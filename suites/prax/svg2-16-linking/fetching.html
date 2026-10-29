@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fetching the document</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg, img { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7.2 Fetching the document</div>
+  <h1>Fetching the document</h1>
+  <p class=pr-lede><q>If the document containing the reference is being processed in secure static mode or secure animated
+  mode, external file references are disallowed. Unless the reference is a data URL, the user agent must treat the
+  reference as if there was a network error, making this an invalid reference.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL-fetch">SVG 2 §16.1.7.2</a></span>
+  Each stage is 160 by 60.</p>
+</header>
+
+<section>
+  <h2>A document in an img: external files disallowed</h2>
+  <p>An SVG document drawn as an image is processed in secure animated mode <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#referencing-modes">§2.3</a></span>.
+  The document has two <code>image</code> elements, outlined: the flag, another file, at 30, 20, and a blue data URL
+  at 90, 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/external-image.svg"></iframe></div>
+    <figcaption>In an <code>iframe</code>, dynamic: both, the flag and the blue rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/external-image.svg" alt=""></div>
+    <figcaption>In an <code>img</code>: the flag not fetched, an empty outline; the blue data URL drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Animation elements: the same document only</h2>
+  <p><q>If the URL reference is from the href attribute on SVG animation elements, only same-document URL references are
+  allowed. A URL referring to a different document is invalid and the document must not be fetched.</q> A
+  <code>set</code> that would turn a square orange, by <code>href</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id="target" x="60" y="10" width="40" height="40" fill="#4f81bd" /><set href="#target" attributeName="fill" to="#d68a3c" begin="0s" /></svg></div>
+    <figcaption><code>href="#target"</code>, in this document: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="#4f81bd" /><set href="support/defs.svg#square" attributeName="fill" to="#d68a3c" begin="0s" /></svg></div>
+    <figcaption><code>href="support/defs.svg#square"</code>: invalid, nothing changes; the square here stays blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

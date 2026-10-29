@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing: what counts as a unit</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ib { display: inline-block; width: 20px; height: 18px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.2 Tracking: the letter-spacing property</div>
+  <h1>letter-spacing: what counts as a unit</h1>
+  <p class=pr-lede><q>For the purpose of 'letter-spacing', each consecutive run of atomic inlines (such as images and
+  inline blocks) is treated as a single typographic character unit.</q> <q>Letter spacing ignores invisible
+  zero-width formatting characters (such as those from the Unicode Cf category). Spacing must be added as if those
+  characters did not exist in the document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#letter-spacing-property">CSS Text 4 §8.2</a></span>
+  Each stage has <code>letter-spacing: 10px</code>; letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>A run of atomic inlines is one unit</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="letter-spacing: 10px"><span class=t>a<span class="pr-a pr-fit ib"></span><span class="pr-b pr-fit ib"></span>b</span></div>
+    <figcaption>"a", two 20px inline-blocks, "b": 10px between "a" and the run and between the run and "b", none
+    between the two boxes: "b" at 70px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> put "b" right after the boxes, at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Format characters are not there</h2>
+  <p><q>For example, 'letter-spacing' applied to A&amp;#x200B;B is identical to AB, regardless of where any element
+  boundaries might fall.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 10px"><span class=t>AB</span></div>
+    <figcaption>"AB": 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 10px"><span class=t>A&#x200B;B</span></div>
+    <figcaption>"A", U+200B, "B": the same 30px, not 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 10px"><span class=t>A<span>&#x200B;</span>B&#x200D;</span></div>
+    <figcaption>U+200B in a span, and U+200D at the end: still 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

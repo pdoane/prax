@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: hidden and none in tables</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: hidden and none in tables</h1>
+  <p class=pr-lede><code>border-*-style</code> and <code>border-style</code> take <code>none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset</code>.</p>
+</header>
+
+<section>
+  <h2>hidden and none in a table</h2>
+  <p>In the collapsing border model, <q>borders with the 'border-style' of 'hidden' take precedence over all other
+  conflicting borders</q>, while <code>none</code> has the lowest priority. Each table has two cells with 6px solid
+  borders; the first cell's right border is set as the caption says. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a>,
+  <a href="https://drafts.csswg.org/css2/#border-conflict-resolution">§17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-table style="width: 100%; border-collapse: collapse"><div class=pr-table-row><div class=pr-table-cell style="border-width: 6px"></div><div class=pr-table-cell style="border-width: 6px"></div></div></div></div>
+    <figcaption>Both solid: one 6px border between the cells.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-table style="width: 100%; border-collapse: collapse"><div class=pr-table-row><div class=pr-table-cell style="border-width: 6px; border-right-style: none"></div><div class=pr-table-cell style="border-width: 6px"></div></div></div></div>
+    <figcaption><code>none</code>: the second cell's left border wins, and the border between stays.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-table style="width: 100%; border-collapse: collapse"><div class=pr-table-row><div class=pr-table-cell style="border-width: 6px; border-right-style: hidden"></div><div class=pr-table-cell style="border-width: 6px"></div></div></div></div>
+    <figcaption><code>hidden</code>: no border between the cells.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

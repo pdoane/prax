@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Oklab and OkLCh</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 9.2 Oklab and OkLCh</div>
+  <h1>Oklab and OkLCh</h1>
+  <p class=pr-lede>The section is not normative. Oklab <q>has improved hue linearity, hue uniformity, and chroma
+  uniformity compared to CIE LCH.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#ok-lab">CSS
+  Color 4 §9.2</a></span></p>
+</header>
+
+<section>
+  <h2>Lightness from 0 to 1</h2>
+  <p><q>L=0% or 0.0 is deep black (no light at all) while L=100% or 1.0 is a diffuse white.</q></p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: oklab(0 0 0)"></div><div class=sw style="background: oklab(0.2 0 0)"></div><div class=sw style="background: oklab(0.4 0 0)"></div><div class=sw style="background: oklab(0.6 0 0)"></div><div class=sw style="background: oklab(0.8 0 0)"></div><div class=sw style="background: oklab(1 0 0)"></div></div>
+    <figcaption><code>oklab(L 0 0)</code> for L of 0 to 1 in steps of 0.2: black to white in six even
+    grays.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Hue held as chroma falls</h2>
+  <p>A figure of the section shows <q>A constant OkLCh hue slice, showing the sRGB gamut around primary blue. The
+  visual hue remains constant.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0.45 0.31 264)"></div><div class=sw style="background: oklch(0.45 0.2 264)"></div><div class=sw style="background: oklch(0.45 0.1 264)"></div></div>
+    <figcaption><code>oklch(0.45 C 264)</code>, sRGB blue's hue, at chroma 0.31, 0.2 and 0.1: blue, grayer and
+    grayer, never purple.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(30 130 301)"></div><div class=sw style="background: lch(30 90 301)"></div><div class=sw style="background: lch(30 50 301)"></div></div>
+    <figcaption>CIE LCH for comparison, <code>lch(30 C 301)</code> at 130, 90 and 50: blue turning purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Even hues</h2>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: oklch(0.7 0.12 0)"></div><div class=sw style="background: oklch(0.7 0.12 60)"></div><div class=sw style="background: oklch(0.7 0.12 120)"></div><div class=sw style="background: oklch(0.7 0.12 180)"></div><div class=sw style="background: oklch(0.7 0.12 240)"></div><div class=sw style="background: oklch(0.7 0.12 300)"></div></div>
+    <figcaption><code>oklch(0.7 0.12 H)</code> for H of 0 to 300 in steps of 60: pink, orange-tan, yellow-green,
+    teal, blue, violet, all equally light and equally colorful.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

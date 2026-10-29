@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table wrapper box: whose properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border: 3px solid #2c5a8f; }
+  .t .pr-table-cell { width: 50px; }
+  .cap { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.4 Tables in the visual formatting model</div>
+  <h1>The table wrapper box: whose properties</h1>
+  <p class=pr-lede>A table element's properties are split between the two boxes it generates. Each table has a 3px blue
+  border and two 50px cells (106px wide), and an orange caption 20px tall.</p>
+</header>
+
+<section>
+  <h2>Position, float, margins and offsets: the wrapper</h2>
+  <p><q>The computed values of properties 'position', 'float', 'margin-*', 'top', 'right', 'bottom', and 'left' on the
+  table element are used on the table wrapper box and not the table box</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="margin: 10px 0 0 30px"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>margin: 10px 0 0 30px</code> moves the caption with the table: the caption is at 30, 10, the
+    table box right below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 70px"><div class="pr-table t" style="position: absolute; right: 10px; bottom: 10px"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>position: absolute; right: 10px; bottom: 10px</code>: caption and table together, the table's
+    bottom right corner 10px from the stage's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="float: right; width: 140px; box-sizing: border-box"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div><span class=pr-text>text</span></div>
+    <figcaption><code>float: right; width: 140px</code>: the float is the wrapper, caption and table 140px wide at the
+    right; the width sizes the table box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

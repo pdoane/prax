@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sorting planes in a 3D rendering context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 200px; }
+  .ctx { position: absolute; left: 20px; top: 10px; width: 120px; height: 80px; transform-style: preserve-3d; }
+  .bg { background: #b9cde6; outline: 1px solid #2c5a8f; }
+  .a, .b { position: absolute; width: 60px; height: 40px; }
+  .a { left: 10px; top: 10px; }
+  .b { left: 50px; top: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.2 3D Rendering Contexts</div>
+  <h1>Sorting planes in a 3D rendering context</h1>
+  <p class=pr-lede><q>The element establishing the 3D rendering context, and each other 3D transformed element
+  participating in the 3D rendering context, is rendered into its own plane.</q> <q>Intersection is performed between
+  this set of planes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#3d-rendering-contexts">CSS Transforms 2 §4.1.2</a></span>
+  Each stage has <code>perspective: 200px</code> and holds a 120 by 80 <code>preserve-3d</code> box at (20, 10). Blue
+  A, 60 by 40, comes first, at (30, 20) in the stage; orange B, after it, at (70, 40).</p>
+</header>
+
+<section>
+  <h2>Nearer covers farther, whatever the order</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx><div class="pr-a pr-fit a" style="transform: translateZ(20px)">A</div><div class="pr-b pr-fit b" style="transform: translateZ(-20px)">B</div></div></div>
+    <figcaption>A at Z 20, B at −20: A, nearer, covers B, though B comes later.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx style="transform-style: flat"><div class="pr-a pr-fit a" style="transform: translateZ(20px)">A</div><div class="pr-b pr-fit b" style="transform: translateZ(-20px)">B</div></div></div>
+    <figcaption>For comparison, the box flat: in order, B covers A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx><div class="pr-a pr-fit a" style="transform: translateZ(10px)">A</div><div class="pr-b pr-fit b" style="transform: translateZ(10px)">B</div></div></div>
+    <figcaption><q>Coplanar 3D transformed elements are rendered in painting order</q>: both at Z 10, B covers
+    A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The establishing element's own plane</h2>
+  <p>Its plane <q>includes the element's backgrounds, borders, other box decorations, content, and descendant
+  elements, excluding any descendant elements that have their own plane</q>, at Z 0, since <a href="https://github.com/w3c/csswg-drafts/issues/6238">csswg-drafts#6238</a>.
+  Here the <code>preserve-3d</code> box has a light blue background.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="ctx bg"><div class="pr-b pr-fit b" style="transform: translateZ(-20px)">B</div></div></div>
+    <figcaption>B at Z −20, behind the box's background: hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="ctx bg"><div class="pr-b pr-fit b" style="transform: translateZ(20px)">B</div></div></div>
+    <figcaption>B at Z 20, in front: shown, 1.11 times larger.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="ctx bg"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b" style="transform: translateZ(-20px)">B</div></div></div>
+    <figcaption>A, not transformed, is in the box's plane too: B, behind, is hidden by both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

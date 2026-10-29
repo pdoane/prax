@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The Porter Duff operators</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1 The Porter Duff Compositing Operators</div>
+  <h1>The Porter Duff operators</h1>
+  <p class=pr-lede><q>The fractional terms Fa (1 in this example) and Fb (1 – αs in this example) are defined for each
+  operator and specify the fraction of the shapes that may contribute to the final pixel value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators">Compositing and Blending 2 §9.1</a></span>
+  Each operator's page draws these two rectangles with it.</p>
+</header>
+
+<section>
+  <h2>The source and the destination</h2>
+  <p><q>Destination is synonymous with backdrop.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#advancedcompositing">§9</a></span>
+  The destination is drawn first, the source over it.</p>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-only=destination></canvas></div>
+    <figcaption>The destination: blue <code>rgb(0% 40% 80% / 0.8)</code>, 90 by 60 at (10, 10).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-only=source></canvas></div>
+    <figcaption>The source: orange <code>rgb(100% 60% 0% / 0.6)</code>, 90 by 60 at (60, 30).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The general equation</h2>
+  <pre class="pr-source pd-formula">co = αs x Fa x Cs + αb x Fb x Cb</pre>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op=source-over></canvas></div>
+    <figcaption>Source over, Fa 1 and Fb 1 – αs: the overlap's αo is 0.6 + 0.8 × 0.4, or 0.92, its color
+    <code>rgb(65.2% 53% 27.8% / 0.92)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: rgb(100% 60% 0% / 0.6)">source</div><div class=pd-swatch style="background: rgb(65.2% 53% 27.8% / 0.92)">both</div><div class=pd-swatch style="background: rgb(0% 40% 80% / 0.8)">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

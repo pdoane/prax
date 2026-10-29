@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic minimum size: the size suggestions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 1fr; width: 20px; }
+  .ta { background: #b9cde6; }
+  .bar { height: 6px; background: #8a93a1; }
+  img { display: block; }
+  figure.w150 .pr-stage { width: 150px; }
+  figure.w150 figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.6 Automatic Minimum Size of Grid Items, size suggestions</div>
+  <h1>Automatic minimum size: the size suggestions</h1>
+  <p class=pr-lede><q>The content-based minimum size for a grid item in a given dimension is its specified size
+  suggestion if it exists, otherwise its transferred size suggestion if that exists and the element is replaced, else
+  its content size suggestion</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#min-size-auto">CSS Grid Layout 2 §6.6</a></span></p>
+</header>
+
+<section>
+  <h2>Specified and content size suggestions</h2>
+  <p>Each dashed grid is 20px wide, one <code>1fr</code> column, which the bar below fills. Each item holds
+  "abcdefgh", 80px. The content size suggestion of an item with a ratio is <q>clamped […] by any definite
+  opposite-axis minimum and maximum sizes converted through the aspect ratio</q>.</p>
+  <figure class=w150>
+    <div class="pr-stage pr-measure"><div class="g pr-frame"><div class=ta style="width: 60px">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>width: 60px</code>: the specified size suggestion; the column is 60px.</figcaption>
+  </figure>
+  <figure class=w150>
+    <div class="pr-stage pr-measure"><div class="g pr-frame"><div class=ta style="max-width: 50px">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>max-width: 50px</code>: <q>additionally clamped by the maximum size</q>, 50px.</figcaption>
+  </figure>
+  <figure class="w150 pr-erratum">
+    <div class="pr-stage pr-measure" style="height: 50px"><div class="g pr-frame"><div class=ta style="aspect-ratio: 1; max-height: 30px">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>aspect-ratio: 1; max-height: 30px</code>: 30px through the ratio; the item 30 by 30px. <span class=pr-flag>Chrome</span> makes the column 80px. <span class=pr-flag>Firefox</span> makes
+    the item 80px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced elements</h2>
+  <p>Each purple item is an <code>img</code> of an SVG image 80 by 40px. The transferred size suggestion is the
+  definite opposite size <q>converted through the aspect ratio</q>; a percentage size caps a compressible replaced
+  element's suggestion, <q>resolved against zero</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g pr-frame"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"><div class=bar></div></div></div>
+    <figcaption>No size given: the content size suggestion, 80px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g pr-frame"><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"><div class=bar></div></div></div>
+    <figcaption><code>height: 20px</code>: transferred, 40px; the column is 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g pr-frame"><img alt="" style="height: 20px; min-width: 0" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"><div class=bar></div></div></div>
+    <figcaption>Then <code>min-width: 0</code>: the column is 20px; the image spills.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g pr-frame"><img alt="" style="width: 100%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"><div class=bar></div></div></div>
+    <figcaption><code>width: 100%</code>: capped at zero; the column is 20px, the image 20 by 10px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

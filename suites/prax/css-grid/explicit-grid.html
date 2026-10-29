@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The explicit grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-auto-columns: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.1 The Explicit Grid</div>
+  <h1>The explicit grid</h1>
+  <p class=pr-lede><q>The size of the explicit grid is determined by the larger of the number of rows/columns defined
+  by grid-template-areas and the number of rows/columns sized by grid-template-rows/grid-template-columns.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#explicit-grids">CSS Grid Layout 2 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>Tracks from the areas, sizes from grid-auto-*</h2>
+  <p><q>Any rows/columns defined by grid-template-areas but not sized by grid-template-rows/grid-template-columns
+  take their size from the grid-auto-rows/grid-auto-columns properties.</q> <q>If these properties don't define
+  <em>any</em> explicit tracks the explicit grid still contains one grid line in each axis.</q> Each grid has
+  <code>grid-auto-columns: 20px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: 'a b c'; grid-template-columns: 40px 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>Three areas, two sizes: three explicit columns, 40, 40 and 20px. C is 20px wide, from 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class="pr-a pr-fit" style="grid-column: 1">A</div><div class="pr-b pr-fit" style="grid-column: -1; grid-row: 2">B</div></div></div>
+    <figcaption>No explicit tracks: the one line is both 1 and −1, so A at <code>1</code> and B at <code>-1</code>
+    start in the same 20px column, B under A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Indexes count from the explicit grid's edges</h2>
+  <p><q>Positive indexes count from the start side (starting from 1 for the start-most explicit line), while negative
+  indexes count from the end side (starting from -1 for the end-most explicit line).</q> Three explicit columns of
+  40px, each item on a row of its own.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px 40px"><div class="pr-a pr-fit" style="grid-column: -2; grid-row: 1">−2</div><div class="pr-b pr-fit" style="grid-column: -1; grid-row: 2">−1</div><div class="pr-c pr-fit" style="grid-column: 1; grid-row: 3">1</div></div></div>
+    <figcaption><code>-2</code> starts the third column, at 80px; <code>-1</code>, the last explicit line, starts an
+    implicit 20px column at 120px; <code>1</code> at 0.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px 40px"><div class="pr-a pr-fit" style="grid-column: -5 / -4; grid-row: 1">−5</div><div class="pr-b pr-fit" style="grid-column: 1; grid-row: 2">1</div><div class="pr-c pr-fit" style="grid-column: -2 / -1; grid-row: 3">C</div></div></div>
+    <figcaption><code>-5 / -4</code> adds an implicit 20px column before the explicit grid; line 1 is still its
+    start: the item at <code>1</code> is at 20px, and C, at <code>-2 / -1</code>, from 100 to 140px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

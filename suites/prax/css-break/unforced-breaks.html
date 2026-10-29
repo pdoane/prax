@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where unforced breaks are allowed</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.4 Unforced Breaks</div>
+  <h1>Where unforced breaks are allowed</h1>
+  <p class=pr-lede><q>An unforced break is one that is inserted automatically by the UA in order to prevent content from overflowing the fragmentainer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#unforced-breaks">CSS Fragmentation 4 §4.4</a></span> Each stage has three columns 60px tall; two Bs leave 20px in the first. The rules on single boxes are shown in <a href="../css-multicol/break-avoid.html">avoiding breaks between boxes</a> and <a href="../css-multicol/break-inside.html">break-inside in columns</a>.</p>
+</header>
+
+<section>
+  <h2>Rule 2: avoid on a common ancestor</h2>
+  <p><q>However, if all of them are auto and a common ancestor of all the elements has a break-inside value of avoid, then breaking here is not allowed.</q> The tinted box holds a dashed box, which holds two As.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k style="break-inside: avoid"><div class=pr-frame><div class=pr-a>A</div><div class=pr-a>A</div></div></div></div>
+    <figcaption>The tinted box, <code>break-inside: avoid</code>, is a common ancestor of the As, two levels up: no break between them. The box starts the second column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rule 4: no breaks between lines inside</h2>
+  <p><q>Additionally, breaking at class B or class C break points is allowed only if the break-inside property of all ancestors is auto.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k style="break-inside: avoid-column"><p style="margin: 0">one two</p></div></div>
+    <figcaption>The paragraph's lines, in a tinted box with <code>break-inside: avoid-column</code>: no break between them. Both lines atop the second column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k style="break-inside: avoid-column; height: 60px">one</div></div>
+    <figcaption>A tinted box 60px tall, <code>break-inside: avoid-column</code>, with one line: no class C break below the line. The box whole in the second column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

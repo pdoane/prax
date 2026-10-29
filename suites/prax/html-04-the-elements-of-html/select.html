@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drop-down box and list box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 6px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.7 The select element</div>
+  <h1>Drop-down box and list box</h1>
+  <p class=pr-lede><q>The select element represents a control for selecting amongst a set of options.</q> <q>A select
+  element is either a list box or a drop-down box, depending on its attributes.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">HTML §4.10.7</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+</header>
+
+<section>
+  <h2>The display size decides</h2>
+  <p>Without <code>size</code>, <q>the element's display size is 4 if the element's multiple content attribute is
+  present, and 1 otherwise.</q> Without <code>multiple</code>, it <q>is expected to render as a single-select drop-down
+  box if its display size is 1, or as a single-select list box if its display size is greater than 1.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select><option>Apple<option>Pear<option>Plum<option>Fig<option>Kiwi</select></div>
+    <figcaption>No <code>size</code>: a drop-down box showing "Apple".</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select size=3><option>Apple<option>Pear<option>Plum<option>Fig<option>Kiwi</select></div>
+    <figcaption><code>size=3</code>: a list box of three rows, Apple to Plum.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select multiple><option>Apple<option>Pear<option>Plum<option>Fig<option>Kiwi</select></div>
+    <figcaption><code>multiple</code>: a list box of four rows, Apple to Fig.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select multiple size=1><option>Apple<option>Pear<option>Plum</select></div>
+    <figcaption><code>multiple size=1</code>: a drop-down box or a list box of one row; either may be
+    drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A placeholder label option</h2>
+  <p>In a <code>required</code> drop-down box, a first option whose value is empty is its placeholder label option:
+  <q>the user agent is expected to render that option in a manner that conveys that it is a label, rather than a valid
+  option of the control.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure>
+    <div class="pr-stage pad"><select required><option value="">Choose a fruit<option>Apple<option>Pear</select></div>
+    <figcaption>"Choose a fruit" shows, selected; open the box: it is offered as a label, which may be drawn apart from
+    Apple and Pear or not be pickable at all.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

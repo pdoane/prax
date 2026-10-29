@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-transform property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.5 Capitalization: the 'text-transform' property</div>
+  <h1>The text-transform property</h1>
+  <p class=pr-lede><code>text-transform</code> takes <code>capitalize | uppercase | lowercase | none</code>. Initial
+  <code>none</code>, inherited, applies to all elements. <q>This property controls capitalization effects of an
+  element's text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caps-prop">CSS 2 §16.5</a></span></p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><q>Puts the first character of each word in uppercase; other characters are unaffected.</q> <q>Puts all
+  characters of each word in uppercase.</q> <q>Puts all characters of each word in lowercase.</q> <q>No capitalization
+  effects.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caps-prop">CSS 2 §16.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">
+      <div style="text-transform: none">none: the miXed text</div>
+      <div style="text-transform: capitalize">capitalize: the miXed text</div>
+      <div style="text-transform: uppercase">uppercase: the miXed text</div>
+      <div style="text-transform: lowercase">lowercase: the miXed text</div>
+    </div>
+    <figcaption>One source. <code>capitalize</code>: "The MiXed Text", "miXed" keeping its other letters;
+    <code>uppercase</code>: all capitals; <code>lowercase</code>: "mixed". <span class="pr-flag pr-since">Since CSS
+    2</span> titlecase, not uppercase.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-transform: uppercase">inherited <span>by the span</span><div style="text-transform: none">but none here</div></div>
+    <figcaption>Set on the stage, <code>uppercase</code> is inherited by the span: "INHERITED BY THE SPAN". The block
+    with <code>none</code> keeps "but none here".</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-transform-property">CSS Text 3 §2.1</a></div>
+  <h2>Titlecase, full mappings, and words across elements</h2>
+  <p><q>Puts the first typographic letter unit of each word, if lowercase, in titlecase; other characters are
+  unaffected.</q> <q>The UA must use the full case mappings for Unicode characters</q>. <q>Out-of-flow boxes and
+  inline box boundaries must not introduce a text-transform word boundary</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-transform-property">CSS Text 3
+  §2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span style="text-transform: capitalize">ǆemal</span> <span style="text-transform: uppercase">ǆemal</span></div></div>
+    <figcaption>"ǆ" is one letter. <code>capitalize</code> gives its titlecase, "ǅ", a capital and a small letter:
+    "ǅemal". <code>uppercase</code> gives "Ǆ", two capitals: "ǄEMAL".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span style="text-transform: uppercase">straße</span> <span style="text-transform: capitalize">mi<span>xed</span></span></div></div>
+    <figcaption><code>uppercase</code> maps "ß" to two letters: "STRASSE". <code>capitalize</code> on "mi" and a
+    span "xed" is one word: "Mixed".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

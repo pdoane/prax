@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: block containers and long lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: block containers and long lines</h1>
+  <p class=pr-lede><code>text-align</code> places a line's content in its line box. Each blue box is 30px wide, and
+  the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Only on block containers</h2>
+  <p><code>text-align</code> <q>Applies to: block containers</q>. <q>This property describes how inline-level content
+  of a block container is aligned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl style="text-align: center">a span <span class="pr-a w">a</span></span></div>
+    <figcaption>The tinted span has <code>text-align: center</code>, which does not apply to it: the line is aligned
+    by the stage's value, at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center"><span class=pr-hl style="text-align: left">a span <span class="pr-a w">a</span></span></div>
+    <figcaption>A centered stage holding a span with <code>text-align: left</code>: the line is centered.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></div>
+  <h2>Too long for the line</h2>
+  <p><q>If (after justification, if any) the inline contents of a line box are too long to fit within it, then the
+  contents are start-aligned: any content that doesn’t fit overflows the line box’s end edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: center"><span class="pr-a w" style="width: 150px">150px</span></div>
+    <figcaption><code>text-align: center</code> in a 100px stage, a 150px box: it starts at the left edge and overflows
+    at the right, rather than 25px out on each side.</figcaption>
+  </figure>
+  <figure style="margin-left: 50px">
+    <div class="pr-stage pr-narrow pr-text" style="text-align: center; direction: rtl"><span class="pr-a w" style="width: 150px">150px</span></div>
+    <figcaption>The same in <code>rtl</code>: it starts at the right edge, and overflows at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

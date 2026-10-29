@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The size attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pad { padding: 10px 0 0 10px; }
+  .pad > div { height: 20px; margin: 0 0 10px; }
+  .pad input { box-sizing: content-box; margin: 0; padding: 0; border: 0; outline: 1px solid #2c5a8f;
+               background: white; font: calc(10px * 2048 / 1229)/20px "PR Cousine"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.2 The size attribute</div>
+  <h1>The size attribute</h1>
+  <p class=pr-lede><q>The size attribute gives the number of characters that, in a visual rendering, the user agent is to
+  allow the user to see while editing the element's value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-size-attribute">HTML §4.10.5.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Characters wide</h2>
+  <p><q>The converting a character width to pixels algorithm returns (size-1)×avg + max</q>, and without the attribute,
+  the field is 20 characters wide. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-a-text-entry-widget">§15.5.6</a></span>
+  Each field is in Cousine, a monospace whose average and maximum widths are its one advance, sized to 10px, so
+  <code>avg</code> and <code>max</code> are both 10px; its border and padding are removed, and an outline marks its
+  content box.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input size=4 value="four"></div>
+        <div><input size=10 value="ten letter"></div>
+        <div><input type=password size=6 value="secret"></div>
+        <div><input value="twenty characters..."></div>
+      </div>
+    </div>
+    <figcaption>40px, 100px, 60px and 200px wide: a size of 4, 10 and 6, and 20 with none. The text fills each but
+    the password field, whose dots need not be 10px wide. <span class=pr-flag>Chrome</span> each 4px wider.
+    <span class=pr-flag>Safari</span> each 12px wider.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

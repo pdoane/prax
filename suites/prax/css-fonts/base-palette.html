@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>base-palette</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-palette-values --third { font-family: "PR Nabla"; base-palette: 2; }
+  @font-palette-values --past { font-family: "PR Nabla"; base-palette: 99; }
+  @font-palette-values --none { font-family: "PR Nabla"; }
+  @font-palette-values --night { font-family: "PR Kalnia Glaze"; base-palette: dark; }
+  @font-palette-values --unmarked { font-family: "PR Nabla"; base-palette: dark; }
+  .pr-sample { font-family: 'PR Nabla'; font-size: 32px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.2.2 Specifying the base palette: the 'base-palette' descriptor</div>
+  <h1>base-palette</h1>
+  <p class=pr-lede>'base-palette' is <code>light | dark | &lt;integer [0,∞]&gt;</code>. <q>If this descriptor is not
+  present in the @font-palette-values, or if the font does not contain a palette at the index of the value of
+  'base-palette', it behaves as if '0' were specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#base-palette-desc">CSS Fonts 4 §9.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>An index</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --third">Nabla</div>
+    <figcaption><code>2</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --past">Nabla</div>
+    <figcaption><code>99</code>, past the seven palettes: as 0, yellow and orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --none">Nabla</div>
+    <figcaption>No 'base-palette': as 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>light and dark</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Kalnia Glaze'; font-palette: --night; background: #1f2430">Glaze</div>
+    <figcaption><code>dark</code> in PR Kalnia Glaze: its palette marked for dark backgrounds, pale pinks and
+    blue. Safari, which draws no COLRv1, draws the outlines in the text color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --unmarked">Nabla</div>
+    <figcaption><code>dark</code> in PR Nabla, which marks none: <q>this value behaves as 0</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

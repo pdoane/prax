@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: the 3D styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f4f5f7; }
+  td { width: 60px; height: 40px; padding: 0; border: 2px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: the 3D styles</h1>
+  <p class=pr-lede>Two cells meet: the left one sets an orange right border, the right one a blue left border. The color between them is the border that wins. All borders are 10px; the blue one is the higher style.</p>
+</header>
+
+<section>
+  <h2>3. Same width: dotted, ridge, outset, groove, inset</h2>
+  <p><q>If none of the styles are 'hidden' and at least one of them is not 'none', then narrow borders are discarded
+  in favor of wider ones. If several have the same 'border-width' then styles are preferred in this order: 'double',
+  'solid', 'dashed', 'dotted', 'ridge', 'outset', 'groove', and the lowest: 'inset'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2
+  §17.6.2.1</a></span> CSS Tables 3 keeps the order: <q>double, solid, dashed, dotted, ridge, outset, groove, inset,
+  none</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-specificity">CSS Table 3 §3.7.1.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px ridge #d68a3c"><td style="border-left: 10px dotted #4f81bd"></table></div>
+    <figcaption><code>dotted</code> beats <code>ridge</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px outset #d68a3c"><td style="border-left: 10px ridge #4f81bd"></table></div>
+    <figcaption><code>ridge</code> beats <code>outset</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px groove #d68a3c"><td style="border-left: 10px outset #4f81bd"></table></div>
+    <figcaption><code>outset</code> beats <code>groove</code>: blue. <span class=pr-flag>Chrome</span> draws the
+    orange groove, as if it ranked <code>outset</code> as the <code>groove</code> it is drawn as and gave the tie to
+    the left cell.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px inset #d68a3c"><td style="border-left: 10px groove #4f81bd"></table></div>
+    <figcaption><code>groove</code> beats <code>inset</code>, the lowest: blue. <span class=pr-flag>Chrome</span>
+    draws the orange border, as if it ranked <code>inset</code> as the <code>ridge</code> it is drawn as, which
+    beats <code>groove</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

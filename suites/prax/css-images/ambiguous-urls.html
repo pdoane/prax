@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A URL that is an element or an image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 40px; height: 40px; margin: 10px; background: #4f81bd; mask-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <mask id=local maskContentUnits=objectBoundingBox><circle cx=0.5 cy=0.5 r=0.5 fill=white /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 2.1.1 Ambiguous Reference-or-Image URLs</div>
+  <h1>A URL that is an element or an image</h1>
+  <p class=pr-lede><q>If an ambiguous image URL is a fragment-only URL, then it must be treated as an element
+  reference. Otherwise, if the ambiguous image URL has a fragment that references an element in the resource that is
+  an appropriate type of element for the context in which the &lt;url&gt; appears (such as a &lt;mask&gt; element for
+  the mask-image property), it is interpreted as an element reference. Otherwise, it is treated as an
+  &lt;image&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#ambiguous-urls">CSS Images 3 §2.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>A mask element: a reference</h2>
+  <p>Each box is a blue 40px square with a <code>mask-image</code>. Each <code>&lt;mask&gt;</code> named here holds a
+  white circle as wide as the box it masks.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="mask-image: url(#local)"></div></div>
+    <figcaption><code>url(#local)</code>, a mask in this page: a blue disc 40px across.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="mask-image: url(support/masks.svg#disc)"></div></div>
+    <figcaption><code>masks.svg#disc</code>, a mask in another file: the same disc.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Anything else: an image</h2>
+  <p><code>masks.svg</code> drawn as an image is 40 by 40, and only its <code>&lt;g&gt;</code> paints: a black bar
+  across its top 10px. As an image, a mask keeps what the image's alpha covers.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="mask-image: url(support/masks.svg#bar)"></div></div>
+    <figcaption><code>masks.svg#bar</code>, a <code>&lt;g&gt;</code>: the whole file as an image, so a blue bar 40 by
+    10 at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="mask-image: url(support/masks.svg)"></div></div>
+    <figcaption><code>masks.svg</code>, no fragment: the same bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

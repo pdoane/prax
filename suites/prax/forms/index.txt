@@ -1,0 +1,14 @@
+# The controls by family, each against every appearance, then what gathers them.
+buttons.html
+button-layout.html
+checkbox.html
+radio.html
+switch.html
+range.html
+progress.html
+meter.html
+color.html
+details.html
+details-styled.html
+labels.html
+form.html

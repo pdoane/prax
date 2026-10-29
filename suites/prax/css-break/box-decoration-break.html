@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-decoration-break: slice and clone</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .r { border: 4px solid #2c5a8f; border-radius: 16px; box-shadow: 4px 4px 0 #6b7381; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.4 Fragmented Borders and Backgrounds: the box-decoration-break property</div>
+  <h1>box-decoration-break: slice and clone</h1>
+  <p class=pr-lede><q>When a break (page/column/region/line) splits a box, the box-decoration-break property controls whether the box’s margins, borders, padding, and other decorations wrap the broken edges of the box fragments</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-decoration">CSS Fragmentation 4 §5.4</a></span> Borders alone, across lines and columns, are shown in <a href="../css-box/box-fragmentation.html">fragmented boxes</a>. Each stage has three columns 60px tall; the box has a 4px border, 16px radii and a shadow, and holds four lines.</p>
+</header>
+
+<section>
+  <h2>slice</h2>
+  <p><code>slice</code>: <q>no border and no padding are inserted at a break; no box-shadow is drawn at a broken edge; and backgrounds, border-radius, and the border-image are applied to the geometry of the whole box as if it were unbroken.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=r>one two six ten</div></div>
+    <figcaption>Rounded corners at the top of the first fragment and the bottom of the second only; no border and no shadow along the break.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clone</h2>
+  <p><code>clone</code>: <q>Each box fragment is independently wrapped with the border, padding, and margin. The border-radius and border-image and box-shadow, if any, are applied to each fragment independently.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=r style="box-decoration-break: clone">one two six ten</div></div>
+    <figcaption>Each fragment a whole rounded box with its shadow, two lines in each. <span class=pr-flag>Safari</span> Slices it: open at the break, as above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

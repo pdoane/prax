@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>safe and unsafe</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 100px; justify-content: center; height: 20px; }
+  .wide { width: 160px; }
+  .fc { display: flex; flex-direction: column; width: 100px; margin: 0 50px; height: 60px; background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.4 Overflow Alignment</div>
+  <h1>safe and unsafe</h1>
+  <p class=pr-lede>“Unsafe” alignment <q>honors the specified alignment mode in overflow situations, even if it
+  causes data loss</q>; “safe” alignment <q>changes the alignment mode in overflow situations in an attempt to avoid
+  data loss.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overflow-values">CSS Box Alignment 3 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>A grid item wider than its area</h2>
+  <p>A 100px column, centered from 50 to 150px, holds A, 160px wide.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class="pr-a pr-fit wide" style="justify-self: unsafe center">A</div></div></div>
+    <figcaption><code>unsafe center</code>: <q>the given alignment value is honored</q>: A from 20 to 180px, 30px
+    over each side of the column.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class="pr-a pr-fit wide" style="justify-self: safe center">A</div></div></div>
+    <figcaption><code>safe center</code>: <q>aligned as if the alignment mode were flex-start</q>: A from 50 to
+    210px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Items wider than a column flexbox</h2>
+  <p>As the specification's example: a tinted column flex container 100px wide, its middle item 160px wide. The
+  items' cross-axis alignment is <code>align-self</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=fc><div class=pr-a style="align-self: unsafe center; width: 40px">A</div><div class="pr-b pr-fit wide" style="align-self: unsafe center">B</div><div class=pr-c style="align-self: unsafe center; width: 40px">C</div></div></div>
+    <figcaption><code>unsafe center</code>: B from 20 to 180px, over both sides; A and C centered.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=fc><div class=pr-a style="align-self: safe center; width: 40px">A</div><div class="pr-b pr-fit wide" style="align-self: safe center">B</div><div class=pr-c style="align-self: safe center; width: 40px">C</div></div></div>
+    <figcaption><code>safe center</code>: B from 50px, all its overflow past the end; A and C still centered.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

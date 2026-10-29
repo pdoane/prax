@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The bitmaprenderer context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; outline: 1px dashed #c0392b; }
+  .stage { padding: 10px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.2.2 The ImageBitmapRenderingContext interface</div>
+  <h1>The bitmaprenderer context</h1>
+  <p class=pr-lede>transferFromImageBitmap <q>Transfers the underlying bitmap data from imageBitmap to context, and the
+  bitmap becomes the contents of the canvas element to which context is bound.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-imagebitmaprenderingcontext-interface">HTML §4.12.5.2.2</a></span>
+  Each canvas has <code>width=80 height=40</code> and a dashed red edge. The bitmap is the 40 by 20 flag, made with
+  <code>createImageBitmap</code>.</p>
+</header>
+<section>
+  <h2>The bitmap becomes the canvas's contents</h2>
+  <p><q>The natural dimensions of the canvas element when it represents embedded content are equal to the dimensions of
+  the element's bitmap.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-element">§4.12.5</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><canvas width=80 height=40 data-draw=flag></canvas></div>
+    <figcaption>The flag, and the canvas 40 by 20, the bitmap's size. <span class=pr-flag>Chrome</span> 80 by 40, the
+    flag stretched to fill it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><canvas width=80 height=40 data-draw=null></canvas></div>
+    <figcaption>Then <code>transferFromImageBitmap(null)</code>: <q>a transparent black bitmap</q> the attributes'
+    size, an empty 80 by 40. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    40 by 20.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>An opaque context</h2>
+  <p><q>When an ImageBitmapRenderingContext object has its alpha flag set to false, the contents of the canvas element to
+  which the context is bound are obtained by compositing the context's output bitmap onto an opaque black bitmap of the
+  same size</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><canvas width=80 height=40 data-draw=opaque></canvas></div>
+    <figcaption><code>alpha: false</code>, and a bitmap of the flag at half opacity: the flag darkened, over black, 40
+    by 20. <span class=pr-flag>Chrome</span> 80 by 40. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Half-transparent, the guides showing through.</figcaption>
+  </figure>
+</section>
+<script>
+  function flagCanvas(alpha) {
+    const canvas = new OffscreenCanvas(40, 20);
+    const context = canvas.getContext("2d");
+    context.globalAlpha = alpha;
+    context.fillStyle = "#4f81bd"; context.fillRect(0, 0, 20, 10);
+    context.fillStyle = "#d68a3c"; context.fillRect(20, 0, 20, 10);
+    context.fillStyle = "#6aa36a"; context.fillRect(0, 10, 20, 10);
+    context.fillStyle = "#8e44ad"; context.fillRect(20, 10, 20, 10);
+    return createImageBitmap(canvas);
+  }
+  const draw = {
+    async flag(canvas) {
+      canvas.getContext("bitmaprenderer").transferFromImageBitmap(await flagCanvas(1));
+    },
+    async null(canvas) {
+      const context = canvas.getContext("bitmaprenderer");
+      context.transferFromImageBitmap(await flagCanvas(1));
+      context.transferFromImageBitmap(null);
+    },
+    async opaque(canvas) {
+      canvas.getContext("bitmaprenderer", {alpha: false}).transferFromImageBitmap(await flagCanvas(0.5));
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas);
+</script>
+</body>
+</html>

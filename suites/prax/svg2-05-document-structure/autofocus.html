@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The autofocus attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  svg rect:focus { fill: #2c5a8f; outline: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.11.6 The ‘autofocus’ attribute</div>
+  <h1>The autofocus attribute</h1>
+  <p class=pr-lede><q>This content attribute allows authors to ask a focusable element to be focused after it's
+  connected to a document.</q> <q>The attribute has no effect if the element is not already focusable.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#autofocusattribute">SVG 2 §5.11.6</a></span></p>
+</header>
+
+<section>
+  <h2>Focused at load, if focusable</h2>
+  <p>Each rect is light blue, and dark blue while it has the focus. Both have <code>autofocus</code>; only the second is
+  focusable, by <code>tabindex="0"</code>. The stage is an SVG 160 by 60.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect autofocus x="10" y="10" width="60" height="40" fill="#b9cde6" /><rect autofocus tabindex="0" x="90" y="10" width="60" height="40" fill="#b9cde6" /></svg></div>
+    <figcaption>At load: the left rect stays light, not focusable; the right one is focused, dark blue.
+    <span class=pr-flag>Safari</span> Neither focused.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

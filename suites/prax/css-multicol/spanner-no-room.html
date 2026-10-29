@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanners without room</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; height: 40px; column-fill: auto; }
+  .all { column-span: all; }
+  figure { margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, limited space</div>
+  <h1>Spanners without room</h1>
+  <p class=pr-lede><q>A spanning element takes up more space than the element would take up otherwise. When space is
+  limited, it may be impossible to find room for the spanning element. In these cases, user agents may treat the
+  element as if none had been specified on this property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage is 40px tall, with three columns of 60px; the Bs are 20px blocks, and A has <code>column-span:
+  all</code>. What a browser does here is its choice.</p>
+</header>
+
+<section>
+  <h2>In an overflow column</h2>
+  <p><q>the h2 element appears later in the content, and the height of the multicol container is constrained.
+  Therefore, the h2 element appears in the overflow and there is not room to make the element spanning.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a pr-fit all>A</div><div class=pr-b>B</div></div>
+    <figcaption>Seven Bs fill the three columns and start a fourth, past the stage's right edge, where A
+    comes. Chrome, Safari and Firefox treat A as <code>none</code>: 60px wide under the seventh B, the last B in a
+    fifth column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the last column</h2>
+  <p><q>the H2 element appears naturally in the last column. Still, there is not enough room to make the element
+  spanning.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a pr-fit all>A</div><div class=pr-b>B</div></div>
+    <figcaption>Five Bs: A comes in the third column, under the fifth B. All three browsers treat it as
+    <code>none</code>: 60px wide there, the last B in a fourth column past the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

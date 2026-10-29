@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The system descriptor: one set of symbols, six algorithms</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style s-cyclic { system: cyclic; symbols: a b c; }
+  @counter-style s-fixed { system: fixed; symbols: a b c; }
+  @counter-style s-symbolic { system: symbolic; symbols: a b c; }
+  @counter-style s-alphabetic { system: alphabetic; symbols: a b c; }
+  @counter-style s-numeric { system: numeric; symbols: a b c; }
+  @counter-style s-initial { symbols: a b c; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 40px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1 Counter algorithms: the system descriptor</div>
+  <h1>The system descriptor: one set of symbols, six algorithms</h1>
+  <p class=pr-lede><q>The 'system' descriptor specifies which algorithm will be used to construct the counter's
+  representation based on the counter value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-system">CSS Counter Styles 3 §3.1</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>symbols: a b c, values 1 to 5</h2>
+  <p>Each list counts 1 to 5 with the symbols "a", "b" and "c" and the initial suffix ". ". The last has no
+  <code>system</code>, whose initial value is <code>symbolic</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-cyclic"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption><code>cyclic</code>: a, b, c, a, b.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-fixed"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption><code>fixed</code>: a, b, c, then 4 and 5 in <code>decimal</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-symbolic"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption><code>symbolic</code>: a, b, c, aa, bb.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-alphabetic"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption><code>alphabetic</code>: a, b, c, aa, ab.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-numeric"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption><code>numeric</code>, "a" the digit 0: b, c, ba, bb, bc.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: s-initial"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption>No <code>system</code>: a, b, c, aa, bb, as <code>symbolic</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

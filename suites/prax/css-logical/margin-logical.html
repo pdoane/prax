@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.2 Flow-Relative Margins</div>
+  <h1>Flow-relative margins</h1>
+  <p class=pr-lede><q>These properties correspond to the 'margin-top', 'margin-bottom', 'margin-left', and 'margin-right' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#margin-properties">CSS Logical Properties and Values 1 §4.2</a></span> The orange tint is A's margin area.</p>
+</header>
+
+<section>
+  <h2>margin-block-start and margin-inline-start</h2>
+  <p>Each A has <code>margin-block-start: 10px; margin-inline-start: 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="margin-block-start: 10px; margin-inline-start: 40px">A</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px above, 40px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-margin-area><div class=pr-a style="margin-block-start: 10px; margin-inline-start: 40px">A</div></div></div>
+    <figcaption><code>rtl</code>: 10px above, 40px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-margin-area><div class=pr-a style="margin-block-start: 10px; margin-inline-start: 40px">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: 10px at the right, 40px above; A runs down the stage's right side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>margin-block-end and margin-inline-end</h2>
+  <p>Each A has <code>margin-block-end: 10px; margin-inline-end: 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="margin-block-end: 10px; margin-inline-end: 40px">A</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px below, 40px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-margin-area><div class=pr-a style="margin-block-end: 10px; margin-inline-end: 40px">A</div></div></div>
+    <figcaption><code>rtl</code>: 10px below, 40px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-margin-area><div class=pr-a style="margin-block-end: 10px; margin-inline-end: 40px">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: 10px at the left, 40px below.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

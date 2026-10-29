@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>code from an on-screen keyboard</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.2.4 code and Virtual Keyboards</div>
+  <h1>code from an on-screen keyboard</h1>
+  <p class=pr-lede><q>In general, if a virtual (or remote control) keyboard is mimicking the layout and functionality
+  of a standard keyboard, then it MUST also set the code attribute as appropriate.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-virtual-keyboards">UI Events §4.2.4</a></span></p>
+</header>
+<section>
+  <h2>A standard layout on screen</h2>
+  <p>An on-screen keyboard that shows a standard layout gives each key the code of the key it stands for.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-virtual-keyboards">§4.2.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Open the system's on-screen keyboard (the Keyboard Viewer on a Mac, the On-Screen Keyboard on
+    Windows), click the field, then click Q and the left Shift on the on-screen keyboard: <code>code="KeyQ"</code>
+    and <code>code="ShiftLeft"</code>, as from the physical keys.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A layout of its own</h2>
+  <p><q>For keyboards which are not mimicking the layout of a standard keyboard, then the code attribute MAY be set to
+  the closest match on a standard keyboard or it MAY be left undefined.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-virtual-keyboards">§4.2.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=touch></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code" data-on="#touch" data-lines=3></ol>
+    </div>
+    <figcaption>On a phone or tablet, tap the field and type <code>q</code> on its keyboard: <code>code="KeyQ"</code>
+    as the closest match, or no <code>code</code>, the empty string. Either is allowed.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

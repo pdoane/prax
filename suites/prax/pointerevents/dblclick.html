@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dblclick</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; user-select: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.4 dblclick</div>
+  <h1>dblclick</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when the primary button of a pointing device is clicked twice
+  over an element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#dblclick">Pointer Events §11.4.4</a></span></p>
+</header>
+<section>
+  <h2>Not stopped by canceling click</h2>
+  <p><q>Canceling the click event does not affect the firing of a dblclick event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#dblclick">§11.4.4</a></span>
+  A listener cancels every <code>click</code> on the box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Double-click here.</div>
+      <ol class=pr-log data-log="click dblclick" data-fields="detail" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>Double-click the box: two <code>click</code>s, both canceled, then <code>dblclick detail=2</code>.
+    Triple-click: a third <code>click</code>, <code>detail=3</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only the primary button</h2>
+  <p><q>Secondary buttons MUST NOT fire dblclick events.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#dblclick">§11.4.4</a></span>
+  The page cancels the context menu and the middle button's scrolling over the box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=other>Double-click the other buttons here.</div>
+      <ol class=pr-log data-log="auxclick dblclick" data-fields="button detail" data-on="#other" data-lines=3></ol>
+    </div>
+    <figcaption>Double-click with the middle or the right button: <code>auxclick detail=1</code> and
+    <code>detail=2</code>, and no <code>dblclick</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels click on the first box; keeps the context menu and middle-button scrolling from the second.
+  document.getElementById("pad").addEventListener("click", event => event.preventDefault());
+  const other = document.getElementById("other");
+  other.addEventListener("contextmenu", event => event.preventDefault());
+  other.addEventListener("mousedown", event => { if (event.button === 1) event.preventDefault(); });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

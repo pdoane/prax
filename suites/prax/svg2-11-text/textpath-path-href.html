@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>textPath: path and href</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="low" d="M 20 60 H 140" /><g id="group"><path d="M 20 60 H 140" /></g></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.1 The ‘textPath’ element</div>
+  <h1>textPath: path and href</h1>
+  <p class=pr-lede><q>If both attributes are specified on a ‘textPath’ element, the path that is used must follow the
+  following order of precedence: ‘path’ attribute, ‘href’ attribute, ‘xlink:href’ attribute</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathElement">SVG 2 §11.8.1</a></span>
+  Each stage is an SVG 160 by 80 holding "abcdefghij" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a
+  letter. <code>#low</code> is a line from 20, 60 to 140, 60, dashed in red; the <code>path</code> attribute's
+  line, at y 30, is dashed in orange.</p>
+</header>
+
+<section>
+  <h2>path before href</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 60H140" class=pr-baseline /><path d="M20 30H140" stroke="#d68a3c" stroke-dasharray="3 2" /><text class=pr-measure><textPath href="#low" path="M 20 30 H 140">abcdefghij</textPath></text></svg></div>
+    <figcaption><code>path</code> on y 30 and <code>href="#low"</code>: the letters on y 30, from 20.
+    <span class=pr-flag>Safari</span> On y 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 60H140" class=pr-baseline /><text class=pr-measure><textPath href="#low" path="">abcdefghij</textPath></text></svg></div>
+    <figcaption><code>path=""</code>, no valid segment, so <code>href="#low"</code> is used: the letters on y 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Errors</h2>
+  <p><q>If the ‘path’ attribute contains valid path segments before the first error, the path is used up to the error
+  following the rules in Error handling in path data, and the ‘href’ attribute is not used as a fallback.</q> For
+  <code>href</code>: <q>If the attribute is used, and the &lt;url&gt; is an invalid reference (e.g., no such element
+  exists, or the referenced element is not a ‘path’ element) or basic shape, then the ‘textPath’ element is in error
+  and its entire contents shall not be rendered by the user agent.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 60H140" class=pr-baseline /><path d="M20 30H140" stroke="#d68a3c" stroke-dasharray="3 2" /><text class=pr-measure><textPath href="#low" path="M 20 30 H 140 L">abcdefghij</textPath></text></svg></div>
+    <figcaption><code>path="M 20 30 H 140 L"</code>, an error after a valid segment: the letters on y 30.
+    <span class=pr-flag>Safari</span> On y 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><text class=pr-measure x="20" y="30">ab<textPath href="#nothing">cdef</textPath></text></svg></div>
+    <figcaption><code>href="#nothing"</code>, which names no element: "cdef" not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><text class=pr-measure x="20" y="30">ab<textPath href="#group">cdef</textPath></text></svg></div>
+    <figcaption><code>href="#group"</code>, naming a <code>g</code>: "cdef" not drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

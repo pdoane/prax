@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background image: no intrinsic dimensions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { width: 160px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .tall { width: 60px; height: 80px; }
+  .ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%234f81bd'/></svg>"); }
+  .none { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background image: no intrinsic dimensions</h1>
+  <p class=pr-lede>An SVG image that gives neither a width nor a height, drawn once at the top left of a dashed padding
+  box, the rectangle <code>background-position</code> works in.</p>
+</header>
+
+<section>
+  <h2>A ratio alone</h2>
+  <p><q>If the image has no intrinsic dimensions and has an intrinsic ratio the dimensions must be assumed to be the
+  largest dimensions at that ratio such that neither dimension exceeds the dimensions of the rectangle that establishes
+  the coordinate system for the 'background-position' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost ratio"></div></div>
+    <figcaption>A 2:1 <code>viewBox</code> in a box 160 by 60: 120 by 60, as tall as the box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost tall ratio"></div></div>
+    <figcaption>The same in a box 60 by 80: 60 by 30, as wide as the box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No ratio either</h2>
+  <p><q>If the image has no intrinsic ratio either, then the dimensions must be assumed to be the rectangle that
+  establishes the coordinate system for the 'background-position' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost none"></div></div>
+    <figcaption>No size and no ratio, in a box 160 by 60: it fills the box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost tall none"></div></div>
+    <figcaption>The same in a box 60 by 80: it fills that box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

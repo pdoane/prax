@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>appearance: none keeps what operates a widget</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > * { display: block; margin: 0 0 6px; }
+  .styled { width: 20px; height: 20px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+  .styled:checked { background: #27ae60; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2.3 Effects of appearance on Semantic Aspects of Elements</div>
+  <h1>appearance: none keeps what operates a widget</h1>
+  <p class=pr-lede><q>When showing the primitive appearance of a widget or its devolved state, user agents must
+  preserve aspects of the widget which are necessary to operate the widget with its original semantics.</q> <q>Aspects
+  of a widget which are merely needed to observe the state the widget is in and are not needed to operate it should be
+  suppressed as well when the same information can be conveyed using ordinary CSS.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-semantics">CSS Basic User Interface 4 §7.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A slider is kept; a check mark is not</h2>
+  <p>Each figure holds a range, a checked checkbox and a checked radio button with <code>appearance: none</code>.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><input type=range style="appearance: none"><input type=checkbox checked style="appearance: none"><input type=radio checked style="appearance: none"></div>
+    <figcaption>The range keeps a thumb to drag, or something that does its work. The checkbox and radio button
+    show no check mark and no dot: with no style of their own, nothing of them is drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The state is still there to style</h2>
+  <p><q>Elements which can be in different states keep this ability, and the relevant pseudo-classes match as
+  usual.</q></p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><input type=checkbox class=styled style="appearance: none"><input type=checkbox checked class=styled style="appearance: none"></div>
+    <figcaption>Two checkboxes styled as 20px squares, green when <code>:checked</code>: the first grey, the second
+    green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

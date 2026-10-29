@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dropping text into a text control</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { margin: 0 0 10px; padding: 0 6px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px;
+        background: white; border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.5 Processing model</div>
+  <h1>Dropping text into a text control</h1>
+  <p class=pr-lede>A text control, editing host or editable element accepts dragged text without a listener: when the dragged data
+  has text, the user agent will <q>Set the current target element to the immediate user selection anyway</q>, and the
+  drop's default action is to <q>Insert the actual data of the first item in the drag data store item list to have a drag
+  data item type string of "text/plain"</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">HTML §6.11.5</a></span></p>
+</header>
+<section>
+  <h2>Into a field, and out of one</h2>
+  <p>When the drop succeeds, the operation is <code>move</code>, and the source is a selection in a text control,
+  <q>The user agent should delete the dragged selection from the relevant text control.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">§6.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=line>select a word of this line</div>
+        <input class=ed id=target value="drop here: ">
+        <input class=ed id=from value="select and drag from this field">
+        <div class=ed id=host contenteditable style="height: auto">an editing host: </div>
+      </div>
+      <ol class="pr-log drag-log" data-log="drop dragend" data-fields="target dataTransfer.dropEffect" data-lines=2></ol>
+    </div>
+    <figcaption>Select a word of the first line and drag it into the first field: the word is inserted where the caret
+    shows, and the line keeps it. Select a word of the second field and drag it into the editing host: it is inserted
+    there, and, the platform's operation being a move, it is gone from the field.</figcaption>
+  </figure>
+</section>
+<script src=support/drag-log.js></script>
+</body>
+</html>

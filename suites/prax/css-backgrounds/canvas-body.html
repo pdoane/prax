@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas background: from the body</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 4.2 The Canvas Background and the HTML &lt;body&gt; Element</div>
+  <h1>The canvas background: from the body</h1>
+  <p class=pr-lede><q>if the computed value of 'background-image' on the root element is none and its
+  'background-color' is transparent, user agents must instead propagate the computed values of the background
+  properties from that element's first HTML BODY or XHTML body child element. The used values of that BODY element's
+  background properties are their initial values, and the propagated values are treated as if they were specified on
+  the root element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#body-background">CSS Backgrounds 4 §4.2</a></span>
+  Each figure is a frame whose root element has <code>margin: 10px</code> and a dashed outline; its body has
+  <code>margin: 20px; height: 20px</code> and a solid outline.</p>
+</header>
+
+<section>
+  <h2>As if specified on the root</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; outline: 1px dashed #1f2430 } body { margin: 20px; height: 20px; outline: 1px solid #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>&quot;) no-repeat }</style>"></iframe></div>
+    <figcaption>The body's square, <code>no-repeat</code> at <code>0 0</code>: at the root's corner, 10px from the
+    frame's, not at the body's. <span class=pr-flag>Safari</span> At the frame's corner.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; outline: 1px dashed #1f2430 } body { margin: 20px; height: 20px; outline: 1px solid #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>&quot;) 0 0 / 100% 100% no-repeat }</style>"></iframe></div>
+    <figcaption><code>0 0 / 100% 100%</code>: an ellipse as big as the root's box, 180 by 60, not the body's 140 by
+    20. <span class=pr-flag>Safari</span> Places it at the frame's corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only when the root has neither</h2>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; outline: 1px dashed #1f2430; background-image: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='2' fill='%234f81bd'/></svg>&quot;) } body { margin: 20px; height: 20px; outline: 1px solid #1f2430; background: #d68a3c }</style>"></iframe></div>
+    <figcaption>The root has an image of dots and no color: its dots cover the frame, and the body keeps its orange,
+    inside its own outline.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; outline: 1px dashed #1f2430 } body { margin: 20px; height: 20px; outline: 1px solid #1f2430; background: #d68a3c; contain: paint }</style>"></iframe></div>
+    <figcaption>A note: <q>Using containment disables this special handling of the HTML &lt;body&gt; element.</q>
+    With <code>contain: paint</code>, the body's orange stays in the body.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

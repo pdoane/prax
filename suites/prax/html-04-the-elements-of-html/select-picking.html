@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Picking an option</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.7 The select element</div>
+  <h1>Picking an option</h1>
+  <p class=pr-lede><q>The user agent should allow the user to pick an option element from a select element in its
+  list of options</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">HTML §4.10.7</a></span></p>
+</header>
+
+<section>
+  <h2>One option, then input and change</h2>
+  <p><q>Fire an event named input at element</q>
+  <q>Fire an event named change at element</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <select id=dropdown><option>Apple<option>Pear<option>Plum</select>
+        <select id=listbox size=3><option>Apple<option>Pear<option>Plum</select>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Open the drop-down box and pick Pear: it shows Pear, and <code>input</code> then
+    <code>change</code> at <code>dropdown</code>. Click Plum in the list box: only Plum is highlighted, and the same
+    two at <code>listbox</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Toggling, and unselecting</h2>
+  <p>With <code>multiple</code>, the user can <q>toggle the selectedness of the option elements</q> <q>that are
+  themselves not disabled</q>; without it, in a list box, <q>request that the option whose selectedness is true, if
+  any, be unselected.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <select id=many multiple><option id=apple selected>Apple<option id=pear>Pear<option id=plum disabled>Plum<option id=fig>Fig</select>
+      </div>
+      <ol class=pr-log data-log="click input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Hold Command (Control off macOS) and click Pear: Apple and Pear are highlighted, then
+    <code>input</code> and <code>change</code>. Click Plum, disabled: nothing, no <code>click</code>.</figcaption>
+  </figure><figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <select id=single size=3><option selected>Apple<option>Pear<option>Plum</select>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Hold Command (Control off macOS) and click Apple: where the browser offers this, no row is
+    highlighted, then <code>input</code> and <code>change</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

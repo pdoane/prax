@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The maxlength attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.3 Limiting user input length: the maxlength attribute</div>
+  <h1>The maxlength attribute</h1>
+  <p class=pr-lede><q>A form control maxlength attribute, controlled by the dirty value flag, declares a limit on the
+  number of characters a user can input.</q> Each textarea here has <code>maxlength=10</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#limiting-user-input-length:-the-maxlength-attribute">HTML §4.10.19.3</a></span></p>
+</header>
+
+<section>
+  <h2>Typing stops at the limit</h2>
+  <p><q>User agents may prevent the user from causing the element's API value to be set to a value whose length is
+  greater than the element's maximum allowed value length.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#limiting-user-input-length:-the-maxlength-attribute">§4.10.19.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <textarea maxlength=10 cols=20 rows=2 placeholder="type 12 letters"></textarea>
+    </div>
+    <figcaption>Type "abcdefghijkl": where the browser prevents it, the text stops at "abcdefghij". A line break counts
+    as one character.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Too long, only after a user edit</h2>
+  <p><q>If an element has a maximum allowed value length, its dirty value flag is true, its value was last changed by a
+  user edit (as opposed to a change made by a script), and the length of the element's API value is greater than the
+  element's maximum allowed value length, then the element is suffering from being too long.</q> The page's script sets
+  the textarea's value to 14 characters. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#limiting-user-input-length:-the-maxlength-attribute">§4.10.19.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=long-result>
+        <textarea id=scripted name=text maxlength=10 cols=20 rows=1></textarea>
+        <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=long-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Submit: the 14 characters are submitted. Delete the last one and click Submit: 13 are still too
+    many, so the browser reports the problem, and the frame keeps the earlier text.</figcaption>
+  </figure>
+</section>
+<script>
+  // Sets a value longer than maxlength from script, which does not make the textarea too long.
+  document.getElementById("scripted").value = "set by script!";
+</script>
+</body>
+</html>

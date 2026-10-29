@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline boxes in bidirectional text: ltr</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .deco {
+    margin: 0 10px;
+    padding: 0 4px;
+    background: #f9cc9d;
+    border-left: 6px solid #c0392b;
+    border-right: 6px solid #2c5a8f;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.6 The box model for inline elements in bidirectional context</div>
+  <h1>Inline boxes in bidirectional text: ltr</h1>
+  <p class=pr-lede><q>For each line box, UAs must take the inline boxes generated for each element and render the margins,
+  borders and padding in visual order (not logical order).</q> The element in each figure has a
+  red 6px left border and a blue 6px right one.</p>
+</header>
+
+<section>
+  <h2>direction: ltr</h2>
+  <p><q>When the element's 'direction' property is 'ltr', the left-most generated box of the first line box in which
+  the element appears has the left margin, left border and left padding, and the right-most generated box of the last
+  line box in which the element appears has the right padding, right border and right margin.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#bidi-box-model">CSS 2 §8.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text">Before <span class=deco>the element starts here and runs on across three lines, through
+    a middle line, to end here</span> after.</div>
+    <figcaption>Red at the left of the element's first line, blue at the right of its last. The line between has
+    neither.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide pr-text">Before <span class=deco>all on one line</span> after.</div>
+    <figcaption>On one line, that box is both first and last: red on its left, blue on its right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

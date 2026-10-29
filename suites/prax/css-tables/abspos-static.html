@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Static positions in table parts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; height: 40px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .abs { position: absolute; width: 20px; height: 10px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 4.3 With a table-internal box as non-containing block parent</div>
+  <h1>Static positions in table parts</h1>
+  <p class=pr-lede><q>The only influence of non-containing block parent of an absolutely-positioned box is to define its
+  static position, in case both top+bottom and/or left+right end up being auto.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#static-position">CSS Table 3 §4.3</a></span>
+  Purple boxes are absolutely positioned with every inset <code>auto</code>, their containing block the page's; text
+  is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>In a cell, as in a block</h2>
+  <p><q>For table-cells, the absolutely-positioned content is positioned follows the rules for block layout as
+  usual.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>aaa<div class=abs></div>bb</td><td>cc</td></tr></table></div>
+    <figcaption>Between "aaa" and "bb" in the blue cell: where the next block would start, under "aaa", at the
+    cell's left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>aa</td><td style="vertical-align: bottom"><div class=abs></div>cc</td></tr></table></div>
+    <figcaption>First in a <code>vertical-align: bottom</code> cell: at the top of the content, where "cc" starts,
+    at the cell's bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Elsewhere, a cell of its own</h2>
+  <p><q>Due to table fixup, it is not possible to create an absolutely-positioned box that is the child of a
+  table-internal box that is not a table-cell</q>: the fixup takes it as <q>inline elements of zero width and
+  height</q> (<a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">§2.2.1</a>).</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>aa</div><div class=abs></div><div class=pr-table-cell>bb</div></div></div></div>
+    <figcaption>A box straight in a row, between two cells: it gets an anonymous cell, so its static position is
+    in a 0px column between "aa" and "bb".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

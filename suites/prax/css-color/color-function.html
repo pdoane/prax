@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The color() function</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.1 Specifying Predefined Colors: the color() function</div>
+  <h1>The color() function</h1>
+  <p class=pr-lede><q>The color() function allows a color to be specified in a particular, specified color space
+  (rather than the implicit sRGB color space that most of the other color functions operate in).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#color-function">CSS Color 4 §10.1</a></span></p>
+</header>
+
+<section>
+  <h2>A space, three components, and alpha</h2>
+  <p><q>An &lt;ident&gt; denoting one of the predefined color spaces</q>, <q>The three parameter values that the color
+  space takes</q>, <q>An optional slash-separated &lt;alpha-value&gt;.</q> 10.2 to 10.9 show each space.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 0 1 0)"></div><div class=sw style="background: color(srgb 0% 100% 0%)"></div><div class=sw style="background: lime"></div></div>
+    <figcaption><code>color(srgb 0 1 0)</code>, <code>color(srgb 0% 100% 0%)</code> and <code>lime</code>: one
+    green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: color(display-p3 0.6 0.4 0.2 / 0.5)"></div><div class=sw style="background: rgb(63.5% 38.9% 15% / 0.5)"></div></div>
+    <figcaption><code>color(display-p3 0.6 0.4 0.2 / 0.5)</code> beside <code>rgb(63.5% 38.9% 15% / 0.5)</code>,
+    on a checkerboard: one half-transparent brown.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out-of-range values are kept</h2>
+  <p><q>An out of gamut color has component values less than 0 or 0%, or greater than 1 or 100%. These are not
+  invalid, and are retained for intermediate computations</q>. Each swatch is the middle of
+  <code>linear-gradient(in srgb to right, A, black)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>), its middle 40px of 4000px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in srgb to right, color(srgb 1.5 0 0), black)"></div><div class=sw style="background: rgb(75% 0% 0%)"></div><div class=sw style="background: rgb(50% 0% 0%)"></div></div>
+    <figcaption>A is <code>color(srgb 1.5 0 0)</code>: halfway to black, red 0.75, as <code>rgb(75% 0% 0%)</code>,
+    the second swatch; not 0.5 (the third), as if A had been clipped to 1 first. <span class=pr-flag>Firefox</span> Clips A first: the third red.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 1.5 0 0)"></div><div class=sw style="background: rgb(100% 71.7% 66.5%)"></div></div>
+    <figcaption>For display, <code>color(srgb 1.5 0 0)</code> itself is gamut mapped (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>): a light salmon, as <code>rgb(100% 71.7%
+    66.5%)</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Each clips it to red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

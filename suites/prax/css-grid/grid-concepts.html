@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid layout concepts: rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { display: grid; grid-template-columns: 40px 60px; grid-template-rows: 20px 30px; }
+  .g > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 3 Grid Layout Concepts and Terminology</div>
+  <h1>Grid layout concepts: rows and columns</h1>
+  <p class=pr-lede><q>The grid is an intersecting set of horizontal and vertical grid lines that divides the grid
+  container’s space into grid areas, into which grid items (representing the grid container’s content) can be
+  placed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-concepts">CSS Grid Layout 2 §3</a></span></p>
+</header>
+
+<section>
+  <h2>Columns along the block axis, rows along the inline axis</h2>
+  <p><q>There are two sets of grid lines: one set defining columns that run along the block axis, and an orthogonal set
+  defining rows along the inline axis.</q> Each grid is <code>grid-template-columns: 40px 60px</code> and
+  <code>grid-template-rows: 20px 30px</code>, with items 1 to 4 placed in order, along the first row and then the
+  second.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div>
+    <figcaption>Horizontal: the columns are 40 and 60px wide, left to right; the rows 20 and 30px tall, top to
+    bottom. 1 and 2 across the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical"><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div>
+    <figcaption><code>vertical-rl</code>: the inline axis runs down, so the columns are 40 and 60px tall, top to
+    bottom, and the rows 20 and 30px wide, right to left. 1 and 2 down the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row" style="direction: rtl"><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div>
+    <figcaption><code>direction: rtl</code>: the inline axis runs left, so the 40px column is at the right, from 160
+    to 200px, and 1 in it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

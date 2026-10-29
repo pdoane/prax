@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- The same document on screen and with its print rules applied. Print rules hide chrome, use serif text and expand link targets. A second copy applies them on screen; red marks show break hints. -->
+<title>Print stylesheet</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.stagelab { display:flex; align-items:baseline; gap:8px; font-size:10px; color:#8a93a0; margin:0 0 5px }
+.stagelab b { font-size:11px; color:#22282f; text-transform:none; letter-spacing:0 }
+.doc { background:#fff; border:1px solid #d3d8de; border-radius:8px; overflow:hidden; color:#22282f; font-size:11.5px; line-height:1.55; margin-bottom:12px }
+.doc .top { display:flex; align-items:center; gap:10px; background:#22303f; color:#fff; padding:8px 12px }
+.doc .top .nm { font-weight:bold; font-size:13px; flex:1 }
+.doc .top span { font-size:10px; color:#a9b8c8 }
+.doc .cols { display:flex }
+.doc .side { flex:none; width:120px; background:#f4f6f8; border-right:1px solid #e6e9ed; padding:9px 10px; font-size:10px; color:#5d6673 }
+.doc .side b { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#8a93a0; margin-bottom:3px }
+.doc .side a { display:block; color:#4a5561; text-decoration:none; padding:1px 0 }
+.doc .body { flex:1; padding:10px 13px; min-width:0 }
+.doc h2 { font-size:15px; margin:0 0 2px }
+.doc .meta { font-size:10px; color:#8a93a0; margin-bottom:6px }
+.doc p { margin:0 0 6px }
+.doc h3 { font-size:12px; margin:8px 0 2px }
+.doc a.ref { color:#1c5b96; text-decoration:underline }
+.doc .promo { background:#eef4fa; border:1px solid #cfe0f0; border-radius:6px; padding:6px 9px; font-size:10.5px; color:#1c5b96; margin:6px 0 }
+.doc table { border-collapse:collapse; width:100%; font-size:10.5px; margin:5px 0 }
+.doc th { text-align:left; background:#f4f6f8; color:#5d6673; font-size:9px; text-transform:uppercase; letter-spacing:.07em; padding:3px 6px; border-bottom:1px solid #ccd3da }
+.doc td { padding:3px 6px; border-bottom:1px solid #eef1f4 }
+.doc td.n, .doc th.n { text-align:right }
+.brk { display:block; border-top:1px dashed #c0392b; color:#c0392b; font-size:9px; letter-spacing:.06em; text-transform:uppercase; margin:7px 0 5px; padding-top:2px }
+
+/* what a printer gets */
+@media print {
+  .stagelab, .doc .side, .doc .top span:not(.nm), .brk { display:none }
+  .doc { border:none; font-family:serif; font-size:10pt; color:#000 }
+  .doc .top { background:none; color:#000; border-bottom:1pt solid #000; padding:0 0 4pt }
+  .doc a.ref { color:#000; text-decoration:none }
+  .doc a.ref::after { content:" (" attr(href) ")"; font-size:8pt; color:#444 }
+  .doc .promo { display:none }
+  .doc h3 { break-after:avoid }
+  .doc table { break-inside:avoid }
+}
+
+/* the same declarations, applied on screen so the print result is visible */
+.asprint { font-family:serif; border:1px solid #d3d8de; border-radius:0; color:#000 }
+.asprint .side, .asprint .promo, .asprint .top span:not(.nm) { display:none }
+.asprint .top { background:none; color:#000; border-bottom:1px solid #000; padding:0 0 4px; margin:12px 14px 0 }
+.asprint .body { padding:8px 14px 12px }
+.asprint a.ref { color:#000; text-decoration:none }
+.asprint a.ref::after { content:" (" attr(href) ")"; font-size:9px; color:#555 }
+.asprint th { background:none; border-bottom:1px solid #000 }
+.asprint .brk { border-top:1px dashed #c0392b }
+</style>
+</head>
+<body>
+<div class="stagelab"><b>On screen</b> full chrome, sidebar, promotion box, and coloured links</div>
+
+<div class="doc">
+  <div class="top"><span class="nm">Riverworks</span><span>Guides</span><span>Reference</span><span>Sign in</span></div>
+  <div class="cols">
+    <div class="side">
+      <b>Water rights</b>
+      <a href="#">Overview</a>
+      <a href="#">Abstraction</a>
+      <a href="#">Hands-off flow</a>
+      <a href="#">Appeals</a>
+    </div>
+    <div class="body">
+      <h2>Abstraction at low flow</h2>
+      <div class="meta">Updated 14 March 2026 &#183; Reviewed by G. Vandeput</div>
+      <p>A licence sets the volume a site may take and the flow below which it
+      may take nothing. The second number decides whether a mill runs in August.
+      The method is set out in <a class="ref" href="https://riverworks.example/flow-tables">the flow tables</a>.</p>
+      <div class="promo">Members get the gauge archive as a spreadsheet. Join for &#8364;20 a year.</div>
+      <h3>Typical conditions</h3>
+      <table>
+        <thead><tr><th>Site</th><th class="n">Take</th><th class="n">Hands-off</th><th class="n">Days</th></tr></thead>
+        <tbody>
+          <tr><td>Vierset</td><td class="n">1.20</td><td class="n">0.90</td><td class="n">301</td></tr>
+          <tr><td>Comblain</td><td class="n">0.85</td><td class="n">0.70</td><td class="n">288</td></tr>
+          <tr><td>Hamoir</td><td class="n">2.10</td><td class="n">1.40</td><td class="n">334</td></tr>
+        </tbody>
+      </table>
+      <p>Where a fish pass is fitted the pass takes its share first, and the
+      licence names it separately.</p>
+    </div>
+  </div>
+</div>
+
+<div class="stagelab"><b>As printed</b> chrome and promotion removed, serif face, link targets written out, breaks marked</div>
+
+<div class="doc asprint">
+  <div class="top"><span class="nm">Riverworks</span><span>Guides</span><span>Reference</span><span>Sign in</span></div>
+  <div class="cols">
+    <div class="side">
+      <b>Water rights</b>
+      <a href="#">Overview</a>
+    </div>
+    <div class="body">
+      <h2>Abstraction at low flow</h2>
+      <div class="meta">Updated 14 March 2026 &#183; Reviewed by G. Vandeput</div>
+      <p>A licence sets the volume a site may take and the flow below which it
+      may take nothing. The second number decides whether a mill runs in August.
+      The method is set out in <a class="ref" href="https://riverworks.example/flow-tables">the flow tables</a>.</p>
+      <div class="promo">Members get the gauge archive as a spreadsheet. Join for &#8364;20 a year.</div>
+      <span class="brk">break-after: avoid keeps this heading with its table</span>
+      <h3>Typical conditions</h3>
+      <table>
+        <thead><tr><th>Site</th><th class="n">Take</th><th class="n">Hands-off</th><th class="n">Days</th></tr></thead>
+        <tbody>
+          <tr><td>Vierset</td><td class="n">1.20</td><td class="n">0.90</td><td class="n">301</td></tr>
+          <tr><td>Comblain</td><td class="n">0.85</td><td class="n">0.70</td><td class="n">288</td></tr>
+          <tr><td>Hamoir</td><td class="n">2.10</td><td class="n">1.40</td><td class="n">334</td></tr>
+        </tbody>
+      </table>
+      <span class="brk">break-inside: avoid holds the table on one sheet</span>
+      <p>Where a fish pass is fitted the pass takes its share first, and the
+      licence names it separately.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

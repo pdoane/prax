@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The code element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.15 The code element</div>
+  <h1>The code element</h1>
+  <p class=pr-lede><q>The code element represents a fragment of computer code.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-code-element">HTML §4.5.15</a></span></p>
+</header>
+<section>
+  <h2>Monospace</h2>
+  <p><q>code, kbd, samp, tt { font-family: monospace; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> The frame's document holds the text, apart from this
+  page's own style for code.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 13px/20px &quot;PR Noto Sans&quot; }</style>Call <code>getElementById()</code>."></iframe></div>
+    <figcaption>"getElementById()" in a monospace font, the rest in the page's.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

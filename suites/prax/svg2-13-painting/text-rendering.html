@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-rendering</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .small { font: 700 5.5px "PR Arimo"; }
+  .large { font: 700 32px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.10.2 The ‘text-rendering’ property</div>
+  <h1>text-rendering</h1>
+  <p class=pr-lede><q>The 'text-rendering' property provides a hint to the implementation about what tradeoffs to make
+  as it renders text.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#TextRendering">SVG 2 §13.10.2</a></span>
+  Each stage is an SVG 160 by 60. What each value draws is the user agent's choice.</p>
+</header>
+
+<section>
+  <h2>Geometric precision</h2>
+  <p><b>geometricPrecision</b>: <q>This option will usually cause the user agent to suspend the use of hinting so that
+  glyph outlines are drawn with comparable geometric precision to the rendering of path data.</q> The text is 5.5px,
+  in a <code>scale(6)</code>, so 33px on the stage.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(6)"><text class=small x="3" y="7.5" fill="#2c5a8f">Paint</text></g></svg></div>
+    <figcaption><code>auto</code>, the initial value: <q>legibility given more importance than speed and
+    geometric precision</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(6)"><text class=small x="3" y="7.5" fill="#2c5a8f" text-rendering="geometricPrecision">Paint</text></g></svg></div>
+    <figcaption><code>geometricPrecision</code>: the outlines scaled as paths are, the word about 87 wide, from x
+    18. The browsers draw it as they draw <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Legibility and speed</h2>
+  <p><b>optimizeLegibility</b>: <q>The user agent will often choose whether to apply anti-aliasing techniques, built-in
+  font hinting or both to produce the most legible text.</q> <b>optimizeSpeed</b>: <q>This option will sometimes
+  cause the user agent to turn off text anti-aliasing.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text class=large x="10" y="42" fill="#2c5a8f" text-rendering="optimizeLegibility">AVA To</text></svg></div>
+    <figcaption><code>optimizeLegibility</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text class=large x="10" y="42" fill="#2c5a8f" text-rendering="optimizeSpeed">AVA To</text></svg></div>
+    <figcaption><code>optimizeSpeed</code>: the browsers draw it as they draw
+    <code>optimizeLegibility</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

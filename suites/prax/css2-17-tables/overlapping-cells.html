@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Visual layout: overlapping cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; background: #f4f5f7; border: 1px solid #2c5a8f; }
+  .o { background: rgba(214, 138, 60, 0.75); color: white; font-weight: 600; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5 Visual layout of table contents</div>
+  <h1>Visual layout: overlapping cells</h1>
+  <p class=pr-lede>Spanning cells that collide. Cells are 40 by 20; the column-spanning cell is translucent orange.</p>
+</header>
+
+<section>
+  <h2>Overlapping cells</h2>
+  <p><q>If this position would cause a column-spanning cell to overlap a row-spanning cell from a prior row, CSS does
+  not define the results: implementations may either overlap the cells (as is done in many HTML implementations) or may
+  shift the later cell to the right to avoid such overlap.</q> The specification's <q>illegal (X)HTML snippet</q>:
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <pre class=pr-source>&lt;tr>&lt;td>1 &lt;/td>&lt;td rowspan="2">2 &lt;/td>&lt;td>3 &lt;/td>&lt;td>4 &lt;/td>&lt;/tr>
+&lt;tr>&lt;td colspan="2">5 &lt;/td>&lt;/tr></pre>
+  <figure>
+    <div class="pr-stage pr-wide"><table><tr><td>1 </td><td rowspan="2">2 </td><td>3 </td><td>4 </td></tr><tr><td colspan="2" class=o>5 </td></tr></table></div>
+    <figcaption>Cell 5 spans two columns from the first; cell 2 spans two rows in the second. Either rendering is
+    allowed: 5 over 2, or 5 moved right. <span class="pr-flag pr-since">Since CSS 2</span> CSS Tables 3 overlaps
+    them.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#terminology">CSS Table 3 §2.1.1</a>, <a href="https://drafts.csswg.org/css-tables-3/#dimensioning-the-row-column-grid--step1">§3.3.1</a></div>
+  <h2>The cells overlap</h2>
+  <p><q>Apply the HTML5 Table Formatting algorithm, where boxes act like the HTML element equivalent to their display
+  type</q>: a cell starts in the first free slot of its row, and its span may run over taken ones. <q>Each slot of the
+  table grid is covered by at least one table-cell (some of them anonymous), and at most two.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#dimensioning-the-row-column-grid--step1">CSS Table 3 §3.3.1</a>, <a href="https://drafts.csswg.org/css-tables-3/#terminology">§2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide"><table><tr><td>1 </td><td rowspan="2" class=blue>2 </td><td>3 </td><td>4 </td></tr><tr><td colspan="2" class=o>5 </td></tr></table></div>
+    <figcaption>Cell 2 is blue. Cell 5 starts in the first column and covers the first and second: its right half
+    lies over 2's lower half, and 3 and 4 have nothing below them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

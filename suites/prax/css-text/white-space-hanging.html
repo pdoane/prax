@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Preserved spaces: hang, hang conditionally, or not</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .w { width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3.2 Phase II: Trimming and Positioning</div>
+  <h1>Preserved spaces: hang, hang conditionally, or not</h1>
+  <p class=pr-lede><q>If 'white-space-collapse' is 'preserve' and 'text-wrap-mode' is not 'nowrap', the UA must
+  (unconditionally) hang this sequence, unless the sequence is followed by a forced line break, in which case it must
+  conditionally hang the sequence instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-phase-2">CSS Text 4 §4.3.2</a></span>
+  Letters are 10px wide, and the text is highlighted.</p>
+</header>
+
+<section>
+  <h2>The specification's examples</h2>
+  <p>Each stage is 30px wide, <code>pre-wrap</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure w" style="white-space: pre-wrap; text-align: right"><span class=t> 0 0 0 0 </span></div>
+    <figcaption><code>" 0 0 0 0 "</code>, right-aligned: the first two lines' last spaces hang, their 0s flush
+    right; the last line's fits, so does not hang, and its 0 is 10px in.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure w" style="white-space: pre-wrap"><span class=t>0 0 0 0 </span></div>
+    <figcaption><code>"0 0 0 0 "</code>: the final space does not fit, and hangs, so "0 0" fits on the second
+    line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where nothing hangs</h2>
+  <p><q>If 'white-space-collapse' is set to 'break-spaces', spaces, tabs, and other space separators are treated the
+  same as other visible characters: they cannot hang nor have their advance width collapsed.</q> Under
+  <code>pre</code>, which does not wrap, no rule hangs them either. Each stage is 60px wide and right-aligned.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: pre; text-align: right"><span class=t>aa  </span></div>
+    <figcaption><code>pre</code>: "aa" and two spaces take room: "aa" ends 20px from the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: break-spaces; text-align: right"><span class=t>aa  </span></div>
+    <figcaption><code>break-spaces</code>: the same, 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: pre-wrap; text-align: right"><span class=t>aaaaa  </span></div>
+    <figcaption><code>pre-wrap</code>, "aaaaa" and two spaces: the one that fits does not hang, so "aaaaa" ends
+    10px from the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

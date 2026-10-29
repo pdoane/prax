@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clip property: empty and negative regions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p, .where { position: absolute; top: 10px; left: 60px; width: 60px; height: 60px; box-sizing: border-box; }
+  .p { background: #d68a3c; border: 5px solid #9c5f22; }
+  .p .pr-a { width: 90px; margin-top: 15px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.2 Clipping: the 'clip' property</div>
+  <h1>The clip property: empty and negative regions</h1>
+  <p class=pr-lede>Each orange box is 50 by 50 with a 5px border, a 60 by 60 border box at 60, 10, and holds a 90px wide A
+  that overflows it to the right.</p>
+</header>
+
+<section>
+  <h2>Empty regions and negative lengths</h2>
+  <p><q>Care should be taken that no pixels remain visible when &lt;left&gt; and &lt;right&gt; have the same
+  value.</q> <q>Negative lengths are permitted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="where pr-ghost"></div><div class=p style="clip: rect(10px, 30px, 50px, 30px)"><div class="pr-a pr-fit">A</div></div></div>
+    <figcaption><code>rect(10px, 30px, 50px, 30px)</code>: left and right are equal, and no pixel is seen; only the
+    dashed outline of where the box is.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="where pr-ghost"></div><div class=p style="clip: rect(-10px, 80px, 70px, -10px)"><div class="pr-a pr-fit">A</div></div></div>
+    <figcaption><code>rect(-10px, 80px, 70px, -10px)</code>: the region reaches 10px past the box on its four sides,
+    and the first 20px of A past the border are seen.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

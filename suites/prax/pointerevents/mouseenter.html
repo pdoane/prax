@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mouseenter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .outer { height: 80px; margin: 10px 20px; padding: 20px 40px; box-sizing: border-box;
+           background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; }
+  .inner { height: 40px; box-sizing: border-box; background: #f6d7b4; border: 1px solid #9c5f22;
+           font-size: 12px; text-align: center; line-height: 38px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.6 mouseenter</div>
+  <h1>mouseenter</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device is moved onto the boundaries of an
+  element or one of its descendent elements.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseenter">Pointer Events §11.4.6</a></span></p>
+</header>
+<section>
+  <h2>Not when moving onto a descendant</h2>
+  <p><q>This event type is similar to mouseover, but differs in that it does not bubble, and MUST NOT be dispatched when
+  the pointer device moves from an element onto the boundaries of one of its descendent elements.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseenter">§11.4.6</a></span>
+  Each log listens on <code>outer</code> alone, ignoring events that only pass through it on their way to
+  <code>inner</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide" id=stage>
+      <div class=outer id=outer><div class=inner id=inner>inner</div></div>
+      <ol class=pr-log id=log></ol>
+    </div>
+    <figcaption>Move from the stage onto the blue box, then the orange one inside it, then back: at
+    <code>outer</code>, <code>mouseenter</code> once, as the pointer comes onto it; <code>mouseover</code> three
+    times, the second bubbling from <code>inner</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs the mouseenter and mouseover events that reach outer itself, in their bubbling or target phase.
+  const outer = document.getElementById("outer"), log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 4);
+  for (const type of ["mouseenter", "mouseover"]) {
+    outer.addEventListener(type, event => {
+      const item = document.createElement("li");
+      item.textContent = type + " target=" + event.target.id;
+      log.append(item);
+      while (log.children.length > 4)
+        log.firstElementChild.remove();
+    });
+  }
+</script>
+</body>
+</html>

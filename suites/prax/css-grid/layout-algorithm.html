@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The grid layout algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .tall { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12 Grid Layout Algorithm</div>
+  <h1>The grid layout algorithm</h1>
+  <p class=pr-lede>The algorithm <q>sizes the grid container, sizes and positions all the grid tracks, and lays out the
+  grid items which have been placed into its grid areas.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#layout-algorithm">CSS Grid Layout 2 §12</a></span></p>
+</header>
+
+<section>
+  <h2>Percentages: auto for the container's size, then resolved</h2>
+  <p>2. <q>Find the size of the grid container</q>: <q>During this phase, cyclic &lt;percentage&gt;s in track sizes are
+  treated as auto.</q> 3. <q>Given the resulting grid container size, run the Grid Sizing Algorithm</q>: <q>During
+  this phase, &lt;percentage&gt;s in track sizes are resolved against the grid container size.</q> Each grid is
+  dashed.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: inline-grid; grid-template-columns: 50% 50%; vertical-align: top"><div class=t>abcd</div><div class=u>ef</div></div></div>
+    <figcaption>An <code>inline-grid</code>, columns <code>50% 50%</code>: as <code>auto</code>, the grid is
+    40 + 20 = 60px wide; then each column is 30px: blue 30px, its text spilling, orange from 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: grid; grid-template-rows: 50% 20px; width: 100px"><div class="t tall">ab</div><div class=u>cd</div></div></div>
+    <figcaption>Rows <code>50% 20px</code>, height <code>auto</code>; blue is 40px tall. As <code>auto</code>, the
+    grid is 60px tall; then the first row is 30px: orange from 30 to 50px, over blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Grid areas are definite</h2>
+  <p>4. <q>Lay out the grid items into their respective containing blocks. Each grid area's width and height are
+  considered definite for this purpose.</q> <q>the size of a grid item which is stretched is also considered
+  definite.</q> Each row is <code>auto</code>, and blue, 40px tall, sizes it.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class="t tall">ab</div><div class=u style="height: 50%">cd</div></div></div>
+    <figcaption>Orange, <code>height: 50%</code> of its grid area: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class="t tall">ab</div><div class=pr-parent><div class=u style="height: 75%">cd</div></div></div></div>
+    <figcaption>The tinted item is stretched to 40px; its child, <code>height: 75%</code>, is 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

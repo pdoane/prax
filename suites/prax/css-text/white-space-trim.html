@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>white-space-trim</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .comma::before { content: ", "; white-space-trim: discard-before; }
+  .pre { margin: 0; white-space: pre; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.2 White Space Trimming: the white-space-trim property</div>
+  <h1>white-space-trim</h1>
+  <p class=pr-lede><q>This property allows authors to specify trimming behavior at the beginning and end of a
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-trim">CSS Text 4 §4.2</a></span>
+  No browser has it. Letters are 10px wide; the boxes it is set on are highlighted.</p>
+</header>
+
+<section>
+  <h2>discard-before and discard-after</h2>
+  <p><code>discard-before</code>: <q>This value directs the UA to collapse all collapsible whitespace immediately
+  before the start of the element.</q> <code>discard-after</code>: <q>... immediately after the end of the
+  element.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">one
+<span class=comma>two</span>
+<span class=comma>six</span></div>
+    <figcaption>Items on their own source lines, a <code>::before</code> of ", " with
+    <code>discard-before</code>: "one, two, six". <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "one , two , six".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=t style="white-space-trim: discard-after">one</span> two</div>
+    <figcaption><code>discard-after</code> on "one": the space after it goes, "onetwo". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "one
+    two".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>discard-inner</h2>
+  <p><q>For block containers this value directs UAs to discard all whitespace at the beginning of the element up to
+  and including the last segment break before the first non-white-space character in the element as well as to
+  discard all white space at the end of the element starting with the first segment break after the last
+  non-white-space character in the element. For other elements this value directs UAs to discard all whitespace at
+  the beginning and end of the element.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="pre t" style="white-space-trim: discard-inner">
+  some
+preformatted
+  text
+</div></div>
+    <figcaption>The specification's <code>pre</code>, its source starting and ending with a newline: three lines,
+    60px tall, "some" and "text" indented 20px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> An empty line above the text: 80px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">[<span class=t style="white-space-trim: discard-inner">
+  some
+inline
+  text
+</span>]</div>
+    <figcaption>On an inline box: "[some inline text]", no space inside the brackets. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "[ some inline text ]".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

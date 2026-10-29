@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement algorithm: the columns of the implicit grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(2, 40px); grid-auto-columns: 40px; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.5 Grid Item Placement Algorithm, step 3</div>
+  <h1>Placement algorithm: the columns of the implicit grid</h1>
+  <p class=pr-lede><q>Determine the columns in the implicit grid.</q> <q>Start with the columns from the explicit
+  grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-placement-algo">CSS Grid Layout 2 §8.5</a></span>
+  The auto-placed items then flow through all of these columns, and only rows are added after.</p>
+</header>
+
+<section>
+  <h2>Columns for items with a definite column</h2>
+  <p><q>Among all the items with a definite column position (explicitly positioned items, items positioned in the
+  previous step, and items not yet positioned but with a definite column) add columns to the beginning and end of the
+  implicit grid as necessary to accommodate those items.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-d style="grid-column: -4">X</div><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-a>4</div></div></div>
+    <figcaption>Two explicit 40px columns; X is <code>grid-column: -4</code>, which adds a column before them. X in
+    it, at 0; then 1 and 2 in the explicit columns, 3 and 4 in the next row from the added column: three
+    columns, 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(5, 30px); grid-auto-columns: 30px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d style="grid-column: 4 / span 3">X</div><div class=pr-a>4</div><div class=pr-b>5</div><div class=pr-c>6</div><div class=pr-a>7</div><div class=pr-b>8</div><div class=pr-c>9</div></div></div>
+    <figcaption>The spec's example, in 30px columns: five explicit; X, <code>4 / span 3</code>, ends on line 7, so six
+    columns, 180px. 1, 2 and 3, then X, fill row 1; 4 to 9 fill all six columns of row 2.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Columns for the widest span</h2>
+  <p><q>If the largest column span among all the items without a definite column position is larger than the width of
+  the implicit grid, add columns to the end of the implicit grid to accommodate that column span.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div></div></div>
+    <figcaption>Two columns: 1 and 2 in row 1, 3 in row 2.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d style="grid-column: span 4">W</div><div class=pr-a>4</div></div></div>
+    <figcaption>W, <code>span 4</code>, makes four columns: 1, 2 and 3 in row 1; W in row 2, 0 to 160px; 4 in row
+    3.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

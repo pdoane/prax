@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>place-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template: 20px / 50px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.2 Content-Distribution Shorthand: the place-content property</div>
+  <h1>place-content</h1>
+  <p class=pr-lede><q>The first value is assigned to 'align-content'. The second value is assigned to
+  'justify-content'; if omitted, it is copied from the first value, unless that value is a &lt;baseline-position&gt;
+  in which case it is defaulted to start.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#place-content">CSS Box Alignment 3 §5.2</a></span>
+  Each stage is a grid 200 by 60 with one 50 by 20 cell.</p>
+</header>
+
+<section>
+  <h2>Two values, one, and a baseline</h2>
+  <figure>
+    <div class=pr-stage><div class=g style="place-content: end start"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-content: end start</code>: A at the bottom left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="place-content: center"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-content: center</code>: A in the middle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="place-content: last baseline"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-content: last baseline</code>: <code>last baseline</code> down and <code>start</code> across:
+    A at the bottom left, by its fallback. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> A at
+    the top left, as with no declaration; <span class=pr-flag>Firefox</span> at the top left too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="place-content: space-evenly end"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-content: space-evenly end</code>: A centered down, at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

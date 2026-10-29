@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The Z axis, toward the viewer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 100px; }
+  .p, .g { position: absolute; left: 60px; top: 40px; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4 The Transform Rendering Model</div>
+  <h1>The Z axis, toward the viewer</h1>
+  <p class=pr-lede><q>Three-dimensional transform functions conceptually extend the coordinate space into three
+  dimensions, adding a Z axis perpendicular to the plane of the screen, that increases towards the viewer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#transform-rendering">CSS Transforms 2 §4</a></span>
+  Each stage has <code>perspective: 100px</code>, centered, so that a box nearer the viewer looks larger. Each blue box
+  is 40 by 20 at the stage's center, where the dashed outline is.</p>
+</header>
+
+<section>
+  <h2>Positive Z is nearer</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(50px)">AB</div></div>
+    <figcaption><code>translateZ(50px)</code>: halfway to the viewer, twice the size, 80 by 40, 40 to 120 across, 30
+    to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(-100px)">AB</div></div>
+    <figcaption><code>translateZ(-100px)</code>: away, half the size, 20 by 10, 70 to 90 across, 45 to 55
+    down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The Z of transform-origin</h2>
+  <p>This module extends the rendering model <q>to account for the existence of three-dimensional transform functions,
+  the Z value of transform-origin</q>: its third value is the depth of the point that a transform is applied about.
+  Each box has <code>rotateY(180deg)</code>, which turns it to show its back, its "AB" mirrored.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotateY(180deg)">AB</div></div>
+    <figcaption>The initial <code>50% 50% 0</code>: turned in place, the same size.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform-origin: 50% 50% -50px; transform: rotateY(180deg)">AB</div></div>
+    <figcaption><code>50% 50% -50px</code>: turned about a point 50px behind it, it ends 100px behind, half the size,
+    20 by 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform-origin: 50% 50% 25px; transform: rotateY(180deg)">AB</div></div>
+    <figcaption><code>50% 50% 25px</code>: turned about a point 25px in front, it ends 50px in front, twice the size,
+    80 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

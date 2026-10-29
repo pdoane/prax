@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>frame-sizing: an iframe sized to its document</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 110px; height: 154px; }
+  figure.f { margin-right: 8px; }
+  figure.f figcaption { max-width: 116px; }
+  iframe { display: block; width: 100px; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.3 Responsively-sized iframes: the frame-sizing property</div>
+  <h1>frame-sizing: an iframe sized to its document</h1>
+  <p class=pr-lede><q>The frame-sizing property allows these elements to opt into exposing their actual content size,
+  known as their internal layout intrinsic size.</q> With content-width, content-height, content-block-size or
+  content-inline-size, <q>If the element has an internal layout intrinsic size, its intrinsic size takes the
+  corresponding dimension (either width or height) from the internal layout intrinsic size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#responsive-iframes">CSS Box Sizing 4 §5.3</a></span>
+  Each iframe is 100px wide; its document opts in with <code>&lt;meta name=responsive-embedded-sizing&gt;</code> and
+  holds a green block 60px tall, with no margins.</p>
+</header>
+
+<section>
+  <h2>The content's height, where the document opts in</h2>
+  <figure class=f>
+    <div class="pr-stage s"><iframe srcdoc="<meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div>"></iframe></div>
+    <figcaption><code>frame-sizing: auto</code>: the size is ignored, and the iframe is the default 150px tall.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe style="frame-sizing: content-height" srcdoc="<meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div>"></iframe></div>
+    <figcaption><code>frame-sizing: content-height</code>: 60px tall, as its green block. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe style="frame-sizing: content-block-size" srcdoc="<meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div>"></iframe></div>
+    <figcaption><code>content-block-size</code>, the iframe horizontal: the same, 60px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><iframe style="frame-sizing: content-height" srcdoc="<body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div>"></iframe></div>
+    <figcaption>A document that does not opt in has no such size: 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

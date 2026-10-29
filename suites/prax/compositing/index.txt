@@ -1,0 +1,120 @@
+00-supports-1.html
+# compositing-2/#introduction 1 Introduction: no page; it introduces compositing and blending, which the later sections show
+# compositing-2/#reading-this-document 2 Reading This Document: no page; it says how the document is organized
+# compositing-2/#module-interactions 2.1 Module interactions: no page; it says which properties create stacking contexts, which 3.4's pages show
+# compositing-2/#values 2.2 Values: no page; it defines the notation and the CSS-wide keywords
+# compositing-2/#csscompositingandblending 3 Specifying Blending in CSS: no page; it introduces the subsections
+compositing-2/#compositingandblendingorder 3.1 Order of graphical operations
+    graphics-order.html
+compositing-2/#csscompositingrules_CSS 3.2 Behavior specific to HTML
+    html-groups.html
+compositing-2/#csscompositingrules_SVG 3.3 Behavior specific to SVG
+    svg-groups.html
+# compositing-2/#csskeywords 3.4 CSS Properties: no page; it introduces the three properties
+compositing-2/#mix-blend-mode 3.4.1 The mix-blend-mode property
+    mix-blend-mode.html
+    mix-blend-mode-backdrop.html
+    mix-blend-mode-plus-lighter.html
+compositing-2/#isolation 3.4.2 The isolation property
+    isolation.html
+compositing-2/#background-blend-mode 3.4.3 The background-blend-mode property
+    background-blend-mode.html
+    background-blend-mode-layers.html
+compositing-2/#canvascompositingandblending 4 Specifying Compositing and Blending in Canvas 2D
+    canvas-composite-operation.html
+# compositing-2/#whatiscompositing 5 Introduction to compositing: no page; it introduces 5.1
+compositing-2/#simplealphacompositing 5.1 Simple alpha compositing
+    simple-alpha.html
+compositing-2/#simplealphacompositingexamples 5.1.1 Examples of simple alpha compositing
+    simple-alpha-examples.html
+compositing-2/#generalformula 6 General Formula for Compositing and Blending
+    general-formula.html
+compositing-2/#backdropCalc 7 Backdrop calculation
+    backdrop.html
+compositing-2/#backdropexamples 7.1 Examples of backdrop calculation
+    backdrop-examples.html
+compositing-2/#groups 8 Compositing Groups
+    groups.html
+compositing-2/#groupinvariance 8.1 Group invariance
+    group-invariance.html
+compositing-2/#isolatedgroups 8.2 Isolated Groups
+    isolated-groups.html
+compositing-2/#pagebackdrop 8.3 The Root Element Group
+    root-element-group.html
+compositing-2/#rootgroup 8.4 The Root Group
+    root-group.html
+# compositing-2/#advancedcompositing 9 Advanced compositing features: no page; it introduces 9.1 and 9.2
+compositing-2/#porterduffcompositingoperators 9.1 The Porter Duff Compositing Operators
+    porter-duff.html
+compositing-2/#porterduffcompositingoperators_clear 9.1.1 Clear
+    operator-clear.html
+compositing-2/#porterduffcompositingoperators_src 9.1.2 Copy
+    operator-copy.html
+# compositing-2/#porterduffcompositingoperators_dst 9.1.3 Destination: no page; the level removed destination from <composite-mode>, and no CSS property names it, so nothing draws it
+compositing-2/#porterduffcompositingoperators_srcover 9.1.4 Source Over
+    operator-source-over.html
+compositing-2/#porterduffcompositingoperators_dstover 9.1.5 Destination Over
+    operator-destination-over.html
+compositing-2/#porterduffcompositingoperators_srcin 9.1.6 Source In
+    operator-source-in.html
+compositing-2/#porterduffcompositingoperators_dstin 9.1.7 Destination In
+    operator-destination-in.html
+compositing-2/#porterduffcompositingoperators_srcout 9.1.8 Source Out
+    operator-source-out.html
+compositing-2/#porterduffcompositingoperators_dstout 9.1.9 Destination Out
+    operator-destination-out.html
+compositing-2/#porterduffcompositingoperators_srcatop 9.1.10 Source Atop
+    operator-source-atop.html
+compositing-2/#porterduffcompositingoperators_dstatop 9.1.11 Destination Atop
+    operator-destination-atop.html
+compositing-2/#porterduffcompositingoperators_xor 9.1.12 XOR
+    operator-xor.html
+compositing-2/#porterduffcompositingoperators_plus 9.1.13 Lighter
+    operator-lighter.html
+compositing-2/#porterduffcompositingoperators_plus_darker 9.1.14 Plus-darker
+    operator-plus-darker.html
+compositing-2/#porterduffcompositingoperators_plus_lighter 9.1.15 Plus-lighter
+    operator-plus-lighter.html
+compositing-2/#groupcompositing 9.2 Group compositing behavior with Porter Duff modes
+    group-porter-duff.html
+compositing-2/#blending 10 Blending
+    blending.html
+compositing-2/#blendingseparable 10.1 Separable blend modes
+    separable.html
+compositing-2/#blendingnormal 10.1.1 normal blend mode
+    blend-normal.html
+compositing-2/#blendingmultiply 10.1.2 multiply blend mode
+    blend-multiply.html
+compositing-2/#blendingscreen 10.1.3 screen blend mode
+    blend-screen.html
+compositing-2/#blendingoverlay 10.1.4 overlay blend mode
+    blend-overlay.html
+compositing-2/#blendingdarken 10.1.5 darken blend mode
+    blend-darken.html
+compositing-2/#blendinglighten 10.1.6 lighten blend mode
+    blend-lighten.html
+compositing-2/#blendingcolordodge 10.1.7 color-dodge blend mode
+    blend-color-dodge.html
+compositing-2/#blendingcolorburn 10.1.8 color-burn blend mode
+    blend-color-burn.html
+compositing-2/#blendinghardlight 10.1.9 hard-light blend mode
+    blend-hard-light.html
+compositing-2/#blendingsoftlight 10.1.10 soft-light blend mode
+    blend-soft-light.html
+compositing-2/#blendingdifference 10.1.11 difference blend mode
+    blend-difference.html
+compositing-2/#blendingexclusion 10.1.12 exclusion blend mode
+    blend-exclusion.html
+compositing-2/#blendingnonseparable 10.2 Non-separable blend modes
+    non-separable.html
+compositing-2/#blendinghue 10.2.1 hue blend mode
+    blend-hue.html
+compositing-2/#blendingsaturation 10.2.2 saturation blend mode
+    blend-saturation.html
+compositing-2/#blendingcolor 10.2.3 color blend mode
+    blend-color.html
+compositing-2/#blendingluminosity 10.2.4 luminosity blend mode
+    blend-luminosity.html
+compositing-2/#isolationblending 10.3 Effect of group isolation on blending
+    isolation-blending.html
+# compositing-2/#changes 11 Changes: no page; it lists changes

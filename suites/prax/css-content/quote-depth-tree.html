@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Quote depth in the flat tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flat q { quotes: "1" "1" "2" "2" "3" "3"; }
+  :lang(fr) > * { quotes: "\00AB\2005" "\2005\00BB" "\2039\2005" "\2005\203A"; }
+  :lang(en) > * { quotes: "\201C" "\201D" "\2018" "\2019"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.4.2 Inserting Quotation Marks: the *-quote keywords</div>
+  <h1>Quote depth in the flat tree</h1>
+  <p class=pr-lede><q>Which pair of quotes is used depends on the nesting level of quotes (the quote depth): the number
+  of occurrences of 'open-quote' in all generated text before the current occurrence, minus the number of occurrences
+  of 'close-quote' in all generated text before and including the current occurence.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#quote-values">CSS Generated Content 3 §2.4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Through a shadow tree</h2>
+  <p><q>Quote depth is independent of the nesting of the source document or the formatting structure. Also, like
+  counter inheritance, it operates on the “flattened element tree” in the context of the [DOM].</q> The
+  <code>q</code> elements' pairs are "1", "2" and "3".</p>
+  <figure>
+    <div class="pr-stage pr-text flat"><div id=host><q slot=quote>Quote</q></div></div>
+    <figcaption>A <code>q</code> slotted into a <code>q</code> of a shadow tree is nested in it in the flat tree:
+    "12Quote21". Read in the document tree alone, it would be "1Quote1".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The surrounding language's marks</h2>
+  <p><q>If a quotation is in a different language than the surrounding text, it is customary to quote the text with
+  the quote marks of the language of the surrounding text</q>. The example's style sheet sets <code>quotes</code> on
+  children by the language around them:</p>
+  <pre class=pr-source>:lang(fr) > * { quotes: "\00AB\2005" "\2005\00BB"
+                         "\2039\2005" "\2005\203A" }
+:lang(en) > * { quotes: "\201C" "\201D" "\2018" "\2019" }</pre>
+  <figure>
+    <div class="pr-stage pr-wide pr-text"><p lang=fr style="margin: 0"><q>Il faut mettre l’action en <q lang=en>fast forward</q>.</q></p></div>
+    <figcaption>«&#8197;Il faut mettre l’action en ‹&#8197;fast forward&#8197;›.&#8197;»: the English quotation inside
+    takes the French inner pair.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("host").attachShadow({mode: "open"}).innerHTML =
+    "<style>q { quotes: '1' '1' '2' '2' '3' '3'; }</style><q><slot name=quote></slot></q>";
+</script>
+</body>
+</html>

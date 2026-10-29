@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The fieldset element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad fieldset { margin: 0; }
+  .pad input, .pad button { margin: 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.15 The fieldset element</div>
+  <h1>The fieldset element</h1>
+  <p class=pr-lede><q>The fieldset element represents a set of form controls (or other content) grouped together,
+  optionally with a caption.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-fieldset-element">HTML §4.10.15</a></span></p>
+</header>
+
+<section>
+  <h2>Disabled, all but the legend</h2>
+  <p><q>The disabled attribute, when specified, causes all the form control descendants of the fieldset element,
+  excluding those that are descendants of the fieldset element's first legend element child, if any, to be
+  disabled.</q> The page's script sets the fieldset's <code>disabled</code> from the checkbox. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-fieldset-element">§4.10.15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <fieldset id=club disabled>
+        <legend><label><input type=checkbox id=use> Use a club card</label></legend>
+        <input id=number placeholder="card number" size=14> <button type=button id=check>Check</button>
+      </fieldset>
+    </div>
+    <figcaption>The field and button are grey and take no clicks, focus or typing; the checkbox in the legend is not
+    disabled. Check it: the field and button work. Clear it: grey again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nested</h2>
+  <p>A fieldset is a disabled fieldset if <q>It is a descendant of another fieldset element whose disabled attribute is
+  specified, and it is not a descendant of that fieldset element's first legend element child, if any.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-fieldset-element">§4.10.15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <fieldset disabled>
+        <legend><button type=button id=outer>Outer legend</button></legend>
+        <fieldset>
+          <legend><button type=button id=inner-legend>Inner legend</button></legend>
+          <button type=button id=inner-content>Inner content</button>
+        </fieldset>
+      </fieldset>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=1 style="margin: 10px -10px -10px"></ol>
+    </div>
+    <figcaption>Click each button: only "Outer legend" logs a <code>click</code>. "Inner legend" is in the inner
+    fieldset's legend, but the outer one disables it all the same.</figcaption>
+  </figure>
+</section>
+<script>
+  // The checkbox in the legend enables the rest of the fieldset.
+  document.getElementById("use").addEventListener("change", event => {
+      document.getElementById("club").disabled = !event.target.checked;
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

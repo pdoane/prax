@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order of inline-level boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px; box-sizing: border-box; }
+  .pr-a, .pr-b { display: inline-block; width: 60px; }
+  .pr-b { margin-left: -30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 2.4 Painting Order</div>
+  <h1>Painting order of inline-level boxes</h1>
+  <p class=pr-lede><q>Except as specified for positioned boxes … inline-level boxes are painted in document order;
+  the z-index property does not generally apply.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#paint-order">CSS Inline Layout 3 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>Document order</h2>
+  <p>In each stage A comes first and B second, B pulled 30px over A by a negative margin.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><span class=pr-a>A</span><span class=pr-b>B</span></div>
+    <figcaption>B, later in the document, covers A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><span class=pr-a style="z-index: 10">A</span><span class=pr-b>B</span></div>
+    <figcaption>A with <code>z-index: 10</code>, which does not apply to a box that is not positioned: B still covers
+    A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positioned boxes</h2>
+  <p>A positioned box is painted in its stacking context's order. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stacking">CSS Positioned Layout 3 §2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking"><span class=pr-a style="position: relative; z-index: 1">A</span><span class=pr-b>B</span></div>
+    <figcaption>A with <code>position: relative; z-index: 1</code>: A covers B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><span class=pr-a style="position: relative">A</span><span class=pr-b>B</span></div>
+    <figcaption>A with <code>position: relative</code> and <code>z-index: auto</code>: painted with the positioned
+    boxes, after B, so A covers B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

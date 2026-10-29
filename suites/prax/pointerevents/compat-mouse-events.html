@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Compatibility mouse events</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 10 Compatibility mapping with mouse events</div>
+  <h1>Compatibility mouse events</h1>
+  <p class=pr-lede><q>At a high level, compatibility mouse events are intended to be "interleaved" with their respective
+  pointer events.</q> <q>The compatibility mapping with mouse events is an OPTIONAL feature of this specification.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#compatibility-mapping-with-mouse-events">Pointer Events §10</a></span></p>
+</header>
+<section>
+  <h2>Interleaved</h2>
+  <p><q>Unless otherwise noted, the target of any mapped mouse event SHOULD be the same target as the respective pointer
+  event</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#compatibility-mapping-with-mouse-events">§10</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Click here.</div>
+      <ol class=pr-log data-log="pointerdown mousedown pointerup mouseup click" data-fields="pointerType" data-on="#pad" data-lines=5></ol>
+    </div>
+    <figcaption>Click the box: <code>pointerdown</code>, <code>mousedown</code>, <code>pointerup</code>,
+    <code>mouseup</code>, <code>click</code>. Tap it, on a touch screen: the same events, the mouse ones perhaps
+    held back and sent together after the <code>pointerup</code>, in the same order among themselves.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>What canceling cannot prevent</h2>
+  <p><q>Mouse events can only be prevented when the pointer is down. Hovering pointers (e.g. a mouse with no buttons
+  pressed) cannot have their mouse events prevented.</q> <q>Compatibility mouse events can't be prevented when a pointer
+  event EventListener is set to be passive [DOM].</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#compatibility-mapping-with-mouse-events">§10</a></span>
+  A listener cancels every <code>pointermove</code> over the first box; a passive one tries to cancel
+  <code>pointerdown</code> over the second.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=hover>Move over here.</div>
+      <div class="pr-target pad" id=passive>Click here.</div>
+      <ol class=pr-log data-log="pointermove mousemove pointerdown mousedown" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Move the mouse over the first box: a <code>mousemove</code> after each <code>pointermove</code>,
+    though each is canceled. Click the second: <code>mousedown</code> after <code>pointerdown</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the hovering moves over one box, and tries to cancel pointerdown from a passive listener on the other.
+  document.getElementById("hover").addEventListener("pointermove", event => event.preventDefault());
+  document.getElementById("passive").addEventListener("pointerdown", event => event.preventDefault(), {passive: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

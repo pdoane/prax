@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alphabetic styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.2 Alphabetic</div>
+  <h1>Alphabetic styles</h1>
+  <p class=pr-lede><q>Lowercase ASCII letters (e.g., a, b, c, ..., z, aa, ab).</q> <q>Lowercase classical Greek (e.g., α, β, γ, ..., ω, αα, αβ).</q> The markers are inside. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-alphabetic">CSS Counter Styles 3 §6.2</a></span></p>
+</header>
+
+<section>
+  <h2>Latin and Greek</h2>
+  <p>Each list runs past the last letter. <code>lower-latin</code> and <code>upper-latin</code> extend the alpha styles.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: lower-alpha; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=26>26<li>27<li>28</ol></div>
+    <figcaption><code>lower-alpha</code>: <bdi dir=ltr>"a."</bdi>, <bdi dir=ltr>"z."</bdi>, <bdi dir=ltr>"aa."</bdi>, <bdi dir=ltr>"ab."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: lower-latin; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=26>26<li>27<li>28</ol></div>
+    <figcaption><code>lower-latin</code>: <bdi dir=ltr>"a."</bdi>, <bdi dir=ltr>"z."</bdi>, <bdi dir=ltr>"aa."</bdi>, <bdi dir=ltr>"ab."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: upper-alpha; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=26>26<li>27<li value=702>702</ol></div>
+    <figcaption><code>upper-alpha</code>: <bdi dir=ltr>"A."</bdi>, <bdi dir=ltr>"Z."</bdi>, <bdi dir=ltr>"AA."</bdi>, <bdi dir=ltr>"ZZ."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: upper-latin; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=26>26<li>27<li value=703>703</ol></div>
+    <figcaption><code>upper-latin</code>: <bdi dir=ltr>"A."</bdi>, <bdi dir=ltr>"Z."</bdi>, <bdi dir=ltr>"AA."</bdi>, <bdi dir=ltr>"AAA."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: lower-greek; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=24>24<li>25<li>26</ol></div>
+    <figcaption><code>lower-greek</code>: <bdi dir=ltr>"α."</bdi>, <bdi dir=ltr>"ω."</bdi>, <bdi dir=ltr>"αα."</bdi>, <bdi dir=ltr>"αβ."</bdi>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Kana</h2>
+  <p>Their suffix is "、". Dictionary order has 48 symbols, iroha order 47.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: hiragana; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li>1<li value=48>48<li>49</ol></div>
+    <figcaption><code>hiragana</code>: <bdi dir=ltr>"0、"</bdi>, <bdi dir=ltr>"あ、"</bdi>, <bdi dir=ltr>"ん、"</bdi>, <bdi dir=ltr>"ああ、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: hiragana-iroha; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li>1<li value=47>47<li>48</ol></div>
+    <figcaption><code>hiragana-iroha</code>: <bdi dir=ltr>"0、"</bdi>, <bdi dir=ltr>"い、"</bdi>, <bdi dir=ltr>"す、"</bdi>, <bdi dir=ltr>"いい、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: katakana; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li>1<li value=48>48<li>49</ol></div>
+    <figcaption><code>katakana</code>: <bdi dir=ltr>"0、"</bdi>, <bdi dir=ltr>"ア、"</bdi>, <bdi dir=ltr>"ン、"</bdi>, <bdi dir=ltr>"アア、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: katakana-iroha; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li>1<li value=47>47<li>48</ol></div>
+    <figcaption><code>katakana-iroha</code>: <bdi dir=ltr>"0、"</bdi>, <bdi dir=ltr>"イ、"</bdi>, <bdi dir=ltr>"ス、"</bdi>, <bdi dir=ltr>"イイ、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

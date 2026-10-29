@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Skipped contents: the top layer and scrolling</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4.5 Restrictions and Clarifications</div>
+  <h1>Skipped contents: the top layer and scrolling</h1>
+  <p class=pr-lede>Of the section's points, these two have something to see; the others concern observers, script,
+  animation timing and the event loop. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#cv-notes">CSS Containment 2 §4.5</a></span>
+  Each frame is a document 200 by 100 whose first line, blue, reads "top".</p>
+</header>
+
+<section>
+  <h2>The top layer under content-visibility: hidden</h2>
+  <p><q>If an element has an ancestor with content-visibility: hidden, and it is placed in the top layer, it does not
+  generate any boxes, as if it were display: none.</q> A script shows a popover inside a box with the value given.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } [popover] { margin: auto; padding: 4px 8px; border: 2px solid #9c5f22; background: #f6d7b4 } p { margin: 0; height: 20px; background: #b9cde6 } .sp { height: 300px }</style><p>top</p><div style='content-visibility: hidden'><div popover id=pop>in the top layer</div></div><script>pop.showPopover()</script>"></iframe></div>
+    <figcaption><code>hidden</code>: the popover generates no box, and nothing is drawn but "top".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } [popover] { margin: auto; padding: 4px 8px; border: 2px solid #9c5f22; background: #f6d7b4 } p { margin: 0; height: 20px; background: #b9cde6 } .sp { height: 300px }</style><p>top</p><div style='content-visibility: auto'><div popover id=pop>in the top layer</div></div><script>pop.showPopover()</script>"></iframe></div>
+    <figcaption><code>auto</code>: <q>An element skipped for other reasons</q> <q>will still generate boxes as
+    normal</q>; the popover is drawn in the middle of the frame.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No scrolling to skipped contents</h2>
+  <p><q>If an element is not available to user-agent features (for example, if it is skipped due to a
+  content-visibility: hidden ancestor), then scrolling operations must not scroll to it at all, as if it did not have
+  a layout box.</q> A script calls <code>scrollIntoView()</code> on a line "target" 300px down.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } [popover] { margin: auto; padding: 4px 8px; border: 2px solid #9c5f22; background: #f6d7b4 } p { margin: 0; height: 20px; background: #b9cde6 } .sp { height: 300px }</style><p>top</p><div class=sp></div><div style='content-visibility: hidden'><p id=t>target</p></div><div class=sp></div><script>t.scrollIntoView()</script>"></iframe></div>
+    <figcaption>The target in a <code>content-visibility: hidden</code> box: no scrolling; "top" stays in
+    view.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } [popover] { margin: auto; padding: 4px 8px; border: 2px solid #9c5f22; background: #f6d7b4 } p { margin: 0; height: 20px; background: #b9cde6 } .sp { height: 300px }</style><p>top</p><div class=sp></div><div><p id=t>target</p></div><div class=sp></div><script>t.scrollIntoView()</script>"></iframe></div>
+    <figcaption>The target in a plain box: the frame scrolls, and "target" is at its top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Pages that a plain run or a run of modules leaves out because they cost more than they test. The engine could pass
+# them. An entry is the file on one line, then the reason, indented. The reason starts with what the page costs. A
+# listed file that no longer exists fails the run. --match and --all run these pages like any other.
+
+dom/nodes/NodeList-static-length-getter-tampered-1.html
+dom/nodes/NodeList-static-length-getter-tampered-2.html
+dom/nodes/NodeList-static-length-getter-tampered-3.html
+dom/nodes/NodeList-static-length-getter-tampered-indexOf-1.html
+dom/nodes/NodeList-static-length-getter-tampered-indexOf-2.html
+dom/nodes/NodeList-static-length-getter-tampered-indexOf-3.html
+    a JIT's benchmark: each reads a NodeList's items about a hundred million times, to check that a JIT's cached
+    length sees a tampered getter. The interpreter takes most of the deadline, and passes when it finishes.

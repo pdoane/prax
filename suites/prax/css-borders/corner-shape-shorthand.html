@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: all four corners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; border-radius: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.8.2 Shaping All Corners At Once: The corner-shape shorthand</div>
+  <h1>corner-shape: all four corners</h1>
+  <p class=pr-lede><q>The four values set the top, right, bottom and left shape, respectively. A missing left is the same as right, a missing bottom is the same as top, and a missing right is also the same as top.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shaping-shorthand">CSS Borders and Box Decorations 4 §3.8.2</a></span> Each blue box is 120 by 60 with <code>border-radius: 30px</code>.</p>
+</header>
+
+<section>
+  <h2>One to four values</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel"></div></div>
+    <figcaption><code>bevel</code>: all four. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel scoop"></div></div>
+    <figcaption><code>bevel scoop</code>: top left and bottom right bevelled, top right and bottom left scooped. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel scoop notch"></div></div>
+    <figcaption><code>bevel scoop notch</code>: top left bevel, top right and bottom left scoop, bottom right notch. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel scoop notch squircle"></div></div>
+    <figcaption><code>bevel scoop notch squircle</code>: clockwise from the top left. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

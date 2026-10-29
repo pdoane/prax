@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: padding at an empty edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { display: grid; grid-template-columns: auto auto auto; justify-content: start; }
+  .s { grid-column: span 3; display: grid; grid-template-columns: subgrid; }
+  .r { display: grid; grid-template-columns: 100px 100px; }
+  .ta { background: #b9cde6; }
+  .mk { background: #d68a3c; }
+  .mk2 { background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, empty edge tracks</div>
+  <h1>Subgrids: padding at an empty edge</h1>
+  <p class=pr-lede><q>For each edge of a non-empty subgrid, to account for the subgrid’s margin/border/padding (and
+  any scrollbar gutter) at that edge, a hypothetical item is contributed to the track sizing algorithm for each span
+  size in the set of items spanning into the occupied track closest to that edge of the subgrid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span></p>
+</header>
+
+<section>
+  <h2>The item is not in the edge track</h2>
+  <p><q>The hypothetical item’s sizes are taken from the sizes of the largest such item of each span size, and are
+  additionally inflated by the subgrid’s own margin/border/padding/gutter at that edge. Correspondingly, the
+  hypothetical item’s span is taken from that same real item’s span, and inflated by the number of empty tracks
+  between it and the relevant subgrid’s edge(s).</q> The parent has three <code>auto</code> columns; the tinted,
+  outlined subgrid spans them, and holds only "abcd", 40px, in its middle column.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-parent"><div class=ta style="grid-column: 2">abcd</div></div></div></div>
+    <figcaption>No padding: the first and last columns are empty, 0px; the subgrid is 40px wide, "abcd" at
+    0.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-parent" style="padding: 0 20px"><div class=ta style="grid-column: 2">abcd</div></div></div></div>
+    <figcaption><code>padding: 0 20px</code>: an item of 60px spans the first two columns, another the last two. The
+    columns are 20, 40 and 20px: the subgrid 80px wide, "abcd" from 20 to 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows</h2>
+  <p>The parent has two 100px columns and three <code>auto</code> rows. In the first column, a subgrid of the three
+  rows holds "aa" in its middle row; in the second, empty orange and green boxes stretch to the first and last
+  rows.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=r style="grid-template-rows: auto auto auto"><div class=pr-parent style="grid-row: span 3; display: grid; grid-template-rows: subgrid; padding: 10px 0"><div class=ta style="grid-row: 2">aa</div></div><div class=mk style="grid-column: 2; grid-row: 1"></div><div class=mk2 style="grid-column: 2; grid-row: 3"></div></div></div>
+    <figcaption><code>padding: 10px 0</code>: rows of 10, 20 and 10px. The orange box is 10px tall at the top, "aa"
+    from 10 to 30px, the green box from 30 to 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

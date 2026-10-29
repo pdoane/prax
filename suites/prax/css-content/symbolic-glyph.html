@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Bullets and symbols in content</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .disc::before { content: disc "Fed"; }
+  .circle::before { content: circle; }
+  .square::before { content: square; }
+  .closed summary::marker { content: disclosure-closed; }
+  .closed details[open] > summary::marker { content: disclosure-open; }
+  .closed summary { line-height: 20px; list-style-type: none; }
+  .rtl { direction: rtl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.9 Bullets and Other Symbols: &lt;symbolic-counter-style&gt; values</div>
+  <h1>Bullets and symbols in content</h1>
+  <p class=pr-lede>A <code>&lt;symbolic-glyph&gt;</code> in <code>content</code> is <q>The predefined symbolic counter
+  style, without its 'prefix' or 'suffix', as drawn by the UA for 'list-style-type'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#symbols">CSS Generated Content 3 §2.9</a></span></p>
+</header>
+
+<section>
+  <h2>disc, circle and square</h2>
+  <p>Each is drawn as the list marker of that style is, with no counter and no suffix space.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=disc> text</div></div>
+    <figcaption><code>content: disc "Fed"</code>: a filled disc, then "Fed text" with no space between the disc and
+    "Fed". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    browser has the value: no disc and no "Fed".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=circle> text</div><div class=square> text</div></div>
+    <figcaption><code>circle</code>, then <code>square</code>: a hollow circle and a filled square, each before " text".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Neither is
+    drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A disclosure marker without a counter</h2>
+  <p><q>A disclosure widget can point its marker at the widget’s state without involving a counter:</q> <code>summary::marker
+  { content: disclosure-closed; }</code>, and <code>disclosure-open</code> when the <code>details</code> is open. Each <code>summary</code> has
+  <code>list-style-type: none</code>, so only <code>content</code> gives it a marker.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text closed"><details><summary>Closed</summary>body</details><details open><summary>Open</summary>body</details></div>
+    <figcaption>A triangle pointing right before "Closed", one pointing down before "Open" and its "body" below.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    marker is drawn.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text closed rtl"><details><summary>Closed</summary>body</details></div>
+    <figcaption>Right to left, the closed marker points left, before "Closed" at the right.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    marker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

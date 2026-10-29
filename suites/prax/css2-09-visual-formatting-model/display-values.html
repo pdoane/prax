@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The display property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sized { width: 60px; height: 30px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.4 The 'display' property</div>
+  <h1>The display property</h1>
+  <p class=pr-lede><code>display</code> takes <code>inline | block | list-item | inline-block | table | inline-table |
+  table-*</code> and <code>none</code>. Initial <code>inline</code>, not inherited. Each orange box has <code>width:
+  60px; height: 30px; margin: 0 10px</code>.</p>
+</header>
+
+<section>
+  <h2>block, inline-block and inline</h2>
+  <p><q>block: This value causes an element to generate a principal block box.</q> <q>inline-block: ... The inside of
+  an inline-block is formatted as a block box, and the element itself is formatted as an atomic inline-level box.</q>
+  <q>inline: This value causes an element to generate one or more inline boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#display-prop">CSS 2
+  §9.2.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: block">x</span> after</div>
+    <figcaption><code>block</code>: its own lines, 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: inline-block">x</span> after</div>
+    <figcaption><code>inline-block</code>: on the line, 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: inline">x</span> after</div>
+    <figcaption><code>inline</code>: on the line, as wide as its text; <code>width</code> and <code>height</code> do
+    not apply.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>list-item, and the initial value</h2>
+  <p><q>list-item: This value causes an element (e.g., LI in HTML) to generate a principal block box and a marker
+  box.</q> An element no style sheet gives a display is <code>inline</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#display-prop">CSS 2 §9.2.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: list-item; margin-left: 30px">x</span> after</div>
+    <figcaption><code>list-item</code>: a block box, and its marker outside to the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <x-box class="pr-chip sized">x</x-box> after</div>
+    <figcaption>An <code>x-box</code> element, which no style sheet gives a display: inline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of translate, rotate, scale and transform</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 20px; top: 10px; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 6 Current Transformation Matrix</div>
+  <h1>The order of translate, rotate, scale and transform</h1>
+  <p class=pr-lede><q>Translate by the computed X, Y, and Z values of transform-origin. Translate by the computed X, Y,
+  and Z values of translate. Rotate by the computed &lt;angle&gt; about the specified axis of rotate. Scale by the
+  computed X, Y, and Z values of scale. Translate and rotate by the transform specified by offset. Multiply by each of
+  the transform functions in transform from left to right. Translate by the negated computed X, Y and Z values of
+  transform-origin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#ctm">CSS Transforms 2 §6</a></span>
+  Each blue box is 40 by 20 at (20, 10), where the dashed outline is, about its center, (40, 20). Motion Path's
+  <code>offset</code> is left to that module.</p>
+</header>
+
+<section>
+  <h2>Always in that order</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="translate: 40px; rotate: 90deg">A</div></div>
+    <figcaption><code>translate: 40px; rotate: 90deg</code>: moved 40px right, then turned in place; 70 to 90 across,
+    0 to 40 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="rotate: 90deg; translate: 40px">A</div></div>
+    <figcaption><code>rotate: 90deg; translate: 40px</code>, declared the other way round: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="rotate: 90deg; transform: translateX(40px)">A</div></div>
+    <figcaption><code>rotate: 90deg; transform: translateX(40px)</code>: the transform comes after the rotation, so the
+    40px is turned, down; 30 to 50 across, 40 to 80 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 2; translate: 20px">A</div></div>
+    <figcaption><code>scale: 2; translate: 20px</code>: the translation comes first, so it is not scaled; 80 by 40, 20
+    to 100 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 2; transform: translateX(20px)">A</div></div>
+    <figcaption><code>scale: 2; transform: translateX(20px)</code>: the transform comes after, so its 20px is scaled to
+    40; 40 to 120 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform-origin: 0 0; rotate: 90deg; translate: 40px">A</div></div>
+    <figcaption>And <code>transform-origin: 0 0</code>: about its top left corner after the move, (60, 10); 40 to 60
+    across, 10 to 50 down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

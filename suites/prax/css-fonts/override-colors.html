@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>override-colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-palette-values --red-face { font-family: "PR Bungee Spice"; override-colors: 0 #1f2430, 1 #4f81bd; }
+  @font-palette-values --one { font-family: "PR Bungee Spice"; base-palette: 2; override-colors: 1 white; }
+  @font-palette-values --past { font-family: "PR Bungee Spice"; override-colors: 7 black; }
+  .pr-sample { font-family: 'PR Bungee Spice'; font-size: 32px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.2.3 Overriding a colors from a palette: the 'override-colors' descriptor</div>
+  <h1>override-colors</h1>
+  <p class=pr-lede><q>Each item in the comma-separated list represents a tuple of an entry into the palette and a color
+  to replace it with.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#override-color">CSS Fonts 4 §9.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Replacing entries</h2>
+  <p>PR Bungee Spice's palettes have two entries: palette 0 is red (0) to yellow (1), palette 2 green to lime.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --red-face">Spice</div>
+    <figcaption><code>0 #1f2430, 1 #4f81bd</code>: dark slate to blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --one">Spice</div>
+    <figcaption>Palette 2 with <code>1 white</code>: green to white.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An entry the palette lacks</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --past">Spice</div>
+    <figcaption><code>7 black</code>: there is no entry 7, so nothing changes: red to yellow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

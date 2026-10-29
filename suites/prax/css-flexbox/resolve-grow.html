@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: growing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { padding: 0; border: 0; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, growing</div>
+  <h1>Resolving flexible lengths: growing</h1>
+  <p class=pr-lede><q>Determine the used flex factor. Sum the outer hypothetical main sizes of all items on the line.
+  If the sum is less than the flex container's inner main size, use the flex grow factor for the rest of this
+  algorithm; otherwise, use the flex shrink factor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>Free space, shared by the grow factors</h2>
+  <p><q>Calculate initial free space. Sum the outer sizes of all items on the line, and subtract this from the flex
+  container's inner main size. For frozen items, use their outer target main size; for other items, use their outer
+  flex base size.</q> Then <q>Set the item's target main size to its flex base size plus a fraction of the remaining
+  free space proportional to the ratio.</q> Each stage is 200px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 40px; margin-right: 20px">A</div><div class="pr-b pr-fit" style="flex: 2 1 20px">B</div></div>
+    <figcaption>A of basis 40px with a 20px margin, B of 20px: outer sizes 60 + 20 = 80px, 120px free. Shared 1:2,
+    A is 80px and B 100px; with A's margin they fill the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 0 60px">A</div><div class="pr-b pr-fit" style="flex: 1 1 20px">B</div><div class="pr-c pr-fit" style="flex: 1 1 40px">C</div></div>
+    <figcaption>A, inflexible, frozen at 60px; B and C of 20px and 40px: 80px free, 40px each, so B 60px and C 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From the flex base size, not the hypothetical main size</h2>
+  <p>Blue holds "ab", 20px, and has <code>flex: 1 1 0</code>: its flex base size is 0, and its <code>min-width:
+  auto</code> makes its hypothetical main size 20px. Green has <code>flex: 1 1 40px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex: 1 1 0; background: #4f81bd">ab</div><div class=w style="flex: 1 1 40px; background: #6aa36a">abcd</div></div>
+    <figcaption>Free space is 200 − 0 − 40 = 160px, 80px each: blue is 80px and green 120px. From its hypothetical
+    size, 20px, blue would be 90px and green 110px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="direction: rtl"><div class=w style="flex: 1 1 0; background: #4f81bd">ab</div><div class=w style="flex: 1 1 40px; background: #6aa36a">abcd</div></div>
+    <figcaption>The same in <code>direction: rtl</code>: blue from 120 to 200px at the right, green from 0 to 120px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

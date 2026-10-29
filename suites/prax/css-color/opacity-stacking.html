@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>opacity and stacking</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 80px; }
+  .tile { width: 100px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.3 Transparency: the opacity property, stacking</div>
+  <h1>opacity and stacking</h1>
+  <p class=pr-lede><q>If a box has 'opacity' less than 1, it forms a stacking context for its children.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>A stacking context for its children</h2>
+  <p><q>This prevents its contents from interleaving in the z-axis with content outside it.</q> A holds B with
+  <code>position: relative; z-index: 10</code>; C, after A, has <code>position: relative; z-index: 1</code> and
+  overlaps B.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=pr-a style="width: 120px">A<div class="pr-b tile" style="position: relative; z-index: 10; margin-left: 20px">B</div></div><div class="pr-c tile" style="position: relative; z-index: 1; margin: -30px 0 0 70px">C</div></div>
+    <figcaption>A opaque: B, at z-index 10 in the stage's stacking context, covers C.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=pr-a style="width: 120px; opacity: 0.99">A<div class="pr-b tile" style="position: relative; z-index: 10; margin-left: 20px">B</div></div><div class="pr-c tile" style="position: relative; z-index: 1; margin: -30px 0 0 70px">C</div></div>
+    <figcaption>A with <code>opacity: 0.99</code>: B's z-index counts only inside A, which is at level 0, so C
+    covers B.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painted as if z-index: 0</h2>
+  <p><q>it is otherwise painted on the same layer within its parent stacking context as positioned elements with stack
+  level 0 (as if it were a positioned element with ''z-index:0'').</q> B, first, has <code>position: relative</code>;
+  A follows it in flow, with no position, and overlaps it.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="pr-b tile" style="position: relative">B</div><div class="pr-a tile" style="margin: -20px 0 0 50px">A</div></div>
+    <figcaption>A opaque: in-flow blocks paint before positioned ones, so B covers A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="pr-b tile" style="position: relative">B</div><div class="pr-a tile" style="margin: -20px 0 0 50px; opacity: 0.99">A</div></div>
+    <figcaption>A with <code>opacity: 0.99</code>: at level 0 with B, after it in tree order, so A covers
+    B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

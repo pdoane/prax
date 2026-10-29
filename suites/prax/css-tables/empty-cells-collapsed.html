@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>empty-cells in collapsed-borders mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { empty-cells: hide; border-spacing: 0; background: #1f2430; border: 10px solid #1f2430; }
+  td { padding: 0; width: 40px; height: 30px; color-scheme: light; color: var(--pr-ink); background: white; }
+  .bordered td { border: 4px solid #d68a3c; }
+  .fl { float: left; width: 10px; height: 10px; background: #4f81bd; }
+  .ab { position: absolute; width: 10px; height: 10px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.2 Empty cell rendering (separated-borders mode), collapsed borders</div>
+  <h1>empty-cells in collapsed-borders mode</h1>
+  <p class=pr-lede><code>empty-cells</code> belongs to separated-borders mode. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#empty-cell-rendering">CSS Table 3 §5.2</a></span> The table is black, with a 10px black border and <code>empty-cells: hide</code>; cells are white.</p>
+</header>
+
+<section>
+  <h2>Not in collapsed-borders mode</h2>
+  <p><q>In collapsed-borders mode, this property has no effect.</q> Cells have 4px orange borders.</p>
+  <figure>
+    <div class=pr-stage><table class=bordered style="border-collapse: collapse"><tr><td></td><td>&nbsp;</td></tr></table></div>
+    <figcaption>Collapsed: the empty first cell is drawn white all the same; the orange line between the cells is its border, the table's wider black winning at the edges.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

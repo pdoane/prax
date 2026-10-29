@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(a98-rgb …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.6 The Predefined A98 RGB Color Space: the a98-rgb keyword</div>
+  <h1>color(a98-rgb …)</h1>
+  <p class=pr-lede><q>The a98-rgb color space accepts three numeric parameters, representing the red, green, and blue components of
+  the color.</q> <q>The transfer curve is a gamma function, close to but not exactly 1/2.2.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-a98-rgb">CSS Color 4
+  §10.6</a></span></p>
+</header>
+
+<section>
+  <h2>Inside the sRGB gamut</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(a98-rgb 0.6 0.4 0.2)"></div><div class=sw style="background: rgb(66.6% 40.1% 17%)"></div></div>
+    <figcaption><code>color(a98-rgb 0.6 0.4 0.2)</code> beside <code>rgb(66.6% 40.1% 17%)</code>: one brown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(a98-rgb 0.44091 0.49971 0.37408)"></div><div class=sw style="background: rgb(41.587% 50.367% 36.664%)"></div></div>
+    <figcaption>The specification's leaf, <code>color(a98-rgb 0.44091 0.49971 0.37408)</code>, beside <code>rgb(41.587% 50.367% 36.664%)</code>: one sage green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the sRGB gamut</h2>
+  <p>The stills are taken on an sRGB display, where this color is out of gamut: <q>for display,
+  they are css gamut mapped using a relative colorimetric intent</q> (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>), at constant OkLCh lightness and hue, its
+  chroma reduced.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(a98-rgb 1 0 1)"></div><div class=sw style="background: rgb(100% 41% 93%)"></div></div>
+    <figcaption><code>color(a98-rgb 1 0 1)</code>, mapped, beside <code>rgb(100% 41% 93%)</code>: one pink-magenta. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to pure magenta, <code>rgb(100% 0% 100%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

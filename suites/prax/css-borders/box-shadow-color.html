@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.1 Coloring shadows: the box-shadow-color property</div>
+  <h1>box-shadow-color</h1>
+  <p class=pr-lede><q>The 'box-shadow-color' property defines one or more drop shadow colors. The property accepts a comma-separated list of shadow colors.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-color">CSS Borders and Box Decorations 4 §6.1</a></span> Each box is 104 by 44.</p>
+</header>
+
+<section>
+  <h2>A color for each shadow</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px 10px; box-shadow-color: #d68a3c"></div></div>
+    <figcaption>One orange shadow, 10px right and down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 6px, 12px; box-shadow-color: #d68a3c, #8e44ad"></div></div>
+    <figcaption>Two shadows: orange at 6px over purple at 12px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; color: #6aa36a"></div></div>
+    <figcaption>No color given: <code>currentcolor</code>, green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What forms a Backdrop Root</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { padding: 10px 0; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #f9cc9d 10px 20px); }
+  .parent { padding: 5px 10px; }
+  .glass { width: 80px; height: 30px; backdrop-filter: grayscale(1); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 2 · 3.2 Backdrop Root Triggers</div>
+  <h1>What forms a Backdrop Root</h1>
+  <p class=pr-lede><q>A Backdrop Root is formed, anywhere in the document, by an element in any of the following
+  scenarios.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-2/#BackdropRoot">Filter Effects 2 §3</a></span>
+  This section, which says why for each, is non-normative, and the definition is open (<a href="https://github.com/w3c/fxtf-drafts/issues/53">fxtf-drafts#53</a>).
+  Each dashed box, 80 by 30, has <code>backdrop-filter: grayscale(1)</code>, in a parent with no background over
+  stripes: where the parent is a Backdrop Root, the stripes stay colored in the box.
+  Safari's and Firefox's stills show no backdrop filter, as <a href="backdrop-filter.html">backdrop-filter.html</a>
+  says.</p>
+</header>
+
+<section>
+  <h2>Triggers</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="filter: grayscale(0)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A <code>filter</code>: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="opacity: 0.99"><div class="glass pr-ghost"></div></div></div>
+    <figcaption><code>opacity</code> below 1: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="mask-image: linear-gradient(black, black)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A <code>mask-image</code>: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="clip-path: inset(0)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A <code>clip-path</code>: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="mix-blend-mode: multiply"><div class="glass pr-ghost"></div></div></div>
+    <figcaption><code>mix-blend-mode</code> other than normal: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="will-change: opacity"><div class="glass pr-ghost"></div></div></div>
+    <figcaption><code>will-change: opacity</code>: colored.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="backdrop-filter: grayscale(0)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A <code>backdrop-filter</code> of its own: colored.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not triggers</h2>
+  <p>The definition <q>encompases fewer element types than the definition for a Stacking Context.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="position: relative; z-index: 1"><div class="glass pr-ghost"></div></div></div>
+    <figcaption><code>z-index</code>: gray.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow back"><div class=parent style="transform: translateX(0)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A <code>transform</code>: gray.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

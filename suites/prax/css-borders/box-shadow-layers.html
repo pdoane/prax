@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow: painting order and overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 30px; margin: 20px 30px; border: 6px solid rgba(44, 90, 143, 0.6); background: #f9cc9d; }
+  .scroller { width: 140px; height: 60px; margin: 10px; overflow: auto; outline: 1px dashed #6b7381; }
+  .scroller .box { margin: 10px; }
+  .cell { width: 40px; height: 20px; padding: 0; border: 2px solid #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.7 Layering, Layout, and Other Details</div>
+  <h1>box-shadow: painting order and overflow</h1>
+  <p class=pr-lede><q>the outer box-shadows of an element are drawn immediately below the background of that element,
+  and the inner shadows of an element are drawn immediately above the background of that element (below the borders
+  and border image, if any).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#shadow-layers">CSS Borders and Box Decorations 4 §6.7</a></span></p>
+</header>
+
+<section>
+  <h2>Between the background and the border</h2>
+  <p>Each box has an orange background and a translucent blue 6px border.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: inset 0 0 0 12px #6aa36a"></div></div>
+    <figcaption>Inner, spread 12: green over the orange, and under the border, which is not tinted green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 0 0 0 12px #6aa36a; margin-bottom: 0"></div><div class=box style="margin-top: -10px; background: #b9cde6"></div></div>
+    <figcaption>Outer: a later box overlaps the first one's green; shadows do not move it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No scrolling, and not on collapsed cells</h2>
+  <p><q>Shadows do not trigger scrolling or increase the size of the scrollable area.</q> <q>Outer shadows have no effect on internal table elements in the collapsing border model.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=scroller><div class=box style="box-shadow: 30px 30px #6aa36a"></div></div></div>
+    <figcaption>In a dashed scroll container, a shadow 30px past it: no scrollbar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="padding: 20px; box-sizing: border-box"><table style="border-collapse: collapse"><tr><td class=cell style="box-shadow: 10px 10px #6aa36a"></td><td class=cell></td></tr></table></div>
+    <figcaption>A collapsed table whose first cell has a green shadow: none is drawn. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each draws it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

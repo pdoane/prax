@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ellipse: center and radii</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { cx: 100px; cy: 30px; rx: 50px; ry: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.4 The ‘ellipse’ element</div>
+  <h1>ellipse: center and radii</h1>
+  <p class=pr-lede><q>The ‘ellipse’ element defines an ellipse which is axis-aligned with the current user coordinate
+  system based on a center point and two radii.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#EllipseElement">SVG 2 §10.4</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>cx and cy, rx and ry</h2>
+  <p><q>The ‘cx’ and ‘cy’ coordinates define the center of the ellipse.</q> <q>The ‘rx’ and ‘ry’ properties define the
+  x- and y-axis radii of the ellipse.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse cx="80" cy="30" rx="60" ry="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cx="80" cy="30" rx="60" ry="20"</code>: x 20 to 140, y 10 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse class=styled cx="20" cy="20" rx="10" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption>A style sheet's <code>cx: 100px; cy: 30px; rx: 50px; ry: 20px</code> over the attributes: x 50 to
+    150.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="rotate(-20 80 30)"><ellipse cx="80" cy="30" rx="60" ry="15" fill="#4f81bd" /></g></svg></div>
+    <figcaption>In a <code>g</code> rotated −20°, its axes turn with the user coordinate system.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A radius of zero, or both auto</h2>
+  <p><q>A computed value of zero for either dimension, or a computed value of <code>auto</code> for <em>both</em>
+  dimensions, disables rendering of the element.</q> Each is stroked orange, 10 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse cx="80" cy="30" rx="60" ry="0" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption><code>rx="60" ry="0"</code>: nothing, not even stroke.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse cx="80" cy="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption>Both the initial <code>auto</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

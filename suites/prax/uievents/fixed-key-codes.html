@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed key codes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.3.3 Fixed virtual key codes</div>
+  <h1>Fixed key codes</h1>
+  <p class=pr-lede><q>The virtual key codes for the following keys do not usually change with keyboard layouts on
+  desktop systems</q>. The section is informative. <span class=pr-cite><a href="https://w3c.github.io/uievents/#fixed-virtual-key-codes">UI Events §7.3.3</a></span></p>
+</header>
+<section>
+  <h2>The same on every layout</h2>
+  <p>Backspace 8, Tab 9, Enter 13, Shift 16, Control 17, Alt 18, CapsLock 20, Escape 27, Space 32, PageUp 33, PageDown
+  34, End 35, Home 36, the arrows 37 to 40 (left, up, right, down), Delete 46. The page's script cancels each keydown
+  in the box, so Tab and the arrows stay in it. <span class=pr-cite><a href="https://w3c.github.io/uievents/#fixed-virtual-key-codes">§7.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key keyCode" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Click the box and press Tab, Enter, Space and the four arrows: <code>keyCode=9</code>,
+    <code>13</code>, <code>32</code>, then <code>37</code>, <code>38</code>, <code>39</code>, <code>40</code> for
+    left, up, right, down. Switch to another layout and press them again: the same codes.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys from moving the focus or scrolling the page.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

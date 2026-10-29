@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hit testing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { position: relative; height: 100px; margin: 10px 20px; }
+  .box { position: absolute; width: 100px; height: 60px; box-sizing: border-box; padding: 0 6px; font-size: 12px;
+         line-height: 20px; }
+  #under { top: 10px; left: 10px; z-index: 1; background: #b9cde6; border: 1px solid #2c5a8f; }
+  #over { top: 30px; left: 60px; z-index: 2; background: #f6d7b4; border: 1px solid #9c5f22; }
+  #ghost { top: 20px; left: 140px; z-index: 3; pointer-events: none; border: 1px dashed #c0392b;
+           background: rgba(192, 57, 43, 0.1); }
+  #turned { top: 20px; left: 150px; width: 100px; height: 40px; transform: rotate(45deg); z-index: 0;
+            background: #c3d08b; border: 1px solid #3f7a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.2.5 hit test</div>
+  <h1>Hit testing</h1>
+  <p class=pr-lede><q>Return [CSSOM-View]'s elementFromPoint() with pos (the frontmost DOM element at pos)</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#hit-test">Pointer Events §11.2.5</a></span></p>
+</header>
+<section>
+  <h2>The topmost element under the pointer</h2>
+  <p><q>The topmost event target MUST be the element highest in the rendering order which is capable of being a
+  target.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#glossary">§15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=area id=area>
+        <div class=box id=over>over</div>
+        <div class=box id=under>under</div>
+        <div class=box id=turned>turned</div>
+        <div class=box id=ghost></div>
+      </div>
+      <ol class=pr-log data-log="mousedown" data-fields="target" data-on="#area" data-lines=2></ol>
+    </div>
+    <figcaption>Click where the blue and orange boxes overlap: <code>target=over</code>, drawn on top by its
+    <code>z-index</code>, though it comes first in the document. The dashed red box has <code>pointer-events:
+    none</code>. Click inside the dashed red box, on the green one under it:
+    <code>target=turned</code>, as the dashed box takes no events. Click a corner of the dashed box beside the
+    green one, where the green box is not drawn: the target is <code>area</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

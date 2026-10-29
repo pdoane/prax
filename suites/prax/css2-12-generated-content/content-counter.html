@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: counters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r4 { counter-reset: n 4; }
+  .r3 { counter-reset: n 3; padding-left: 20px; }
+  .k1::before { content: counter(n) " "; }
+  .k2::before { content: counter(n, upper-roman) " "; }
+  .k3::before { content: counters(n, ".") " "; }
+  .k4::before { content: counters(n, "-", lower-latin) " "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: counters</h1>
+  <p class=pr-lede><q>Counters may be specified with two different functions: 'counter()' or 'counters()'.</q> In every
+  figure an outer block resets <code>n</code> to 4; in the right-hand figures an indented inner block resets a second
+  <code>n</code> to 3. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+</header>
+
+<section>
+  <h2>counter(name) and counter(name, style)</h2>
+  <p><q>The generated text is the value of the innermost counter of the given name in scope at this pseudo-element; it
+  is formatted in the indicated style ('decimal' by default).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=r4><div class=k1>outer</div><div class=r3><div class=k1>inner</div></div></div></div>
+    <figcaption><code>counter(n)</code>: "4 outer", and "3 inner": the innermost <code>n</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=r4><div class=k2>outer</div><div class=r3><div class=k2>inner</div></div></div></div>
+    <figcaption><code>counter(n, upper-roman)</code>: "IV outer", "III inner".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>counters(name, string) and counters(name, string, style)</h2>
+  <p><q>The generated text is the value of all counters with the given name in scope at this pseudo-element, from
+  outermost to innermost separated by the specified string. The counters are rendered in the indicated style ('decimal'
+  by default).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=r4><div class=k3>outer</div><div class=r3><div class=k3>inner</div></div></div></div>
+    <figcaption><code>counters(n, ".")</code>: "4 outer", "4.3 inner".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=r4><div class=k4>outer</div><div class=r3><div class=k4>inner</div></div></div></div>
+    <figcaption><code>counters(n, "-", lower-latin)</code>: "d outer", "d-c inner".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

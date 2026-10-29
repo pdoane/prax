@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Moving a range's thumb</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad input[type=range] { width: 180px; margin: 0; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.13 Range state (type=range)</div>
+  <h1>Moving a range's thumb</h1>
+  <p class=pr-lede><q>In this state, the range and step constraints are enforced even during user input, and there is no
+  way to set the value to the empty string.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#range-state-(type=range)">HTML §4.10.5.1.13</a></span></p>
+</header>
+
+<section>
+  <h2>input as it moves, change when it is committed</h2>
+  <p><q>The input event fires whenever the user has modified the data of the control. The change event fires when the
+  value is committed, if that makes sense for the control, or else when the control loses focus.</q> Dragging the knob
+  commits when the user lets go. Whether a key commits is the control's own: HTML's example of a change without a
+  commit step is a slider moved by the keyboard, whose <q>corresponding change event, if any, will be fired when the
+  control loses focus</q>, but an example decides nothing.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#common-input-element-events">§4.10.5.5</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=range id=dragged step=25></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>A step of 25. Drag the thumb slowly to the right: it jumps to 75, then 100, with an <code>input</code>
+    at each jump, and stops nowhere between. Let go: one <code>change</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=range id=keyed min=0 max=10 value=5></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>0 to 10. Click the thumb, press ArrowRight, then End: <code>input</code> each time, at 6 and 10.
+    ArrowRight again: nothing. Where a key has no commit step, as the example has it, the <code>change</code> comes
+    as you Tab away. Chrome, Safari and Firefox treat each key as a commit, and send a <code>change</code> after each
+    key's <code>input</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The d property: interpolation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .quarter { animation-duration: 4s; animation-timing-function: linear; animation-delay: -1s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  /* The sweep holds 0 for the first half, then goes from 0 to 1: to and fro, as long under as over. A still shows it
+     at 62.5%, a quarter of the way from 0 to 1. */
+  .flag { animation-duration: 4s; animation-timing-function: linear; animation-delay: -2.5s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes rise { from { d: path("M 20 50 L 80 50 L 140 50"); } to { d: path("M 20 50 L 80 10 L 140 50"); } }
+  @keyframes close { from { d: path("M 20 50 L 80 50 L 140 50"); } to { d: path("M 20 50 L 80 10 L 140 50 Z"); } }
+  @keyframes tilt { from { d: path("M 20 50 L 140 50 L 140 50"); } to { d: path("M 20 50 L 140 10 L 140 10"); } }
+  @keyframes kinds { from { d: path("M 20 50 L 140 50 L 140 50"); } to { d: path("M 20 50 Q 140 10 140 10"); } }
+  @keyframes sweep { from, 50% { d: path("M 30 30 A 50 20 0 0 0 130 30"); } to { d: path("M 30 30 A 50 20 0 0 1 130 30"); } }
+  @keyframes radius { from { d: path("M 30 30 A 50 0 0 0 0 130 30"); } to { d: path("M 30 30 A 50 20 0 0 0 130 30"); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.2 Specifying path data: the ‘d’ property</div>
+  <h1>The d property: interpolation</h1>
+  <p class=pr-lede><q>two 'd' property values can only be interpolated smoothly when the path data strings contain
+  have the same structure, (i.e. exactly the same number and types of path data commands which are in the same
+  order)</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#TheDProperty">SVG 2 §9.3.2</a></span>
+  Each path, stroked 4 wide, runs to and fro between two <code>path()</code> values over 4 seconds; a still
+  shows it a quarter of the way.</p>
+</header>
+
+<section>
+  <h2>Each parameter as a number</h2>
+  <p><q>each parameter to each path data command must be interpolated separately as real numbers</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: rise" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>From a flat line on y 50 to a caret with its apex at 80, 10: a quarter of the way, the apex at 80,
+    40; it rises and falls. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: tilt" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>From 20, 50 to 140, 50, to 20, 50 to 140, 10: a quarter of the way, to 140, 40; the line swings
+    up and down. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: radius" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>An arc's <code>ry</code> from 0, a straight line, to 20: a quarter of the way, 5, a flat half
+    ellipse down to y 35. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise, discrete</h2>
+  <p><q>If an animation is specified and the lists of path data commands do not have the same structure, then the
+  values must be interpolated using the discrete animation type.</q> <q>Flags and booleans must be interpolated as
+  fractions between zero and one, with any non-zero value considered to be a value of one/true.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: close" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>To the caret with a <b>Z</b> added: a quarter of the way, still the flat line; halfway it jumps to
+    the closed triangle. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: kinds" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>A lineto to a quadratic Bézier: a quarter of the way, still the line on y 50; halfway it jumps to
+    the curve. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=flag style="animation-name: sweep" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>A sweep flag at 0, then 0 to 1: a quarter of the way, 0.25, so 1, over the top to y 10. It flips
+    as it leaves 0. <span class=pr-flag>Chrome</span> Under, to y 50. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

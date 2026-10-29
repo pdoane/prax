@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which way a range runs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .vertical { display: inline-block; margin: 10px 30px 10px 20px; text-align: center; font-size: 11px; }
+  .vertical input { writing-mode: vertical-lr; width: 20px; height: 100px; margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.13 Range state (type=range)</div>
+  <h1>Which way a range runs</h1>
+  <p class=pr-lede>A range is a number <q>with the caveat that the exact value is not important, letting UAs provide a
+  simpler interface than they do for the Number state</q>: a slider, along the inline axis.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#range-state-(type=range)">HTML §4.10.5.1.13</a></span></p>
+</header>
+
+<section>
+  <h2>Which way it runs</h2>
+  <p><q>When this control has a horizontal writing mode, the control is expected to be a horizontal slider. Its lowest
+  value is on the right if the 'direction' property has a computed value of 'rtl', and on the left otherwise.</q> A
+  vertical one's <q>lowest value is on the bottom if the 'direction' property has a computed value of 'rtl', and on the
+  top otherwise.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-a-range-control">§15.5.8</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=range value=20 style="width: 180px"></div>
+        <div><input type=range value=20 dir=rtl style="width: 180px"></div>
+      </div>
+    </div>
+    <figcaption>Both at 20: near the left end, then, right to left, near the right end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <span class=vertical><input type=range value=20><br>ltr</span>
+      <span class=vertical><input type=range value=20 dir=rtl><br>rtl</span>
+    </div>
+    <figcaption><code>writing-mode: vertical-lr</code>, both at 20: near the top, then, right to left, near the
+    bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

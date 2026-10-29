@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-spacing-trim at the start of lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 15px/24px "PR Noto Sans JP"; }
+  figure { margin-right: 10px; }
+  .pr-stage { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.5 CJK Punctuation Spacing: the text-spacing-trim property</div>
+  <h1>text-spacing-trim at the start of lines</h1>
+  <p class=pr-lede><q>Controls spacing around CJK punctuation characters on the same line within the same inline
+  formatting context using a set of character-class-based rules, allowing them to be set halfwidth or fullwidth based
+  on their position and neighbors within the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-spacing-trim-property">CSS Text 4 §8.5</a></span>
+  Each stage is <code>lang=ja</code>, 120px wide, eight 15px characters to a line: 「あいうえおかき「さしす」, a
+  <code>&lt;br&gt;</code>, 「た」. Lines 1 and 3 start after a start or a forced break, line 2 after a soft wrap. A
+  full-width 「 has 7.5px blank before its ink.</p>
+</header>
+
+<section>
+  <h2>Full-width, or trimmed, at each line's start</h2>
+  <p><code>space-all</code>: <q>All fullwidth punctuation characters are set with full-width glyphs (spaced).</q>
+  <code>normal</code>: <q>Set fullwidth opening punctuation with full-width glyphs (spaced) at the start of each
+  line</q>. <code>trim-start</code>: <q>Set fullwidth opening punctuation with half-width glyphs (flush) at the start
+  of each line.</q> <code>space-first</code>: full-width <q>on the first line of the block container and each line
+  after a forced line break</q>. <code>trim-all</code>: half-width <q>without regards for the position within the line
+  nor for adjacent characters.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>space-all</code>: each 「 7.5px in.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: normal">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>normal</code>: the same.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-start">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>trim-start</code>: each 「 flush at 0. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Full-width, as <code>space-all</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-first">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>space-first</code>: flush on line 2 only. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Full-width, as <code>space-all</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-both">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>trim-both</code>: as <code>trim-start</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Full-width, as <code>space-all</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-all">「あいうえおかき「さしす」<br>「た」</div>
+    <figcaption><code>trim-all</code>: every bracket half-width, 」 tight after "た" too. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Full-width, as <code>space-all</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>device-cmyk(): the naive conversion</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 6.1 Naively Converting Between Uncalibrated CMYK and sRGB-Based Color</div>
+  <h1>device-cmyk(): the naive conversion</h1>
+  <p class=pr-lede><q>red = 1 - min(1, cyan * (1 - black) + black)</q>, and green and blue likewise from magenta and yellow;
+  <q>Alpha is same as for input color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#cmyk-rgb">CSS Color 5
+  §6.1</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Each ink</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0.5 0 0 0)"></div><div class=sw style="background: rgb(50% 100% 100%)"></div><div class=sw style="background: device-cmyk(0 0 0 0.5)"></div><div class=sw style="background: rgb(50% 50% 50%)"></div></div>
+    <figcaption>Cyan 0.5: <code>rgb(50% 100% 100%)</code>, pale cyan. Black 0.5: <code>rgb(50% 50% 50%)</code>, gray. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0.5 0 0 0.5)"></div><div class=sw style="background: rgb(25% 50% 50%)"></div><div class=sw style="background: device-cmyk(1 1 0 0)"></div><div class=sw style="background: rgb(0% 0% 100%)"></div></div>
+    <figcaption>Cyan and black 0.5: red is 1 − (0.25 + 0.5), <code>rgb(25% 50% 50%)</code>. Cyan and magenta: blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

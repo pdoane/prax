@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid container baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 160px; font: 13px/20px "PR Arimo"; }
+  figcaption { max-width: 160px; }
+  figure { margin-right: 12px; }
+  .pr-baseline { width: 160px; margin-right: -160px; }
+  .g { display: inline-grid; grid-template-columns: 50px 50px; vertical-align: baseline; }
+  .t { background: #b9cde6; padding: 0 4px; }
+  .u { background: #f6d7b4; padding: 0 4px; }
+  .low { padding-top: 20px; }
+  .lower { padding-top: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.6 Grid Container Baselines</div>
+  <h1>Grid container baselines</h1>
+  <p class=pr-lede><q>The first baseline set of a grid container is taken from the first available of</q> the
+  steps below. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-baselines">CSS Grid Layout 2 §11.6</a></span>
+  Each stage: "x", then an <code>inline-grid</code> of two 50px columns; the red line is the line's baseline. A
+  "low" item has 20px of padding above its text.</p>
+</header>
+
+<section>
+  <h2>From baseline-aligned items in the first row</h2>
+  <p>1. <q>If any grid items intersecting the first (block-start–most) non-empty track participate in first baseline
+  alignment along the relevant axis, generate a baseline set from their shared alignment baseline</q>. 2. <q>Otherwise,
+  if any grid items intersecting that track participate in last baseline alignment</q>, from that.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class="t low">A</div><div class=u style="align-self: baseline">B</div></div></div>
+    <figcaption>A, low, comes first; B is <code>align-self: baseline</code>: B's text is on the red line, and A's
+    20px below it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class=t style="align-self: last baseline">one<br>two</div><div class=u style="height: 50px"></div></div></div>
+    <figcaption>A, two lines, is <code>align-self: last baseline</code>, at the bottom of a 50px row: A's "two" is on
+    the red line. <span class=pr-flag>Safari</span> puts "one" on it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise from the first item that has a baseline</h2>
+  <p>3. <q>Otherwise, if any grid items intersecting that track have a baseline set in the relevant axis at all, take
+  the baseline set from the first such grid item in grid order.</q> 4. <q>Otherwise, if there are any grid items at
+  all, synthesize a baseline set from the first grid item in grid order.</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class="t low" style="grid-area: 1 / 2">A</div><div class=u>B</div></div></div>
+    <figcaption>3. A, low, is first in the document but in the second column; B, first in grid order, is on the
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class=t style="height: 20px"></div><div class="u low">B</div></div></div>
+    <figcaption>3. The first item, 20px tall, is empty, with no baseline; B, low, has one: its text is on the red
+    line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    synthesize one from the empty item, at its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class=t style="height: 30px"></div><div class=u style="height: 50px"></div></div></div>
+    <figcaption>4. Two empty items, 30 and 50px tall: synthesized from the first, the red line is at its bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scripts and spacing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; text-align-last: justify; text-justify: inter-character; }
+  .s { padding: 0 6px; font: 20px/36px "PR Noto Sans JP"; }
+  .ko { font-family: "PR Noto Sans KR"; }
+  .th { font-family: "PR Noto Sans Thai"; }
+  .ar { font-family: "PR Noto Sans Arabic"; }
+  .dv { font-family: "PR Noto Sans Devanagari"; }
+  .t { background: #f9cc9d; }
+  figure { margin-right: 8px; }
+  .pr-stage { width: 120px; }
+  figure.pr-narrow figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · D Scripts and Spacing</div>
+  <h1>Scripts and spacing</h1>
+  <p class=pr-lede><q>This appendix categorizes some common scripts in Unicode 6.0 according to their justification and
+  spacing behavior. Category descriptions are descriptive, not prescriptive; the determining factor is the
+  prioritization of justification opportunities.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#script-groups">CSS Text 4 §D</a></span>
+  The appendix is normative. Each stage is 120px wide, <code>inter-character</code>, its one line justified.</p>
+</header>
+
+<section>
+  <h2>Block, clustered and cursive scripts, and Indic</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage s j" lang=ja><span class=t>漢字かな</span></div>
+    <figcaption>Block, Han and kana: four units, three equal gaps.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage s ko j" lang=ko><span class=t>한국어</span></div>
+    <figcaption>Block, Hangul: the same, two gaps. <span class=pr-flag>Safari</span> No gaps.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage s th j" lang=th><span class=t>ภาษาไทย</span></div>
+    <figcaption>Clustered, Thai: gaps between clusters. <span class=pr-flag>Safari</span> No gaps.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage s ar j" lang=ar dir=rtl><span class=t>مرحبا</span></div>
+    <figcaption>Cursive, Arabic: no gaps, the word whole at the start, or elongated.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage s dv j" lang=hi><span class=t>नमस्ते</span></div>
+    <figcaption>Devanagari, not cursive: gaps between its units. <span class=pr-flag>Safari</span> No gaps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ambiguous characters, by writing system</h2>
+  <p>Block scripts include Wide and Fullwidth characters, but <q>Ambiguous characters are included only if the writing
+  system is Chinese, Korean, or Japanese.</q> The stages hold "○", U+25CB, Ambiguous, between Latin letters.</p>
+  <figure>
+    <div class="pr-stage s j" lang=ja style="text-justify: auto"><span class=t>ab○cd</span></div>
+    <figcaption><code>lang=ja</code>, <code>auto</code>: ○ is of a block script, so opportunities on both its sides:
+    "ab" and "cd" apart from it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s j" lang=en style="text-justify: auto"><span class=t>ab○cd</span></div>
+    <figcaption><code>lang=en</code>: ○ is not of a block script; whether <code>auto</code> finds other opportunities is the UA's choice: Firefox none, Chrome and Safari spread it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

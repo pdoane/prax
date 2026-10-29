@@ -1,0 +1,84 @@
+00-supports-1.html
+# css-page-3/#intro 1 Introduction: no page; it lists what the module covers, which the sections after it show
+# css-page-3/#values 1.1 Value Definitions: no page; it defines terms
+# css-page-3/#page-terms 2 Page Terminology: no page; it defines terms: left and right pages are shown in 3.3 and 4.2.1, orientation in 7.1 and 7.1.2
+css-page-3/#page-model 3 The Page Model
+    page-model.html
+    page-box-size.html
+css-page-3/#painting 3.1 Page Backgrounds and Painting Order
+    page-painting.html
+css-page-3/#content-outside-box 3.2 Content outside the page box
+    content-outside.html
+css-page-3/#progression 3.3 Page Progression
+    page-progression.html
+    first-page-side.html
+# css-page-3/#page-selector-and-context 4 Page Selectors and the Page Context: no page; it only heads 4.1 to 4.4
+css-page-3/#at-page-rule 4.1 The @page Rule
+    page-rule.html
+css-page-3/#page-selectors 4.2 Page selectors
+    page-type-selectors.html
+css-page-3/#spread-pseudos 4.2.1 Spread pseudo-classes: :left, :right
+    left-right.html
+css-page-3/#first-pseudo 4.2.2 First-page pseudo-class: :first
+    first-page.html
+css-page-3/#blank-pseudo 4.2.3 Blank-page pseudo-class: :blank
+    blank-page.html
+# css-page-3/#syntax-page-selector 4.3 @page rule grammar: no page; it is the syntax of @page rules and margin at-rules, which is parsing; 4.1 to 5.2 show what the rules do
+css-page-3/#cascading-and-page-context 4.4 Cascading in the page context
+    page-cascade.html
+    page-cascade-contexts.html
+css-page-3/#margin-boxes 5 Page-Margin Boxes
+    margin-boxes.html
+css-page-3/#margin-at-rules 5.1 At-rules for page-margin boxes
+    margin-at-rules.html
+css-page-3/#populating-margin-boxes 5.2 Populating page-margin boxes
+    populating-margin-boxes.html
+# css-page-3/#margin-dimension 5.3 Computing Page-margin Box Dimensions: no page; it introduces 5.3.1 to 5.3.3, and its min-width and max-width are shown in 5.3.2.3
+css-page-3/#margin-box-terms 5.3.1 Page-Margin Box Layout Terminology
+    margin-box-containing-blocks.html
+# css-page-3/#variable-sizing 5.3.2 Page-Margin Box Variable Dimension Computation Rules: no page; it only names the boxes A, B and C of 5.3.2.1 to 5.3.2.5
+css-page-3/#variable-auto-margins 5.3.2.1 Margins
+    margin-box-auto-margins.html
+css-page-3/#variable-auto-sizing 5.3.2.2 Resolving auto widths
+    margin-box-widths-sides.html
+    margin-box-widths-center.html
+css-page-3/#variable-minmax 5.3.2.3 Handling min-width and max-width
+    margin-box-min-max.html
+css-page-3/#variable-position 5.3.2.4 Positioning
+    margin-box-positions.html
+css-page-3/#variable-mapping 5.3.2.5 Boxes on other sides
+    margin-box-other-sides.html
+css-page-3/#fixed-sizing 5.3.3 Page-Margin Box Fixed Dimension Computation Rules
+    margin-box-fixed-dimension.html
+css-page-3/#margin-box-ex 5.4 Page-margin box examples
+    margin-box-examples.html
+css-page-3/#page-properties 6 Page Properties
+    page-properties.html
+    margin-box-vertical-align.html
+css-page-3/#page-based-counters 6.1 Page-based counters
+    page-counters.html
+    page-counters-document.html
+css-page-3/#margin-text-alignment 6.2 Page-margin boxes and default values
+    margin-box-defaults.html
+# css-page-3/#page-size 7 Page Size: no page; it introduces 7.1
+css-page-3/#page-size-prop 7.1 Page size: the size property
+    page-size.html
+# css-page-3/#page-size-media-query 7.1.1 Media Queries: no page; it is informative, an example of style sheets chosen by the paper's size
+css-page-3/#page-orientation-prop 7.1.2 Rotating The Printed Page: the page-orientation property
+    page-orientation.html
+# css-page-3/#marks 7.2 Crop and Registration Marks: the marks property: no page; the marks print outside the page box, on a sheet larger than it, and each page here is printed on a sheet of its own size
+# css-page-3/#bleed 7.3 Bleed Area: the bleed property: no page; the bleed area lies outside the page box, on a sheet larger than it, and each page here is printed on a sheet of its own size
+css-page-3/#renderingpages 7.4 Rendering page boxes that do not fit a page sheet
+    page-sheet-mismatch.html
+css-page-3/#positioning-page-box 7.5 Positioning the page box on the sheet
+    page-on-sheet.html
+# css-page-3/#page-margin-safety 7.6 Staying within the printable area: the page-margin-safety property: no page; its inset is a printer's unprintable area, and a PDF has none, so the pages printed here would not change
+# css-page-3/#page-breaks 8 Page Breaks: no page; breaks are CSS Fragmentation's, which css-break walks
+css-page-3/#using-named-pages 8.1 Using named pages: page
+    named-pages.html
+    named-pages-propagation.html
+# css-page-3/#image-properties 9 Image Properties: no page; the section moved to CSS Images 3
+# css-page-3/#properties-list A Applicable CSS2.1 Properties: no page; it heads A.1 and A.2
+# css-page-3/#page-property-list A.1 CSS 2.1 Properties that apply within the page context: no page; it lists the page properties, which 3, 3.1 and 6 use
+# css-page-3/#margin-property-list A.2 CSS 2.1 properties that apply within the margin contexts: no page; it lists the page-margin properties, which 5 to 6.2 use
+# css-page-3/#transfer-possibilities B Transfer Possibilities: no page; it lists ways to put pages on sheets that the module does not address

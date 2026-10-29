@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3 Margin properties</div>
+  <h1>Margins: the shorthand</h1>
+  <p class=pr-lede><code>margin-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>margin</code> take <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. The orange tint is each box's margin area.</p>
+</header>
+
+<section>
+  <h2>The shorthand</h2>
+  <p><q>If there is only one component value, it applies to all sides. If there are two values, the top and bottom
+  margins are set to the first value and the right and left margins are set to the second. If there are three values,
+  the top is set to the first value, the left and right are set to the second, and the bottom is set to the third. If
+  there are four values, they apply to the top, right, bottom, and left, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#margin-properties">CSS 2
+  §8.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px">box</div></div></div>
+    <figcaption><code>margin: 10px</code>: 10 on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px 40px">box</div></div></div>
+    <figcaption><code>margin: 10px 40px</code>: 10 top and bottom, 40 right and left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px 40px 30px">box</div></div></div>
+    <figcaption><code>margin: 10px 40px 30px</code>: 10 top, 40 right and left, 30 bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px 20px 30px 40px">box</div></div></div>
+    <figcaption><code>margin: 10px 20px 30px 40px</code>: top, right, bottom, left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-top: 10px; margin-right: 40px; margin-bottom: 30px; margin-left: 40px">box</div></div></div>
+    <figcaption>The three-value form written out: <code>margin-top: 10px; margin-right: 40px; margin-bottom: 30px;
+    margin-left: 40px</code>. It matches the third figure.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

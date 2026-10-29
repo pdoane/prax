@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transition hints: where the halfway color falls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .bar { height: 20px; }
+  .bar + .bar { margin-top: 10px; }
+  .tick { height: 6px; border-right: 1px solid #c0392b; box-sizing: border-box; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .at25 { background-position: 25% 0; background-size: 4000px 100%; }
+  .at50 { background-position: 50% 0; background-size: 4000px 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.5.2 Coloring the Gradient Line</div>
+  <h1>Transition hints: where the halfway color falls</h1>
+  <p class=pr-lede><q>if a transition hint was provided between two color stops, the interpolation is non-linear, and
+  controlled by the hint</q>: at a point <var>P</var> of the way between the stops, with the hint <var>H</var> of the
+  way, the second stop's share is <q>P<sup>log<sub>H</sub>(.5)</sup></q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#coloring-gradient-line">CSS Images 4 §3.5.2</a></span>
+  Each bar is <code>to right</code>, 200px wide, from <code>black</code> to <code>white</code>, legacy colors
+  mixed in sRGB.</p>
+</header>
+
+<section>
+  <h2>The halfway color at the hint</h2>
+  <p><q>The transition hint specifies where the “halfway color”--the 50% blend between the colors of the two
+  surrounding color stops--should be placed.</q></p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, black, 25%, white)"></div><div class=tick style="width: 50px"></div></div>
+    <figcaption><code>black, 25%, white</code>: mid grey at the red tick, x 50, then a slow climb to white.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw at25" style="background-image: linear-gradient(to right, black, 25%, white)"></div><div class=sw style="background: rgb(50% 50% 50%)"></div></div>
+    <figcaption>The bar at 25%, then <code>rgb(50% 50% 50%)</code>: alike.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A curve, linear only at the middle</h2>
+  <p><q>When the hint is exactly halfway between the two surrounding color stops, the above interpolation algorithm
+  happens to produce the ordinary linear interpolation.</q></p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, black, 50%, white)"></div><div class=bar style="background: linear-gradient(to right, black, white)"></div></div>
+    <figcaption><code>black, 50%, white</code> above, <code>black, white</code> below: alike.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw at50" style="background-image: linear-gradient(to right, black, 10%, white)"></div><div class=sw style="background: rgb(81.2% 81.2% 81.2%)"></div><div class="sw at50" style="background-image: linear-gradient(to right, black, 90%, white)"></div><div class=sw style="background: rgb(1% 1% 1%)"></div></div>
+    <figcaption>The middles of <code>black, 10%, white</code>, a light grey, 0.5<sup>log<sub>0.1</sub>(.5)</sup> = 81.2% white;
+    and of <code>black, 90%, white</code>, almost black, 1% white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

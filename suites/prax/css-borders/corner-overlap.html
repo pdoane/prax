@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overlapping curves are scaled down</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.3 Overlapping Curves</div>
+  <h1>Overlapping curves are scaled down</h1>
+  <p class=pr-lede><q>Corner curves must not overlap: When the sum of any two adjacent border radii exceeds the size of
+  the border box, UAs must proportionally reduce the used values of all border radii until none of them overlap.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-overlap">CSS Borders and Box Decorations 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>All radii by the same factor</h2>
+  <p><q>Let f = min(1, L<sub>i</sub> / S<sub>i</sub>)</q> <q>If f &lt; 1, then all corner radii are reduced by multiplying them
+  by f.</q> Each box is 120px wide, with <code>border-radius: 10px 40px</code>, as in the specification's example at
+  20px to the em.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="height: 50px; border-radius: 10px 40px"></div></div>
+    <figcaption>50px tall: 10 + 40 fits, so the corners are 10px and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="height: 40px; border-radius: 10px 40px"></div></div>
+    <figcaption>40px tall: f = 40 / 50 = 0.8, so all four shrink, to 8px and 32px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Large radii</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="height: 40px; border-radius: 100px"></div></div>
+    <figcaption><code>100px</code> on 120 by 40: f = 40 / 200 = 0.2, so 20px: round ends, a straight top and
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="height: 40px; border-radius: 100px 0 0 100px"></div></div>
+    <figcaption><code>100px 0 0 100px</code>: f = 40 / 200 on the left: the left end a half circle, the right
+    square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="height: 40px; border-radius: 100%"></div></div>
+    <figcaption><code>100%</code>, 120 by 40 each: f = 0.5, an ellipse.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

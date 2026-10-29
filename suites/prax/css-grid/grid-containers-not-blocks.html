@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid containers are not block containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 60px 60px; }
+  .fl::first-line { color: #c0392b; font-weight: bold; }
+  .fc::first-letter { color: #c0392b; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 5.1 Establishing Grid Containers, not block containers</div>
+  <h1>Grid containers are not block containers</h1>
+  <p class=pr-lede><q>Grid containers are not block containers</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-containers">CSS Grid Layout 2 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>float, clear and vertical-align on items</h2>
+  <p><q>float and clear have no effect on a grid item.</q> <q>vertical-align has no effect on a grid item.</q> Each
+  grid has two 60px columns.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b style="float: right">B</div></div></div>
+    <figcaption>B, <code>float: right</code>: in the second column, from 60 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: 40px"><div class=pr-a style="height: 20px">A</div><div class=pr-b style="align-self: start; vertical-align: bottom">B</div></div></div>
+    <figcaption>B, <code>vertical-align: bottom; align-self: start</code>: at the top of its 40px row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>::first-line and ::first-letter</h2>
+  <p><q>the ::first-line and ::first-letter pseudo-elements do not apply to grid containers, and grid containers do not
+  contribute a first formatted line or first letter to their ancestors.</q> The red rules are set on a block
+  holding a grid of "one two" and "three".</p>
+  <figure>
+    <div class="pr-stage fl"><div class=g><div>one two</div><div>three</div></div></div>
+    <figcaption><code>::first-line</code> on the stage: no text turns red or bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage fc"><div class=g><div>one two</div><div>three</div></div></div>
+    <figcaption><code>::first-letter</code> on the stage: the "o" stays plain.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

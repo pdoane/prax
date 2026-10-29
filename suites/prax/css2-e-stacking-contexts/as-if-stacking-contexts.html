@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: as if a stacking context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { box-sizing: border-box; width: 100px; height: 60px; padding: 0 6px; font-size: 13px; line-height: 20px; white-space: normal; vertical-align: top; }
+  .f { float: left; }
+  .ib { display: inline-block; }
+  .it { display: inline-table; }
+  .kid { position: relative; box-sizing: border-box; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: as if a stacking context</h1>
+  <p class=pr-lede>Floats, inline blocks and inline tables are each painted <q>as if it created a new stacking context, but
+  any positioned descendants and descendants which actually create a new stacking context should be considered part of
+  the parent stacking context, not this new one.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+</header>
+
+<section>
+  <h2>Floats</h2>
+  <p>Step 5. A float's positioned children leave it, and are painted with the stacking context's: those with
+  <code>z-index: auto</code> in step 8, after every float; those with a negative one in step 3, before every float.
+  Each stage forms the stacking context. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="padding: 10px"><div class="pr-b pr-light box f">A<div class="pr-c kid" style="top: 10px">child of A</div></div><div class="pr-a pr-light box f" style="margin: 20px 0 0 -70px; text-align: right">B</div></div>
+    <figcaption>Float A's green child is <code>position: relative</code>: it is over float B, which covers the rest of
+    A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking" style="padding: 10px"><div class="pr-b pr-light box f" style="margin-left: 50px">A<div class="pr-c kid" style="z-index: -1; left: -40px; top: 10px">child</div></div></div>
+    <figcaption>A child with <code>z-index: -1</code> is moved 40px left: it is behind float A, and shows only left of
+    it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline blocks and inline tables</h2>
+  <p><q>For inline-block and inline-table elements: For each one of these, treat the element as if it created a new
+  stacking context</q>. Each figure's second box has a negative left margin that pulls it over the first. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 10px"><div class="pr-b pr-light box ib">A's text, which runs on</div><div class="pr-a pr-light box it" style="margin-left: -70px; text-align: right">B</div></div>
+    <figcaption>An inline block A and an inline table B: B covers A's text with its background, since each is painted
+    whole, in turn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 10px"><div class="pr-b pr-light box ib">A<div class="pr-c kid" style="top: 10px">child of A</div></div><div class="pr-a pr-light box ib" style="margin: 20px 0 0 -70px; text-align: right">B</div></div>
+    <figcaption>Inline block A's green child is <code>position: relative</code>: painted in step 8, it is over inline
+    block B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

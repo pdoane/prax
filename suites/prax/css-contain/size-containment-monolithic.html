@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment boxes do not break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 110px; }
+  .mc { columns: 2; column-gap: 20px; column-fill: auto; height: 60px; outline: 1px dashed #6b7381; }
+  .b { background: #b9cde6; }
+  .k { contain: size; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, fragmentation</div>
+  <h1>Size containment boxes do not break</h1>
+  <p class=pr-lede><q>Size containment boxes are monolithic (See CSS Fragmentation 3 §4.4).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>In columns</h2>
+  <p>Each multicol, dashed, has two columns 90px wide and 60px tall, filled in turn. In it is a blue box of five lines, 100px
+  tall.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=mc><div class=b>line 1 line 2 line 3 line 4 line 5</div></div></div>
+    <figcaption>No containment: the box breaks after its third line, and lines 4 and 5 go to the second
+    column. <span class=pr-flag>Safari</span> breaks after the second, and line 5 spills into a third column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=mc><div class="b k" style="height: 100px">line 1 line 2 line 3 line 4 line 5</div></div></div>
+    <figcaption><code>contain: size</code>: the box is monolithic, all five lines in the first column, running 40px
+    past the multicol's bottom; the second column is empty. <span class=pr-flag>Safari</span> breaks it after its third line, as without
+    containment.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline-size containment still breaks</h2>
+  <p><q>the box is allowed to fragment normally in the block axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-inline-size">CSS Containment 2 §3.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=mc><div class=b style="contain: inline-size">line 1 line 2 line 3 line 4 line 5</div></div></div>
+    <figcaption><code>contain: inline-size</code>: as with no containment, lines 4 and 5 in the second
+    column. <span class=pr-flag>Safari</span> breaks it as in the first figure.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

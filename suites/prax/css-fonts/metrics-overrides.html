@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Metric overrides</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Metrics Normal"; src: url(../../../third_party/fonts/Arimo.ttf); }
+  @font-face { font-family: "Metrics Tall"; src: url(../../../third_party/fonts/Arimo.ttf); ascent-override: 150%; descent-override: 50%; }
+  @font-face { font-family: "Metrics Gap"; src: url(../../../third_party/fonts/Arimo.ttf); ascent-override: 80%; descent-override: 20%; line-gap-override: 100%; }
+  .lines { padding: 0 6px; font-size: 20px; line-height: normal; }
+  .lines span { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.11 Default font metrics overriding: 'ascent-override', 'descent-override' and 'line-gap-override'</div>
+  <h1>Metric overrides</h1>
+  <p class=pr-lede>The descriptors <q>define the ascent metric, descent metric and line gap metric of the font</q>.
+  <q>When the descriptor value is a percentage, the corresponding metric value is resolved as the given percentage
+  multiplied by the used font size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-metrics-override-desc">CSS Fonts 4 §4.11</a></span></p>
+</header>
+
+<section>
+  <h2>Two lines of 20px Arimo, line-height normal</h2>
+  <p>The tinted spans show each inline box's content area, from ascent to descent.</p>
+  <figure>
+    <div class="pr-stage lines" style="font-family: 'Metrics Normal'"><span>Line one</span><br><span>Line two</span></div>
+    <figcaption>Arimo's own metrics: ascent 0.905em, descent 0.212em, gap 0.033em, so lines about 23px
+    apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines" style="font-family: 'Metrics Tall'"><span>Line one</span><br><span>Line two</span></div>
+    <figcaption><code>150%</code> and <code>50%</code>: ascent 30px, descent 10px, so 40px lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines" style="font-family: 'Metrics Gap'"><span>Line one</span><br><span>Line two</span></div>
+    <figcaption><code>80%</code>, <code>20%</code> and a gap of <code>100%</code>: a 20px content area in 40px
+    lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines" style="font-family: 'Metrics Tall'; font-size: 10px"><span>Line one</span><br><span>Line two</span></div>
+    <figcaption>The tall overrides at 10px: resolved against the size, 20px lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

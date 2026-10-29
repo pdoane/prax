@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>x and y: absolute positions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.1 Attributes</div>
+  <h1>x and y: absolute positions</h1>
+  <p class=pr-lede><q>If a single &lt;length&gt; is provided, then the value represents the new absolute X (Y)
+  coordinate for the current text position for rendering the glyphs that correspond to the first character within
+  this element or any of its descendants.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanAttributes">SVG 2 §11.2.1</a></span>
+  The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter, on a baseline dashed in red.</p>
+</header>
+
+<section>
+  <h2>One value, and a list</h2>
+  <p><q>If a comma- or space-separated list of n &lt;length&gt;s is provided, then the values represent new absolute X
+  (Y) coordinates for the current text position for rendering the glyphs corresponding to each of the first n
+  addressable characters within this element or any of its descendants.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35">ab<tspan x="100">cd</tspan></text></svg></div>
+    <figcaption><code>x="20"</code> on the <code>text</code>, <code>x="100"</code> on a <code>tspan</code> of
+    "cd": "ab" from 20 to 40, "cd" from 100 to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20 50 90" y="35">abcd</text></svg></div>
+    <figcaption><code>x="20 50 90"</code> on "abcd": a at 20, b at 50, c at 90, and d after it at 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 20H160 M0 30H160 M0 40H160" class=pr-baseline /><text class=pr-measure x="20" y="20 30 40">abcd</text></svg></div>
+    <figcaption><code>y="20 30 40"</code>: a on the baseline at 20, b at 30, c and d at 40, each a step
+    down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>More characters than values</h2>
+  <p><q>if an ancestor ‘text’ or ‘tspan’ element specifies an absolute X (Y) coordinate for the given character via
+  an ‘x’ (‘y’) attribute (nearest ancestor has precedence), then that absolute X (Y) coordinate is used as the
+  starting X (Y) coordinate for that character</q>; else the character follows the one before.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="10 30 50 70 90 110" y="35">ab<tspan x="60">cd</tspan>ef</text></svg></div>
+    <figcaption><code>x="10 30 50 70 90 110"</code> on the <code>text</code>, <code>x="60"</code> on a
+    <code>tspan</code> of "cd": c at the <code>tspan</code>'s 60, d at the <code>text</code>'s 70; a at 10, b 30,
+    e 90, f 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35">ab<tspan x="90 110">cdef</tspan></text></svg></div>
+    <figcaption><code>x="90 110"</code> on a <code>tspan</code> of "cdef" whose <code>text</code> has one
+    value: c at 90, d at 110, then e and f follow, to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20 40 60 80" y="35">ab</text></svg></div>
+    <figcaption><code>x="20 40 60 80"</code> on "ab": <q>the extra &lt;length&gt;s will have no effect</q>; a at
+    20, b at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

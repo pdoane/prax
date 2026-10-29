@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of tabindex</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.3 The tabindex attribute</div>
+  <h1>The order of tabindex</h1>
+  <p class=pr-lede><q>Positive numbers specify the relative position of the element's focusable areas in the sequential focus
+  navigation order, and negative numbers indicate that the control is not sequentially focusable.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-tabindex-attribute">HTML §6.6.3</a></span></p>
+</header>
+<section>
+  <h2>Positive values first, then the rest in tree order</h2>
+  <p>An element with a positive value is placed <q>before any focusable area whose DOM anchor is an element whose
+  tabindex attribute has a value less than or equal to zero</q>. <q>The relative ordering within a tabindex-ordered
+  focus navigation scope for elements and focusable areas that belong to the same focus navigation scope and whose
+  tabindex value is zero should be in shadow-including tree order.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-tabindex-attribute">§6.6.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=start tabindex=1>start, tabindex=1</div>
+        <div class=pr-target id=t3 tabindex=3>tabindex=3</div>
+        <div class=pr-target id=t0 tabindex=0>tabindex=0</div>
+        <div class=pr-target id=t1 tabindex=1>tabindex=1</div>
+        <div class=pr-target id=tm tabindex=-1>tabindex=-1</div>
+        <button class=pr-target id=b>a button, no tabindex</button>
+        <div class=pr-target id=t2 tabindex=2>tabindex=2</div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click <code>start</code>, then press Tab repeatedly: <code>t1</code>, <code>t2</code>,
+    <code>t3</code>, then <code>t0</code> and <code>b</code> in tree order. <code>start</code> comes before
+    <code>t1</code>, its equal, being earlier in the tree. <code>tabindex=-1</code> is never
+    reached.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block formatting contexts: roots clear of floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; width: 60px; height: 40px; }
+  .fr { float: right; width: 60px; height: 40px; }
+  .root { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.1 Block formatting contexts</div>
+  <h1>Block formatting contexts: roots clear of floats</h1>
+  <p class=pr-lede>A box that establishes a block formatting context keeps clear of the floats beside it, and of no
+  others. Each orange box has <code>overflow: hidden</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-formatting">CSS 2 §9.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>With no float beside it</h2>
+  <p>Where no float is beside the box, it is laid out as any block box is, whether or not a float lies further down: a
+  negative margin takes it past the edge, and a box too wide overflows. Each stage has a 40px block, then a float at
+  40, then the orange box with <code>margin-top: -40px</code>, at the stage's top. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div style="height: 40px"></div><div class="pr-a pr-fit fl" style="height: 20px">float</div><div class="pr-b root" style="margin: -40px 0 0 -20px">ml −20</div></div>
+    <figcaption><code>margin-left: -20px</code>: at −20, 220px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="height: 40px"></div><div class="pr-a pr-fit fl" style="height: 20px">float</div><div class="pr-b pr-fit root" style="margin-top: -40px; width: 250px">width: 250px</div></div>
+    <figcaption><code>width: 250px</code>: at 0, overflowing the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="height: 40px"></div><div class="pr-a pr-fit fl" style="height: 20px">float</div><div class="pr-b pr-fit root" style="margin-top: -40px; width: 250px; height: 50px">250 by 50</div></div>
+    <figcaption>250 by 50: it would reach the float, and does not fit beside it, so it goes below. CSS 2 does not say
+    where: Chrome and Safari put it just below the float, at 60px; Firefox at 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

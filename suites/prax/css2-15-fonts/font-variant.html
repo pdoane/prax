@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font variant: small-caps</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.5 Small-caps: the 'font-variant' property</div>
+  <h1>Font variant: small-caps</h1>
+  <p class=pr-lede><code>font-variant</code> takes <code>normal | small-caps</code>. Initial <code>normal</code>, it
+  applies to all elements, is inherited, and computes to the value as specified.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/variant-caps.html">font-variant-caps</a>, <a href="../css-fonts/font-variant.html">The font-variant shorthand</a>.</p>
+</header>
+
+<section>
+  <h2>normal and small-caps</h2>
+  <p><q>In a small-caps font the lower case letters look similar to the uppercase ones, but in a smaller size and with
+  slightly different proportions.</q> <q>It is acceptable (but not required) in CSS 2.2 if the small-caps font is a
+  created by taking a normal font and replacing the lower case letters by scaled uppercase characters.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#small-caps">CSS 2 §15.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-variant: normal">Small Caps</div>
+    <figcaption><code>normal</code>: capitals and lower case letters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-variant: small-caps">Small Caps</div>
+    <figcaption><code>small-caps</code>: "S" and "C" full capitals, the lower case letters smaller capitals.
+    <span class="pr-flag pr-since">Since CSS 2</span> simulating them is now what user agents should do.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-variant-prop">CSS Fonts 4 §6.11</a>, <a href="https://drafts.csswg.org/css-fonts-4/#font-variant-caps-prop">§6.6</a></div>
+  <h2>font-variant is a shorthand</h2>
+  <p><q>The font-variant property is a shorthand for all font-variant subproperties</q>, and <code>small-caps</code>
+  sets <code>font-variant-caps</code>. <q>The value normal resets all subproperties of font-variant to their initial
+  value.</q> Small capitals are glyphs of the font, and <q>if small-caps or all-small-caps is specified but small-caps
+  glyphs are not available for a given font, user agents should simulate a small-caps font</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-prop">CSS Fonts 4 §6.11</a>, <a href="https://drafts.csswg.org/css-fonts-4/#font-variant-caps-prop">§6.6</a></span></p>
+
+  <figure>
+    <div id=reset class="pr-stage pr-sample" style="font-family: Georgia; font-variant-caps: all-small-caps; font-variant-ligatures: none; font-variant: normal">Small Caps</div>
+    <figcaption><code>all-small-caps</code> and ligatures <code>none</code>, then <code>font-variant: normal</code>:
+    capitals and lower case letters again: the shorthand resets the caps.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

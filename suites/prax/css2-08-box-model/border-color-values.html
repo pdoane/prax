@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border color: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.2 Border color</div>
+  <h1>Border color: values</h1>
+  <p class=pr-lede><code>border-top-color</code>, <code>border-right-color</code>, <code>border-bottom-color</code>,
+  <code>border-left-color</code> and the shorthand <code>border-color</code>. Each takes <code>&lt;color&gt; |
+  transparent</code>. Initial: the value of the <code>color</code> property; not inherited. Every figure's border is
+  solid and 10px wide.</p>
+</header>
+
+<section>
+  <h2>&lt;color&gt;</h2>
+  <p><q>Specifies a color value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-color-properties">CSS 2 §8.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid; border-color: #c0392b"></div></div>
+    <figcaption><code>border-color: #c0392b</code>: red on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid; border-color: rgb(39, 174, 96)"></div></div>
+    <figcaption><code>rgb(39, 174, 96)</code>: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>transparent</h2>
+  <p><q>The border is transparent (though it may have width).</q> The border still takes its room, and what is behind
+  it shows through: the box's own background, which runs under the border, and nothing more. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-color-properties">CSS 2
+  §8.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid transparent; background: none; outline: 1px dashed #6b7381"></div></div>
+    <figcaption>A transparent border on a box with no background: the guides show through. The dashed outline is the
+    border edge, 10px out from the content on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid transparent; background: #d68a3c"></div></div>
+    <figcaption>On an orange box: the border is orange, the box's own background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

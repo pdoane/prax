@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins of spanners</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+  .m20 { margin: 20px 0; }
+  .m10 { margin: 10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, margins</div>
+  <h1>Margins of spanners</h1>
+  <p class=pr-lede><q>Spanners are block-level boxes therefore the margins of two adjacent spanners will collapse with
+  each other.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage has three columns of 60px. A has <code>margin: 20px 0</code>, B <code>margin: 10px 0</code>; both span.</p>
+</header>
+
+<section>
+  <h2>Between spanners, margins collapse</h2>
+  <p><q>The margins of two spanners separated only by an absolutely positioned item will collapse with each other</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">one<div class="pr-a all m20">A</div><div class="pr-b all m10">B</div>two</div>
+    <figcaption>20px between A and B, the larger margin, not 30px. <span class=pr-flag>Safari</span> The stage
+    ends too soon, cutting "two" in half.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="position: relative">one<div class="pr-a all m20">A</div><div style="position: absolute; top: 0; right: 0" class="pr-c">C</div><div class="pr-b all m10">B</div>two</div>
+    <figcaption>C, absolutely positioned, between them: still 20px. <span class=pr-flag>Firefox</span> 30px: the margins do not
+    collapse. <span class=pr-flag>Safari</span> "two" cut in half, as in the first.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

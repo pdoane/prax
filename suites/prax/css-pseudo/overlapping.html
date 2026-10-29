@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-line and ::first-letter together</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; width: 160px; }
+  .ex { color: red; }
+  .ex::first-letter { color: green; font-size: 200%; }
+  .ex::first-line { color: blue; }
+  .size::first-letter { font-size: 200%; }
+  .size::first-line { color: blue; }
+  .before::before { content: "So "; }
+  .before::first-letter { color: green; font-size: 200%; }
+  .before::first-line { color: blue; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 6 Overlapping Pseudo-element Interactions</div>
+  <h1>::first-line and ::first-letter together</h1>
+  <p class=pr-lede><q>the ::first-letter boundaries are tightly wrapped around the first letter text, and
+  ::first-letter is constrained to exist solely on the first formatted line.</q> <q>the ::first-line start is
+  inserted just inside the containing block's element boundary, and its end after the close of all content on the
+  line</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#interactions">CSS Pseudo-Elements 4 §6</a></span>
+  Each paragraph is 160px wide; every character is 10px wide, the first letter 20px.</p>
+</header>
+
+<section>
+  <h2>The section's example</h2>
+  <pre class=pr-source>p { color: red }
+p::first-letter { color: green; font-size: 200% }
+p::first-line { color: blue }</pre>
+  <figure>
+    <div class=pr-stage><p class="ex pr-measure">Some text that ends up on two lines</p></div>
+    <figcaption><q>The first letter of each P element will be green</q>, at twice the size. <q>The rest of the first
+    formatted line will be blue while the rest of the paragraph will be red.</q> The line breaks before "ends".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Contained in ::first-line</h2>
+  <figure>
+    <div class=pr-stage><p class="size pr-measure">Some text that ends up on two lines</p></div>
+    <figcaption><code>::first-letter</code> sets only the size: the S is blue, from <code>::first-line</code>
+    around it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="before pr-measure">me text that ends up on two lines</p></div>
+    <figcaption><code>::before</code> adds "So ": its S is the green first letter, and "o me text that" blue,
+    as if it were the source's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

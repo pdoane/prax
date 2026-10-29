@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vertical-align in page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 6 Page Properties</div>
+  <h1>vertical-align in page-margin boxes</h1>
+  <p class=pr-lede><q>On page-margin boxes, the 'vertical-align' property behaves as specified for table cells. It always performs alignment in the vertical dimension, regardless of writing mode.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-properties">CSS Paged Media 3 §6</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>As in a table cell</h2>
+  <p>The pages have a 60px top margin, so each top box is 60px tall, and its one line is placed in it as a cell's content would be.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 60px 0 20px; @top-left { content: 'top'; vertical-align: top; background: #f9cc9d } @top-center { content: 'middle'; background: #c3d08b } @top-right { content: 'bottom'; vertical-align: bottom; background: #f9cc9d } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>'top' at the top of its box, 'middle' in the middle, the default, and 'bottom' at the bottom. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

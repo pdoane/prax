@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The option element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.10 The option element</div>
+  <h1>The option element</h1>
+  <p class=pr-lede><q>The option element represents an option in a select element or as part of a list of suggestions
+  in a datalist element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-option-element">HTML §4.10.10</a></span></p>
+</header>
+
+<section>
+  <h2>What an option shows</h2>
+  <p>Its label is its <code>label</code> attribute if not empty, or else its text, with spaces collapsed; a
+  <code>select</code> not in base appearance shows <q>the result of getting an option element's label given the option
+  and true</q>, the text including images' <code>alt</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-option-element">§4.10.10</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select size=2><option label="Pomme">Apple<option label="">Pear</select></div>
+    <figcaption>"Pomme", the label; "Pear", the content, as the label is empty.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select size=2><option>  Plum
+    tree  <option>Fig<script>/* skipped */</script></select></div>
+    <figcaption>"Plum tree", its spaces collapsed; "Fig", the script skipped.</figcaption>
+  </figure><figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pad"><select size=2><option><img alt="★">Star<option>Moon</select></div>
+    <figcaption>"★Star": an image's <code>alt</code> counts. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> show "Star".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside a select</h2>
+  <p><q>If an option does not have a nearest ancestor select, then it is expected to render its children.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad"><div>before<option label="Ignored">Apple, <b>bold</b></option>after</div></div>
+    <figcaption>Three lines: "before", "Apple, <b>bold</b>" as the option's content, not its label, then
+    "after". <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> show the label,
+    "Ignored".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

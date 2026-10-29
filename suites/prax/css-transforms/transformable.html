@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transformable elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .row { padding: 10px; }
+  .m { transform: translateY(30px); }
+  .t { margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>Transformable elements</h1>
+  <p class=pr-lede><q>Transforms apply to transformable elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  A transformable element is one <q>whose layout is governed by the CSS box model except for non-replaced inline boxes,
+  table-column boxes, and table-column-group boxes</q>, or an SVG renderable element <q>with the exception of any
+  descendant element of text content elements</q>. Each orange element has <code>translateY(30px)</code>.</p>
+</header>
+
+<section>
+  <h2>CSS boxes</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-text row">one <span class="pr-chip m">two</span> three</div>
+    <figcaption>A non-replaced inline: not moved; "two" stays on the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text row">one <span class="pr-chip m" style="display: inline-block">two</span> three</div>
+    <figcaption>An inline-block: 30px down, below the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text row">one <svg class=m width=30 height=20 style="vertical-align: bottom"><rect width=30 height=20 fill="#d68a3c"/></svg> three</div>
+    <figcaption>An inline <code>svg</code>, a replaced box: 30px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="pr-table t"><div class="pr-table-column"></div><div class="pr-table-column m" style="background: #d68a3c"></div><div class="pr-table-row"><div class="pr-table-cell" style="background: none">1</div><div class="pr-table-cell" style="background: none">2</div><div class="pr-table-cell" style="background: none">3</div></div></div></div>
+    <figcaption>A table column with an orange background: not moved; it stays behind cell 2, 10 to 30
+    down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG elements</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80 style="display: block; font: 13px sans-serif"><text x=10 y=25>one <tspan class=m fill="#d68a3c">two</tspan> three</text></svg></div>
+    <figcaption>A <code>tspan</code>, inside a text content element: not moved.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80 style="display: block; font: 13px sans-serif"><text class=m x=10 y=25 fill="#d68a3c">one two three</text></svg></div>
+    <figcaption>The <code>text</code> itself: 30px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80 style="display: block"><rect class=m x=10 y=10 width=40 height=20 fill="#d68a3c"/></svg></div>
+    <figcaption>A <code>rect</code>: 30px down, to 40 to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix(): the result</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3.3 Calculating the Result of color-mix</div>
+  <h1>color-mix(): the result</h1>
+  <p class=pr-lede><q>Interpolate a and b’s colors as described in [css-color-4#interpolation], with a progress percentage
+  equal to (b’s percentage) / combined percentage)</q>, two at a time, in order. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix-result">CSS Color 5
+  §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Three colors</h2>
+  <p><q>In this example three colors are mixed, and no percentages are given so each color
+  contributes one-third of the final result</q>: <code>color-mix(in oklab, teal, olive, blue)</code>, <q>mixed result
+  is oklab(52.53% -0.0550 -0.0720)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: teal"></div><div class=sw style="background: olive"></div><div class=sw style="background: blue"></div></div>
+    <figcaption>The three colors.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in oklab, teal, olive, blue)"></div><div class=sw style="background: oklab(52.53% -0.0550 -0.0720)"></div></div>
+    <figcaption>The mix beside <code>oklab(52.53% -0.0550 -0.0720)</code>: one steel blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Each takes only two colors: the mix draws nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One color</h2>
+  <p><q>If items is length 1, set color to the color of that sole item, converted to the
+  specified interpolation &lt;color-space&gt;.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in oklab, teal)"></div><div class=sw style="background: teal"></div></div>
+    <figcaption><code>color-mix(in oklab, teal)</code> beside <code>teal</code>: one teal. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The mix draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: color-mix(in oklab, teal 50%)"></div><div class=sw style="background: rgb(0 128 128 / 0.5)"></div></div>
+    <figcaption><code>color-mix(in oklab, teal 50%)</code>: teal at alpha 0.5, as <code>rgb(0 128 128 / 0.5)</code>, on a checkerboard. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The mix draws nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

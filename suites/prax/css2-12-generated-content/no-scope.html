@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: no scope</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .show::before { content: counter(n) " "; font-weight: 600; color: #2c5a8f; }
+  .rs { counter-reset: n; color: #7b8494; }
+  .rs5 { counter-reset: n 5; color: #7b8494; }
+  .inc { counter-increment: n; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.1 Nested counters and scope</div>
+  <h1>Nested counters: no scope</h1>
+  <p class=pr-lede>Grey lines reset <code>n</code>; the others increment it and show it in blue.</p>
+</header>
+
+<section>
+  <h2>A counter in no scope</h2>
+  <p><q>If 'counter-increment' or 'content' on an element or pseudo-element refers to a counter that is not in the
+  scope of any 'counter-reset', implementations should behave as though a 'counter-reset' had reset the counter to 0
+  on that element or pseudo-element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="inc show">a</div><div class="inc show">b</div><div class="inc show">c</div></div>
+    <figcaption>No reset anywhere: "a" behaves as if reset to 0 and incremented, 1; its siblings are in that scope: 2,
+    3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=show>used only</div></div>
+    <figcaption>Only <code>content</code> refers to <code>n</code>: 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Before a reset</h2>
+  <p>A reset's scope starts at the element that has it, so an element before it is in no scope and gets a counter of
+  its own; the reset that follows starts a new one. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="inc show">before</div><div class=rs5>reset to 5</div><div class="inc show">after</div></div>
+    <figcaption>"before" is not in the scope of the reset that follows it: it shows 1. "after" shows 6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div><div class="inc show">inside</div></div><div class="inc show">outside</div></div>
+    <figcaption>The implied reset on "inside" covers only its own following siblings and their descendants:
+    "outside", its parent's sibling, gets a counter of its own: 1 and 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

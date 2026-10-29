@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: resolving conflicts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; border: 0 none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.7.1.1 Conflict Resolution Algorithm for Collapsed Borders</div>
+  <h1>Collapsed borders: resolving conflicts</h1>
+  <p class=pr-lede><q>When they are laid out in collapsed-borders mode, table-root and table-cell boxes sharing a border
+  attempt to unify their borders so that they render using the same style, width, and color (whenever this is
+  possible).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#conflict-resolution-for-collapsed-borders">CSS Table 3 §3.7.1</a></span>
+  Cells are grey, 40 by 20 inside their borders.</p>
+</header>
+
+<section>
+  <h2>One border along a spanning cell</h2>
+  <p>For a cell's right border, the set holds <q>the border-left style of all cells sharing a section of their left
+  border with C°'s right border</q>, and, <q>For all newly-added left borders from cell C<sub>i</sub> having a rowspan
+  greater than one</q>, the right borders that meet theirs; then <q>Harmonize the conflicting borders of S</q>: all take
+  one winner. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-conflict-resolution-algorithm">CSS Table 3 §3.7.1.1</a></span>
+  Cell A spans two rows, with a 2px blue right border; B, beside it on top, has a 10px orange left border; C, below
+  B, a 2px green one.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td rowspan=2 style="border-right: 2px solid #4f81bd">A<td style="border-left: 10px solid #d68a3c">B<tr><td style="border-left: 2px solid #6aa36a">C</table></div>
+    <figcaption>The one line between A and the cells B and C is 10px orange all the way down, beside C too. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> resolve it a segment at a time, as CSS 2 did: 10px orange beside B, 2px beside C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

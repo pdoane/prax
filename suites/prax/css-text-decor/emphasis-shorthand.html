@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-emphasis shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/56px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.3 Emphasis Mark Shorthand: the text-emphasis property</div>
+  <h1>The text-emphasis shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for setting 'text-emphasis-style' and 'text-emphasis-color' in one
+  declaration. Omitted values are set to their initial values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-property">CSS Text Decoration 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Style and color</h2>
+  <figure>
+    <div class="pr-stage j" lang=ja><span style="text-emphasis: open triangle #c0392b">強調</span></div>
+    <figcaption><code>open triangle #c0392b</code>: a red △ over each character.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" lang=ja><span style="text-emphasis-color: #c0392b; text-emphasis: sesame">強調</span></div>
+    <figcaption>A red color, then <code>text-emphasis: sesame</code>: the color is reset to
+    <code>currentcolor</code>, black sesames.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The position is not reset</h2>
+  <p><q>Note that 'text-emphasis-position' is not reset in this shorthand.</q></p>
+  <figure>
+    <div class="pr-stage j" lang=ja style="text-emphasis-position: under"><span style="text-emphasis: dot">強調</span></div>
+    <figcaption><code>under</code> on the stage, then the shorthand on the span: the dots are under the
+    characters.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

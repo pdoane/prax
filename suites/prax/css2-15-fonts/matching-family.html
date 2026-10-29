@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font matching: the family list</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.2 Font matching algorithm</div>
+  <h1>Font matching: the family list</h1>
+  <p class=pr-lede><q>Using the complete set of properties, the UA uses the 'font-family' property to choose a tentative
+  font family.</q> When that family cannot draw a character, the next one in the list is tried.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/family-lookup.html">Finding the family</a>, <a href="../css-fonts/next-family.html">No glyph: the next family</a>.</p>
+</header>
+
+<section>
+  <h2>No face in a family: the next family</h2>
+  <p><q>If there is no matching font face within the 'font-family' being processed by step 2, and if there is a next
+  alternative 'font-family' in the font set, then repeat step 2 with the next alternative 'font-family'.</q> <q>If
+  there is no font within the family selected in 2, then use a UA-dependent default 'font-family'</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2 §15.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Such Font', monospace">Mono iiii</div>
+    <figcaption><code>"No Such Font", monospace</code>: no such family, so the next one draws the text:
+    monospace, the i's as wide as the M.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Such Font'">Mono iiii</div>
+    <figcaption><code>"No Such Font"</code> alone: no next family, so the user agent's default family draws the
+    text, which is not monospace: the i's are narrow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No glyph for a character: the next family, or a symbol</h2>
+  <p><q>If there is a matching font face, but it does not contain a glyph for the current character, and if there is a
+  next alternative 'font-family' in the font sets, then repeat step 2 with the next alternative 'font-family'.</q> <q>The
+  UA should map each character for which it has no suitable font to a visible symbol</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2
+  §15.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Courier, Impact">Text αβγ</div>
+    <figcaption><code>Courier, Impact</code>: "Text" in Courier, a typewriter face, which has no Greek, so
+    "αβγ" is in Impact, heavy and narrow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample">a &#xE000; b</div>
+    <figcaption>U+E000, a private use character no font here has, between "a" and "b": a box or other symbol stands
+    in for it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Implicit pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .row { margin: 10px 20px; touch-action: none; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; height: 40px; margin: 0 16px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 8.4 Implicit pointer capture</div>
+  <h1>Implicit pointer capture</h1>
+  <p class=pr-lede><q>Inputs that implement direct manipulation interactions for panning and zooming (such as touch or
+  stylus on a touchscreen) SHOULD behave exactly as if setPointerCapture was called on the target element just before
+  the invocation of any pointerdown listeners.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-pointer-capture">Pointer Events §8.4</a></span></p>
+</header>
+<section>
+  <h2>A finger stays with what it touched</h2>
+  <p><q>The hasPointerCapture API may be used (for instance, in a pointerdown listener) to determine whether this has
+  occurred.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-pointer-capture">§8.4</a></span>
+  The log shows <code>hasCapture</code> where the target has capture as <code>pointerdown</code>'s listeners run.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>a</div><div class=pr-target id=b>b</div></div>
+      <ol class=pr-log data-log="pointerdown gotpointercapture pointermove" data-fields="pointerType target hasCapture" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen. Touch <code>a</code> and slide onto <code>b</code>: <code>pointerdown</code>
+    with <code>hasCapture</code>, <code>gotpointercapture</code> at <code>a</code>, and every
+    <code>pointermove</code> at <code>a</code>. The same with the mouse: no <code>hasCapture</code>, and the moves
+    reach <code>b</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Released in pointerdown</h2>
+  <p><q>If releasePointerCapture is not called for the pointer before the next pointer event is fired, then a
+  gotpointercapture event will be dispatched to the target (as normal) indicating that capture is active.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-pointer-capture">§8.4</a></span>
+  A <code>pointerdown</code> listener on <code>c</code> releases the capture.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=c>c</div><div class=pr-target id=d>d</div></div>
+      <ol class=pr-log data-log="pointerdown gotpointercapture pointermove" data-fields="target hasCapture" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen. Touch <code>c</code> and slide onto <code>d</code>: no
+    <code>gotpointercapture</code>, and the <code>pointermove</code>s follow the finger to <code>d</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Marks each pointerdown with whether its target has capture before the target's own listeners run.
+  document.addEventListener("pointerdown", event => {
+    event.hasCapture = event.target.hasPointerCapture(event.pointerId);
+  }, {capture: true});
+  const c = document.getElementById("c");
+  c.addEventListener("pointerdown", event => c.releasePointerCapture(event.pointerId));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

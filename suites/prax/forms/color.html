@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color well</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+.restyled input[type=color] { appearance: none; width: 28px; height: 28px; padding: 0; border: none;
+  border-radius: 50%; overflow: hidden; }
+.restyled input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.restyled input[type=color]::-webkit-color-swatch { border: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Color well</h1>
+  <p>A color control shows its value in a swatch. Its picker is the host's, which comes in a later step.</p>
+</header>
+
+<section>
+  <h2>Values and states</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th><th>restyled parts</th></tr>
+  <tr><th scope=row>no value</th><td><input type=color></td><td class=none><input type=color></td><td class=base><input type=color></td><td class=styled><input type=color></td><td class=restyled><input type=color></td></tr>
+  <tr><th scope=row>#3d82c4</th><td><input type=color value=#3d82c4></td><td class=none><input type=color value=#3d82c4></td><td class=base><input type=color value=#3d82c4></td><td class=styled><input type=color value=#3d82c4></td><td class=restyled><input type=color value=#3d82c4></td></tr>
+  <tr><th scope=row>a named color</th><td><input type=color value=tomato></td><td class=none><input type=color value=tomato></td><td class=base><input type=color value=tomato></td><td class=styled><input type=color value=tomato></td><td class=restyled><input type=color value=tomato></td></tr>
+  <tr><th scope=row>with alpha</th><td><input type=color alpha value="#e08a2e80"></td><td class=none><input type=color alpha value="#e08a2e80"></td><td class=base><input type=color alpha value="#e08a2e80"></td><td class=styled><input type=color alpha value="#e08a2e80"></td><td class=restyled><input type=color alpha value="#e08a2e80"></td></tr>
+  <tr><th scope=row>disabled</th><td><input type=color value=#2e9e6a disabled></td><td class=none><input type=color value=#2e9e6a disabled></td><td class=base><input type=color value=#2e9e6a disabled></td><td class=styled><input type=color value=#2e9e6a disabled></td><td class=restyled><input type=color value=#2e9e6a disabled></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>Set by script</h2>
+  <p class=note>The buttons set the value, which the swatch shows at once, and the line reads it back sanitized.</p>
+<div class=strip>
+  <input type=color id=well value=#3d82c4>
+  <button type=button data-set="#c0477a">#c0477a</button>
+  <button type=button data-set="#FFAA00">#FFAA00</button>
+  <button type=button data-set="red">red</button>
+  <span id=value class=log></span>
+</div>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><input type=color value=#3d82c4></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><input type=color value=#3d82c4></div></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><div class=strip><input type=color value=#3d82c4></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><input type=color value=#3d82c4></div>
+</div>
+</section>
+
+<script>
+const well = document.getElementById('well');
+const shown = document.getElementById('value');
+const show = () => { shown.textContent = 'value: ' + well.value; };
+for (const button of document.querySelectorAll('[data-set]'))
+  button.addEventListener('click', () => { well.value = button.dataset.set; show(); });
+well.addEventListener('input', show);
+show();
+</script>
+</body>
+</html>

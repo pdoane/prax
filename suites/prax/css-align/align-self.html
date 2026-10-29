@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-self</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-auto-flow: column; grid-auto-columns: 40px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.2 Block-Axis (or Cross-Axis) Self-Alignment</div>
+  <h1>align-self</h1>
+  <p class=pr-lede><q>Aligns the box (as the alignment subject) within its containing block (as the alignment
+  container) along the block/column/cross axis of the alignment container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-self-property">CSS Box Alignment 3 §6.2</a></span>
+  Each stage is a grid one row 60px tall, of 40px columns.</p>
+</header>
+
+<section>
+  <h2>auto, and stretch</h2>
+  <p><code>auto</code> <q>behaves as the computed 'align-items' value of the parent box (minus any legacy
+  keywords)</q>. <code>stretch</code> is <q>As defined for 'justify-self'</q>: within <code>min-height</code> and
+  <code>max-height</code>, for an <code>auto</code> height.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="align-items: end"><div class=pr-a>A</div><div class=pr-b style="align-self: start">B</div><div class=pr-c style="align-self: center">C</div></div></div>
+    <figcaption><code>align-items: end</code>: A, <code>auto</code>, at the bottom; B <code>start</code> at the top;
+    C <code>center</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="align-self: stretch">A</div><div class=pr-b style="align-self: stretch; max-height: 30px">B</div><div class=pr-c style="align-self: stretch; height: 20px">C</div><div class=pr-d style="align-self: start">D</div></div></div>
+    <figcaption>A <code>stretch</code>: 60px tall; B with <code>max-height: 30px</code>: 30px; C with
+    <code>height: 20px</code>: 20px; D <code>start</code>: 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto margins first</h2>
+  <p><q>auto margins, because they effectively adjust the size of the margin area, take precedence over
+  'align-self'.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="align-self: start; margin-top: auto">A</div><div class=pr-b style="align-self: stretch; margin: auto 0">B</div><div class=pr-c style="align-self: end; margin-bottom: auto">C</div></div></div>
+    <figcaption>A <code>start</code>, <code>margin-top: auto</code>: at the bottom; B <code>stretch</code>, auto
+    margins: 20px tall, centered; C <code>end</code>, <code>margin-bottom: auto</code>: at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

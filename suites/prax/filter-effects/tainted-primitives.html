@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tainted filter primitives</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 80px; height: 40px; margin: 0 10px; background: url(../shared/resources/flag-40x20.png) 0 0 / 80px 40px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute; color: #ff0000">
+  <filter id="map-flood" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#ff8000" result="map" />
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+  <filter id="map-current" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feFlood flood-color="currentColor" result="map" />
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+  <filter id="map-source" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feDisplacementMap in="SourceGraphic" in2="SourceGraphic" scale="40" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 15.1 Tainted Filter Primitives</div>
+  <h1>Tainted filter primitives</h1>
+  <p class=pr-lede><q>The following filter primitives may have access to pixel values that potentially contain
+  privacy-sensitive information, either from the filtered object itself or other sources such as CSS styling. These
+  primitives must be flagged as "tainted".</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#tainted-filter-primitives">Filter Effects 1 §15.1</a></span>
+  What a still can show of it is the one rule that changes what is drawn: <q>If feDisplacementMap has a "tainted"
+  flagged filter primitive as input and this input filter primitive is used as displacement map (referenced by in2),
+  then feDisplacementMap must not proceed with the filter operation and acts as a pass through filter.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#fedisplacemnentmap-restrictions">§15.2</a></span></p>
+</header>
+
+<section>
+  <h2>A map that is not tainted</h2>
+  <p>Each box is 80 by 40, the flag at twice its size: blue, orange, green and purple quarters. Each filter displaces
+  it by a map, <code>scale="40"</code>, x by the map's red and y by its green.</p>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#map-flood)"></div></div>
+    <figcaption>A flood of <code>#ff8000</code>: red 1 and green 0.5, so each point takes the color 20px to its right,
+    level: blue 20px, orange 40px, then 20px empty at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tainted maps: passed through</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=box style="filter: url(#map-current)"></div></div>
+    <figcaption>A flood of <code>currentColor</code>, red, is tainted: <q>feFlood when the specified value of the
+    flood-color property computes to currentColor</q>. The flag as it is. <span class=pr-flag>Safari</span>
+    Displaced: the top half moved, the bottom gone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=box style="filter: url(#map-source)"></div></div>
+    <figcaption><code>in2="SourceGraphic"</code>, tainted as all <q>the filter primitives: SourceGraphic,
+    SourceAlpha</q> are: the flag as it is. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    Displaced by its own colors, the quarters shifted apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

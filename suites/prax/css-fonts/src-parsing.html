@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Parsing src</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Parse Skip"; src: url(../../../third_party/fonts/Cousine.ttf) format("embedded-opentype"), url(../../../third_party/fonts/Literata.ttf) format("truetype"); }
+  @font-face { font-family: "Parse Tech"; src: url(../../../third_party/fonts/Cousine.ttf) tech(incremental), url(../../../third_party/fonts/Literata.ttf) tech(variations); }
+  @font-face { font-family: "Parse Bad Item"; src: url(../../../third_party/fonts/Cousine.ttf) format(zebra), url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Parse Nothing"; src: url(../../../third_party/fonts/Literata.ttf) format("embedded-opentype"); }
+  @font-face { font-family: "Parse Variations"; src: url(../../../third_party/fonts/Literata.ttf) format("truetype-variations"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.3.1 Parsing the 'src' descriptor</div>
+  <h1>Parsing src</h1>
+  <p class=pr-lede><q>If parsing a component value results in a parsing error or its format or tech are unsupported, do
+  not add it to the list of supported sources. If there are no supported entries at the end of this process, the
+  value for the 'src' descriptor is a parse error.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-face-src-parsing">CSS Fonts 4 §4.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Unsupported entries are left out</h2>
+  <p>Each rule's first entry is Cousine, a monospace, and its second Literata, a serif. Each stage names the family,
+  then <code>sans-serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Parse Skip', sans-serif">Handgloves</div>
+    <figcaption><code>format("embedded-opentype")</code> is an EOT file, which no current engine supports: left
+    out, so Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Parse Tech', sans-serif">Handgloves</div>
+    <figcaption><code>tech(incremental)</code> where incremental transfer is unsupported: left out, so
+    Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Parse Bad Item', sans-serif">Handgloves</div>
+    <figcaption><code>format(zebra)</code>, a format with no meaning: left out, so Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Parse Nothing', sans-serif">Handgloves</div>
+    <figcaption>Only an unsupported entry: the face has no source to load, so the family is not available:
+    sans-serif.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The legacy format strings</h2>
+  <p><code>format("truetype-variations")</code> is accepted as <code>format(truetype) tech(variations)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Parse Variations', sans-serif">Handgloves</div>
+    <figcaption>Literata.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

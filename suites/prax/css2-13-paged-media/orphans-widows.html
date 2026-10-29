@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>orphans and widows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.3.2 Breaks inside elements: orphans, widows</div>
+  <h1>orphans and widows</h1>
+  <p class=pr-lede><q>The 'orphans' property specifies the minimum number of lines in a block container that must be left at the bottom of a page. The 'widows' property specifies the minimum number of lines in a block container that must be left at the top of a page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#break-inside">CSS 2 §13.3.2</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Lines left at the bottom and the top</h2>
+  <p>A green block leaves room below it on page 1 for some lines of a six-line paragraph, which is orange.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } p { orphans: 3; background: #f9cc9d }</style><div style='height: 100px; background: #c3d08b'></div><p>line 1<br>line 2<br>line 3<br>line 4<br>line 5<br>line 6</p>"></iframe>
+    <figcaption>Room for two lines below the 100px block, but <code>orphans: 3</code>: the whole paragraph moves to page 2. <span class=pr-flag>Firefox</span> Lines 1 and 2 on page 1.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } p { widows: 3; background: #f9cc9d }</style><div style='height: 40px; background: #c3d08b'></div><p>line 1<br>line 2<br>line 3<br>line 4<br>line 5<br>line 6</p>"></iframe>
+    <figcaption>Room for five lines below the 40px block, which would leave one; <code>widows: 3</code> leaves three on page 2, and three on page 1. <span class=pr-flag>Firefox</span> Five lines on page 1, one on page 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

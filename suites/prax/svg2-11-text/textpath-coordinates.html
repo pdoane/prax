@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>textPath: whose coordinates</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>textPath: whose coordinates</h1>
+  <p class=pr-lede><q>The path data coordinates within the referenced ‘path’ element or basic shape element are assumed
+  to be in the same coordinate system as the current ‘text’ element, not in the coordinate system where the ‘path’
+  element is defined.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  "abcdefgh" is PR Noto Sans Mono, 10 a letter; the path it is to follow is dashed in red.</p>
+</header>
+
+<section>
+  <h2>The text's coordinates</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><g transform="translate(0 30)"><defs><path id="moved" d="M 20 30 H 140" /></defs></g><path d="M20 30H140" class=pr-baseline /><text class=pr-measure><textPath href="#moved">abcdefgh</textPath></text></svg></div>
+    <figcaption>The path, <code>M 20 30 H 140</code>, inside a <code>g</code> translated 30 down: the translation
+    has no effect, "abcdefgh" on y 30, from 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><defs><path id="line" d="M 20 30 H 140" /></defs><path d="M30 20L143.8 58" class=pr-baseline /><text class=pr-measure transform="translate(10 -10) rotate(18.43 20 30)"><textPath href="#line">abcdefgh</textPath></text></svg></div>
+    <figcaption>A <code>text</code> with <code>transform="translate(10 -10) rotate(18.43 20 30)"</code>: the path
+    moved and turned with it, the letters on the dashed line from 30, 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The path's own transform</h2>
+  <p><q>The ‘transform’ attribute on the referenced ‘path’ element or basic shape element represents a supplemental
+  transformation relative to the current user coordinate system for the current ‘text’ element</q>; it <q>scales the
+  path (equivalent to multiplying every coordinate by 2 for simple linear paths), but does not scale the text placed
+  along the path.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><defs><path id="scaled" d="M 10 30 L 70 30" transform="scale(2 1)" /></defs><path d="M20 30H140" class=pr-baseline /><text class=pr-measure><textPath href="#scaled" startOffset="40">abcdefgh</textPath></text></svg></div>
+    <figcaption><code>M 10 30 L 70 30</code> with <code>transform="scale(2 1)"</code>: the path from 20 to 140;
+    <code>startOffset="40"</code> along it, "abcdefgh" from 60 to 140, the letters no wider.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

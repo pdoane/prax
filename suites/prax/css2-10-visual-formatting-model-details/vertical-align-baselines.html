@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: baselines of boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .ib { display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: baselines of boxes</h1>
+  <p class=pr-lede>Each stage's text is 13px on 20px lines, with the line's baseline dashed in red. Each box is aligned <code>baseline</code>, the initial value.</p>
+</header>
+
+<section>
+  <h2>Inline-blocks and inline tables</h2>
+  <p><q>The baseline of an 'inline-block' is the baseline of its last line box in the normal flow, unless it has either
+  no in-flow line boxes or if its 'overflow' property has a computed value other than 'visible', in which case the
+  baseline is the bottom margin edge.</q> <q>The baseline of an 'inline-table' is the baseline of the first row of the
+  table.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib">first<br>last line</span></div>
+    <figcaption>An inline-block of two lines: its last line's text is on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 30px"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="overflow: hidden">first<br>last line</span></div>
+    <figcaption>With <code>overflow: hidden</code>, its bottom margin edge is on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="width: 30px; height: 30px"></span></div>
+    <figcaption>Empty, with no line boxes: its bottom edge is on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=pr-inline-table><span class=pr-table-row><span class=pr-table-cell>row 1</span></span><span class=pr-table-row><span class=pr-table-cell>row 2</span></span></span></div>
+    <figcaption>An inline table of two rows: its first row's text is on the red line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A box with no baseline</h2>
+  <p><q>If the box does not have a baseline, align the bottom margin edge with the parent's baseline.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 10px"><span class=pr-baseline></span>Xx <img alt="" style="margin-bottom: 6px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An image, which has no baseline, with <code>margin-bottom: 6px</code>: its margin edge is on the red line, so the image is 6px above it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

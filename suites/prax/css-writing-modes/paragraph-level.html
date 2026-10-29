@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The paragraph embedding level</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.1 Bidi Paragraph Embedding Levels</div>
+  <h1>The paragraph embedding level</h1>
+  <p class=pr-lede><q>In CSS, the paragraph embedding level must be set (following UAX9 clause HL1) according to the
+  direction property of the paragraph's containing block rather than by the heuristic given in steps P2 and P3 of the
+  Unicode algorithm.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-para-direction">CSS Writing Modes 4 §2.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>From direction, not from the text</h2>
+  <p>P2 and P3 would take each paragraph's direction from its first strong letter. CSS takes it from the block.</p>
+  <figure>
+    <div class=pr-stage>אבג abc!</div>
+    <figcaption><code>ltr</code>, the Hebrew first: still left to right, the Hebrew word at the left and "abc!"
+    after it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl">abc אבג!</div>
+    <figcaption><code>rtl</code>, English first: still right to left, "abc" at the right, the Hebrew word left of
+    it, and the "!" at the left end.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The exception: plaintext</h2>
+  <p><q>when the computed unicode-bidi of the paragraph's containing block is plaintext, the Unicode heuristics in P2
+  and P3 are used as described in [UAX9], without the HL1 override.</q></p>
+  <figure>
+    <div class=pr-stage style="unicode-bidi: plaintext; text-align: left">אבג abc!</div>
+    <figcaption><code>ltr</code> and <code>plaintext</code>: right to left, from the Hebrew: from the left, "!abc"
+    and then the Hebrew word.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: plaintext; text-align: right">abc אבג!</div>
+    <figcaption><code>rtl</code> and <code>plaintext</code>: left to right, from "abc": from the right, "!" then the
+    Hebrew word then "abc".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

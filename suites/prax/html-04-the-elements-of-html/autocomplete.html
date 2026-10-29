@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Offering past values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0 0 10px; font-size: 13px; }
+  iframe.pr-result { height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.7.2 Processing model</div>
+  <h1>Offering past values</h1>
+  <p class=pr-lede><q>The autocomplete content attribute can be used to hint to the user agent how to, or indeed whether
+  to, provide such a feature.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#autofilling-form-controls:-the-autocomplete-attribute">HTML §4.10.19.7.1</a></span></p>
+</header>
+
+<section>
+  <h2>on and off</h2>
+  <p><q>When an element's autofill field name is "off", the user agent should not remember the control's data, and
+  should not offer past values to the user.</q> <q>When an element's autofill field name is not "off", the user agent
+  may store the control's data, and may offer previously stored values to the user.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#autofill-processing-model">§4.10.19.7.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=remembered-result>
+        <input name=city size=12 placeholder="a city"> <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=remembered-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>No <code>autocomplete</code>, so "on". Type "Lisbon" and Submit. Clear the field and type "L": the
+    browser may offer "Lisbon".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=forgotten-result>
+        <input name=city size=12 placeholder="a city" autocomplete=off> <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=forgotten-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption><code>autocomplete=off</code>, the same <code>name</code>. Type "L": nothing is offered, not even the
+    city that the first field submitted. Type "Porto" and Submit, then "P": still nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What kind of value</h2>
+  <p><q>When the autofill field name is one of the names of the autofill fields described above, the user agent should
+  provide suggestions that match the meaning of the field name</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#autofill-processing-model">§4.10.19.7.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <input name=x size=24 autocomplete=email placeholder="autocomplete=email">
+    </div>
+    <figcaption>Click the field: a browser that knows the reader's email addresses offers them, though the field's
+    <code>name</code> says nothing of email.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

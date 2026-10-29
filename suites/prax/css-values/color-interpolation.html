@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Colors interpolate premultiplied</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .c { height: 60px; background: white; }
+  .c div { height: 60px; animation: 1s linear -0.5s infinite alternate; }
+  @keyframes fade { from { background-color: rgb(255 0 0); } to { background-color: rgb(0 0 255 / 0); } }
+  @keyframes clear { from { background-color: rgb(0 0 0 / 0); } to { background-color: rgb(0 0 255); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 8.1.1 Combination of &lt;color&gt;</div>
+  <h1>Colors interpolate premultiplied</h1>
+  <p class=pr-lede><q>Interpolation of &lt;color&gt; is defined in [css-color-4]. Interpolation is done between
+  premultiplied colors</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combine-colors">CSS Values and Units 4 §8.1.1</a></span>
+  Each stage animates <code>background-color</code> over white, linearly, to and fro; a still shows it halfway.</p>
+</header>
+
+<section>
+  <h2>A transparent end adds no hue</h2>
+  <figure>
+    <div class="pr-stage c pr-motion"><div style="animation-name: fade"></div></div>
+    <figcaption>From opaque red to transparent blue: halfway is red at half opacity, pink, with no purple.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage c pr-motion"><div style="animation-name: clear"></div></div>
+    <figcaption>From transparent black to blue: blue at half opacity, light blue, not darkened.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

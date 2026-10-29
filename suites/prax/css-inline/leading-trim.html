@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Trimming leading over and under text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px; }
+  .icon { width: 50px; height: 50px; background: #4f81bd; flex: none; }
+  .label { font: 40px/1.5 "PR Literata"; background: rgba(214, 138, 60, 0.4); }
+  .ar { font-family: "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6 Trimming Leading Over/Under Text</div>
+  <h1>Trimming leading over and under text</h1>
+  <p class=pr-lede><q>The text-box property allows trimming this additional space above and below the first and last
+  lines of a block, allowing more precise control over spacing around the glyphs.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#leading-trim">CSS Inline Layout 3 §6</a></span></p>
+</header>
+
+<section>
+  <h2>Centering text on an icon</h2>
+  <p>The spec's example: <q>because the visual boundaries of Latin text are the cap height and the alphabetic
+  baseline, rather than the ascent and descent</q>, centering a text's box does not center its letters. <q>By using
+  text-box-trim to strip out the spacing above the cap height and below the alphabetic baseline, centering the box
+  actually centers the text</q>. Each row centers a 50px blue square and an orange block of 40px PR Literata capitals on 60px lines.</p>
+  <figure>
+    <div class="pr-stage row"><div class=icon></div><div class=label>HEY</div></div>
+    <figcaption>Untrimmed: the 60px box is centered, but Literata's ascent is taller than its descent, so the
+    capitals sit about 3px low.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage row"><div class=icon></div><div class=label style="text-box: trim-both cap alphabetic">HEY</div></div>
+    <figcaption><code>text-box: trim-both cap alphabetic</code>: the box is the capitals, centered on the square,
+    as much square above them as below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Whatever the font</h2>
+  <p><q>Even though different fonts have different cap heights, by using the font's metric rather than a magic number,
+  the layout intention is met even as the font is changed.</q></p>
+  <figure>
+    <div class="pr-stage row"><div class=icon></div><div class="label ar" style="text-box: trim-both cap alphabetic">HEY</div></div>
+    <figcaption>PR Arimo, whose ascent, descent and cap height differ: centered the same way.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage row"><div class=icon></div><div class=label style="font-size: 20px; text-box: trim-both cap alphabetic">HEY</div></div>
+    <figcaption>At 20px: the capitals 14px tall, centered.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

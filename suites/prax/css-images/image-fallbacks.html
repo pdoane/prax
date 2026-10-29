@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image(): a color when the image fails</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .pr-stage ul { margin: 10px 0; padding: 0 10px; list-style-position: inside; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 2.1.1 Image Fallbacks</div>
+  <h1>image(): a color when the image fails</h1>
+  <p class=pr-lede><q>If both a URL and a &lt;color&gt; are specified in image(), then whenever the URL represents an
+  invalid image or loading image, the image() function renders as if the URL were not specified at all; it generates
+  a solid-color image</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#image-fallbacks">CSS Images 5 §2.1.1</a></span>
+  Each dashed box is 100 by 40, with its background drawn once at the top left.</p>
+</header>
+
+<section>
+  <h2>The color only when the image fails</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('support/no-such-image.png', #4f81bd)"></div></div>
+    <figcaption>A URL that fails, and blue: the box filled with blue, an image of no natural size. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('../shared/resources/flag-40x20.png', #4f81bd)"></div></div>
+    <figcaption>A flag 40 by 20 that loads, and blue: the flag, and no blue around it. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('support/arrow.svg', #4f81bd)"></div></div>
+    <figcaption>An orange arrow 20 by 20 on a transparent ground, and blue: the arrow, the guides showing around it.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No color: the image is invalid</h2>
+  <p><q>If just a URL is specified (no &lt;color&gt;) and it represents an invalid image or loading image, the image()
+  function represents the same.</q> An invalid image in <code>list-style-image</code> <q>is treated as none, allowing
+  the list-style-type to render in its place.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#image-values">CSS Images 4 §2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><ul class=pr-text style="list-style-image: image('support/no-such-image.png')"><li>Item</ul></div>
+    <figcaption>A URL that fails: a disc marker, as for <code>list-style-image: none</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

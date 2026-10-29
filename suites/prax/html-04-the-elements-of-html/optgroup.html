@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The optgroup element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.9 The optgroup element</div>
+  <h1>The optgroup element</h1>
+  <p class=pr-lede><q>The optgroup element represents a group of option elements with a common label.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-optgroup-element">HTML §4.10.9</a></span></p>
+</header>
+
+<section>
+  <h2>Groups, each under its label</h2>
+  <p>User agents <q>should show the option elements of such groups as being related to each other and separate
+  from other option elements.</q> Its <code>disabled</code> <q>can be used to disable a group of option elements together.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-optgroup-element">§4.10.9</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad">
+      <select size=6><optgroup label="Fruit"><option>Apple<option>Pear</optgroup><optgroup label="Nuts"><option>Almond<option>Pecan</optgroup></select>
+    </div>
+    <figcaption>"Fruit" in bold over Apple and Pear, "Nuts" in bold over Almond and Pecan. <span class=pr-flag>Firefox</span> sets the labels in italics too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pad">
+      <select size=6 id=grouped><optgroup label="Fruit"><option>Apple<option>Pear</optgroup><optgroup label="Nuts" disabled><option>Almond<option>Pecan</optgroup></select>
+      <ol class=pr-log data-log="change" data-fields="target" data-lines=1 data-on="#grouped" style="margin: 10px -10px -10px"></ol>
+    </div>
+    <figcaption>Nuts <code>disabled</code>, grey. Click Pear: <code>change</code>. Click Almond:
+    nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A label from a legend</h2>
+  <p><q>If optgroup's first element child is a legend element, then return the result of get HTML-aware text
+  content given that legend element and true.</q> Outside base appearance, <q>it is expected to be rendered by displaying the element's label and children.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-optgroup-element">§4.10.9</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad">
+      <select size=3><optgroup label="Ignored"><legend>Fruit</legend><option>Apple<option>Pear</optgroup></select>
+    </div>
+    <figcaption>A list box: "Fruit" in bold, from the legend, over Apple and Pear; the <code>label</code> attribute,
+    "Ignored", is not shown. <span class=pr-flag>Firefox</span> shows "Ignored", then "Fruit" as a row of its
+    own.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

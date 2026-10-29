@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline-shift: the legacy SVG value</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  svg { display: block; width: 200px; height: 80px; }
+  text { font: 30px "PR Baseline Diagnostic"; }
+  line { stroke: #c0392b; stroke-width: 1; stroke-dasharray: 3 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.3.1 Legacy Values for SVG</div>
+  <h1>baseline-shift: the legacy SVG value</h1>
+  <p class=pr-lede><q>User agents may additionally support the keyword baseline as computing to 0 if is necessary for
+  them to support legacy SVG content. This value is not allowed in the vertical-align shorthand.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-shift-svg-legacy">CSS Inline Layout 3 §4.2.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>In SVG text</h2>
+  <p>Each SVG holds a <code>text</code> element of 30px PR Baseline Diagnostic at y = 40, dashed in red, whose last █
+  is a <code>tspan</code> with the caption's <code>baseline-shift</code>.</p>
+  <figure>
+    <div class=pr-stage><svg viewBox="0 0 200 80"><line x1=0 y1=40 x2=200 y2=40></line><text x=20 y=40>██<tspan id=t1 style="baseline-shift: 15px">█</tspan></text></svg></div>
+    <figcaption><code>15px</code>: the last █ raised 15px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg viewBox="0 0 200 80"><line x1=0 y1=40 x2=200 y2=40></line><text x=20 y=40 style="baseline-shift: 15px">██<tspan id=t2 style="baseline-shift: baseline">█</tspan></text></svg></div>
+    <figcaption><code>baseline</code> on the <code>tspan</code> of a <code>text</code> raised 15px: no shift of its
+    own, so level with the rest. <span class=pr-flag>Safari</span> Drops the
+    last █ 15px, back to y = 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not in vertical-align</h2>
+  <p>The span declares <code>vertical-align: 10px</code> and then <code>vertical-align: baseline</code>, which is
+  valid as <code>alignment-baseline</code>'s keyword, not as this one.</p>
+  <figure>
+    <div class="pr-stage pr-text">Xx <span class=pr-hl id=v1 style="vertical-align: 10px; vertical-align: baseline">span</span></div>
+    <figcaption><code>vertical-align: baseline</code> is <code>alignment-baseline</code>'s keyword, and resets
+    <code>baseline-shift</code> to 0: the span on the baseline, not raised 10px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

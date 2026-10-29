@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid item sizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template: 60px / 120px; }
+  .g.tall { grid-template: 80px / 120px; }
+  section figure .pr-stage { width: 150px; overflow: hidden; }
+  section figcaption { max-width: 150px; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.2 Grid Item Sizing</div>
+  <h1>Grid item sizing</h1>
+  <p class=pr-lede><q>A grid item is sized within the containing block defined by its grid area.</q> <q>Grid item
+  calculations for automatic sizes in a given dimensions vary by their self-alignment values</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-item-sizing">CSS Grid Layout 2 §6.2</a></span></p>
+</header>
+
+<section>
+  <h2>normal and stretch fill the area; other values fit the content</h2>
+  <p>For <code>normal</code>, with no ratio, <q>the grid item is sized as for align-self: stretch</q>; for any other
+  value but <code>stretch</code>, <q>Size the item as fit-content.</q> Each grid area is 120 by 60px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta>ab</div></div></div>
+    <figcaption><code>normal</code>: "ab" fills the area, 120 by 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta style="justify-self: start; align-self: end">ab</div></div></div>
+    <figcaption><code>justify-self: start; align-self: end</code>: 20 by 20px, at the bottom left of the
+    area.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta style="justify-self: center">ab cd ef gh ij</div></div></div>
+    <figcaption><code>justify-self: center</code> on 140px of words: fit-content, as a float, 120px wide on two
+    lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With a preferred aspect ratio</h2>
+  <p>For <code>normal</code>, an item with a ratio <q>is sized consistent with the size calculation rules for
+  block-level elements for the corresponding axis</q>; <code>stretch</code> uses the stretch-fit size, and <q>This can
+  distort the aspect ratio</q>. Each area is 120 by 80px; each item has <code>aspect-ratio: 3 / 1</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g tall"><div class=tb style="aspect-ratio: 3 / 1">ab</div></div></div>
+    <figcaption><code>normal</code>: 120px wide as a block is, and 40px tall from the ratio, not
+    80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g tall"><div class=tb style="aspect-ratio: 3 / 1; place-self: stretch">ab</div></div></div>
+    <figcaption><code>place-self: stretch</code>: the stretch-fit size in both axes, 120 by 80px, the ratio given
+    up.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="g tall"><div class=tb style="aspect-ratio: 3 / 1; justify-self: start">abcdef</div></div></div>
+    <figcaption><code>justify-self: start</code> on "abcdef": fit-content, 60px wide, and 20px tall from the
+    ratio. <span class=pr-flag>Chrome</span> fills the area's height, 80px, and is 240px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

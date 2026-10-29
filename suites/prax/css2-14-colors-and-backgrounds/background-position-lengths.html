@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background position: lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { height: 100px; background-repeat: no-repeat; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50'><rect width='50' height='50' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background position: lengths</h1>
+  <p class=pr-lede><code>background-position</code> takes percentages, lengths and keywords. The image is a 50px blue
+  square, drawn once, in a box 200 by 100. The guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The top left corner, a distance in</h2>
+  <p><q>A length L aligns the top left corner of the image a distance L to the right of (for horizontal) or below (for
+  vertical) the top left corner of the element's padding box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=area style="background-position: 2cm 1cm"></div></div>
+    <figcaption>The specification's <code>2cm 1cm</code>: <q>the upper left corner of the image is placed 2cm to the
+    right and 1cm below the upper left corner</q>, about 76px and 38px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=area style="background-position: 120px 40px"></div></div>
+    <figcaption><code>120px 40px</code>: the image's top left corner 120px across and 40px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative values</h2>
+  <p><q>Negative &lt;percentage&gt; and &lt;length&gt; values are allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=area style="background-position: -20px -30px"></div></div>
+    <figcaption><code>-20px -30px</code>: only the image's bottom right, 30 by 20, shows, in the box's
+    corner.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=area style="background-position: -20% 50%"></div></div>
+    <figcaption><code>-20% 50%</code>: 20% of the 150px of room, 30px of the image, is past the left edge; 25px
+    down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

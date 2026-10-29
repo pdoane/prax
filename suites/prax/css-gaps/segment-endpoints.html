@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Segment endpoints</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .f { display: flex; flex-wrap: wrap; gap: 10px; }
+  .f > div { padding: 0; box-sizing: border-box; }
+  .mcw { column-width: 60px; column-height: 20px; column-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.1.1 Segment endpoints</div>
+  <h1>Segment endpoints</h1>
+  <p class=pr-lede><q>A segment endpoint is a point on a gap's centerline where a gap decoration segment may start or
+  end.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#segment-endpoints">CSS Gaps 1 §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>At the bounds of a gap, and on each side of a junction</h2>
+  <p>Endpoints are made at a gap's two bounds, and at each <q>gap junction</q>, <q>a region of G where one or more
+  gaps abut or overlap G</q>: an end endpoint <q>where a cross gap appears on at least one side of G</q>, a start
+  endpoint <q>where no cross gap exists on either side of G</q>. With <code>rule-break: intersection</code>, a rule
+  runs from each start endpoint to the next end endpoint. Column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption>Grid: each rule starts at the container's edge, ends where the crossing gap begins, starts again
+    where it ends, and ends at the far edge, leaving each 10px junction empty. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption>A spans two columns, so the first column gap meets the row gap only from below: still a junction, and
+    the black rule stops on both sides of it. The red rule there is only between C and D. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex lines and rows of columns</h2>
+  <p>Each flex line has column gaps of its own, which abut the row gap between the lines.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f rules"><div class=pr-a style="width: 60px">A</div><div class=pr-b style="width: 80px">B</div><div class=pr-c style="width: 30px">C</div><div class=pr-d style="width: 90px">D</div><div class=pr-a style="width: 50px">E</div></div></div>
+    <figcaption>Flex: the red rules run from the top edge to the row gap, and from it to the bottom edge, where each
+    line's own gaps are; the black rule stops at each of the three column gaps, from either line, that meet it.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="mcw rules"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption>Multicol, rows of columns from <code>column-height: 20px; column-wrap: wrap</code>: the same as the
+    grid, a junction where each column gap meets the row gap. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One row of columns, B under A, and red rules from top to bottom only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

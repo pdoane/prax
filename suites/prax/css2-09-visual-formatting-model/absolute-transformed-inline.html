@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute positioning: a transformed inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 0; right: 0; }
+  .host { transform: translateX(0); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.6 Absolute positioning</div>
+  <h1>Absolute positioning: a transformed inline</h1>
+  <p class=pr-lede>Each stage is positioned, and holds a static orange inline with <code>transform: translateX(0)</code>,
+  which moves nothing. In the inline is a blue box with <code>top: 0; right: 0</code>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a>, <a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></div>
+  <h2>Only a box that can be transformed</h2>
+  <p><q>any value other than none for the transform property also causes the element to establish a containing block
+  for all descendants</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>, but
+  <code>transform</code> applies only to transformable elements: <q>all elements whose layout is governed by the CSS box
+  model except for non-replaced inline boxes, table-column boxes, and table-column-group boxes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 60px; padding: 20px 0 0 20px; box-sizing: border-box">a <span class="pr-chip host">transformed span<span class="pr-a pr-fit abs" style="width: 20px; height: 20px"></span></span></div>
+    <figcaption>A span is a non-replaced inline: its transform does not apply, it holds nothing, and the blue box is
+    at the stage's top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 60px; padding: 20px 0 0 20px; box-sizing: border-box">a <span class="pr-chip host" style="display: inline-block; padding-right: 24px">inline block<span class="pr-a pr-fit abs" style="width: 20px; height: 20px"></span></span></div>
+    <figcaption>The same span as an inline block is transformed: it is the containing block, and the blue box is at
+    its top right padding corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas: no boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The canvas: no boxes</h1>
+  <p class=pr-lede>Each figure is a frame. The frame's canvas is transparent unless a background is given to it, so the
+  stage's guides show through it.</p>
+</header>
+
+<section>
+  <h2>No boxes: a transparent canvas</h2>
+  <p><q>if no boxes are generated for the element whose background would be used for the background of the canvas,
+  then the canvas background is transparent. (in CSS 2.2, that is the case when the element or an ancestor has
+  'display: none'.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<style>html { display: none; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>html { display: none; background: #d68a3c }</code>: no orange, the guides show through the whole
+    frame.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<style>body { display: none; background: #d68a3c }</style>"></iframe></div>
+    <figcaption>The root has no background and <code>body { display: none; background: #d68a3c }</code>: no orange
+    either.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-backgrounds-4/#special-backgrounds">CSS Backgrounds 4 §4</a></div>
+  <h2>Only display: none</h2>
+  <p><q>However, if the element whose background would be used for the canvas is display: none, then the canvas
+  background is transparent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#special-backgrounds">CSS Backgrounds 4 §4</a></span> An element can now generate no
+  boxes without <code>display: none</code>: with <code>display: contents</code> its background is still
+  propagated.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<style>body { display: contents; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>body { display: contents; background: #d68a3c }</code>: the whole frame is orange. <span
+    class=pr-flag>Chrome</span> paints no orange, as for <code>display: none</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<style>html { display: contents; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>html { display: contents; background: #d68a3c }</code>: the root still generates a box, as a block does <span class=pr-cite><a href="https://drafts.csswg.org/css-display-3/#root">CSS Display 3 §2.8</a></span>, and the frame is orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

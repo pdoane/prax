@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cells paint in document order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; height: 20px; vertical-align: top; }
+  .a { background: #4f81bd; }
+  .b { background: #d68a3c; }
+  .over { height: 40px; margin-bottom: -20px; width: 20px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.1 Paint order of cells</div>
+  <h1>Cells paint in document order</h1>
+  <p class=pr-lede><q>Table cells are painted in a table-root in DOM order as usual, independently of where cells end up
+  actually being drawn.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#paint-order">CSS Table 3 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Two cells on one slot</h2>
+  <p>Blue spans down from the first row, orange across the second.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td></td><td class=a rowspan=2></td><tr><td class=b colspan=2></td></tr></table></div>
+    <figcaption>Blue comes first in the document, orange second: orange over blue in the shared slot, bottom
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A header drawn first, painted in its place in the document</h2>
+  <p>An orange header row and a blue body row. The header's cell holds a purple block 40px tall with
+  <code>margin-bottom: -20px</code>, so it hangs 20px down into the body row.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><thead><tr><td class=b><div class=over></div></td></tr></thead><tbody><tr><td class=a></td></tr></tbody></table></div>
+    <figcaption><code>thead</code> first in the document: the body's blue cell is painted after it, over the purple
+    block's lower half. <span class=pr-flag>Firefox</span> paints every cell's background first: purple whole.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tbody><tr><td class=a></td></tr></tbody><thead><tr><td class=b><div class=over></div></td></tr></thead></table></div>
+    <figcaption><code>thead</code> after the <code>tbody</code>: drawn on top all the same, but painted after the
+    body, so the purple block shows whole, over blue. <span class=pr-flag>Chrome</span> paints in the order drawn:
+    blue over purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

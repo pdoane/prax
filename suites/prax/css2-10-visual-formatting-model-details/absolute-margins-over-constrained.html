@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: auto margins and over-constraint</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; left: 70px; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.4 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute heights: auto margins and over-constraint</h1>
+  <p class=pr-lede>Each stage, 200 by 100, is the containing block of the orange box in it. Here none of 'top', 'height'
+  and 'bottom' is 'auto'.</p>
+</header>
+
+<section>
+  <h2>Auto margins</h2>
+  <p><q>If none of the three are 'auto': If both 'margin-top' and 'margin-bottom' are 'auto', solve the equation under
+  the extra constraint that the two margins get equal values. If one of 'margin-top' or 'margin-bottom' is 'auto',
+  solve the equation for that value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="top: 0; bottom: 0; height: 40px; margin: auto 0">box</div></div>
+    <figcaption><code>top: 0; bottom: 0; height: 40px; margin: auto 0</code>: 30px margins center the box
+    vertically.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="top: 0; bottom: 0; height: 40px; margin: auto 0 10px">box</div></div>
+    <figcaption><code>margin-top: auto; margin-bottom: 10px</code>: the top margin is 50px, and the box ends 10px from
+    the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over-constrained</h2>
+  <p><q>If the values are over-constrained, ignore the value for 'bottom' and solve for that value.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="top: 20px; bottom: 20px; height: 40px">box</div></div>
+    <figcaption><code>top: 20px; height: 40px; bottom: 20px</code>: <code>bottom</code> is ignored and becomes 40px.
+    The box is at 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="direction: rtl"><div class="pr-b abs pr-fit" style="top: 20px; bottom: 20px; height: 40px">box</div></div>
+    <figcaption>The same in an <code>rtl</code> containing block: direction does not matter vertically.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The unicode-bidi property: isolate and plaintext</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .he { font-family: "PR Arimo", "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The unicode-bidi property: isolate and plaintext</h1>
+  <p class=pr-lede>CSS 2's <code>unicode-bidi</code> takes <code>normal | embed | bidi-override</code>. Hebrew is
+  right-to-left: אבג reads alef, bet, gimel, from the right. The tinted span is the one each figure styles.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">CSS Writing Modes 4 §2.2</a></div>
+  <h2>isolate, isolate-override and plaintext</h2>
+  <p><code>unicode-bidi</code> takes <code>normal | embed | isolate | bidi-override | isolate-override |
+  plaintext</code>. With <code>isolate</code>, <q>neither is the content inside the box bidi-affected by the content
+  surrounding the box, nor is the content surrounding the box bidi-affected by the content or specified
+  directionality of the box.</q> <code>plaintext</code> <q>behaves as 'isolate' except that ... the base
+  directionality ... is determined by following the heuristic in rules P2 and P3</q>. HTML's <code>dir</code>
+  attribute isolates. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">CSS Writing Modes 4 §2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text he"><span class=pr-hl style="direction: rtl; unicode-bidi: embed">אבג</span> - 3 reviews</div>
+    <figcaption><code>embed</code>: the "- 3" after the span is drawn into its right-to-left run: "3 -" at the
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he"><span class=pr-hl style="direction: rtl; unicode-bidi: isolate">אבג</span> - 3 reviews</div>
+    <figcaption><code>isolate</code>: the span is one neutral to the line around it, and "- 3 reviews" reads after
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" style="unicode-bidi: plaintext">אבג abc!<br>abc אבג!</div>
+    <figcaption><code>plaintext</code> on the block: each paragraph takes its direction from its first strong letter,
+    the first right to left, at the right, and the second left to right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he">x <span class=pr-hl dir=auto>אבג abc</span> y</div>
+    <figcaption><code>dir=auto</code> on the span: Hebrew first, so its content is right to left, "abc" at the left
+    of אבג, and isolated between x and y.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

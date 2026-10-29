@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>block-ellipsis: which line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px; background: #f4f5f7; continue: collapse; max-lines: 2; }
+  .stage { height: 70px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 4.2 Indicating Block-Axis Overflow, which line</div>
+  <h1>block-ellipsis: which line</h1>
+  <p class=pr-lede><code>block-ellipsis: no-ellipsis | ellipsis | &lt;string&gt;</code>, inherited. <q>This property
+  allows inserting content into the last line box before a clamp point or a (forced or unforced) region break to
+  indicate the continuity of truncated / interrupted content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#block-ellipsis">CSS Overflow 4 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Only where a clamp point or break follows the line</h2>
+  <p>The property <q>affects a line box that immediately precedes a region break or a clamp point when both
+  participate in the same independent formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#block-ellipsis">CSS Overflow 4 §4.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 90px"><div class="pr-frame pr-measure c" style="block-ellipsis: ellipsis">line one<br>line two<div class=pr-plain style="height: 10px"></div>line three</div></div>
+    <figcaption>An empty block 10px tall between "line two" and the clamp point: no ellipsis, 50px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 90px"><div class="pr-frame pr-measure c" style="block-ellipsis: ellipsis; max-lines: auto; max-height: 40px">line one<div style="display: flow-root">line two</div>line three</div></div>
+    <figcaption><code>max-height: 40px</code> clamps after a <code>flow-root</code> holding "line two", another formatting context: no ellipsis. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+00-supports-1.html
+00-supports-2.html
+# css-contain-2/#intro 1 Introduction: no page; it introduces contain and content-visibility, which 2 and 4 show
+# css-contain-2/#interaction 1.1 Module Interactions: no page; it says the module supersedes CSS Containment 1
+# css-contain-2/#values 1.2 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+css-contain-2/#contain-property 2 Strong Containment: the contain property
+    contain-values.html
+    contain-applies.html
+    contain-root.html
+    contain-root-writing-mode.html
+# css-contain-2/#containment-types 3 Types of Containment: no page; it defines containment, whose kinds 3.1 to 3.5 show
+css-contain-2/#containment-size 3.1 Size Containment
+    size-containment.html
+    size-containment-in-place.html
+    size-containment-replaced.html
+    size-containment-properties.html
+    size-containment-item.html
+    size-containment-monolithic.html
+    size-containment-exceptions.html
+# css-contain-2/#containment-size-opt 3.1.1 Possible Size-Containment Optimizations: no page; informative; optimizations, which draw nothing different
+css-contain-2/#containment-inline-size 3.2 Inline-Size Containment
+    inline-size-containment.html
+    inline-size-indirect.html
+css-contain-2/#containment-layout 3.3 Layout Containment
+    layout-containment.html
+    layout-containment-stacking.html
+    layout-containment-baseline.html
+    layout-containment-breaks.html
+    layout-containment-exceptions.html
+# css-contain-2/#containment-layout-opt 3.3.1 Possible Layout-Containment Optimizations: no page; informative; optimizations, which draw nothing different
+css-contain-2/#containment-style 3.4 Style Containment
+    style-containment.html
+    style-containment-scope.html
+    style-containment-quotes.html
+# css-contain-2/#containment-style-opt 3.4.1 Possible Style-Containment Optimizations: no page; informative; optimizations, which draw nothing different
+css-contain-2/#containment-paint 3.5 Paint Containment
+    paint-containment.html
+    paint-containment-effects.html
+    paint-containment-exceptions.html
+# css-contain-2/#containment-paint-opt 3.5.1 Possible Paint-Containment Optimizations: no page; informative; optimizations, which draw nothing different
+css-contain-2/#content-visibility 4 Suppressing An Element’s Contents Entirely: the content-visibility property
+    content-visibility.html
+    content-visibility-skipped.html
+    content-visibility-auto.html
+css-contain-2/#content-visibility-animation 4.1 Animating and Interpolating content-visibility
+    content-visibility-animation.html
+css-contain-2/#using-cv-hidden 4.2 Using content-visibility: hidden
+    using-content-visibility-hidden.html
+css-contain-2/#using-cv-auto 4.3 Using content-visibility: auto
+    using-content-visibility-auto.html
+# css-contain-2/#content-visibility-auto-state-change 4.4 Detecting content-visibility: auto state changes: the contentvisibilityautostatechange event: no page; an event and its IDL, for script
+css-contain-2/#cv-notes 4.5 Restrictions and Clarifications
+    content-visibility-restrictions.html
+# css-contain-2/#cv-a11y 4.6 Accessibility Implications: no page; the accessibility tree, which is not drawn
+# css-contain-2/#cv-examples 4.7 Examples: no page; its examples are content-visibility: auto and hidden, which 4 shows, and a script reading a rect
+# css-contain-2/#privacy 5 Privacy Considerations: no page; nothing to see
+# css-contain-2/#security 6 Security Considerations: no page; nothing to see
+# css-contain-2/#changes A Changes: no page; the changes since earlier drafts
+# css-contain-2/#changes-since-2022-09-17 A.1 Changes from 2022-09-17 Working Draft: no page; the changes since earlier drafts
+# css-contain-2/#changes-since-2020-12-16 A.2 Changes from 2020-12-16 Working Draft: no page; the changes since earlier drafts
+# css-contain-2/#changes-since-2020-06-03 A.3 Changes from 2020-06-03 Working Draft: no page; the changes since earlier drafts
+# css-contain-2/#changes-since-2019-11-11 A.4 Changes from 2019-11-11 Working Draft: no page; the changes since earlier drafts
+# css-contain-2/#l1-changes A.5 Changes from CSS Containment Level 1: no page; the changes since earlier drafts
+# css-contain-3/#privacy 1 Privacy Considerations: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5
+# css-contain-3/#security 2 Security Considerations: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5
+# css-contain-3/#changes A Changes: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5
+# css-contain-3/#changes-2022-08 A.1 Changes since the 18 August 2022 Working Draft: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5
+# css-contain-3/#changes-2021-12 A.2 Changes since the 21 December 2021 First Public Working Draft: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5
+# css-contain-3/#l3-changes A.3 Changes from CSS Containment Level 2: no page; CSS Containment 3 is now empty: inline-size containment moved back to level 2 (3.2), and container queries to CSS Conditional 5

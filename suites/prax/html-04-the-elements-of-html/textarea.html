@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The textarea element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 10px 0; }
+  .stage textarea { display: block; margin: 0; padding: 0; border: 1px solid #2c5a8f; resize: none; }
+  /* Cousine, whose average character width is its advance, at a 10px advance. */
+  .ten { font: calc(10px * 2048 / 1229)/20px "PR Cousine"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.11 The textarea element</div>
+  <h1>The textarea element</h1>
+  <p class=pr-lede><q>The textarea element represents a multiline plain text edit control for the element's raw
+  value.</q> Each <code>textarea</code> here is set in Cousine, whose average character width is its advance, 10px,
+  on 20px lines. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">HTML §4.10.11</a></span></p>
+</header>
+
+<section>
+  <h2>cols and rows</h2>
+  <p>The <code>cols</code> attribute gives the character width, <q>otherwise, it is 20</q>; <code>rows</code> the
+  character height, <q>otherwise, it is 2</q>. Its width is <q>size×avg + sbw</q>, its height <q>the number of lines
+  given by the element's character height, plus the height of a scrollbar</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">§4.10.11</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-textarea-element-2">§15.5.17</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><textarea class=ten cols=10 rows=3>three lines here</textarea></div>
+    <figcaption><code>cols=10 rows=3</code>: 100 by 60 inside its border, each plus a scrollbar, which takes no room
+    where scrollbars overlay. <span class=pr-flag>Chrome</span> is 16px wider there.</figcaption>
+  </figure><figure class=pr-erratum>
+    <div class="pr-stage pr-wide stage"><textarea class=ten>defaults</textarea></div>
+    <figcaption>Neither: 20 characters by 2 lines, 200 by 40, each plus a scrollbar. <span class=pr-flag>Chrome</span>
+    is 16px wider where scrollbars take no room.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Wrapping</h2>
+  <p><q>In visual renderings, the user agent should wrap the user's input in the rendering so that each line is no wider
+  than this number of characters.</q> <code>textarea { white-space: pre-wrap; }</code>, and <code>wrap=off</code> is
+  <q>a presentational hint setting the element's 'white-space' property to 'pre'</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-textarea-element-2">§15.5.17</a></span></p>
+  <figure>
+    <div class="pr-stage stage"><textarea class=ten cols=10 rows=3>one two three four</textarea></div>
+    <figcaption>"one two" over "three four": the text wraps at the box's width.</figcaption>
+  </figure><figure>
+    <div class="pr-stage stage"><textarea class=ten cols=10 rows=3 wrap=off>one two three four</textarea></div>
+    <figcaption><code>wrap=off</code>: one line, "one two" and on, cut off at the box's right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

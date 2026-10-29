@@ -1,0 +1,34 @@
+00-supports-1.html
+# SVG2/render.html#Introduction 3.1 Introduction: no page; it is the latitude an implementation has in following the model
+SVG2/render.html#RenderingTree 3.2 The rendering tree
+    rendering-tree.html
+# SVG2/render.html#Definitions 3.2.1 Definitions: no page; it defines terms that the chapter's pages use
+SVG2/render.html#Rendered-vs-NonRendered 3.2.2 Rendered versus non-rendered elements
+    rendered-elements.html
+SVG2/render.html#VisibilityControl 3.2.3 Controlling visibility: the effect of the ‘display’ and ‘visibility’ properties
+    display-visibility.html
+SVG2/render.html#ReusedGraphics 3.2.4 Re-used graphics
+    reused-graphics.html
+SVG2/render.html#PaintersModel 3.3 The painters model
+    painters-model.html
+SVG2/render.html#RenderingOrder 3.4 Rendering order
+    rendering-order.html
+SVG2/render.html#EstablishingStackingContex 3.4.1 Establishing a stacking context in SVG
+    stacking-context.html
+SVG2/render.html#Elements 3.5 How elements are rendered
+    elements-rendered.html
+# SVG2/render.html#Grouping 3.6 How groups are rendered: no page; 3.5's page shows a group isolated by an effect
+SVG2/render.html#ObjectAndGroupOpacityProperties 3.6.1 Object and group opacity: the effect of the ‘opacity’ property
+    opacity.html
+# SVG2/render.html#TypesOfGraphicsElements 3.7 Types of graphics elements: no page; it names the kinds of graphics, which its subsections show
+SVG2/render.html#PaintingShapesAndText 3.7.1 Painting shapes and text
+    painting-shapes.html
+SVG2/render.html#PaintingRasterImages 3.7.2 Painting raster images
+    raster-images.html
+SVG2/render.html#FilteringPaintRegions 3.8 Filtering painted regions
+    filtering.html
+# SVG2/render.html#ClippingAndMasking 3.9 Clipping and masking: no page; it defers to CSS Masking, which css-masking walks
+SVG2/render.html#ParentCompositing 3.10 Parent compositing
+    parent-compositing.html
+SVG2/render.html#OverflowAndClipProperties 3.11 The effect of the ‘overflow’ property
+    overflow.html

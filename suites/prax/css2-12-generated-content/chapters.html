@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: chapters and sections</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .body { counter-reset: chapter; }
+  .h1:before { content: "Chapter " counter(chapter) ". "; counter-increment: chapter; }
+  .h1 { counter-reset: section; font-weight: 700; }
+  .h2:before { content: counter(chapter) "." counter(section) " "; counter-increment: section; }
+  .h2 { padding-left: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.1 Nested counters and scope</div>
+  <h1>Nested counters: chapters and sections</h1>
+  <p class=pr-lede>The specification's example <q>shows a way to number chapters and sections with "Chapter 1", "1.1",
+  "1.2", etc.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+</header>
+
+<section>
+  <h2>Counters on elements that are not nested</h2>
+  <p><q>Another example, showing how scope works when counters are used on elements that are not nested</q>: each H1
+  resets <code>section</code>, and its scope runs through the H2s that follow it as siblings, until the next H1's
+  reset. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+  <pre class=pr-source>BODY { counter-reset: chapter; }
+H1:before {
+    content: "Chapter " counter(chapter) ". ";
+    counter-increment: chapter; }
+H1 { counter-reset: section; }
+H2:before {
+    content: counter(chapter) "." counter(section) " ";
+    counter-increment: section; }</pre>
+  <figure>
+    <div class="pr-stage pr-text body"><div class=h1>About CSS</div><div class=h2>CSS 2</div><div class=h2>CSS 2.2</div><div class=h1>Style</div></div>
+    <figcaption>The specification's markup: "Chapter 1. About CSS", "1.1 CSS 2", "1.2 CSS 2.2", "Chapter 2.
+    Style".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text body"><div class=h1>Style</div><div class=h2>Selectors</div><div class=h1>Layout</div><div class=h2>Boxes</div><div class=h2>Floats</div></div>
+    <figcaption>Each new chapter starts its sections again: "1.1 Selectors", then "2.1 Boxes", "2.2
+    Floats".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas: the body's background</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The canvas: the body's background</h1>
+  <p class=pr-lede>Each figure is a frame whose body has <code>margin: 20px; height: 60px</code> and a dashed outline. The
+  guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>From the body, when the root has none</h2>
+  <p>When the root <q>has computed values of 'transparent' for 'background-color' and 'none' for 'background-image',
+  user agents must instead use the computed value of the background properties from that element's first HTML "BODY"
+  element or XHTML "body" element child when painting backgrounds for the canvas, and must not paint a background for
+  that child element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>body { background: #d68a3c }</code>: the whole frame is orange, the body's margin too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #8cb6c0 } body { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: #d68a3c }</style>"></iframe></div>
+    <figcaption>The root has <code>background: #8cb6c0</code>: it fills the frame in teal, and the body paints its own
+    orange inside the outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Anchored at the root, and the omitted tag</h2>
+  <p><q>Such backgrounds must also be anchored at the same point as they would be if they were painted only for the
+  root element.</q> <q>the rule for the BODY element will work even though the BODY tag has been omitted in the HTML
+  source</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) no-repeat }</style>"></iframe></div>
+    <figcaption>The body's 30px blue square at <code>0 0</code>: at the frame's top left, where the root's box starts,
+    not 20px in at the body's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<STYLE type=text/css>BODY { background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23c3d08b'/><path d='M0 14 Q6 8 10 12 T20 6' stroke='%236aa36a' stroke-width='2' fill='none'/></svg>&quot;) }</STYLE><P>My background is marble."></iframe></div>
+    <figcaption>The specification's example, with no BODY tag and a "marble" pattern: the pattern fills the whole
+    frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

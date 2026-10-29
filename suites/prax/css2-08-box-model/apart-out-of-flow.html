@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: boxes out of the flow</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: boxes out of the flow</h1>
+  <p class=pr-lede>Margins adjoin only if no line boxes, no clearance, no padding and no border separate them, and both boxes are in flow in one block formatting context. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Boxes out of the flow</h2>
+  <p><q>Margins between a floated box and any other box do not collapse.</q> <q>Margins of absolutely positioned boxes
+  do not collapse.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><div class=pr-b style="float: left; margin-top: 20px">float: mt 20</div></div>
+    <figcaption>A's 40 and the float's 20 add: the float is 60px below A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="position: relative; height: 100px"><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><div class=pr-b style="position: absolute; left: 0; right: 0; margin-top: 20px">abspos: mt 20</div></div>
+    <figcaption>An absolutely positioned box at its static position: 40 + 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="position: relative"><div class=pr-a style="margin-bottom: 20px">A: mb 20</div><div class=pr-b style="position: absolute; left: 100px; width: 60px">abspos</div><div class=pr-c style="margin-top: 30px">C: mt 30</div></div>
+    <figcaption>Between A and C, the absolutely positioned box keeps nothing apart: A's 20 and C's 30 collapse
+    past it, and C is 30px below A. The box itself, out of the flow, sits after A's margin, 20px below A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

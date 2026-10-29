@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Assigning values to gaps</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; flex-wrap: wrap; gap: 10px; column-rule: 6px solid; }
+  .f > div { width: 30px; padding: 0; box-sizing: border-box; }
+  .wrap3 { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.6 Assigning gap decoration values to gaps</div>
+  <h1>Assigning values to gaps</h1>
+  <p class=pr-lede><q>Beginning from the first item in values and the first item in gaps, assign each value to the
+  corresponding gap. If there are fewer values than gaps, repeat beginning from the first item in values, as many
+  times as needed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#assigning">CSS Gaps 1 §4.6</a></span></p>
+</header>
+
+<section>
+  <h2>In placement order, across flex lines</h2>
+  <p>Each flexbox has 6px column rules and <code>column-rule-color: red, blue, green</code>. Values go <q>starting
+  at the side where placement begins</q>, and across flex lines the pattern <q>does not restart at the beginning of
+  each flex line.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: red, blue, green"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption>Four gaps: red, blue, green, then red again. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: red, blue, green; flex-direction: row-reverse"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption><code>row-reverse</code>: 1 and the red rule beside it are on the right; then blue, green, red,
+    leftward. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f wrap3" style="column-rule-color: red, blue, green"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div><div class=pr-b>6</div></div></div>
+    <figcaption>120px wide, three to a line: the first line's gaps red and blue, the second's green and red. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With an auto repeater</h2>
+  <p>Values before the auto repeater go to the first gaps, those after it to the last, in order; the repeater fills
+  the rest. (The step reads <q>using the first trailing count items in values</q>, but the partition before it counts
+  the items after the repeater, so those are the ones meant.)</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: gray, repeat(auto, red, blue), gray"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption><code>gray, repeat(auto, red, blue), gray</code>: gray, red, blue, gray. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: red, repeat(auto, gray), blue, green"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div></div></div>
+    <figcaption><code>red, repeat(auto, gray), blue, green</code> over two gaps: red, then blue, the first value
+    after the repeater; gray gets none. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

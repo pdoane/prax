@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid items in z-order</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .ex { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 100px; }
+  .e { background: #f6d7b4; color: #1f2430; border: 1px solid #9c5f22; width: 60px; box-sizing: border-box; padding: 0 6px; font-size: 12px; font-weight: 600; line-height: 18px; }
+  .item { background: #b9cde6; color: #1f2430; width: 100px; height: 40px; }
+  .kid { position: relative; z-index: -1; top: 20px; left: 40px; width: 60px; height: 40px; background: #8e44ad; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.5 Z-axis Ordering: the z-index property</div>
+  <h1>Grid items in z-order</h1>
+  <p class=pr-lede><q>The painting order of grid items is exactly the same as inline blocks, except that order-modified
+  document order is used in place of raw document order, and z-index values other than auto create a stacking context
+  even if position is static (behaving exactly as if position were relative).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#z-order">CSS Grid Layout 2 §6.5</a></span></p>
+</header>
+
+<section>
+  <h2>Overlapping items, ordered by z-index and source order</h2>
+  <p>The specification's example, none of it positioned: two <code>1fr</code> columns and rows; A along the bottom;
+  B in the top-left cell, <code>z-index: 10</code>; C at the top right, <code>margin-left: -20px</code>; D in the
+  bottom-right cell; E, light, centered over the grid, <code>z-index: 5</code>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=ex><div class=pr-a style="grid-column: 1 / span 2; grid-row: 2; align-self: end">A</div><div class=pr-b style="grid-column: 1; grid-row: 1; z-index: 10">B</div><div class=pr-c style="grid-column: 2; grid-row: 1; align-self: start; margin-left: -20px">C</div><div class=pr-d style="grid-column: 2; grid-row: 2; justify-self: end; align-self: start">D</div><div class=e style="grid-column: 1 / span 2; grid-row: 1 / span 2; z-index: 5; justify-self: center; align-self: center">E</div></div></div>
+    <figcaption>B, highest, covers the first 20px of C and E's top-left corner; E covers the rest of what it
+    overlaps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stacking context without position</h2>
+  <p>Each light blue item, 100 by 40px, holds a purple child with <code>position: relative; z-index: -1</code>,
+  shifted 40px right and 20px down. A negative child paints below the in-flow boxes of its stacking context.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div style="display: grid; height: 60px"><div class=item><div class=kid>child</div></div></div></div>
+    <figcaption><code>z-index: auto</code>: the item paints over the child, which shows only below it, from 40 to
+    60px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div style="display: grid; height: 60px"><div class=item style="z-index: 0"><div class=kid>child</div></div></div></div>
+    <figcaption><code>z-index: 0</code> on the static item: a stacking context, so the child paints over its
+    background, from 20 to 60px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

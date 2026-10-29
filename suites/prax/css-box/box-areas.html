@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The box model: four areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stripes { background-image: repeating-linear-gradient(45deg, #c3d08b 0 6px, #a9b86a 6px 12px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2 The CSS Box Model</div>
+  <h1>The box model: four areas</h1>
+  <p class=pr-lede><q>Each box has a content area (which contains its content-- text, descendant boxes, an image or
+  other replaced element content, etc.) and optional surrounding padding, border, and margin areas; the size of each
+  area is specified by corresponding properties, and can be zero (or in the case of margins, negative).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#box-model">CSS Box Model 4 §2</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin<span class="pr-swatch pr-border"></span>border<span
+class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>Each area has its own size, and can be zero</h2>
+  <p><q>The margin, border, and padding can be broken down into top, right, bottom, and left segments, each of which
+  can be controlled independently by its corresponding property.</q></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 10px; border-width: 10px; padding: 10px"><div class=pr-content-area></div></div></div></div>
+    <figcaption>Margin, border and padding 10px on every side, around a content area 140 by 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 0 0 20px 30px; border-width: 10px 0 0; padding: 0 20px 10px 0"><div class=pr-content-area></div></div></div></div>
+    <figcaption>Each side its own, some zero: margin only below and at the left, border only on top, padding only
+    at the right and below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Backgrounds under content, padding and border; margins transparent</h2>
+  <p><q>The background of the content, padding, and border areas of a box is specified by its 'background' properties.
+  The border area can additionally be painted with a border style using the 'border' properties. Margins are always
+  transparent.</q></p>
+  <figure>
+    <div class=pr-stage><div class=stripes style="margin: 20px; padding: 10px; border: 10px dashed #e6b54a"><div class=pr-content-area></div></div></div>
+    <figcaption>Stripes in the padding and between the border's dashes; the stage's grid in the 20px
+    margin.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=stripes style="margin: 20px; padding: 10px; border: 10px dotted #e6b54a; background-color: white"><div class=pr-content-area></div></div></div>
+    <figcaption>With a white <code>background-color</code> too: still nothing in the margin.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

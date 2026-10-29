@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus delegation</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.4 Processing model</div>
+  <h1>Focus delegation</h1>
+  <p class=pr-lede>For <q>a shadow host whose shadow root's delegates focus is true</q>, the focus delegate <q>essentially returns
+  the first suitable focusable area where the path between its DOM anchor and focusTarget delegates focus at any shadow
+  tree boundaries.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">HTML §6.6.4</a></span></p>
+</header>
+<section>
+  <h2>A click on the host</h2>
+  <p>The shadow tree holds a line of text, then the fields <code>first</code> and <code>second</code>. <q>If focus
+  target is a shadow-including inclusive ancestor of focusedElement, then return focusedElement.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div id=host></div>
+        <button class=pr-target id=call>host.focus()</button>
+      </div>
+    </div>
+    <figcaption>Click the line of text: the focus goes to <code>first</code>, with a caret. Click <code>second</code>,
+    then the line: <code>second</code> keeps it, being inside the host.
+    The button, which does not take the focus itself, calls <code>host.focus()</code>: it leaves the focus at
+    <code>second</code> too.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>An autofocus delegate first</h2>
+  <p><q>Let autofocusDelegate be the autofocus delegate for whereToLook given focusTrigger.</q> <q>If autofocusDelegate
+  is not null, then return autofocusDelegate.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div id=host2></div>
+      </div>
+    </div>
+    <figcaption>The same, with <code>autofocus</code> on <code>second</code>. Click the line of text: the focus goes
+    to <code>second</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Two hosts that delegate focus, each holding a line of text and two fields; the second's second field has autofocus.
+  const tree = autofocus => '<link rel=stylesheet href=../shared/page.css>'
+      + '<div style="height: 20px; margin: 0 0 10px; font-size: 12px; line-height: 20px">a line of text in the host</div>'
+      + '<input class=pr-target id=first value=first>'
+      + '<input class=pr-target id=second value=second' + (autofocus ? ' autofocus' : '') + '>';
+  const host = document.getElementById("host");
+  host.attachShadow({mode: "open", delegatesFocus: true}).innerHTML = tree(false);
+  document.getElementById("host2").attachShadow({mode: "open", delegatesFocus: true}).innerHTML = tree(true);
+  // The button keeps the focus where it is when pressed, so that host.focus() starts from the field.
+  const call = document.getElementById("call");
+  call.addEventListener("mousedown", event => event.preventDefault());
+  call.addEventListener("click", () => host.focus());
+</script>
+</body>
+</html>

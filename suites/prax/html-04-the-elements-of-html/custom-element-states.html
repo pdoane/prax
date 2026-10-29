@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Custom states</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  x-switch { display: block; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px; box-sizing: border-box;
+             border: 2px dashed #c0392b; font-size: 12px; line-height: 16px; cursor: pointer; }
+  x-switch:state(on) { border: 2px solid #4f81bd; background: #b9cde6; }
+  x-switch::part(knob) { color: #c0392b; }
+  x-switch::part(knob):state(lit) { color: #3f7a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.7.5 Custom state pseudo-class</div>
+  <h1>Custom states</h1>
+  <p class=pr-lede><q>The :state(identifier) pseudo-class must match all custom elements whose states set's set entries
+  contains identifier.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span>
+  <code>internals.states.add(value)</code> <q>Adds the string value to the element's states set to be exposed as a
+  pseudo-class.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-state-pseudo-class">HTML §4.13.7.5</a></span></p>
+</header>
+<section>
+  <h2>A state the page's style sheet matches</h2>
+  <p>The page defines <code>x-switch</code>: a click adds the state <code>on</code> to its states set, or deletes it. The
+  page's style sheet gives <code>x-switch</code> a red dashed border, and <code>x-switch:state(on)</code> a solid blue
+  one on light blue.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act><x-switch id=first>a switch</x-switch><x-switch id=second>another switch</x-switch></div>
+    </div>
+    <figcaption>Both red and dashed at first. Click the first: blue and solid. Click it again: red and dashed. The
+    second changes only when it is clicked.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>On a shadow part</h2>
+  <p>The switch's shadow tree has a "●" with <code>part=knob</code>, which the element's code gives the state
+  <code>lit</code> while it is on, through an inner custom element's own internals. The page styles
+  <code>x-switch::part(knob)</code> red and <code>x-switch::part(knob):state(lit)</code> green.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act><x-switch id=knobbed data-knob>with a knob</x-switch></div>
+    </div>
+    <figcaption>A red "●" before the words. Click: the switch turns blue and the "●" green. Click again: both back.</figcaption>
+  </figure>
+</section>
+<script>
+  customElements.define("x-knob", class extends HTMLElement {
+    constructor() {
+      super();
+      this.internals = this.attachInternals();
+    }
+    set lit(on) {
+      if (on) this.internals.states.add("lit");
+      else this.internals.states.delete("lit");
+    }
+  });
+  customElements.define("x-switch", class extends HTMLElement {
+    constructor() {
+      super();
+      this.internals = this.attachInternals();
+      const root = this.attachShadow({mode: "open"});
+      root.innerHTML = this.dataset.knob !== undefined ? '<x-knob part=knob>●</x-knob> <slot></slot>' : '<slot></slot>';
+      this.addEventListener("click", () => {
+        const on = !this.internals.states.has("on");
+        if (on) this.internals.states.add("on");
+        else this.internals.states.delete("on");
+        const knob = root.querySelector("x-knob");
+        if (knob) knob.lit = on;
+      });
+    }
+  });
+</script>
+</body>
+</html>

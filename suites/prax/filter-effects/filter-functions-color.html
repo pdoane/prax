@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filter functions that change color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 80px; height: 30px; margin: 0 10px; background: #4f81bd; }
+  .bar { width: 80px; height: 10px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 6.1 Supported Filter Functions</div>
+  <h1>Filter functions that change color</h1>
+  <p class=pr-lede><q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">Filter Effects 1 §5</a></span>
+  Each box is 80 by 30, blue <code>rgb(79 129 189)</code> before its filter; the bar under it is the color its
+  function gives.</p>
+</header>
+
+<section>
+  <h2>Amounts from 0 to 1, and past</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: brightness(50%)"></div><div class=bar style="background: rgb(40 64 94)"></div></div>
+    <figcaption><code>brightness(50%)</code>: <q>a linear multiplier</q>, half of each channel.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: contrast(0)"></div><div class=bar style="background: rgb(128 128 128)"></div></div>
+    <figcaption><code>contrast(0)</code>: <q>completely gray</q>, every channel 0.5.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: contrast(2)"></div><div class=bar style="background: rgb(30 130 250)"></div></div>
+    <figcaption><code>contrast(2)</code>: twice as far from 0.5, <code>rgb(30 130 250)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: invert(1)"></div><div class=bar style="background: rgb(176 126 66)"></div></div>
+    <figcaption><code>invert(1)</code>: each channel from 1, an orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Grays, hues and sepia</h2>
+  <p><q>Values of amount over 100% are allowed but UAs must clamp the values to 1.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: grayscale(0.5)"></div><div class=bar style="background: rgb(101 126 156)"></div></div>
+    <figcaption><code>grayscale(0.5)</code>: halfway to its gray, a dull blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: grayscale(2)"></div><div class=bar style="background: rgb(123 123 123)"></div></div>
+    <figcaption><code>grayscale(2)</code>, clamped to 1: the gray <code>rgb(123 123 123)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: hue-rotate(180deg)"></div><div class=bar style="background: rgb(166 116 56)"></div></div>
+    <figcaption><code>hue-rotate(180deg)</code>: <code>rgb(166 116 56)</code>, a brown.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: sepia(1)"></div><div class=bar style="background: rgb(166 148 115)"></div></div>
+    <figcaption><code>sepia(1)</code>: <q>completely sepia</q>, <code>rgb(166 148 115)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Saturation and transparency</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: saturate(0)"></div><div class=bar style="background: rgb(123 123 123)"></div></div>
+    <figcaption><code>saturate(0)</code>: <q>completely un-saturated</q>, gray.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: saturate(2)"></div><div class=bar style="background: rgb(35 135 255)"></div></div>
+    <figcaption><code>saturate(2)</code>: <q>super-saturated</q>, <code>rgb(35 135 255)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: opacity(0.5)"></div><div class=bar style="background: rgb(79 129 189 / 0.5)"></div></div>
+    <figcaption><code>opacity(0.5)</code>: half-transparent, the guides showing through.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: opacity(2)"></div><div class=bar style="background: rgb(79 129 189)"></div></div>
+    <figcaption><code>opacity(2)</code>, clamped to 1: unchanged.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

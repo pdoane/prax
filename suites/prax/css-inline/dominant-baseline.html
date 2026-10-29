@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dominant-baseline: each value</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .d .pr-stage { width: 112px; font: 72px/80px "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 2px; box-sizing: border-box; }
+  .d figure { margin-right: 10px; }
+  .d figcaption { max-width: 112px; }
+  .half { font-size: 36px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.1 Dominant Baselines: the dominant-baseline property</div>
+  <h1>dominant-baseline: each value</h1>
+  <p class=pr-lede><q>This property specifies the dominant baseline, which is the default baseline type used to align
+  content within the box.</q> <q>For inline boxes, the dominant baseline is used to align the box’s text … by aligning each glyph/box’s corresponding
+  baseline to the box’s own dominant baseline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#dominant-baseline-property">CSS Inline Layout 3 §4.1</a></span></p>
+</header>
+
+<section class=d>
+  <h2>Each &lt;baseline-metric&gt;</h2>
+  <p>Each stage is a block of 72px PR Baseline Diagnostic, whose baselines each have their own
+  height, holding a glyph and a 36px span of it, under the caption's <code>dominant-baseline</code>.
+  Each glyph fills the band between two of the font's baselines: █ the ascent and descent, H hanging and
+  alphabetic, I ideographic over and under, x x-height and alphabetic, + math and alphabetic.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: text-bottom">█<span class=half>█</span></div>
+    <figcaption><code>text-bottom</code>: the bottoms level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> The tops level.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="dominant-baseline: alphabetic">H<span class=half>H</span></div>
+    <figcaption><code>alphabetic</code>: the bottoms level.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: ideographic">I<span class=half>I</span></div>
+    <figcaption><code>ideographic</code>: the bottoms level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: middle">x<span class=half>x</span></div>
+    <figcaption><code>middle</code>: the centers level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> The small x lower.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: central">I<span class=half>I</span></div>
+    <figcaption><code>central</code>: the centers level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: mathematical">+<span class=half>+</span></div>
+    <figcaption><code>mathematical</code>: the tops level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: hanging">H<span class=half>H</span></div>
+    <figcaption><code>hanging</code>: the tops level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="dominant-baseline: text-top">█<span class=half>█</span></div>
+    <figcaption><code>text-top</code>: the tops level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> The bottoms level.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

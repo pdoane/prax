@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The hidden attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .framed { border: 2px solid #2c5a8f; padding: 8px 6px; margin: 0; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.1 The hidden attribute</div>
+  <h1>The hidden attribute</h1>
+  <p class=pr-lede><q>When an element has the hidden attribute in the Hidden state, it indicates that the element is not yet, or is no
+  longer, directly relevant to the page's current state</q>. <q>User agents should not render elements that are in the
+  Hidden state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">HTML §6.1</a></span></p>
+</header>
+<section>
+  <h2>Hidden: not rendered</h2>
+  <p>The Rendering section gives it <code>display: none</code>, and <q>a rule that applies 'display: block' to all
+  elements will cancel the effects of the Hidden state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">§6.1</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class=pr-a>A</div>
+      <div class=pr-b hidden>B, hidden</div>
+      <div class=pr-c>C</div>
+    </div>
+    <figcaption>A and C touch, 20px tall each: B, with <code>hidden</code>, is not drawn and takes no
+    room.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class=pr-a>A</div>
+      <div class=pr-b hidden style="display: block">B, hidden, display: block</div>
+      <div class=pr-c>C</div>
+    </div>
+    <figcaption>B has <code>hidden</code> and an author's <code>display: block</code>, which wins over the user
+    agent's <code>display: none</code>: A, B and C, one under the other.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Hidden Until Found: a box with nothing in it</h2>
+  <p><q>The element will still have a generated box when in the Hidden Until Found state, which means that borders,
+  margin, and padding will still be rendered around the element.</q> Its style is <code>content-visibility:
+  hidden</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">§6.1</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class=pr-a>A</div>
+      <div class=framed hidden=until-found>text that is not drawn</div>
+      <div class=pr-c>C</div>
+    </div>
+    <figcaption>Between A and C, an empty frame 20px tall: its 2px blue border and 8px of padding above and below,
+    and no text, since its contents are skipped and add no height.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class=pr-a>A</div>
+      <div class=framed hidden>text that is not drawn</div>
+      <div class=pr-c>C</div>
+    </div>
+    <figcaption>The same box in the Hidden state: no frame, A and C touch.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

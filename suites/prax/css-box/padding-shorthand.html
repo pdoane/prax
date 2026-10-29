@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The padding shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-box { border-color: #e6b54a; border-width: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 4.2 Padding Shorthand: the padding property</div>
+  <h1>The padding shorthand</h1>
+  <p class=pr-lede><q>The 'padding' property is a shorthand property for setting 'padding-top', 'padding-right',
+  'padding-bottom', and 'padding-left' in a single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#padding-shorthand">CSS Box Model 4 §4.2</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-border"></span>border<span class="pr-swatch pr-padding"></span>padding<span
+class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>One to four values</h2>
+  <p><q>If there is only one component value, it applies to all sides. If there are two values, the top and bottom
+  padding are set to the first value and the right and left padding are set to the second. If there are three values,
+  the top is set to the first value, the left and right are set to the second, and the bottom is set to the
+  third.</q> The section gives no sentence for four values; its value, <code>&lt;'padding-top'&gt;{1,4}</code>, takes
+  them, and they go to the top, right, bottom and left, as for <code>margin</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px</code>: 10px on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px 40px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px 40px</code>: 10px above and below, 40px at the left and right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 0 40px 20px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 0 40px 20px</code>: none above, 40px at the left and right, 20px below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 0 60px 20px 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 0 60px 20px 10px</code>: none above, 60px at the right, 20px below, 10px at the
+    left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

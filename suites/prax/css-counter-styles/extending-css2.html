@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counter styles in list-style-type, counter() and counters()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style arrows { system: cyclic; symbols: "→" "⇒"; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Math"; }
+  .pr-stage ol { padding-left: 40px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .nest, .nest ol { counter-reset: item; }
+  .nest li { list-style: none; counter-increment: item; }
+  .nest li::before { content: counters(item, "-", lower-greek) " "; }
+  .nest ol { padding-left: 20px; }
+  .unknown { counter-reset: n 7; }
+  .unknown div::before { content: counter(n, no-such-style) " "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 5 Extending list-style-type, counter(), and counters()</div>
+  <h1>Counter styles in list-style-type, counter() and counters()</h1>
+  <p class=pr-lede><q>In CSS Level 2 [CSS21] the 'list-style-type' property and the 'counter()' and 'counters()'
+  notations accept various pre-defined keywords, each identifying a counter style. This module extends these features to
+  take instead the &lt;counter-style&gt; type</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#extending-css2">CSS Counter Styles 3 §5</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Any counter style, wherever a style is named</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: arrows"><li>one<li>two<li>three</ol></div>
+    <figcaption>An author's style in <code>list-style-type</code>: →, ⇒, →.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=nest><li>one<ol><li>one<li>two</ol><li>two</ol></div>
+    <figcaption><code>counters(item, "-", lower-greek)</code>: α, α-α, α-β, β.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A name that is not a style</h2>
+  <p><q>If a &lt;counter-style-name&gt; is used that does not refer to any existing counter style, it must act
+  identically to the 'decimal' counter style</q>.</p>
+  <figure>
+    <div class="pr-stage pr-text unknown"><div>text</div></div>
+    <figcaption><code>counter(n, no-such-style)</code> at 7: "7 text".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Required CSS features</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+  text { font: 700 28px "PR Arimo"; fill: #2c5a8f; }
+  @media screen { .screen { fill: #4f81bd; } }
+  g > rect:first-child { fill: #4f81bd; }
+  .letter::first-letter { fill: #d68a3c; }
+  .line::first-line { fill: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.9 Required CSS features</div>
+  <h1>Required CSS features</h1>
+  <p class=pr-lede><q>Besides the features described above, the following CSS features must be also supported in SVG user
+  agents</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#RequiredCSSFeatures">SVG 2 §6.9</a></span>
+  Each stage is an SVG 160 by 60; each rect is 120 by 40 at 20, 10 and orange by its <code>fill</code> attribute,
+  until a feature makes it blue.</p>
+</header>
+
+<section>
+  <h2>Loading and conditions</h2>
+  <p><q>in XML documents, external CSS style sheets using the &lt;?xml-stylesheet?&gt; processing instruction</q>;
+  <q>@media, @import and @charset rules within style sheets</q>. The first two stages are <code>iframe</code>s of
+  SVG documents.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/processing-instruction.svg"></iframe></div>
+    <figcaption><code>&lt;?xml-stylesheet href="blue.css"?&gt;</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/imported.svg"></iframe></div>
+    <figcaption><code>@import url(blue.css)</code> in its <code>style</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=screen x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>@media screen</code>: blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Pseudo-classes and pseudo-elements</h2>
+  <p><q>all pseudo-classes defined in CSS 2.1</q>; <q>the ::first-letter and ::first-line pseudo-elements defined in
+  CSS 2.1 (on ‘text’ elements)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g><rect x="20" y="10" width="50" height="40" fill="#d68a3c" /><rect x="90" y="10" width="50" height="40" fill="#d68a3c" /></g></svg></div>
+    <figcaption><code>:first-child</code>: the left rect blue, the right orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text class=letter x="20" y="40">Letter</text></svg></div>
+    <figcaption><code>::first-letter</code>, orange: the L orange, the rest dark blue. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> All dark blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text class=line x="20" y="40">Line</text></svg></div>
+    <figcaption><code>::first-line</code>, orange: the line orange. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Dark blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

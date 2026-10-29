@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-width: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.4 Minimum and maximum widths: 'min-width' and 'max-width'</div>
+  <h1>Min-width: values</h1>
+  <p class=pr-lede><code>min-width</code> takes <code>&lt;length&gt; | &lt;percentage&gt;</code>, initial 0,
+  not inherited. Each blue box has no padding, so its width is what it shows.</p>
+</header>
+
+<section>
+  <h2>min-width</h2>
+  <p><q>These two properties allow authors to constrain content widths to a certain range.</q> <q>Specifies a fixed
+  minimum or maximum used width.</q> <q>The percentage is calculated with respect to the width of the generated box's
+  containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="float: left; min-width: 100px">box</div></div>
+    <figcaption>A float that would shrink to its text, with <code>min-width: 100px</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="float: left; min-width: 75%">box</div></div>
+    <figcaption><code>min-width: 75%</code> of 200px: 150px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-sizing-3/#min-size-properties">CSS Box Sizing 3 §3.1.2</a>, <a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">§3.2</a></div>
+  <h2>The initial value is auto</h2>
+  <p><q>The initial value of auto is new; in [CSS2] the initial value was zero.</q> <q>For min-width/min-height,
+  specifies an automatic minimum size. Unless otherwise defined by the relevant layout module, however, it resolves to a
+  used value of 0. For backwards-compatibility, the resolved value of this keyword is zero for boxes of all [CSS2]
+  display types</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#min-size-properties">CSS Box Sizing 3 §3.1.2</a>, <a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">§3.2</a></span> A CSS 2 box behaves as
+  before; only a newer layout, such as flex, sees <code>auto</code>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="float: left; min-width: auto">box</div></div>
+    <figcaption>A float with <code>min-width: auto</code> shrinks to its text, as with 0.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: flex"><div class=pr-a style="flex: 0 1 10px">automatic</div></div>
+    <figcaption>A flex item with <code>flex-basis: 10px</code> and no <code>min-width</code>: <code>auto</code> keeps
+    it as wide as its word, not 10px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

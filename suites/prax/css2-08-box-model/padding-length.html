@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding: lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.4 Padding properties</div>
+  <h1>Padding: lengths</h1>
+  <p class=pr-lede><code>padding-top</code>, <code>padding-right</code>, <code>padding-bottom</code>,
+  <code>padding-left</code> and the shorthand <code>padding</code>. Each takes <code>&lt;length&gt; |
+  &lt;percentage&gt;</code>. Initial <code>0</code>, not inherited, and the computed value is the percentage as given or
+  the absolute length.</p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>&lt;length&gt;</h2>
+  <p><q>Specifies a fixed width.</q> Each side on its own. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#padding-properties">CSS 2 §8.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding-top: 30px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-top: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding-right: 30px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-right: 30px</code>: an auto width leaves 170px for the content.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding-bottom: 30px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-bottom: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding-left: 30px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-left: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding-left: 2em; font-size: 15px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-left: 2em</code> of a 15px font: 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

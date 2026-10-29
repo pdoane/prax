@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-fit-edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/30px "PR Baseline Diagnostic"; }
+  .b { font-size: 40px; }
+  .pad { padding: 10px 0; background: rgba(214, 138, 60, 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 5.2 Text Edge Metrics: the line-fit-edge property</div>
+  <h1>line-fit-edge</h1>
+  <p class=pr-lede><q>Inline boxes, whose primary purpose is to contain text, are sized in the block axis based on their
+  font metrics. The line-fit-edge property controls which metrics are used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-edges">CSS Inline Layout 3 §5.2</a></span>
+  Each stage: two lines of 20px PR Baseline Diagnostic on 30px lines; █ fills its ascent to descent, H its cap height to alphabetic.</p>
+</header>
+
+<section>
+  <h2>Which metrics</h2>
+  <p><code>leading</code>: <q>Use the ascent/descent plus any positive half-leading.</q> Other values use the named
+  metrics, and <q>if the half-leading is positive, treat it as zero.</q> Each first line holds a 40px span on 30px lines.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">█<span class=b>█H</span><br>██</div>
+    <figcaption><code>leading</code>, initial: the span adds its 30px line height; the 40px █ crosses into the
+    next line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="line-fit-edge: text">█<span class=b>█H</span><br>██</div>
+    <figcaption><code>text</code>: the span's ascent and descent: the line grows to fit the 40px █.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not
+    supported.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="line-fit-edge: cap alphabetic">█<span class=b>█H</span><br>██</div>
+    <figcaption><code>cap alphabetic</code>: only the H's band counts, inside the root's: 30px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins, borders and padding</h2>
+  <p><q>Unless line-fit-edge is leading—in which case the box’s own line-height is used to add spacing—the box’s
+  margin, padding, and border also contribute to the layout bounds.</q> Each orange span has 10px of padding above and
+  below.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">█<span class=pad>██</span><br>██</div>
+    <figcaption><code>leading</code>: the padding crosses into the next line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="line-fit-edge: text">█<span class=pad>██</span><br>██</div>
+    <figcaption><code>text</code>: the padding counts: the first line 40px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not
+    supported.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: splitting inline boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .example em { padding: 2px; margin: 1em; border-width: medium; border-style: dashed; line-height: 2.4em; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: splitting inline boxes</h1>
+  <p class=pr-lede><q>When an inline box exceeds the width of a line box, it is split into several boxes and these boxes
+  are distributed across several line boxes.</q></p>
+</header>
+
+<section>
+  <h2>Where a box splits</h2>
+  <p><q>When an inline box is split, margins, borders, and padding have no visual effect where the split occurs.</q>
+  The specification's example: <code>EM { padding: 2px; margin: 1em; border-width: medium; border-style: dashed;
+  line-height: 2.4em; }</code> in <code>&lt;P&gt;Several &lt;EM&gt;emphasized words&lt;/EM&gt; appear
+  here.&lt;/P&gt;</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage example" style="width: 150px; padding: 0 4px"><p style="margin: 0">Several <em>emphasized words</em> appear here.</p></div>
+    <figcaption><q>The margin is inserted before "emphasized" and after "words". The padding is inserted before,
+    above, and below "emphasized" and after, above, and below "words". A dashed border is rendered on three sides in
+    each case.</q></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

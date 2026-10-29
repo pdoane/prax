@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: the static position and the equation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.4 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute heights: the static position and the equation</h1>
+  <p class=pr-lede>Vertically, an absolutely positioned box follows rules like those for its width. Each stage, 200 by
+  100, is the containing block of the orange box in it.</p>
+</header>
+
+<section>
+  <h2>The static position for top</h2>
+  <p><q>the static position for 'top' is the distance from the top edge of the containing block to the top margin edge
+  of a hypothetical box that would have been the first box of the element if its specified 'position' value had been
+  'static' and its specified 'float' had been 'none' and its specified 'clear' had been 'none'.</q> <q>If all three of
+  'top', 'height', and 'bottom' are auto, set 'top' to the static position and apply rule number three below.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pr-a style="height: 30px; box-sizing: border-box">A: 30 tall</div><div class="pr-b abs pr-fit" style="left: 70px">B</div></div>
+    <figcaption>B has <code>top</code>, <code>height</code> and <code>bottom</code> <code>auto</code>: its top is
+    where it would have been in flow, 30px, below A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a" style="float: left; width: 60px; height: 50px; padding: 0; box-sizing: border-box">float</div><div class="pr-b abs pr-fit" style="left: 70px; clear: left">B</div></div>
+    <figcaption>B has <code>clear: left</code> after a 50px float; its static position ignores the clear, so its top
+    is 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The constraint</h2>
+  <p><q>'top' + 'margin-top' + 'border-top-width' + 'padding-top' + 'height' + 'padding-bottom' + 'border-bottom-width'
+  + 'margin-bottom' + 'bottom' = height of containing block</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pr-box style="position: absolute; left: 20px; width: 60px; top: 10px; bottom: 10px; margin: 10px 0; border-width: 5px 0; padding: 5px 0"><div class=pr-content-area style="height: 100%"></div></div></div>
+    <figcaption><code>top</code> and <code>bottom</code> 10, margins 10, borders (yellow) 5 and padding (green) 5:
+    the teal content is 100 − 60 = 40px, from 30 to 70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The baselines of a box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 4px; height: 70px; }
+  .g > div { background: #f9cc9d; padding: 0 3px; font-size: 13px; line-height: 16px; }
+  .big { font-size: 32px !important; line-height: 1 !important; }
+  .gap { height: 20px; background: #b9cde6; }
+  .line { font-size: 13px; line-height: 20px; padding-top: 30px; }
+  .ib { display: inline-block; width: 50px; background: #f9cc9d; vertical-align: baseline; }
+  .mc { column-count: 2; column-gap: 4px; column-fill: auto; width: 80px; height: 40px; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.1 Determining the Baselines of a Box</div>
+  <h1>The baselines of a box</h1>
+  <p class=pr-lede>Each box has <q>a first baseline set (and last baseline set) that nominally corresponds to the
+  baseline set of the first/last line of text within the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span>
+  In the grids, items are highlighted and <code>align-self: baseline</code>; the first is 32px "Ag".</p>
+</header>
+
+<section>
+  <h2>Block containers and multicol</h2>
+  <p>A block container's is <q>taken from the first/last in-flow line box in the block container or the first/last
+  in-flow block-level child in the block container that contributes a set of first/last baselines</q>. A multicol
+  container's is that of <q>the column or multi-column spanner with the highest (block-start–most) baseline</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=big style="align-self: baseline">Ag</div><div style="align-self: baseline"><div class=gap></div>Bh<br>Ck</div></div></div>
+    <figcaption>The second item: a blue empty block, then "Bh" and "Ck": "Bh" on the baseline of "Ag".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=big style="align-self: baseline">Ag</div><div style="align-self: baseline"><div class=mc><div class=gap></div>Bh<br>Ck</div></div></div></div>
+    <figcaption>Two columns 40px tall, filled in turn: "Bh" under the blue block, "Ck" at the top of the second: "Ck", the higher, on the
+    baseline of "Ag". <span class=pr-flag>Safari</span> "Bh", of the first column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scroll containers</h2>
+  <p><q>if its 'baseline-source' is auto (the initial value) a block-level or inline-level block container that is a
+  block-axis scroll container always has a last baseline set, whose baselines all correspond to its block-end margin
+  edge.</q> On a dashed line, inline-blocks of two lines, 40px tall.</p>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=ib>Bh<br>Ck</span> x <span class=ib style="overflow: hidden; height: 40px">Bh<br>Ck</span> x</div>
+    <figcaption>The first, <code>visible</code>: "Ck" on the line. The second, <code>overflow: hidden</code>: its
+    bottom edge on the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=ib style="overflow: hidden; height: 40px; baseline-source: first">Bh<br>Ck</span> x <span class=ib style="overflow: hidden; height: 40px; baseline-source: last">Bh<br>Ck</span> x</div>
+    <figcaption>The same, <code>baseline-source</code> <code>first</code>: "Bh" on the line; <code>last</code>: "Ck"
+    on it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Symbolic styles: disc, circle, square and disclosure</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .pr-stage ul { padding-left: 40px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .fn { counter-reset: n 1; }
+  .fn .d::before { content: counter(n, disc) "|"; }
+  .fn .c::before { content: counter(n, circle) "|"; }
+  .fn .s::before { content: counter(n, square) "|"; }
+  .v { writing-mode: vertical-rl; width: auto; height: 100px; }
+  .v ul { padding: 30px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.3 Symbolic: disc, circle, square, disclosure-open, disclosure-closed</div>
+  <h1>Symbolic styles: disc, circle, square and disclosure</h1>
+  <p class=pr-lede><q>A UA may render the &lt;symbolic-glyph&gt; styles using a UA-generated image or a UA-chosen font
+  instead of rendering the specified character in the element’s own font. It must look similar to the character, and
+  must be sized to attractively fill a 1em by 1em square.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-symbolic">CSS Counter Styles 3 §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>disc, circle, square</h2>
+  <p><q>A filled circle, similar to • U+2022 BULLET.</q> <q>A hollow circle, similar to ◦ U+25E6 WHITE BULLET.</q>
+  <q>A filled square, similar to ▪ U+25AA BLACK SMALL SQUARE.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ul style="list-style-type: disc"><li>a<li>b</ul><ul style="list-style-type: circle"><li>a</ul><ul style="list-style-type: square"><li>a</ul></div>
+    <figcaption>Markers: two filled discs, a hollow circle, a filled square. Firefox's sit about 5px nearer the text.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text fn"><div class=d>a</div><div class=c>b</div><div class=s>c</div></div>
+    <figcaption>In <code>counter()</code>: "•|a", "◦|b", "▪|c", or the marker's drawing; Chrome's and Safari's square is a larger block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>disclosure-open and disclosure-closed</h2>
+  <p><q>If the image is directional, it must respond to the writing mode of the element</q>. For example, ▸ and ◂ closed, ▾ open.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ul style="list-style-type: disclosure-closed"><li>closed</ul><ul style="list-style-type: disclosure-open"><li>open</ul></div>
+    <figcaption>Pointing right before "closed", down before "open".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text" dir=rtl><ul style="list-style-type: disclosure-closed; padding: 0 40px 0 0"><li>closed</ul></div>
+    <figcaption>Right to left: pointing left, at the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text v"><ul style="list-style-type: disclosure-closed"><li>closed</ul></div>
+    <figcaption>Vertical: the closed marker points down the line, its inline direction.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inlinification</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding-top: 8px; font: 13px/20px "PR Arimo"; }
+  .rt { display: ruby-text; font-size: 10px; line-height: 12px; }
+  .box { background: #f6d7b4; border: 1px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.7 Automatic Box Type Transformations, inlinification</div>
+  <h1>Inlinification</h1>
+  <p class=pr-lede><q>Containment in a ruby container inlinifies the box’s display type</q>.
+  Inlinification sets the outer display type to <code>inline</code>. In each stage, a
+  <code>display: ruby</code> span holds base content and an annotation "text" above it. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#transformations">CSS Display 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>A block stays a block container; an inline box inlinifies its children</h2>
+  <p><q>If a block box (block flow) is inlinified, its inner display type is set to flow-root so that it remains a
+  block container.</q></p>
+  <p><q>If an inline box (inline flow) is inlinified, it recursively inlinifies all of its in-flow children, so that no
+  block-level descendants break up the inline formatting context in which it participates.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>x <span style="display: ruby"><div id=n1 class=box style="width: 50px">a div</div><span class=rt>text</span></span> x</div>
+    <figcaption>A 50px-wide <code>div</code> in the ruby: an inline-block on the line between the x's, "text" above
+    it. <span class=pr-flag>Safari</span> draws the ruby as an inline box: the div is a block, on a line of its own.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>x <span style="display: ruby"><span id=n2>a <div id=n3 class=box>div</div> b</span><span class=rt>text</span></span> x</div>
+    <figcaption>A span with a <code>div</code> in it, in the ruby: one line, the div an inline-block between a and b.
+    <span class=pr-flag>Safari</span> makes the div a block, on a line of its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layout-internal boxes are left alone</h2>
+  <p><q>Inlinification has no effect on layout-internal boxes.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>x <span style="display: ruby"><span id=n4 class=box style="display: table-cell">cell</span><span class=rt>text</span></span> x</div>
+    <figcaption>A <code>table-cell</code> in the ruby stays a cell, wrapped in an anonymous inline table on the line. <span class=pr-flag>Safari</span> sets "text" beside it, not above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

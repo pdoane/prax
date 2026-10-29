@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The area of a highlight</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 20px/50px "PR Arimo"; }
+  ::highlight(h) { background-color: rgb(79 129 189 / 0.6); }
+  .em-box { display: inline-block; width: 0; height: 20px; vertical-align: -4px; outline: 1px dashed #c0392b; }
+  .tall { font-size: 40px; }
+  .gap { word-spacing: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.4 Area of a Highlight</div>
+  <h1>The area of a highlight</h1>
+  <p class=pr-lede><q>Each box owns the piece of the overlay corresponding to any text or replaced
+  content directly contained by the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-bounds">CSS Pseudo-Elements 4 §3.4</a></span>
+  Each stage has 20px Arimo on 50px lines, in a custom highlight with a translucent blue background.</p>
+</header>
+
+<section>
+  <h2>At least the em box, at most the line box</h2>
+  <p><q>For text, the corresponding overlay must cover at least the entire em box and may extend further above/below
+  the em box to the line box edges.</q></p>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption>At least 20px tall, the em box, and at most 50px, the line: the band may be any height between.
+    Chrome, Safari and Firefox draw the font's ascent and descent, a little taller than the em box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=h>Small</span> <span class=tall data-highlight=h>Big</span></div></div>
+    <figcaption>20px and 40px text on one line: each word's band covers at least its own em box, 20px and
+    40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The space between</h2>
+  <p><q>Spacing between two characters may also be part of the overlay area, in which case it belongs to the innermost
+  element that contains both characters and is selected when both characters are selected.</q></p>
+  <figure>
+    <div class=pr-stage><div class="t gap"><span data-highlight=h>One</span> <span data-highlight=h>two</span></div></div>
+    <figcaption>Two words, each in the highlight, with a 30px word space between them, which belongs to neither
+    word's element: it may stay unhighlighted. Chrome, Safari and Firefox leave it so.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="t gap"><span data-highlight=h>One two</span></div></div>
+    <figcaption>One element holding both words: its space may be highlighted. Chrome and Firefox highlight
+    it; Safari leaves it.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

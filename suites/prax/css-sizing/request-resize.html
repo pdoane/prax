@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>window.requestResize()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 110px; height: 154px; }
+  figure.f { margin-right: 8px; }
+  figure.f figcaption { max-width: 116px; }
+  iframe { display: block; width: 100px; border: 1px solid #2c5a8f; frame-sizing: content-height; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.3.2 Extensions to the Window Interface</div>
+  <h1>window.requestResize()</h1>
+  <p class=pr-lede><q>Subsequent changes to content, styling or layout of the embedded document do not automatically
+  affect the internal layout intrinsic size</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#iframe-frame-sizing">CSS Box Sizing 4 §5.3.1</a></span>
+  requestResize() is to <q>Set the internal layout intrinsic size of host element to the width and height of the
+  scrolling area of this.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#window-requestresize">§5.3.2</a></span>
+  Each iframe has <code>frame-sizing: content-height</code>; its document opts in, holds a green block 40px tall, and
+  after loading adds a second, 40px more.</p>
+</header>
+
+<section>
+  <h2>Sized again only when asked</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe srcdoc="<meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 40px; background: #6aa36a'></div><script>onload = () => { const d = document.createElement('div'); d.style.cssText = 'height: 40px; background: #3f7a3f'; document.body.append(d); requestResize(); };</script>"></iframe></div>
+    <figcaption>The document calls <code>requestResize()</code>: 80px tall, both blocks shown. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe srcdoc="<meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 40px; background: #6aa36a'></div><script>onload = () => setTimeout(() => { const d = document.createElement('div'); d.style.cssText = 'height: 40px; background: #3f7a3f'; document.body.append(d); });</script>"></iframe></div>
+    <figcaption>It does not call it: the size taken at load, 40px tall, the second block cut off. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe srcdoc="<body style='margin: 0'><div style='height: 40px; background: #6aa36a'></div><p id=r style='font: 12px sans-serif; margin: 4px'></p><script>try { requestResize(); r.textContent = 'no exception'; } catch (e) { r.textContent = e.name || 'TypeError'; }</script>"></iframe></div>
+    <figcaption>A document that did not opt in: <q>throw a NotAllowedError</q>; the frame shows NotAllowedError. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no <code>requestResize</code>: a
+    ReferenceError.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

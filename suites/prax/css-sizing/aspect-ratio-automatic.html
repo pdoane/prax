@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ratio-dependent axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 110px; }
+  figure.f figcaption { max-width: 152px; }
+  .r { background: #8cb6c0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.2 Effects of Preferred Aspect Ratio on Automatic Sizes</div>
+  <h1>The ratio-dependent axis</h1>
+  <p class=pr-lede><q>When a box has a preferred aspect ratio, its automatic sizes are calculated the same as for a
+  replaced element with a natural aspect ratio and no natural size in that axis</q>. <q>The axis in which the preferred
+  size calculation depends on this aspect ratio is called the ratio-dependent axis, and the resulting size is definite
+  if its input sizes are also definite.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio-automatic">CSS Box Sizing 4 §4.2</a></span>
+  Each stage is 150px wide.</p>
+</header>
+
+<section>
+  <h2>Either axis can depend on the ratio</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="aspect-ratio: 3 / 1"></div></div>
+    <figcaption><code>aspect-ratio: 3 / 1</code>, both sizes auto: the width is the stage's, the height depends, 50px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="height: 40px; aspect-ratio: 2 / 1"></div></div>
+    <figcaption><code>height: 40px</code>: the width depends, 80px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="width: 100px; height: 30px; aspect-ratio: 1"></div></div>
+    <figcaption><code>width: 100px; height: 30px; aspect-ratio: 1</code>: <q>If neither width nor height is an
+    automatic size, it can have no effect</q>: 100 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Definite from definite inputs</h2>
+  <p>A percentage height inside resolves against the height the ratio gives.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="width: 120px; aspect-ratio: 3 / 2"><div class="pr-a pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>A box of <code>width: 120px; aspect-ratio: 3 / 2</code>, 80px tall, holding a child of
+    <code>height: 50%</code>: 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="float: left"><div class=r style="height: 50px; aspect-ratio: 2"></div></div></div>
+    <figcaption>In a float, <code>height: 50px; aspect-ratio: 2</code>: 100px wide, and so is the float.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

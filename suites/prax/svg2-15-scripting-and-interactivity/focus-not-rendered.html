@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus: not when not rendered</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg :focus { outline: none; stroke: #2c5a8f; stroke-width: 4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.7 Focus</div>
+  <h1>Focus: not when not rendered</h1>
+  <p class=pr-lede><q>SVG uses the same focus model as HTML, modified for SVG as described in this section.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#Focus">SVG 2 §15.7</a></span>
+  Each focusable shape is stroked dark blue while it has the focus. The logs list the <code>focus</code> and
+  <code>click</code> events that reach the stage.</p>
+</header>
+
+<section>
+  <h2>Not when not rendered</h2>
+  <p><q>A non-rendered element can never receive focus, regardless of the value of the ‘tabindex’ attribute. If a script
+  programmatically assigns focus to a non-rendered or otherwise un-focusable element, the focusing call is aborted.</q>
+  Each button calls <code>focus()</code> on a rect with <code>tabindex="0"</code>: <code>#shown</code>, and
+  <code>#gone</code> with <code>display="none"</code>, outlined dashed.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 10px 0"><button class=pr-target id=focus-shown style="display: inline-block; width: 135px">focus #shown</button> <button class=pr-target id=focus-gone style="display: inline-block; width: 135px">focus #gone</button></div>
+      <svg width="300" height="40"><rect id=shown tabindex="0" x="40" y="5" width="70" height="30" fill="#b9cde6" /><rect id=gone tabindex="0" x="190" y="5" width="70" height="30" fill="#b9cde6" display="none" /><rect class=pr-ghost x="190" y="5" width="70" height="30" /></svg>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <q>focus #shown</q>: <code>focus target=shown</code>, the rect stroked. Click <q>focus
+    #gone</q>: no focus event for <code>#gone</code>; the button keeps the focus.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("focus-shown").addEventListener("click", () => document.getElementById("shown").focus());
+  document.getElementById("focus-gone").addEventListener("click", () => document.getElementById("gone").focus());
+</script>
+</body>
+</html>

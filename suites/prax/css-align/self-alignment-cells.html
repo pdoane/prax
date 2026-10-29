@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Self-alignment and table cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .pr-table { width: 200px; }
+  .pr-table-cell { height: 40px; width: 50%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.3 Table Cells</div>
+  <h1>Self-alignment and table cells</h1>
+  <p class=pr-lede><q>This property does not apply to table cells, because their position and size is fully
+  constrained by table layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-cell">CSS Box Alignment 3 §6.1.3</a></span>
+  The same holds for <code>align-self</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-cell">CSS Box Alignment 3 §6.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>justify-self and align-self do nothing</h2>
+  <p>Each stage is a table of one row, 40px tall, of two cells, each 100px wide.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="justify-self: end">end</div><div class=pr-table-cell style="justify-self: center">center</div></div></div></div>
+    <figcaption><code>justify-self</code> <code>end</code> and <code>center</code>: the cells side by side, each
+    100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="align-self: end">end</div><div class=pr-table-cell style="align-self: center">center</div></div></div></div>
+    <figcaption><code>align-self</code> <code>end</code> and <code>center</code>: the same, the text at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A cell's content is aligned with align-content</h2>
+  <p>To align what is in a cell, <code>align-content</code> on the cell does what <code>vertical-align</code> did:
+  see <a href="align-content-cells.html">align-content in table cells</a>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="align-content: end">end</div><div class=pr-table-cell style="align-content: center">center</div></div></div></div>
+    <figcaption><code>align-content</code> <code>end</code> and <code>center</code>: the text at the bottom and in
+    the middle. <span class=pr-flag>Firefox</span> Both at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

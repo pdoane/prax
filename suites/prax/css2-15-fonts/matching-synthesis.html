@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font matching: synthesized faces</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.2 Font matching algorithm</div>
+  <h1>Font matching: synthesized faces</h1>
+  <p class=pr-lede>CSS 2 matched <code>font-style</code>, then <code>font-variant</code>, then <code>font-weight</code>,
+  and a family whose style failed gave way to the next family. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2 §15.2</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/synthetic-faces.html">Synthetic faces</a>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a>, <a href="https://drafts.csswg.org/css-fonts-4/#missing-weights">§2.2.2</a></div>
+  <h2>Style and weight never fail, and faces may be synthesized</h2>
+  <p>A family's faces are narrowed <q>using other font properties in the order given below</q>: font-width,
+  font-style, font-weight; font-variant is no longer among them. A style with no slanted face falls back to upright
+  ones: <q>If no match is found, italic values less than or equal to 0 are checked in descending order until a match
+  is found.</q> <q>For families that lack any italic or oblique faces, user agents may create artificial oblique faces,
+  if this is permitted by the value of the font-synthesis property.</q> Synthesized bold faces <q>must be treated as if
+  they exist within the family.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a>, <a href="https://drafts.csswg.org/css-fonts-4/#missing-weights">§2.2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery', Georgia; font-style: italic">Handgloves</div>
+    <figcaption><code>"Apple Chancery", Georgia</code> italic: Apple Chancery has no slanted face, but does not give
+    way to Georgia: its upright face, sheared.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery', Georgia; font-style: italic; font-synthesis: none">Handgloves</div>
+    <figcaption>The same with <code>font-synthesis: none</code>: no shearing, and still not Georgia: Apple Chancery
+    upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery'; font-weight: 900">Handgloves</div>
+    <figcaption><code>"Apple Chancery"</code> at weight 900: a bold face synthesized from its one weight, the strokes
+    thicker than on the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery'; font-weight: 900; font-synthesis: none">Handgloves</div>
+    <figcaption>The same with <code>font-synthesis: none</code>: the one real face, at its own weight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

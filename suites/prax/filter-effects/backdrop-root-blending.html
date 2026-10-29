@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mix-blend-mode and the Backdrop Root</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { padding: 10px; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #f9cc9d 10px 20px); }
+  .parent { padding: 5px 35px; }
+  .blend { width: 100px; height: 40px; background: #d68a3c; mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 2 · 3.3 Mix Blend Mode</div>
+  <h1>mix-blend-mode and the Backdrop Root</h1>
+  <p class=pr-lede><q>The current definition of mix-blend-mode defines the input (backdrop) image for mix-blend-mode as
+  being all of the underlying content of the parent stacking context. This definition could likely be relaxed to use
+  the Backdrop Root definition instead, allowing more elements to be blended.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-2/#mix-blend-mode">Filter Effects 2 §3.3</a></span>
+  The section is non-normative. Each orange box, 100 by 40, has <code>mix-blend-mode: multiply</code>, in a parent
+  with no background over stripes.</p>
+</header>
+
+<section>
+  <h2>A parent that is a stacking context, not a Backdrop Root</h2>
+  <figure>
+    <div class="pr-stage back"><div class=parent><div class=blend></div></div></div>
+    <figcaption>A plain parent: the box multiplies the stripes, dark brown over the blue ones.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class=parent style="transform: translateX(0)"><div class=blend></div></div></div>
+    <figcaption>A transformed parent: by the current definition, nothing under the box in the parent's stacking
+    context, so plain orange. Relaxed to the Backdrop Root, it would multiply the stripes, as the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

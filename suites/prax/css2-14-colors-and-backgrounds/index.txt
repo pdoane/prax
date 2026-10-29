@@ -1,0 +1,28 @@
+00-supports-1.html
+CSS2/#colors 14.1 Foreground color: the color property
+    color.html
+    color-initial.html
+CSS2/#background 14.2 The background
+    background-areas.html
+    canvas-root.html
+    canvas-body.html
+    canvas-no-boxes.html
+    canvas-hidden.html
+    stacking-context.html
+CSS2/#background-properties 14.2.1 Background properties: background-color, background-image, background-repeat, background-attachment, background-position, and background
+    background-color.html
+    background-image.html
+    image-size-intrinsic.html
+    image-size-percentages.html
+    image-size-none.html
+    background-repeat.html
+    background-repeat-areas.html
+    background-attachment.html
+    background-attachment-elements.html
+    background-position-percentages.html
+    background-position-lengths.html
+    background-position-keywords.html
+    background-position-one-value.html
+    background-position-pairs.html
+    background-position-fixed.html
+    background-shorthand.html

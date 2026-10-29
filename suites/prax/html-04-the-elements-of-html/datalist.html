@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The datalist element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.8 The datalist element</div>
+  <h1>The datalist element</h1>
+  <p class=pr-lede><q>The datalist element represents a set of option elements that represent predefined options for
+  other controls.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-datalist-element">HTML §4.10.8</a></span></p>
+</header>
+
+<section>
+  <h2>Nothing to see in the page</h2>
+  <p><q>In the rendering, the datalist element represents nothing and it, along with its children, should be
+  hidden.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-datalist-element">§4.10.8</a></span></p>
+  <figure>
+    <div class="pr-stage pad">before<datalist><option>Apple<option>Pear</datalist>after</div>
+    <figcaption>"beforeafter": the options are not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pad">before<datalist>Fruit: <select><option>Apple<option>Pear</select></datalist>after</div>
+    <figcaption>A fallback <code>select</code> is hidden too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Suggestions, and nothing to validate or submit</h2>
+  <p><q>Each option element that is a descendant of the datalist element, that is not disabled, and whose value is a
+  string that isn't the empty string, represents a suggestion.</q> <q>If an element has a datalist element ancestor,
+  it is barred from constraint validation.</q> Nor is it submitted. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-datalist-element">§4.10.8</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set">§4.10.22.4</a></span></p>
+  <figure>
+    <div class="pr-stage pad">
+      <input list=fruits size=16 placeholder="a fruit">
+      <datalist id=fruits>
+        <option>Apple
+        <option disabled>Banana
+        <option value="">Cherry
+        <option value="Damson" label="Damson plum">
+        <option>Elderberry
+      </datalist>
+    </div>
+    <figcaption>Click the field, or press the down arrow: Apple, "Damson plum" and Elderberry are offered, not Banana,
+    disabled, nor Cherry, valueless. Pick "Damson plum": "Damson".</figcaption>
+  </figure><figure>
+    <div class="pr-stage">
+      <form class=pad action=support/form-echo.html target=barred-result>
+        <datalist><textarea name=hidden required></textarea></datalist>
+        <input name=shown value=pear size=8> <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=barred-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>An empty <code>required</code> <code>textarea</code> is in a datalist. Click Submit: the frame turns
+    green, <code>shown=pear</code> alone.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

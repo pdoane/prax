@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Showing the context menu</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; margin: 0 16px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.2.18 maybe show context menu</div>
+  <h1>Showing the context menu</h1>
+  <p class=pr-lede><q>Let result be dispatch menuevent at target</q> <q>If result is true, then show the UA context
+  menu</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#maybe-show-context-menu">Pointer Events §11.2.18</a></span></p>
+</header>
+<section>
+  <h2>Canceled, no menu</h2>
+  <p>contextmenu: <q>A user agent MUST dispatch this event before invoking a context menu.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#contextmenu">§11.4.3</a></span>
+  A listener cancels <code>contextmenu</code> on the second box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=open>right-click me</div><div class=pr-target id=closed>and me</div></div>
+      <ol class=pr-log data-log="contextmenu" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Right-click the first box: <code>contextmenu</code>, and the menu opens. Right-click the second:
+    <code>contextmenu</code>, and no menu.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>From the keyboard</h2>
+  <p><q>To handle a context menu triggered by the keyboard, call this algorithm with native = null and target =
+  currently focused element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#maybe-show-context-menu">§11.2.18</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><button class=pr-target id=focused>Tab here</button><button class=pr-target id=other>other</button></div>
+      <ol class=pr-log data-log="contextmenu" data-fields="target pointerId pointerType" data-lines=2></ol>
+    </div>
+    <figcaption>Needs a keyboard with a context menu key, or Shift+F10 on Windows and Linux. Focus the first button
+    with Tab and press it: <code>contextmenu</code> at <code>focused</code>, with <code>pointerId=-1</code>, and the
+    menu opens by the button.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels contextmenu on the second box.
+  document.getElementById("closed").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

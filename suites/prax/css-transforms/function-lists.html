@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transform function lists: order, and transforms that cannot be undone</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 20px; top: 10px; width: 40px; height: 20px; }
+  .q, .h { position: absolute; left: 60px; top: 40px; width: 40px; height: 20px; }
+  .o { position: absolute; left: 20px; top: 10px; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 8 The Transform Function Lists</div>
+  <h1>Transform function lists: order, and transforms that cannot be undone</h1>
+  <p class=pr-lede><q>If a list of &lt;transform-function&gt;s is provided, then the net effect is as if each transform
+  function had been specified separately in the order provided.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-function-lists">CSS Transforms 1 §8</a></span></p>
+</header>
+
+<section>
+  <h2>Order matters, and nesting is the same</h2>
+  <p><q>a nested set of transforms is equivalent to a single list of transform functions</q>. Each blue box is 40 by 20
+  at (20, 10), about its center.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateX(40px) rotate(90deg)">A</div></div>
+    <figcaption><code>translateX(40px) rotate(90deg)</code>: moved right, turned in place; 70 to 90
+    across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate(90deg) translateX(40px)">A</div></div>
+    <figcaption><code>rotate(90deg) translateX(40px)</code>: the 40px is turned, down; 40 to 80
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="o" style="transform: translateX(40px)"><div class="pr-a pr-fit" style="height: 20px; transform: rotate(90deg)">A</div></div></div>
+    <figcaption><code>translateX(40px)</code> holding <code>rotate(90deg)</code>: as the first.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A transform that cannot be undone is not displayed</h2>
+  <p><q>If a transform function causes the current transformation matrix of an object to be non-invertible, the object
+  and its content do not get displayed.</q> Each blue box is 40 by 20 at (60, 40), on the dashed outline.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost h"></div><div class="pr-a pr-fit q" style="transform: matrix(1, 0.5, 1.8, 1, 0, 0)"></div></div>
+    <figcaption><code>matrix(1, 0.5, 1.8, 1, 0, 0)</code>, determinant 0.1: a sliver, (42, 30) to (118,
+    70).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost h"></div><div class="pr-a pr-fit q" style="transform: matrix(1, 0.5, 2, 1, 0, 0)"></div></div>
+    <figcaption><code>matrix(1, 0.5, 2, 1, 0, 0)</code>, determinant 0, a line: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost h"></div><div class="q" style="transform: scale(0)"><div class="pr-a pr-fit" style="height: 20px; transform: scale(100)">A</div></div></div>
+    <figcaption><code>scale(0)</code> holding <code>scale(100)</code>: the child's matrix cannot be undone either;
+    nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

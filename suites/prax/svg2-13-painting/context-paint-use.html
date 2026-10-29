@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>context-fill and context-stroke in use, and paint servers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="across"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <circle id="disc" cx="80" cy="30" r="18" fill="context-fill" stroke="context-stroke" stroke-width="6" />
+  <use id="inner" href="#disc" fill="context-fill" stroke="context-stroke" />
+  <g id="pair"><rect x="20" y="15" width="40" height="30" fill="context-fill" /><rect x="100" y="15" width="40" height="30" fill="context-fill" /></g>
+  <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="context-stroke" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.2 Specifying paint</div>
+  <h1>context-fill and context-stroke in use, and paint servers</h1>
+  <p class=pr-lede><q>If the element is within a sub-tree that is instantiated with a ‘use’ element, then the context
+  element is that ‘use’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingPaint">SVG 2 §13.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>The use element's paint</h2>
+  <p>A circle at 80, 30 has <code>fill="context-fill"</code> and <code>stroke="context-stroke"</code>. <q>If the referenced value of 'fill' or 'stroke' is a context-fill and context-stroke value, then
+  those contextual referencing is recursive.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#disc" fill="#4f81bd" stroke="#d68a3c" /></svg></div>
+    <figcaption>A <code>use</code>, filled blue, stroked orange: a blue disc in an orange ring.
+    <span class=pr-flag>Firefox</span> A black disc.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#disc" fill="#6aa36a" stroke="#8e44ad" /></svg></div>
+    <figcaption>Another, filled green, stroked purple: a green disc in a purple ring.
+    <span class=pr-flag>Firefox</span> A black disc.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#inner" fill="#6aa36a" stroke="#8e44ad" /></svg></div>
+    <figcaption>A <code>use</code> of a <code>use</code> whose paint is context paint, filled green, stroked
+    purple: the same. <span class=pr-flag>Firefox</span> A black disc.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Paint servers in the context element's space</h2>
+  <p><q>When the context paint layers include paint server references, then the coordinate space and the bounding box
+  used to scale the paint server elements and content are those of the context element.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="url(#across)" stroke-width="4" marker-start="url(#dot)" marker-mid="url(#dot)" marker-end="url(#dot)" /></svg></div>
+    <figcaption>A path stroked with a gradient, with dots of <code>context-stroke</code>: blue at 20, the
+    middle color at 80, orange at 140. <span class=pr-flag>Safari</span> Black dots.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#pair" fill="url(#across)" /></svg></div>
+    <figcaption>Rectangles from x 20 to 60 and 100 to 140, of <code>context-fill</code>, in a <code>use</code>
+    filled with a gradient across its box: blue to a third of it, two thirds to orange. <span class=pr-flag>Safari</span>
+    Each the whole gradient. <span class=pr-flag>Firefox</span> Black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>use: layout of re-used graphics</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <rect id="square" width="20" height="20" fill="#4f81bd" />
+  <symbol id="sized" width="40" height="20" viewBox="0 0 20 10"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <clipPath id="left" clipPathUnits="userSpaceOnUse"><rect width="40" height="60" /></clipPath>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5.2 Layout of re-used graphics</div>
+  <h1>use: layout of re-used graphics</h1>
+  <p class=pr-lede><q>The value of the ‘x’, ‘y’, width and height properties on a ‘use’ element are used to position
+  the re-used graphics and to set the viewport size if the referenced element defines a nested viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseLayout">SVG 2 §5.5.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>x and y: a translation after the transform</h2>
+  <p><q>The ‘x’ and ‘y’ properties define an additional transformation (translate(x,y) […]) to be applied to the ‘use’
+  element, after any transformations specified with other properties</q>. <q>This affects the coordinate system used
+  for any masks, clipping paths, or filters applied to the ‘use’ element</q>. The square is 20 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#square" x="20" y="10" transform="scale(2)" /></svg></div>
+    <figcaption><code>scale(2)</code> and <code>x="20" y="10"</code>: translated, then scaled, 40 by 40 at 40,
+    20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#square" x="60" y="20" clip-path="url(#left)" transform="scale(2 1)" /></svg></div>
+    <figcaption>A clip 40 wide at x 0 in user space, <code>x="60"</code>, <code>scale(2 1)</code>: the clip moved
+    and scaled too, from x 120; the square, 40 by 20 from 120, 20, whole.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>width and height, for a viewport only</h2>
+  <p><q>The width and height properties on the ‘use’ element override the values for the corresponding properties on a
+  referenced ‘svg’ or ‘symbol’ element</q>; <q>if the computed value for the property on the ‘use’ element is auto,
+  then the property is computed as normal for the element instance.</q> The symbol is 40 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#sized" x="20" y="20" /><use href="#sized" x="80" y="10" width="60" height="40" /></svg></div>
+    <figcaption>Left, <code>auto</code>: the symbol's 40 by 20 at 20, 20. Right, 60 by 40: its content scaled 3,
+    60 by 30, centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#square" x="20" y="20" width="120" height="40" /></svg></div>
+    <figcaption>A rect, no viewport, with <code>width="120"</code>: no effect, 20 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

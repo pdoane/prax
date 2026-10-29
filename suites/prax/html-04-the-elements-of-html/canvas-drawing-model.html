@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The drawing model</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.22 Drawing model</div>
+  <h1>The drawing model</h1>
+  <p class=pr-lede><q>When a shape or image is painted, user agents must follow these steps, in the order given (or act
+  as if they do)</q>: render it to image A, multiply by global alpha, filter A into B, render the shadow from B into C,
+  then composite C and then B. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-model">HTML §4.12.5.1.22</a></span>
+  The shape is a blue square of 40 at (30, 10).</p>
+</header>
+<section>
+  <h2>The shadow comes from the filtered image</h2>
+  <p><q>When shadows are drawn, render the shadow from image B, using the current shadow styles, creating image
+  C.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=filtershadow></canvas></div>
+    <figcaption><code>blur(4px)</code> and a shadow offset (60, 10) with no blur of its own: the shadow, from x 90, as
+    soft as the square. <span class=pr-flag>Safari</span> Both sharp.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=alphashadow></canvas></div>
+    <figcaption><code>globalAlpha</code> 0.5 and a black shadow offset (60, 10): the square half-transparent, and its
+    shadow mid-grey rather than black, made from B after the alpha.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Shadow and shape composited in turn</h2>
+  <p><q>When shadows are drawn, composite C within the clipping region over the current output bitmap using the current
+  compositing and blending operator.</q> <q>Composite B within the clipping region</q> in the same way.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=out></canvas></div>
+    <figcaption>Orange everywhere, then the square drawn with <code>destination-out</code> and a half-transparent
+    shadow offset (60, 10): a hole where the square is, and a half-faded orange where the shadow is.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=clip></canvas></div>
+    <figcaption>Clipped to x 0 to 100, with a shadow offset (60, 10): the square whole, its shadow cut off at x
+    100.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    filtershadow(context) {
+      context.fillStyle = "#4f81bd";
+      context.filter = "blur(4px)";
+      context.shadowColor = "black";
+      context.shadowOffsetX = 60;
+      context.shadowOffsetY = 10;
+      context.fillRect(30, 10, 40, 40);
+    },
+    alphashadow(context) {
+      context.fillStyle = "#4f81bd";
+      context.globalAlpha = 0.5;
+      context.shadowColor = "black";
+      context.shadowOffsetX = 60;
+      context.shadowOffsetY = 10;
+      context.fillRect(30, 10, 40, 40);
+    },
+    out(context) {
+      context.fillStyle = "#d68a3c";
+      context.fillRect(0, 0, 200, 70);
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "rgb(0 0 0 / 0.5)";
+      context.shadowOffsetX = 60;
+      context.shadowOffsetY = 10;
+      context.globalCompositeOperation = "destination-out";
+      context.fillRect(30, 10, 40, 40);
+    },
+    clip(context) {
+      context.beginPath();
+      context.rect(0, 0, 100, 70);
+      context.clip();
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "black";
+      context.shadowOffsetX = 60;
+      context.shadowOffsetY = 10;
+      context.fillRect(30, 10, 40, 40);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

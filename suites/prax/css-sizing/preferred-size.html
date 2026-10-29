@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>width, height, inline-size and block-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+  .s { width: 150px; height: 120px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.1.1 Preferred Size Properties</div>
+  <h1>width, height, inline-size and block-size</h1>
+  <p class=pr-lede><q>The width and height (physical) and inline-size and block-size (flow-relative) are sizing
+  properties that specify the preferred width and height (physical) or inline size and block size (flow-relative) of
+  the box, respectively.</q> They apply to <q>all elements except non-replaced inlines</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#preferred-size-properties">CSS Box Sizing 3 §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Not on non-replaced inlines</h2>
+  <p>Each has <code>width: 100px; height: 40px</code>.</p>
+  <figure class=f>
+    <div class="pr-stage s"><span class="pr-a" style="width: 100px; height: 40px">span</span></div>
+    <figcaption>An inline <code>span</code>: neither applies, the box is as wide as its text and as tall as its
+    line.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><span class="pr-a pr-fit" style="display: inline-block; width: 100px; height: 40px">inline-block</span></div>
+    <figcaption>An inline-block: 100 by 40.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" style="width: 100px; height: 40px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An inline image, replaced, 80 by 40 by nature: 100 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages of the containing block</h2>
+  <p><q>Percentages: relative to width/height of containing block</q>. Each stage is 150 by 120.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 50%; height: 25%">50%, 25%</div></div>
+    <figcaption><code>width: 50%; height: 25%</code>: 75 by 30.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="inline-size: 80%; block-size: 50%">80%, 50%</div></div>
+    <figcaption><code>inline-size: 80%; block-size: 50%</code>: 120 by 60.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s" style="writing-mode: vertical-rl"><div class="pr-a pr-fit" style="inline-size: 50%; block-size: 20%">50%, 20%</div></div>
+    <figcaption>In a <code>vertical-rl</code> stage, <code>inline-size: 50%; block-size: 20%</code>: 30 wide, 60 tall, at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The deprecated clip property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .cb { position: relative; height: 70px; }
+  .p { position: absolute; left: 10px; top: 10px; width: 50px; height: 55px; background: #4f81bd; }
+  .p.wide { width: 80px; height: 40px; }
+  .static { width: 80px; height: 40px; margin: 10px; background: #4f81bd; }
+  .kid { width: 40px; height: 20px; margin: 30px 0 0 60px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · A The deprecated clip property</div>
+  <h1>The deprecated clip property</h1>
+  <p class=pr-lede><q>With this specification the clip property is deprecated. Authors are encouraged to use the
+  clip-path property instead. UAs must support the clip property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#clip-property">CSS Masking 1 §A</a></span>
+  Each blue box is absolutely positioned at 10, 10 in its stage unless said otherwise.</p>
+</header>
+
+<section>
+  <h2>Offsets from the top and left border edges</h2>
+  <p><q>top and bottom specify offsets from the top border edge of the box, and right, and left specify offsets from
+  the left border edge of the box.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow cb"><div class=p></div></div>
+    <figcaption>The box, 50 by 55, unclipped.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow cb"><div class=p style="clip: rect(5px, 40px, 45px, 5px)"></div></div>
+    <figcaption>The section's example, <code>rect(5px, 40px, 45px, 5px)</code>: 35 by 40, from 15, 15.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow cb"><div class=p style="clip: rect(5px, 55px, 45px, 5px)"></div></div>
+    <figcaption><code>rect(5px, 55px, 45px, 5px)</code>: right past the box, so 45 by 40, to the box's right
+    edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow cb"><div class=p style="clip: rect(20px, auto, auto, 20px)"></div></div>
+    <figcaption><code>rect(20px, auto, auto, 20px)</code>: <code>auto</code> is the border box's edge, so 30 by 35
+    at the bottom right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Absolutely positioned boxes only, and negative lengths</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=static style="clip: rect(0, 40px, 20px, 0)"></div></div>
+    <figcaption>A box in flow, 80 by 40, with <code>clip</code>: it applies only to absolutely positioned elements, so
+    unclipped.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium cb"><div class="p wide" style="clip: rect(-10px, 120px, 70px, -10px)"><div class=kid></div></div></div>
+    <figcaption><q>Negative lengths are permitted.</q> The box is 80 by 40, its orange child overflows it to x 110 and
+    y 70; <code>rect(-10px, 120px, 70px, -10px)</code> reaches past the border box, so the child shows
+    whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

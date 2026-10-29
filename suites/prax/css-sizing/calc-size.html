@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>calc-size() in the sizing properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; height: 80px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 3.2 New Sizing Values: calc-size()</div>
+  <h1>calc-size() in the sizing properties</h1>
+  <p class=pr-lede>Level 4 adds <q>the contain, fit-content(), and calc-size() values in the sizing properties</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#sizing-values">CSS Box Sizing 4 §3.2</a></span>
+  <q>The calc-size() function allows math and transition/animation to be performed on these sizes in a safe,
+  well-defined way.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-5/#calc-size">CSS Values and Units 5 §11</a></span>
+  Text is PR Cousine, 9px a character; each orange block holds "abc def", 63px on one line.</p>
+</header>
+
+<section>
+  <h2>A keyword's size, adjusted</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: calc-size(max-content, size + 20px)">abc def</div></div>
+    <figcaption><code>width: calc-size(max-content, size + 20px)</code>: 83px. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> drop it: 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: calc-size(fit-content, size * 2)">abc def</div></div>
+    <figcaption><code>width: calc-size(fit-content, size * 2)</code>: 126px. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: calc-size(stretch, size - 30px)">abc def</div></div>
+    <figcaption><code>width: calc-size(stretch, size - 30px)</code>: 120px. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto in the block axis</h2>
+  <p>The examples: <q>height: calc-size(auto, size / 2); /* used height is 50% of auto */</q>, <q>height:
+  calc-size(auto, size + 10px); /* used height is auto + 10px */</q>.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: 40px; height: calc-size(auto, size / 2)">abc def ehg ijk</div></div>
+    <figcaption>Four lines, 80px as auto, at <code>calc-size(auto, size / 2)</code>: 40px, the text overflowing.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="height: calc-size(auto, size + 10px)">abc def</div></div>
+    <figcaption><code>calc-size(auto, size + 10px)</code>: 30px. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

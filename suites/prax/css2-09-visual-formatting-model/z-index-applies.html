@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The z-index property: positioned boxes only</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .blk { height: 40px; box-sizing: border-box; }
+  .over { position: relative; width: 120px; margin: -20px 0 0 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.9.1 Specifying the stack level: the 'z-index' property</div>
+  <h1>The z-index property: positioned boxes only</h1>
+  <p class=pr-lede>In each stage, which forms the stacking context, blue A has <code>z-index: 10</code>, and orange B
+  after it is <code>position: relative</code> at <code>z-index: auto</code>, pulled up 20px over A.</p>
+</header>
+
+<section>
+  <h2>Not a static box</h2>
+  <p><q>Applies to: positioned elements</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#z-index">CSS 2 §9.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="padding: 10px 0"><div class="pr-a blk" style="z-index: 10">A: static, z-index 10</div><div class="pr-b blk over">B: relative</div></div>
+    <figcaption>A is static: its <code>z-index</code> does not apply, A is painted with the blocks, and B, painted
+    later as a positioned box, covers A's lower half.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking" style="padding: 10px 0"><div class="pr-a blk" style="position: relative; z-index: 10">A: relative, z-index 10</div><div class="pr-b blk over">B: relative</div></div>
+    <figcaption>For comparison, A relative: it is at level 10, over B.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></div>
+  <h2>Not even with opacity</h2>
+  <p>A box with <code>opacity</code> below 1 forms a stacking context. <q>Furthermore, if the 'z-index' property applies
+  to the box, the auto value is treated as 0 for the element; it is otherwise painted on the same layer within its
+  parent stacking context as positioned elements with stack level 0</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="padding: 10px 0"><div class="pr-a blk" style="z-index: 10; opacity: 0.9">A: opacity 0.9, z-index 10</div><div class="pr-b blk over">B: relative</div></div>
+    <figcaption>A is static with <code>opacity: 0.9</code>: painted at level 0, before B in tree order, and B still
+    covers it; its 10 does not apply.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

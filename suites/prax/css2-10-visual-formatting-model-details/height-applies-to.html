@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The height property: what it applies to</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.5 Content height: the 'height' property</div>
+  <h1>The height property: what it applies to</h1>
+  <p class=pr-lede><code>height</code> applies to <q>all elements but non-replaced inline elements, table columns, and
+  column groups</q>.</p>
+</header>
+
+<section>
+  <h2>Not to non-replaced inline elements</h2>
+  <p><q>This property does not apply to non-replaced inline elements. See the section on computing heights and margins
+  for non-replaced inline elements for the rules used instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2 §10.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="height: 60px">span</span> b</div>
+    <figcaption>A <code>span</code> with <code>height: 60px</code> is as tall as its text, on a 20px line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="display: inline-block; height: 40px; vertical-align: top">block</span> b</div>
+    <figcaption>As an inline-block, which is not an inline element, <code>height: 40px</code> applies.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not to columns</h2>
+  <p>A column is as tall as its table. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2
+  §10.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-column style="height: 60px"></div><div class=pr-table-row><div class=pr-table-cell>a cell</div></div></div></div>
+    <figcaption>A column with <code>height: 60px</code> does not make its table taller: one 20px row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

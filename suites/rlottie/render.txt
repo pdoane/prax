@@ -1,0 +1,4 @@
+# How the suite renders (tools/suite/suite_render.h): on transparent pixels, as rlottie draws, with text set in the system's
+# fonts.
+system
+default Times

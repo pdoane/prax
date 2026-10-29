@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lists of rule values and repeat()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; gap: 10px; column-rule-style: solid; column-rule-width: 6px; }
+  .f > div { width: 11px; height: 20px; padding: 0; box-sizing: border-box; }
+  .mc { column-count: 4; gap: 14px; column-rule: 6px solid; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.5 Lists of values and the repeat() notation</div>
+  <h1>Lists of rule values and repeat()</h1>
+  <p class=pr-lede><q>Each of the properties in this section accepts a comma-separated list of values. Setting
+  multiple values in this way allows for varying gap decorations within a given container.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#lists-repeat">CSS Gaps 1 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>A list, and an integer repeater</h2>
+  <p>Each flexbox has ten items and nine gaps, with 6px solid rules. <q>An integer repeater expands out to the list of
+  values in the second argument, repeated as many times as specified by the first argument.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: red, blue"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>column-rule-color: red, blue</code>: red and blue in turn, red first and last. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: gray, repeat(3, red, blue), gray"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>gray, repeat(3, red, blue), gray</code>: eight values, gray, then red and blue three times,
+    then gray; the ninth gap starts the list again, gray. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-width: 1px, repeat(2, 4px), 8px"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>column-rule-width: 1px, repeat(2, 4px), 8px</code>: widths 1, 4, 4, 8 from the left, then
+    again. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An auto repeater</h2>
+  <p><q>An auto repeater will be used to fill in values for gaps that would not otherwise receive values from other
+  parts of the list.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule-color: gray, repeat(auto, red, blue), gray"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>gray, repeat(auto, red, blue), gray</code>: <q>a gray decoration in the first and last column
+    gaps, and alternating red and blue decorations in the in-between column gaps</q>. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=mc style="column-rule-color: gray, repeat(auto, red, blue), gray"><div style="height: 80px"></div></div></div>
+    <figcaption>Multicol, four columns, the same list: gray, red, gray. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No list: all three rules the text
+    color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

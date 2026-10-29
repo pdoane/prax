@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>orphans and widows on pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.3 Breaks Between Lines: orphans, widows</div>
+  <h1>orphans and widows on pages</h1>
+  <p class=pr-lede><q>The orphans property specifies the minimum number of line boxes in a block container that must be left in a fragment before a fragmentation break. The widows property specifies the minimum number of line boxes of a block container that must be left in a fragment after a break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#widows-orphans">CSS Fragmentation 4 §3.3</a></span> In columns: <a href="../css-multicol/orphans-widows.html">orphans and widows in columns</a>.</p>
+</header>
+
+<section>
+  <h2>On pages</h2>
+  <p>B is a block; the tinted paragraph of four lines follows it. A page holds 140px.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure><div class=pr-b style='height: 100px'>B</div><div class=k style='orphans: 3'>one<br>two<br>three<br>four</div>"></iframe>
+    <figcaption>B, 100px; <code>orphans: 3</code>. Two lines would fit under B, but three must be left before a break: the paragraph moves whole to the second page. <span class=pr-flag>Firefox</span> "one" under B, the rest on the second page, as with orphans 2.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure><div class=pr-b style='height: 80px'>B</div><div class=k style='widows: 3'>one<br>two<br>three<br>four</div>"></iframe>
+    <figcaption>B, 80px; <code>widows: 3</code>. Three lines would fit under B, but three must follow the break: "one" under B, the other three on the second page. <span class=pr-flag>Firefox</span> "one" and "two" under B, as with widows 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

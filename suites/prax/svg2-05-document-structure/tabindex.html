@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The tabindex attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg rect:focus { fill: #2c5a8f; outline: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.11.5 The ‘tabindex’ attribute</div>
+  <h1>The tabindex attribute</h1>
+  <p class=pr-lede><q>This content attribute allows authors to control whether an element is focusable, whether it is
+  supposed to be reachable using sequential focus navigation, and what is to be the relative order of the element for
+  the purposes of sequential focus navigation.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#tabindexattribute">SVG 2 §5.11.5</a></span></p>
+</header>
+
+<section>
+  <h2>Focusable, in sequence or not, and in order</h2>
+  <p>Four rects, each light blue and dark blue while it has the focus: <code>#a</code> <code>tabindex="0"</code>,
+  <code>#b</code> <code>tabindex="-1"</code>, <code>#c</code> none, <code>#d</code> <code>tabindex="1"</code>. The log
+  lists the focus events that reach the stage.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <button class=pr-target id=start style="margin: 10px 10px 0; width: 280px">start here</button>
+      <svg width="300" height="50"><rect id=a tabindex="0" x="10" y="10" width="60" height="30" fill="#b9cde6" /><rect id=b tabindex="-1" x="80" y="10" width="60" height="30" fill="#b9cde6" /><rect id=c x="150" y="10" width="60" height="30" fill="#b9cde6" /><rect id=d tabindex="1" x="220" y="10" width="60" height="30" fill="#b9cde6" /></svg>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click <q>start here</q> and press Tab: <code>#a</code>; Tab again leaves the stage, past
+    <code>#b</code> and <code>#c</code>. Shift+Tab back to the page's first link, then once more: <code>#d</code>,
+    whose positive index puts it first of all. Click <code>#b</code>: it takes the focus; <code>#c</code> does
+    not.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

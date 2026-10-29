@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margin percentages: the inline size, in every writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { height: 100px; }
+  .vrl { writing-mode: vertical-rl; }
+  .vlr { writing-mode: vertical-lr; }
+  .htb { writing-mode: horizontal-tb; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.1 Page-relative (Physical) Margin Properties, percentages</div>
+  <h1>Margin percentages: the inline size, in every writing mode</h1>
+  <p class=pr-lede><q>Percentages: refer to logical width of containing block</q>: its inline size, which is its width
+  in horizontal writing and its height in vertical writing, whichever side the margin is on. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-physical">CSS Box Model 4 §3.1</a></span> Each stage is 200px wide
+  and 100px tall; the orange tint is the box's margin area.</p>
+</header>
+
+<section>
+  <h2>Horizontal: of the width</h2>
+  <figure>
+    <div class="pr-stage s"><div class=pr-margin-area><div class=pr-a style="margin-top: 10%; margin-left: 10%">box</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>margin-top: 10%; margin-left: 10%</code>: both 20px, a tenth of the
+    200px width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=pr-margin-area><div class="pr-a vrl" style="height: 60px; margin-top: 10%; margin-left: 10%">box</div></div></div>
+    <figcaption>A <code>vertical-rl</code> box in the same stage: still 20px each, a tenth of its containing block's
+    inline size, not its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical: of the height</h2>
+  <figure>
+    <div class="pr-stage s vrl"><div class=pr-margin-area><div class=pr-a style="margin-top: 10%; margin-right: 10%">box</div></div></div>
+    <figcaption><code>vertical-rl</code>, <code>margin-top: 10%; margin-right: 10%</code>: both 10px, a tenth of the
+    100px height. The box runs down the stage's right side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s vrl"><div class=pr-margin-area><div class="pr-a htb" style="width: 60px; margin-top: 10%; margin-right: 10%">box</div></div></div>
+    <figcaption>A <code>horizontal-tb</code> box 60px wide in the <code>vertical-rl</code> stage: 10px each, of the
+    stage's height.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas background is not transformed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  iframe.pr-view { width: 160px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>The canvas background is not transformed</h1>
+  <p class=pr-lede><q>When the background of an element is propagated to the canvas ... that background is not affected by
+  any transform specified for that element or for the root element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span></p>
+</header>
+
+<section>
+  <h2>From the root, and from the body</h2>
+  <p>Each frame's background, a 40px orange square at
+  <code>10px 10px</code>, comes from the element with <code>translateX(60px)</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><iframe class=pr-view srcdoc="<style>html { background: linear-gradient(#d68a3c, #d68a3c) no-repeat 10px 10px / 40px 40px, #e7eaef; transform: translateX(60px); font: 13px/20px sans-serif } body { margin: 55px 0 0 }</style>root moved">
+    </iframe></div>
+    <figcaption>The root's: the square stays at (10, 10); the root's text moves 60px right. <span class=pr-flag>Safari</span>
+    moves the background with the root, the square to (70, 10), leaving the frame's left 60px bare.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view srcdoc="<style>body { background: linear-gradient(#d68a3c, #d68a3c) no-repeat 10px 10px / 40px 40px, #e7eaef; transform: translateX(60px); margin: 55px 0 0; font: 13px/20px sans-serif }</style>body moved"></iframe></div>
+    <figcaption>The body's, propagated: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

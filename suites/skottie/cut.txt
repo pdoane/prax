@@ -1,0 +1,10 @@
+# Cases that a plain run leaves out because they test what the engine has decided not to build. An entry lists its
+# cases, one per line, as <path>:<index> within the corpus, or a path for every frame of the animation, followed by the
+# indented reason, which starts with what is cut. An entry that names no case fails the run. --match runs these cases
+# like any other.
+
+skottie-sksl-color-filter.json
+skottie-sksl-effect-2.json
+skottie-sksl-effect.json
+    Skottie's SkSL effects: shaders in Skia's own shading language, an effect of Skottie's that neither After Effects
+    nor the Lottie specification defines.

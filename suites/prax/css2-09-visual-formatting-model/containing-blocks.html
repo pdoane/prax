@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The viewport and containing blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.1 Introduction to the visual formatting model</div>
+  <h1>The viewport and containing blocks</h1>
+  <p class=pr-lede>Each element generates zero or more boxes, laid out by their dimensions and type, their positioning
+  scheme, their relationships in the document tree, and information from outside it, such as the viewport's size.</p>
+</header>
+
+<section>
+  <h2>The viewport</h2>
+  <p><q>When the viewport is smaller than the area of the canvas on which the document is rendered, the user agent
+  should offer a scrolling mechanism.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#viewport">CSS 2 §9.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 10px } div { height: 200px; background: #4f81bd }</style><div></div>"></iframe></div>
+    <figcaption>A frame 100px tall showing a document 220px tall: the frame scrolls.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 10px } div { height: 60px; background: #4f81bd }</style><div></div>"></iframe></div>
+    <figcaption>A document that fits: nothing to scroll.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Containing blocks</h2>
+  <p><q>Many box positions and sizes are calculated with respect to the edges of a rectangular box called a containing
+  block.</q> <q>Each box is given a position with respect to its containing block, but it is not confined by this
+  containing block; it may overflow.</q> The dashed box is 100px wide. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block">CSS 2 §9.1.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="width: 100px"><div class="pr-a pr-fit" style="width: 50%">50%</div></div></div>
+    <figcaption><code>width: 50%</code> of the dashed box it lives in: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 50%">50%</div></div>
+    <figcaption>The same box in the 200px stage: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="width: 100px"><div class="pr-b pr-fit" style="width: 150px">150px</div></div></div>
+    <figcaption>A box wider than its containing block overflows it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="width: 100px"><div class="pr-b pr-fit" style="width: 80px; margin-left: 60px">ml 60</div></div></div>
+    <figcaption>So does one placed past its edge: 60 + 80 = 140px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

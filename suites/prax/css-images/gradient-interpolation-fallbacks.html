@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gradients that do not interpolate directly</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; }
+  .anim { animation-duration: 100s; animation-timing-function: linear; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  .half { animation-delay: -50s; }
+  .quarter { animation-delay: -25s; }
+  .three-quarters { animation-delay: -75s; }
+  @keyframes functions {
+    from { background-image: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%); }
+    to { background-image: repeating-linear-gradient(to right, #4f81bd 0 25%, #d68a3c 25% 50%); }
+  }
+  @keyframes counts {
+    from { background-image: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%); }
+    to { background-image: linear-gradient(to right, #4f81bd 25%, #d68a3c 25%, #d68a3c); }
+  }
+  @keyframes units {
+    from { background-image: linear-gradient(to right, #4f81bd 20px, #d68a3c 20px 100%); }
+    to { background-image: linear-gradient(to right, #4f81bd 80%, #d68a3c 80% 100%); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.4 Interpolating &lt;gradient&gt;</div>
+  <h1>Gradients that do not interpolate directly</h1>
+  <p class=pr-lede><q>If they fail the third one only, they must be abruptly transitioned at 50% (unless otherwise
+  specified by a future specification). If they fail either of the first two constraints, they must be interpolated
+  using cross-fade() as for generic images.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-gradients">CSS Images 4 §7.4</a></span>
+  Each gradient is animated to and fro; a still shows the frame the caption gives. Its stops are hard, blue then
+  orange.</p>
+</header>
+
+<section>
+  <h2>Cross-faded</h2>
+  <p><q>Both the starting and ending gradient must be expressed with the same function.</q> <q>Both the starting and
+  ending gradient must have the same number of color-stops.</q> Where neither holds, at 50% each pixel is half the
+  one gradient's color and half the other's: where blue meets orange, a greyish brown.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box anim half" style="animation-name: functions"></div></div>
+    <figcaption>Linear, split at 50px, to repeating, 25px stripes: blue to 25px, brown to 75px, then orange. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The repeating
+    stripes: it switches at 50%.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box anim half" style="animation-name: counts"></div></div>
+    <figcaption>Two stops, split at 50px, to three, split at 25px: blue to 25px, brown to 50px, then orange. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Split at
+    25px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths and percentages: abrupt at 50%</h2>
+  <p><q>Neither gradient uses a combination of &lt;length&gt; and &lt;percentage&gt; color stops.</q> From stops at
+  <code>20px</code> and <code>20px 100%</code>, which mix them, to stops at <code>80%</code> and
+  <code>80% 100%</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><div class="box anim quarter" style="animation-name: units"></div></div>
+    <figcaption>At 25%: still the start, blue for 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><div class="box anim three-quarters" style="animation-name: units"></div></div>
+    <figcaption>At 75%: already the end, blue for 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: scrolling and boxes out of flow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { width: 100px; height: 60px; margin-left: 50px; overflow: auto; font-size: 13px; line-height: 20px; color-scheme: light; color: var(--pr-ink); background: white; }
+  .scroller div { padding: 0 6px; }
+  .sq { position: absolute; width: 20px; height: 20px; padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: scrolling and boxes out of flow</h1>
+  <p class=pr-lede>Each stage is <code>position: relative</code>. Each white box is a scroll container 100 by 60; whether
+  it is positioned decides what it holds.</p>
+</header>
+
+<section>
+  <h2>Scrolled boxes, and static positions</h2>
+  <p>A scroll container moves only its content, and its content leaves out <q>any descendant elements (and their
+  respective content and descendants) whose containing block is the viewport or an ancestor of the element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span>
+  For a static position, <q>all scrollable boxes should be assumed to be scrolled to their origin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="scroller pr-frame" id=scrolled><div>one</div><i class="pr-b sq" style="margin-left: 60px"></i><div>two</div><div>three</div><div>four</div><div>five</div></div></div>
+    <figcaption>A static scroller, scrolled down 20px; the square after "one" is held by the stage. It stays at its
+    unscrolled static position, beside "three" now, not "two".</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></div>
+  <h2>Whose scrollable overflow</h2>
+  <p>A box's scrollable overflow area holds <q>The border boxes of all boxes for which it is the containing
+  block</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span> Each scroller holds a square with
+  <code>top: 70px</code>, and is scrolled as far down as it goes.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 100px"><div class="scroller pr-frame" id=scrolled2><div>one</div><div>two</div><i class="pr-b sq" style="top: 70px; left: 60px"></i></div></div>
+    <figcaption>The scroller is static: the square, held by the stage, gives it nothing to scroll, and "one" stays
+    in view.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 100px"><div class="scroller pr-frame" id=scrolled3 style="position: relative"><div>one</div><div>two</div><i class="pr-b sq" style="top: 70px; left: 60px"></i></div></div>
+    <figcaption>The scroller is relative: it holds the square, which reaches 30px past its end, and it scrolls
+    30px to show it.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("scrolled").scrollTop = 20; document.getElementById("scrolled2").scrollTop = 1000; document.getElementById("scrolled3").scrollTop = 1000;</script>
+</body>
+</html>

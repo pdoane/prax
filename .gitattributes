@@ -1,0 +1,23 @@
+# Text is LF in the repository and in every checkout, whatever core.autocrlf says. Tools, tests and patches read and
+# compare files byte for byte, and a script with CRLF does not run under sh. Git detects text from content; the
+# binary formats are listed so that a file of one is never mistaken for text.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.mp4 binary
+*.webm binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary

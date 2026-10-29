@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dashes in motion</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .quarter { animation-duration: 4s; animation-timing-function: linear; animation-delay: -1s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes lists { from { stroke-dasharray: 20 40 10; } to { stroke-dasharray: 40 20; } }
+  @keyframes from-none { from { stroke-dasharray: none; } to { stroke-dasharray: 20 10; } }
+  @keyframes march { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 40; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.6 Dashing strokes: the ‘stroke-dasharray’ and ‘stroke-dashoffset’ properties</div>
+  <h1>Dashes in motion</h1>
+  <p class=pr-lede><q>'stroke-dasharray' values are not additive. For interpolation, 'stroke-dasharray' values are
+  combined as follows</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeDashing">SVG 2 §13.5.6</a></span>
+  Each line runs from x 20 to 140, stroked dark blue 10 wide, to and fro between two values over 4 seconds; a
+  still shows it a quarter of the way.</p>
+</header>
+
+<section>
+  <h2>Two lists, repeated to the same length</h2>
+  <p><q>repeat both dash patterns of start and end value list until the length of elements in both value lists match.
+  Each item is then combined by computed value.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: lists" d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>20 40 10</code> to <code>40 20</code>, as <code>20 40 10 20 40 10</code> to <code>40 20 40
+    20 40 20</code>: a quarter of the way, <code>25 35 17.5 20 40 12.5</code>, dashes 20 to 45, 80 to 97.5 and
+    117.5 to 140; they stretch and shrink.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: from-none" d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>none</code> to <code>20 10</code>: <q>If either start or end compute to none or are invalid
+    … combined using the discrete animation type.</q> A quarter of the way, solid; halfway it jumps to
+    dashes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The offset</h2>
+  <p><code>stroke-dashoffset</code> is animated <q>by computed value</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path class=quarter style="animation-name: march" d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" /></svg></div>
+    <figcaption><code>20 10</code>, the offset from 0 to 40: a quarter of the way, 10, dashes 20 to 30, 40 to
+    60, 70 to 90, 100 to 120 and 130 to 140; they march left and back.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,137 @@
+diff --git a/quickjs.c b/quickjs.c
+index cb87b50..ba733b5 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -320,6 +320,7 @@ struct JSClass {
+     JSClassCall *call;
+     /* pointers for exotic behavior, can be NULL if none are present */
+     const JSClassExoticMethods *exotic;
++    JSClassStateHook *state;
+ };
+ 
+ typedef struct JSStackFrame {
+@@ -1159,8 +1160,9 @@ static int JS_CreateProperty(JSContext *ctx, JSObject *p,
+ static int js_string_memcmp(JSString *p1, JSString *p2, int len);
+ static void reset_weak_ref(JSRuntime *rt, JSWeakRefRecord **first_weak_ref);
+ static bool is_valid_weakref_target(JSValueConst val);
+-static void insert_weakref_record(JSValueConst target,
++static void insert_weakref_record(JSRuntime *rt, JSValueConst target,
+                                   struct JSWeakRefRecord *wr);
++static void js_object_state(JSRuntime *rt, JSObject *p);
+ static JSValue js_array_buffer_constructor3(JSContext *ctx,
+                                             JSValueConst new_target,
+                                             uint64_t len, uint64_t *max_len,
+@@ -3555,6 +3557,7 @@ static int JS_NewClass1(JSRuntime *rt, JSClassID class_id,
+     cl->gc_mark = class_def->gc_mark;
+     cl->call = class_def->call;
+     cl->exotic = class_def->exotic;
++    cl->state = class_def->state;
+     return 0;
+ }
+ 
+@@ -7202,6 +7205,7 @@ static int JS_SetPrototypeInternal(JSContext *ctx, JSValueConst obj,
+ 
+     if (js_shape_prepare_update(ctx, p, NULL))
+         return -1;
++    js_object_state(ctx->rt, p);
+     sh = p->shape;
+     if (sh->proto)
+         JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
+@@ -8120,6 +8124,8 @@ int JS_PreventExtensions(JSContext *ctx, JSValueConst obj)
+     p = JS_VALUE_GET_OBJ(obj);
+     if (unlikely(p->class_id == JS_CLASS_PROXY))
+         return js_proxy_preventExtensions(ctx, obj);
++    if (p->extensible)
++        js_object_state(ctx->rt, p);
+     p->extensible = false;
+     return true;
+ }
+@@ -8370,6 +8376,14 @@ JSValue JS_GetPropertyStr(JSContext *ctx, JSValueConst this_obj,
+     return ret;
+ }
+ 
++/* Tells the class of `p` that the object may now hold what a new one would not */
++static void js_object_state(JSRuntime *rt, JSObject *p)
++{
++    JSClassStateHook *state = rt->class_array[p->class_id].state;
++    if (unlikely(state))
++        state(rt, JS_MKPTR(JS_TAG_OBJECT, p));
++}
++
+ /* Note: the property value is not initialized. Return NULL if memory
+    error. */
+ static JSProperty *add_property(JSContext *ctx,
+@@ -8377,6 +8391,7 @@ static JSProperty *add_property(JSContext *ctx,
+ {
+     JSShape *sh, *new_sh;
+ 
++    js_object_state(ctx->rt, p);
+     sh = p->shape;
+     if (sh->is_hashed) {
+         /* try to find an existing shape */
+@@ -47198,7 +47213,7 @@ static JSMapRecord *map_add_record(JSContext *ctx, JSMapState *s,
+         }
+         wr->kind = JS_WEAK_REF_KIND_MAP;
+         wr->u.map_record = mr;
+-        insert_weakref_record(key, wr);
++        insert_weakref_record(ctx->rt, key, wr);
+         mr->key = unsafe_unconst(key);
+     } else {
+         mr->key = js_dup(key);
+@@ -55465,7 +55480,7 @@ static JSValue js_weakref_constructor(JSContext *ctx, JSValueConst new_target,
+     wrd->obj = obj;
+     wr->kind = JS_WEAK_REF_KIND_WEAK_REF;
+     wr->u.weak_ref_data = wrd;
+-    insert_weakref_record(arg, wr);
++    insert_weakref_record(ctx->rt, arg, wr);
+ 
+     JS_SetOpaqueInternal(obj, wrd);
+     return obj;
+@@ -55619,7 +55634,7 @@ static JSValue js_finrec_register(JSContext *ctx, JSValueConst this_val,
+     list_add_tail(&fre->link, &frd->entries);
+     wr->kind = JS_WEAK_REF_KIND_FINALIZATION_REGISTRY_ENTRY;
+     wr->u.fin_rec_entry = fre;
+-    insert_weakref_record(target, wr);
++    insert_weakref_record(ctx->rt, target, wr);
+ 
+     return JS_UNDEFINED;
+ }
+@@ -55787,10 +55802,12 @@ static bool is_valid_weakref_target(JSValueConst val)
+     return true;
+ }
+ 
+-static void insert_weakref_record(JSValueConst target,
++static void insert_weakref_record(JSRuntime *rt, JSValueConst target,
+                                   struct JSWeakRefRecord *wr)
+ {
+     JSWeakRefRecord **pwr = get_first_weak_ref(target);
++    if (JS_VALUE_GET_TAG(target) == JS_TAG_OBJECT)
++        js_object_state(rt, JS_VALUE_GET_OBJ(target));
+     /* Add the weak reference */
+     wr->next_weak_ref = *pwr;
+     *pwr = wr;
+diff --git a/quickjs.h b/quickjs.h
+index 087b557..6fb8140 100644
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -572,6 +572,12 @@ typedef JSValue JSClassCall(JSContext *ctx, JSValueConst func_obj,
+                             JSValueConst this_val, int argc,
+                             JSValueConst *argv, int flags);
+ 
++/* Called as an object of the class may first hold what a new object of the class would not: an
++   own property is added, its prototype changes, it is made non-extensible, or it becomes the
++   target of a weak reference. It may be called again for the same object. It runs no JS code and
++   frees no value. */
++typedef void JSClassStateHook(JSRuntime *rt, JSValueConst obj);
++
+ typedef struct JSClassDef {
+     const char *class_name; /* pure ASCII only! */
+     JSClassFinalizer *finalizer;
+@@ -585,6 +591,7 @@ typedef struct JSClassDef {
+     /* XXX: suppress this indirection ? It is here only to save memory
+        because only a few classes need these methods */
+     JSClassExoticMethods *exotic;
++    JSClassStateHook *state;
+ } JSClassDef;
+ 
+ #define JS_EVAL_OPTIONS_VERSION 1

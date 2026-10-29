@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-wrap: one line or many</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 60px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.2 Flex Line Wrapping: the flex-wrap property</div>
+  <h1>flex-wrap: one line or many</h1>
+  <p class=pr-lede><q>The flex-wrap property controls whether the flex container is single-line or multi-line, and the
+  direction of the cross-axis, which determines the direction new lines are stacked in.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-wrap-property">CSS Flexible Box Layout 2 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>nowrap, wrap and wrap-reverse</h2>
+  <p>Each stage holds A, B, C and D, 60px wide and <code>flex: none</code>, 240px in all. <q>For the values that are
+  not wrap-reverse, the cross-start direction is equivalent to either the inline-start or block-start direction of the
+  current writing mode</q>; <q>When flex-wrap is wrap-reverse, the cross-start and cross-end directions are
+  swapped.</q></p>
+  <figure style="margin-right: 60px">
+    <div class=pr-stage style="flex-wrap: nowrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>nowrap</code>: single-line, so D overflows the stage, from 180px to 240px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>wrap</code>: A, B, C on the first line, D on a second line below them, at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>wrap-reverse</code>: the first line, A, B, C, at the bottom, and D's line above it, at the
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Every line holds at least one item</h2>
+  <p><q>Every line contains at least one flex item, unless the flex container itself is completely empty.</q></p>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="width: 220px">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>wrap</code>, and B 220px, wider than the stage: A alone on the first line, B alone on the second,
+    overflowing by 20px, and C on the third.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

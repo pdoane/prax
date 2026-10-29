@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The iframe element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .small { width: 160px; height: 40px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.5 The iframe element</div>
+  <h1>The iframe element</h1>
+  <p class=pr-lede><q>The iframe element represents its content navigable.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-iframe-element">HTML §4.8.5</a></span>
+  <code>doc.html</code> is green, with its name at its top left.</p>
+</header>
+
+<section>
+  <h2>A document from src, or from srcdoc</h2>
+  <p><q>The srcdoc attribute gives the content of the page that the element's content navigable is to contain.</q>
+  <q>If the src attribute and the srcdoc attribute are both specified together, the srcdoc attribute takes
+  priority.</q> <q>Descendants of iframe elements represent nothing.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe class=small srcdoc="<body style='margin: 0; background: #f6d7b4; font: 12px/20px sans-serif; padding: 0 6px'>from srcdoc"></iframe></div>
+    <figcaption><code>srcdoc</code>: orange, "from srcdoc".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe class=small src="support/doc.html" srcdoc="<body style='margin: 0; background: #f6d7b4; font: 12px/20px sans-serif; padding: 0 6px'>from srcdoc"></iframe></div>
+    <figcaption>Both: orange, "from srcdoc", not doc.html.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe class=small src="support/doc.html"><b>fallback</b></iframe></div>
+    <figcaption><code>src</code>, and markup inside: doc.html, green, and no "fallback".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>300 by 150, in a 2px inset border</h2>
+  <p>The iframe is <q>expected to be treated as a replaced element</q>, with the rule <code>iframe { border: 2px
+  inset; }</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#embedded-content-rendering-rules">§15.4.1</a></span>
+  Without natural dimensions, a replaced element is 300 by 150. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-replaced-width">CSS 2 §10.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row" style="width: 304px; padding: 6px"><iframe src="support/doc.html"></iframe></div>
+    <figcaption>doc.html in a box 300 by 150 inside an inset border 2px wide, 304 by 154 in all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

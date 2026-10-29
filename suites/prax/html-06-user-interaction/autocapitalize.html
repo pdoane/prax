@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Autocapitalization</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px;
+        background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.7 Autocapitalization</div>
+  <h1>Autocapitalization</h1>
+  <p class=pr-lede><q>The autocapitalize attribute, as typically implemented, does not affect behavior when typing on a physical
+  keyboard.</q> It guides virtual keyboards and voice input.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#autocapitalization">HTML §6.8.7</a></span></p>
+</header>
+<section>
+  <h2>The hints</h2>
+  <p><q>None</q>: <q>No autocapitalization should be applied (all letters should default to lowercase).</q>
+  <q>Sentences</q>: <q>The first letter of each sentence should default to a capital letter</q>. <q>Words</q>: <q>The
+  first letter of each word should default to a capital letter</q>. <q>Characters</q>: <q>All letters should default
+  to uppercase.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#autocapitalization">§6.8.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=ed autocapitalize=none placeholder="autocapitalize=none">
+        <input class=ed autocapitalize=sentences placeholder="autocapitalize=sentences">
+        <input class=ed autocapitalize=words placeholder="autocapitalize=words">
+        <input class=ed autocapitalize=characters placeholder="autocapitalize=characters">
+      </div>
+    </div>
+    <figcaption>On a phone or tablet's virtual keyboard, type <code>one two. three</code> in each: <code>one two. three</code>,
+    <code>One two. Three</code>, <code>One Two. Three</code>, <code>ONE TWO. THREE</code>, the keyboard's shift state following the
+    hint.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>From the form, but never for URLs, emails or passwords</h2>
+  <p><q>If element is an autocapitalize-and-autocorrect inheriting element and has a non-null form owner, return the
+  own autocapitalization hint of element's form owner.</q>
+  <q>If element is an input element whose type attribute is in one of the URL, Email, or Password states, then return
+  Default.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#autocapitalization">§6.8.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form autocapitalize=characters style="padding: 10px 20px 0">
+        <input class=ed placeholder="text, in a form with characters">
+        <input class=ed type=email placeholder="email, in the same form">
+      </form>
+    </div>
+    <figcaption>On a virtual keyboard, type in each: capitals in the first, from its form; in the email field, the
+    user agent's own choice, typically lowercase.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>backdrop-filter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { padding: 10px; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #f9cc9d 10px 20px); }
+  .glass { width: 100px; height: 40px; margin: 0 40px; }
+  .holder { width: 100px; height: 40px; margin: 0 40px; background: rgb(255 255 255 / 0.3); }
+  .holder .abs { position: absolute; right: 0; top: 0; width: 20px; height: 20px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 2 · 2 Backdrop filters: the backdrop-filter property</div>
+  <h1>backdrop-filter</h1>
+  <p class=pr-lede><q>The first filter function or filter reference in the &lt;filter-value-list&gt; takes the element's
+  Backdrop Root Image as the input image. Subsequent operations take the output from the previous filter function or
+  filter reference as the input image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-2/#BackdropFilterProperty">Filter Effects 2 §2</a></span>
+  Each stage is striped, blue and light orange every 10px; the box over it, 100 by 40, is dashed and has no
+  background. Safari's and Firefox's stills show no backdrop filter at all, though both apply the property, as the
+  containing blocks below show in every column: their screenshots are taken without the effect.</p>
+</header>
+
+<section>
+  <h2>What is behind the box, filtered</h2>
+  <figure>
+    <div class="pr-stage back"><div class="glass pr-ghost" style="backdrop-filter: blur(4px)"></div></div>
+    <figcaption><code>blur(4px)</code>: the stripes blurred inside the box only.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class="glass pr-ghost" style="backdrop-filter: grayscale(1)"></div></div>
+    <figcaption><code>grayscale(1)</code>: gray stripes inside the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class="glass pr-ghost" style="backdrop-filter: blur(3px) contrast(4)"></div></div>
+    <figcaption><code>blur(3px) contrast(4)</code>: blurred, then sharpened again into hard bands.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class="glass pr-ghost" style="backdrop-filter: contrast(4) blur(3px)"></div></div>
+    <figcaption>The other order: the contrast first, so the blur's soft stripes stay.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stacking context and a containing block</h2>
+  <p><q>A computed value of other than none results in the creation of both a stacking context and a Containing Block
+  for absolute and fixed position descendants, unless the element it applies to is a document root element in the
+  current browsing context.</q> The box is white at 30%, not positioned, with <code>grayscale(0)</code>.</p>
+  <figure>
+    <div class="pr-stage back pr-cb" style="height: 40px"><div class=holder style="backdrop-filter: grayscale(0)"><div class=abs></div></div></div>
+    <figcaption>A purple square, absolute, <code>right: 0; top: 0</code>: at the box's top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back pr-cb" style="height: 40px"><div class=holder style="backdrop-filter: grayscale(0)"><div class=abs style="position: fixed"></div></div></div>
+    <figcaption>Fixed: the same, the box its containing block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

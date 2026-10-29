@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>attr() and the case of attribute names</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font: 12px/18px ui-monospace, Menlo, monospace; }
+  .rows p { margin: 0 0 4px; padding: 0 6px; background: #d5d9e0; }
+  .upper::before { content: "[" attr(DATA-LABEL) "] "; color: #3f7a3f; font-weight: 600; }
+  .lower::before { content: "[" attr(data-label) "] "; color: #3f7a3f; font-weight: 600; }
+  iframe.rows-frame { display: block; width: 200px; height: 62px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.1 Case-sensitivity of the CSS 'attr()' function</div>
+  <h1>attr() and the case of attribute names</h1>
+  <p class=pr-lede><q>When comparing the attribute name part of a CSS 'attr()' function to the names of namespace-less
+  attributes on HTML elements in HTML documents, the name part of the CSS 'attr()' function must first be converted to
+  ASCII lowercase. The same function when compared to other attributes must be compared according to its original
+  case.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-the-css-'attr()'-function">HTML §4.16.1</a></span></p>
+</header>
+<section>
+  <h2>Lowercased in an HTML document, as written in an XML one</h2>
+  <p>Each line's <code>::before</code> is <code>"[" attr(…) "] "</code>, with the name the line shows, on an element
+  whose <code>data-label</code> is "found". <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-the-css-'attr()'-function">§4.16.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <p class=upper data-label=found>DATA-LABEL</p>
+        <p class=lower data-label=found>data-label</p>
+      </div>
+    </div>
+    <figcaption>This HTML document: both lines begin "[found]" in green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <iframe class=rows-frame src="support/attr-case.xhtml"></iframe>
+    </div>
+    <figcaption>An XML document: <code>DATA-LABEL</code> names no attribute, so the first line begins "[]"; the
+    second begins "[found]".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

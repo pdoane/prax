@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>symbol: never rendered, clipped when used</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; }
+  .hidden-instance { display: none; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <symbol id="big"><circle cx="20" cy="20" r="30" fill="#4f81bd" /></symbol>
+  <symbol id="hidden" class=hidden-instance><rect width="120" height="40" fill="#4f81bd" /></symbol>
+  <symbol id="big-visible" overflow="visible"><circle cx="20" cy="20" r="30" fill="#4f81bd" /></symbol>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.4.2 Notes on symbols</div>
+  <h1>symbol: never rendered, clipped when used</h1>
+  <p class=pr-lede><q>‘symbol’ elements must never be rendered directly; their only usage is as something that can be
+  referenced using the ‘use’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SymbolNotes">SVG 2 §5.4.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>display: none, and inline for the instance</h2>
+  <p><q>The user agent must set the display property on the ‘symbol’ element to none, as part of the user agent style
+  sheet, and this declaration must have importance over any other CSS rule or presentation attribute.</q> <q>The
+  generated instance of a ‘symbol’ that is the direct referenced element of a ‘use’ element must always have a
+  computed value of inline for the display property.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><symbol class=shown display="inline"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></symbol></svg></div>
+    <figcaption>A <code>symbol</code> in the stage with <code>display: inline !important</code>: nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#hidden" x="20" y="10" /></svg></div>
+    <figcaption>A symbol a style sheet sets <code>display: none</code>, by a <code>use</code> at 20, 10: its instance
+    inline, the rect 120 by 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>overflow: hidden</h2>
+  <p><q>Unless the overflow property is overridden, any graphics within the symbol which goes outside of the symbol's
+  SVG viewport will be clipped.</q> A circle of radius 30 in a symbol used 40 by 40 at 60, 10, outlined.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="60" y="10" width="40" height="40" /><use href="#big" x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>Clipped to the square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="60" y="10" width="40" height="40" /><use href="#big-visible" x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>The symbol's <code>overflow="visible"</code> overriding it: the whole circle, from y 0 to
+    60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

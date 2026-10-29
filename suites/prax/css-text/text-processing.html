@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text processing across boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { float: right; width: 20px; height: 20px; }
+  .ar { padding: 0 8px; font: 28px/44px "PR Noto Sans Arabic"; }
+  .b { background: #f9cc9d; }
+  .m .pr-stage { width: 150px; }
+  .m figcaption { max-width: 155px; }
+  .m { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 1.5 Text Processing</div>
+  <h1>Text processing across boxes</h1>
+  <p class=pr-lede><q>For the purpose of determining adjacency for text processing (such as white space processing,
+  text transformation, line-breaking, etc.), and thus in general within this specification, intervening inline box
+  boundaries and out-of-flow elements must be ignored.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-encoding">CSS Text 4 §1.5</a></span></p>
+</header>
+
+<section>
+  <h2>A float between characters is not there</h2>
+  <p>In each stage a green float, at the right, comes in the source between the characters around it. Each letter
+  is 10px wide.</p>
+  <figure class=m>
+    <div class="pr-stage pr-measure">one <span class="pr-c pr-fit f"></span> two</div>
+    <figcaption>"one ", the float, " two": the two spaces are adjacent and collapse to one, so "two" starts at
+    40px.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure" style="text-transform: capitalize">ab<span class="pr-c pr-fit f"></span>cd
+    e<b>fgh</b></div>
+    <figcaption><code>capitalize</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-mapping">§2.1.1</a></span>:
+    "Abcd Efgh", no capital after the float or at the bold. <span class=pr-flag>Chrome</span> "AbCd".</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure" style="width: 50px">abc<span class="pr-c pr-fit f" style="width: 10px"></span>defg</div>
+    <figcaption>50px wide, with a 10px float: "abc" and "defg" are one word, so the line does not break at the float;
+    "abcdefg" runs past the float and the edge. <span class=pr-flag>Safari</span> breaks at the float: "abc", then
+    "defg".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unicode's requirements hold</h2>
+  <p><q>UAs that support Unicode must adhere to all normative requirements of the Unicode Core Standard, except where
+  explicitly overridden by CSS.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-encoding">§1.5</a></span>
+  Each stage is the Arabic letter beh, twice.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ar" dir=rtl>بب</div>
+    <figcaption>Joined: an initial form, then a final.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ar" dir=rtl>ب&#x200C;ب</div>
+    <figcaption>With U+200C ZERO WIDTH NON-JOINER between: two isolated forms.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ar" dir=rtl>ب&#x200D; ب</div>
+    <figcaption>U+200D ZERO WIDTH JOINER after the first, then a space: the first takes its initial form, joined
+    toward nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

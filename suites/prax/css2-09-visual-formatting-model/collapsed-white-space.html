@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous inline boxes: white space</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.2.1 Anonymous inline boxes</div>
+  <h1>Anonymous inline boxes: white space</h1>
+  <p class=pr-lede><q>Any text that is directly contained inside a block container element (not inside an inline element)
+  must be treated as an anonymous inline element.</q> Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>White space that collapses away</h2>
+  <p><q>White space content that would subsequently be collapsed away according to the 'white-space' property does not
+  generate any anonymous inline boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous①">CSS 2 §9.2.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-a>A</div>
+      <div class=pr-b>B</div>
+    </div>
+    <figcaption>Spaces and a newline between two blocks make no line: A and B touch.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div> x <div class=pr-b>B</div></div>
+    <figcaption>Text that is not white space does: a line holding "x" between them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

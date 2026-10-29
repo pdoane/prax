@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hit testing a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; cursor: crosshair; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.13 Drawing paths to the canvas</div>
+  <h1>Hit testing a path</h1>
+  <p class=pr-lede>isPointInPath <q>Returns true if the given point is in the current default path or the given path,
+  using the given fill rule to determine what points are in the path.</q> isPointInStroke <q>Returns true if the given
+  point would be in the region covered by the stroke of the current default path or the given path, given the current
+  stroke style.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-paths-to-the-canvas">HTML §4.12.5.1.13</a></span></p>
+</header>
+<section>
+  <h2>Where a click lands</h2>
+  <p>The canvas holds a ring, filled light blue with <code>evenodd</code>, and a line stroked light orange, 12 wide. On
+  each click the page asks <code>isPointInPath(ring, x, y, "evenodd")</code> and <code>isPointInStroke(line, x,
+  y)</code> at the click's offset, and draws a dot there: blue where the first is true, orange where the second is, grey
+  where neither. The point is taken <q>in the canvas coordinate space unaffected by the current transformation</q>, and
+  <q>Points on the path itself must be considered to be inside the path.</q></p>
+  <figure>
+    <div class="pr-stage pr-wide"><canvas width=300 height=120 id=hit></canvas></div>
+    <figcaption>Click in the ring: a blue dot. Click in its middle, which <code>evenodd</code> leaves outside: a grey
+    dot. Click on the orange band: an orange dot. Click elsewhere: grey.</figcaption>
+  </figure>
+</section>
+<script>
+  const canvas = document.getElementById("hit");
+  const context = canvas.getContext("2d");
+  const ring = new Path2D();
+  ring.arc(80, 60, 50, 0, 2 * Math.PI);
+  ring.moveTo(105, 60);
+  ring.arc(80, 60, 25, 0, 2 * Math.PI);
+  const line = new Path2D("M 180 15 L 280 105");
+  context.fillStyle = "#b9cde6";
+  context.fill(ring, "evenodd");
+  context.strokeStyle = "#f6d7b4";
+  context.lineWidth = 12;
+  context.stroke(line);
+  canvas.addEventListener("click", event => {
+    const x = event.offsetX, y = event.offsetY;
+    context.fillStyle = context.isPointInPath(ring, x, y, "evenodd") ? "#2c5a8f"
+                      : context.isPointInStroke(line, x, y) ? "#9c5f22" : "#7b8494";
+    context.beginPath();
+    context.arc(x, y, 3, 0, 2 * Math.PI);
+    context.fill();
+  });
+</script>
+</body>
+</html>

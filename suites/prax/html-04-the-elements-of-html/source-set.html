@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which source an img takes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+  .pic img ~ img { margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.3.9 Updating the source set</div>
+  <h1>Which source an img takes</h1>
+  <p class=pr-lede><q>Each img element independently considers its previous sibling source elements plus the img
+  element itself for selecting an image source, ignoring any other (invalid) elements, including other img elements in
+  the same picture element, or source elements that are following siblings of the relevant img element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#updating-the-source-set">HTML §4.8.4.3.9</a></span>
+  Blue is the img's <code>src</code>, 80 by 40; orange, green and purple are 160 by 80 at <code>2x</code>, 80 by 40
+  too.</p>
+</header>
+
+<section>
+  <h2>The first source that qualifies</h2>
+  <p>A source is passed over if it has no <code>srcset</code>, if <q>source set has zero image sources</q>, or if its
+  media or type do not fit; the first one left gives the img its source set, and <q>Return.</q></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source srcset="support/orange-160x80.png 2x"><source srcset="support/green-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>Orange, then green: orange, the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source src="support/orange-160x80.png"><source srcset=""><source srcset="support/green-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>A source with <code>src</code> and no srcset, one with an empty srcset, then green: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the sources before the img</h2>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><img src="support/blue-80x40.png" alt=""><source srcset="support/orange-160x80.png 2x"></picture></div>
+    <figcaption>The source after the img: ignored. Blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""><source srcset="support/green-160x80.png 2x"><img src="support/purple-160x80.png" width="80" alt=""></picture></div>
+    <figcaption>Orange, an img, green, a second img: both orange. Each img takes the first source before it, and
+    the second img passes over the first img.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which box's properties decide a break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+  .ja { width: 40px; font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.5 Line Breaking Details</div>
+  <h1>Which box's properties decide a break</h1>
+  <p class=pr-lede><q>For soft wrap opportunities created by characters that disappear at the line break (e.g. U+0020
+  SPACE), properties on the box directly containing that character control the line breaking at that opportunity.
+  For soft wrap opportunities defined by the boundary between two characters or atomic inlines, the 'white-space'
+  property on the nearest common ancestor of the two characters controls breaking</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-details">CSS Text 4 §6.5</a></span>
+  The span with <code>nowrap</code> is blue.</p>
+</header>
+
+<section>
+  <h2>A space: its own box</h2>
+  <p>Each stage is 60px wide, of 10px letters, and holds "aaa", a space, "bbb".</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="width: 60px">aaa<span class=u style="white-space: nowrap"> </span>bbb</div>
+    <figcaption>The space alone in a <code>nowrap</code> span: no break at it, one line past the edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: nowrap"><span class=u>aaa</span><span class=t style="white-space: normal"> </span><span class=u>bbb</span></div>
+    <figcaption>A <code>nowrap</code> stage, the space in an orange span of <code>normal</code>: a break at it,
+    "aaa", then "bbb".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Between two characters: their common ancestor</h2>
+  <p>Each stage is 40px wide, two 20px characters to a line, and holds 日本語文.</p>
+  <figure>
+    <div class="pr-stage ja" lang=ja>日<span class=u style="white-space: nowrap">本語</span>文</div>
+    <figcaption>本語 in a blue <code>nowrap</code> span: 本|語 is inside it: no break; 日|本 and 語|文 are the stage's: breaks. "日", "本語",
+    "文".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="white-space: nowrap"><span class=t style="white-space: normal">日本</span><span class=t style="white-space: normal">語文</span></div>
+    <figcaption>A <code>nowrap</code> stage of two orange <code>normal</code> spans: 本|語, between the spans, is the
+    stage's: no break there; inside each span, breaks: "日", "本語", "文". <span class=pr-flag>Chrome</span>
+    breaks between the spans: "日本", "語文".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>white-space-collapse</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 120px; tab-size: 4; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.1 White Space Collapsing: the white-space-collapse property</div>
+  <h1>white-space-collapse</h1>
+  <p class=pr-lede><q>This property specifies whether and how white space is collapsed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-collapsing">CSS Text 4 §4.1</a></span>
+  Each stage is 120px wide, of 10px letters, with <code>tab-size: 4</code>, and its source is "a", three spaces,
+  "b", a newline, two spaces, "c", a tab, "d". The text is highlighted to show its spaces.</p>
+</header>
+
+<section>
+  <h2>collapse, preserve and preserve-breaks</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space-collapse: collapse"><span class=t>a   b
+  c	d</span></div>
+    <figcaption><code>collapse</code>: <q>collapse sequences of white space into a single character</q>: "a b c d",
+    one line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space-collapse: preserve"><span class=t>a   b
+  c	d</span></div>
+    <figcaption><code>preserve</code>: "a   b", then "  c", and the tab to 40px, "d". <q>Segment breaks such as
+    line feeds are preserved as forced line breaks.</q></figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space-collapse: preserve-breaks"><span class=t>a   b
+  c	d</span></div>
+    <figcaption><code>preserve-breaks</code>: <q>collapses consecutive white space characters, but preserves
+    segment breaks</q>: "a b", then "c d".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>preserve-spaces and discard</h2>
+  <p><code>preserve-spaces</code>: <q>This value prevents user agents from collapsing sequences of white space,
+  and converts tabs and segment breaks to spaces.</q> <code>discard</code>: <q>This value directs user agents to
+  “discard” all white space in the element.</q> Whether a discarded space leaves its wrap opportunity is an open
+  issue in the draft.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="white-space-collapse: preserve-spaces"><span class=t>a   b
+  c	d</span></div>
+    <figcaption>"a   b   c d": the newline a space beside the two after it, and the tab one space, all on one
+    line, 110px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> collapse it: "a b c d".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="white-space-collapse: discard"><span class=t>a   b
+  c	d</span></div>
+    <figcaption><code>discard</code>: "abcd", 40px, no white space at all. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Ignore the value: "a b c d".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

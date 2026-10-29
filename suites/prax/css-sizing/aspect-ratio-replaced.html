@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>aspect-ratio on replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 150px; }
+  .low { height: 60px; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.1 Preferred Aspect Ratios, replaced elements</div>
+  <h1>aspect-ratio on replaced elements</h1>
+  <p class=pr-lede>The property allows <q>altering the effective aspect ratio of replaced elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#ratios">CSS Box Sizing 4 §4</a></span>
+  With auto &amp;&amp; &lt;ratio&gt;, <q>the preferred aspect ratio is the specified ratio of width / height unless it
+  is a replaced element with a natural aspect ratio, in which case that aspect ratio is used instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio">§4.1</a></span></p>
+</header>
+
+<section>
+  <h2>An image 80 by 40 by nature, 2:1, at width: 60px</h2>
+  <figure class=f>
+    <div class="pr-stage s low"><img alt="" style="width: 60px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>auto: its own ratio, 60 by 30.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s low"><img alt="" style="width: 60px; aspect-ratio: 1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>aspect-ratio: 1</code>: 60 by 60, the picture stretched to fill it.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s low"><img alt="" style="width: 60px; aspect-ratio: auto 1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>aspect-ratio: auto 1</code>: the natural 2:1 wins, 60 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only a natural width, or nothing</h2>
+  <p><q>If a replaced element's only natural dimension is a natural width or a natural height, giving it a preferred
+  aspect ratio also gives it an natural height or width, whichever was missing, by transferring the existing size
+  through the preferred aspect ratio.</q> These SVGs have <code>width='80'</code> and no height or viewBox.</p>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>auto: 80 wide by nature, and the default 150 tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" style="aspect-ratio: 2" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>aspect-ratio: 2</code>: a natural height of 40, so 80 by 40.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" style="aspect-ratio: 4; width: 120px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>No natural size at all, <code>aspect-ratio: 4; width: 120px</code>: 120 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

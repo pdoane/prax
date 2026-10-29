@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>inline-size: where the rectangle goes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .wrap { inline-size: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.4.1 The ‘inline-size’ property</div>
+  <h1>inline-size: where the rectangle goes</h1>
+  <p class=pr-lede><q>For left-to-right text, the initial current text position is at the left of the rectangle. For
+  right-to-left text it is at the right of the rectangle.</q> <q>The rectangle (wrapping area) is then anchored
+  according to the text-anchor property using the edges of the wrapping area to determine the start, middle, and end
+  positions.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#InlineSize">SVG 2 §11.4.1</a></span>
+  The text has <code>inline-size: 100px</code>, in PR Noto Sans Mono 10 a letter on 20px lines; its
+  <code>x</code> is solid red, the rectangle's edges dashed.</p>
+</header>
+
+<section>
+  <h2>Anchored by text-anchor</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M80 0V80" stroke="#c0392b" /><path d="M30 0V80 M130 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="80" y="30" text-anchor="middle">wraps here wraps here</text></svg></div>
+    <figcaption><code>text-anchor="middle"</code>, <code>x="80"</code>, solid: the rectangle from 30 to 130, a line
+    in it on y 30 and on 50. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line centered on 80.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M140 0V80" stroke="#c0392b" /><path d="M40 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="140" y="30" text-anchor="end">wraps here wraps here</text></svg></div>
+    <figcaption><code>text-anchor="end"</code>, <code>x="140"</code>: the rectangle from 40 to 140, the two lines in
+    it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    One line ending at 140.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Left to right, and right to left</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 0V80" stroke="#c0392b" /><path d="M120 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30">wraps here wrap</text></svg></div>
+    <figcaption>Left to right at <code>x="20"</code>: the rectangle from 20 to 120, "wrap" from 20 to 60 on y 50.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M140 0V80" stroke="#c0392b" /><path d="M40 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="140" y="30" direction="rtl">wraps here wrap</text></svg></div>
+    <figcaption><code>direction="rtl"</code> at <code>x="140"</code>: the rectangle from 40 to 140, "wrap" from 100
+    to 140 on y 50. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line ending at 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

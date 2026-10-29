@@ -1,0 +1,66 @@
+00-supports-1.html
+SVG2/painting.html#Introduction 13.1 Introduction
+    painting.html
+# SVG2/painting.html#Definitions 13.1.1 Definitions: no page; it defines fill and stroke, which 13.1's page shows
+SVG2/painting.html#SpecifyingPaint 13.2 Specifying paint
+    paint.html
+    context-paint.html
+    context-paint-use.html
+SVG2/painting.html#ColorProperty 13.3 The effect of the ‘color’ property
+    color-property.html
+# SVG2/painting.html#FillProperties 13.4 Fill properties: no page; its subsections have them
+SVG2/painting.html#SpecifyingFillPaint 13.4.1 Specifying fill paint: the ‘fill’ property
+    fill.html
+SVG2/painting.html#WindingRule 13.4.2 Winding rule: the ‘fill-rule’ property
+    fill-rule.html
+SVG2/painting.html#FillOpacity 13.4.3 Fill paint opacity: the ‘fill-opacity’ property
+    fill-opacity.html
+SVG2/painting.html#StrokeProperties 13.5 Stroke properties
+    stroke-properties.html
+SVG2/painting.html#SpecifyingStrokePaint 13.5.1 Specifying stroke paint: the ‘stroke’ property
+    stroke.html
+SVG2/painting.html#StrokeOpacity 13.5.2 Stroke paint opacity: the ‘stroke-opacity’ property
+    stroke-opacity.html
+SVG2/painting.html#StrokeWidth 13.5.3 Stroke width: the ‘stroke-width’ property
+    stroke-width.html
+SVG2/painting.html#LineCaps 13.5.4 Drawing caps at the ends of strokes: the ‘stroke-linecap’ property
+    linecap.html
+SVG2/painting.html#LineJoin 13.5.5 Controlling line joins: the ‘stroke-linejoin’ and ‘stroke-miterlimit’ properties
+    linejoin.html
+    miterlimit.html
+SVG2/painting.html#StrokeDashing 13.5.6 Dashing strokes: the ‘stroke-dasharray’ and ‘stroke-dashoffset’ properties
+    dasharray.html
+    dashoffset.html
+    dash-animation.html
+SVG2/painting.html#StrokeShape 13.5.7 Computing the shape of the stroke
+    stroke-shape.html
+SVG2/painting.html#PaintingVectorEffects 13.6 Vector effects
+    vector-effect.html
+SVG2/painting.html#Markers 13.7 Markers
+    markers.html
+SVG2/painting.html#MarkerElement 13.7.1 The ‘marker’ element
+    marker-units.html
+    marker-viewbox.html
+    marker-orient.html
+SVG2/painting.html#VertexMarkerProperties 13.7.2 Vertex markers: the ‘marker-start’, ‘marker-mid’ and ‘marker-end’ properties
+    marker-vertices.html
+SVG2/painting.html#MarkerShorthand 13.7.3 Marker shorthand: the ‘marker’ property
+    marker-shorthand.html
+SVG2/painting.html#RenderingMarkers 13.7.4 Rendering markers
+    marker-orient-auto.html
+    marker-rendering.html
+    marker-properties.html
+SVG2/painting.html#PaintOrder 13.8 Controlling paint operation order: the ‘paint-order’ property
+    paint-order.html
+SVG2/painting.html#ColorInterpolation 13.9 Color space for interpolation: the ‘color-interpolation’ property
+    color-interpolation.html
+# SVG2/painting.html#RenderingHints 13.10 Rendering hints: no page; its subsections have them
+SVG2/painting.html#ShapeRendering 13.10.1 The ‘shape-rendering’ property
+    shape-rendering.html
+SVG2/painting.html#TextRendering 13.10.2 The ‘text-rendering’ property
+    text-rendering.html
+SVG2/painting.html#ImageRendering 13.10.3 The ‘image-rendering’ property
+    image-rendering.html
+# SVG2/painting.html#WillChange 13.11 The effect of the ‘will-change’ property: no page; it is a hint that draws nothing of its own, and its one statement, that scroll-position has no effect on SVG elements, has nothing to draw
+# SVG2/painting.html#DOMInterfaces 13.12 DOM interfaces: no page; it is object model
+# SVG2/painting.html#InterfaceSVGMarkerElement 13.12.1 Interface SVGMarkerElement: no page; it is object model

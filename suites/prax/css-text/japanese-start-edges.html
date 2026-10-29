@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Japanese paragraph starts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; width: 160px; }
+  .ja p { margin: 0; text-indent: 1em; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.5.3 Japanese Paragraph-start Conventions in CSS</div>
+  <h1>Japanese paragraph starts</h1>
+  <p class=pr-lede><q>Japanese has three common start-edge typesetting schemes, which are distinguished by their handling
+  of opening brackets.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#japanese-start-edges">CSS Text 4 §8.5.3</a></span>
+  Each stage is two paragraphs, <code>text-indent: 1em</code>, eight 20px characters to a line; the first starts
+  with 「, and so does its second line.</p>
+</header>
+
+<section>
+  <h2>The specification's three schemes</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-both"><p>「あいうえおか「さしす」</p><p>たちつてと</p></div>
+    <figcaption><q>Brackets flush with indent, flush with other lines</q>, <code>trim-both</code>: the first 「 at
+    20px, the second at 0. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Neither trimmed: inks at 30 and 10.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all"><p>「あいうえおか「さしす」</p><p>たちつてと</p></div>
+    <figcaption><q>Brackets preserve fullwidth spacing on all lines</q>, <code>space-all</code>: the first 「's ink
+    at 30px, the second's at 10.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-both; hanging-punctuation: first"><p>「あいうえおか「さしす」</p><p>たちつてと</p></div>
+    <figcaption><q>Brackets hang in indent, flush with other lines</q>, <code>trim-both</code> and
+    <code>hanging-punctuation: first</code>: the first 「 hangs into the indent, at 10px, its text from 20.
+    <span class=pr-flag>Chrome</span> does not hang it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not trim the second line's 「, its ink at 10px; Firefox does not hang the first either.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

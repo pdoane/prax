@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Max-width: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.4 Minimum and maximum widths: 'min-width' and 'max-width'</div>
+  <h1>Max-width: values</h1>
+  <p class=pr-lede><code>max-width</code> takes <code>&lt;length&gt; | &lt;percentage&gt; | none</code>, initial
+  <code>none</code>, not inherited. Each blue box has no padding, so its width is what it shows.</p>
+</header>
+
+<section>
+  <h2>max-width</h2>
+  <p><q>Specifies a fixed minimum or maximum used width.</q> <q>(Only on 'max-width') No limit on the width of the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 100px">box</div></div>
+    <figcaption>A block that would fill the stage, with <code>max-width: 100px</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 25%">box</div></div>
+    <figcaption><code>max-width: 25%</code> of 200px: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: none">box</div></div>
+    <figcaption><code>max-width: none</code>: no limit, the full 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="max-width: 50%"><div class="pr-a pr-fit">box</div></div></div>
+    <figcaption>Not inherited: the dashed parent has <code>max-width: 50%</code>, 100px. The child fills its 98px
+    content box; inherited, 50% would have made it 49px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

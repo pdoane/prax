@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Editing a textarea</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 10px 0; }
+  .act { padding: 10px 10px 0; }
+  .stage textarea, .act textarea { margin: 0 0 10px; padding: 0; border: 1px solid #2c5a8f; resize: none;
+                                   vertical-align: top; }
+  .stage textarea { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.11 The textarea element</div>
+  <h1>Editing a textarea</h1>
+  <p class=pr-lede><q>When a textarea is mutable, its raw value should be editable by the user</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">HTML §4.10.11</a></span></p>
+</header>
+
+<section>
+  <h2>Editing, and not</h2>
+  <p><q>Any time the user causes the element's raw value to change, the user agent must queue an element task</q> <q>to
+  fire an event named input at the textarea element</q>. <q>A textarea element is mutable if it is neither disabled
+  nor has a readonly attribute specified.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">§4.10.11</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=act><textarea class=pr-measure id=edited cols=15 rows=2></textarea></div>
+      <ol class=pr-log data-log="input" data-fields="inputType" data-lines=3></ol>
+    </div>
+    <figcaption>Type "ab", press Enter, type "c": "ab" over "c", and an <code>input</code> for each, the third
+    inserting a line break or paragraph.</figcaption>
+  </figure><figure>
+    <div class=pr-stage>
+      <div class=act>
+        <textarea class=pr-measure id=readonly cols=9 rows=1 readonly>read only</textarea><br>
+        <textarea class=pr-measure id=disabled cols=9 rows=1 disabled>disabled</textarea>
+      </div>
+      <ol class=pr-log data-log="focus input" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click "read only" and type: it takes the focus, but the text stays and no <code>input</code> is
+    logged. Click "disabled": no focus.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The placeholder</h2>
+  <p><q>User agents should present this hint to the user when the element's value is the empty string and the control
+  is not focused</q>; <q>U+000A LINE FEED (LF) characters in the hint, must be treated as line breaks when rendering the
+  hint.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">§4.10.11</a></span></p>
+  <figure>
+    <div class="pr-stage stage"><textarea class=pr-measure cols=10 rows=3 placeholder="Dear Sir,&#10;&#10;Regards"></textarea></div>
+    <figcaption>Grey, on three lines: "Dear Sir,", an empty line, "Regards". Type a letter: the hint is
+    gone.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

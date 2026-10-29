@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Animating display</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  @keyframes inline-to-block { from { display: inline; } to { display: block; } }
+  @keyframes none-to-block { from { display: none; } to { display: block; } }
+  @keyframes block-to-none { from { display: block; } to { display: none; } }
+  .anim { animation-duration: 4s; animation-timing-function: linear; animation-fill-mode: both; }
+  /* To and fro, so that the value flips each time the animation passes halfway. */
+  .cycle { animation-iteration-count: infinite; animation-direction: alternate; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.9 Animating and Interpolating display</div>
+  <h1>Animating display</h1>
+  <p class=pr-lede><q>In general, the 'display' property’s animation type is discrete.</q> Each orange box is a span
+  whose animation runs over 4 seconds; a still shows it at the progress its caption gives. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#display-animation">CSS Display 4 §2.9</a></span></p>
+</header>
+
+<section>
+  <h2>Discrete: the value flips halfway</h2>
+  <p>From <code>inline</code> to <code>block</code>.</p>
+  <figure>
+    <div class="pr-stage pr-motion">x <span id=a1 class="pr-chip anim cycle" style="animation-name: inline-to-block; animation-delay: -1.6s">span</span> x</div>
+    <figcaption>At 40%: <code>inline</code>, on the line between the x's. To and fro, it jumps to a line of its
+    own each time it passes halfway.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion">x <span id=a2 class="pr-chip anim cycle" style="animation-name: inline-to-block; animation-delay: -2.4s">span</span> x</div>
+    <figcaption>At 60%: <code>block</code>, a line of its own, and back on the line each time it passes halfway. <span class=pr-flag>Firefox</span> does not animate <code>display</code>: the span stays on the line between the
+    x's.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>To and from none: shown throughout</h2>
+  <p><q>during interpolation between display/none and any other 'display' value, p values between 0 and 1 map to the
+  non-display/none value.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion" style="height: 60px">x <span id=a3 class="pr-chip anim" style="animation-name: none-to-block; animation-delay: -0.4s">span</span> x</div>
+    <figcaption><code>none</code> to <code>block</code> at 10%: <code>block</code>, a line of its own, which it
+    stays to the end. <span class=pr-flag>Firefox</span> does not animate <code>display</code>: the span stays on the line between the
+    x's.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion" style="height: 60px">x <span id=a4 class="pr-chip anim" style="animation-name: block-to-none; animation-delay: -3.6s">span</span> x</div>
+    <figcaption><code>block</code> to <code>none</code> at 90%: still <code>block</code>, a line of its own,
+    until the end, where it is <code>none</code> and gone. <span class=pr-flag>Firefox</span> does not animate <code>display</code>: the span stays on the line between the
+    x's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

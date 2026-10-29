@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pseudo-algorithm: N and W</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .rule { column-rule: 1px dashed #6b7381; }
+  pre.pr-source { margin: 0 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 3.4 The Pseudo-algorithm</div>
+  <h1>The pseudo-algorithm: N and W</h1>
+  <p class=pr-lede><q>The pseudo-algorithm below determines the used values for column-count (N) and column-width
+  (W). There is one other variable in the pseudo-algorithm: U is the used width of the multi-column container.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#pseudo-algorithm">CSS Multi-column Layout 1 §3.4</a></span>
+  Each letter is 10px wide; a dashed rule marks each gap.</p>
+</header>
+
+<section>
+  <h2>N, then W</h2>
+  <p>In short, with gap for column-gap and width for column-width:</p>
+<pre class=pr-source>column-width = auto:  N := column-count
+column-count = auto:  N := max(1, floor((U + gap)/(width + gap)))
+otherwise:            N := min(column-count, max(1, floor(...)))
+                      W := max(0, (U + gap)/N - gap)</pre>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="columns: 30px; column-gap: 20px">a b c d e f g h</div>
+    <figcaption>U 200, width 30, gap 20: N = floor(220 / 50) = 4; W = 220 / 4 &minus; 20 = 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent rule" style="width: 150px; columns: 60px; column-gap: 10px">one two three four</div></div>
+    <figcaption>U 150, width 60, gap 10: N = floor(160 / 70) = 2; W = 160 / 2 &minus; 10 = 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="column-count: 4; column-gap: 0">one two six ten</div>
+    <figcaption>U 200, count 4, gap 0: N = 4; W = 200 / 4 = 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="columns: 3 100px; column-gap: 10px">one two three four</div>
+    <figcaption>U 200, count 3, width 100, gap 10: N = min(3, floor(210 / 110)) = 1; W = 200: no columns to
+    see, the words on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="column-count: 3; column-gap: 150px">a b c</div>
+    <figcaption>U 200, count 3, gap 150: W = max(0, 350 / 3 &minus; 150) = 0; columns of no width at 0, 150 and
+    300px, "c" past the stage's edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

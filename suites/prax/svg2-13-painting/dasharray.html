@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-dasharray</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.6 Dashing strokes: the ‘stroke-dasharray’ and ‘stroke-dashoffset’ properties</div>
+  <h1>stroke-dasharray</h1>
+  <p class=pr-lede><q>The 'stroke-dasharray' property controls the pattern of dashes and gaps used to form the shape of
+  a path's stroke.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeDashing">SVG 2 §13.5.6</a></span>
+  Each stage is an SVG 160 by 60; the lines are stroked dark blue, 10 wide, with butt caps.</p>
+</header>
+
+<section>
+  <h2>Dashes and gaps, repeated</h2>
+  <p><q>The first value and every second value in the list after it specifies the length of a dash, and every other
+  value specifies the length of a gap between the dashes. If the list has an odd number of values, then it is repeated
+  to yield an even number of values.</q> <q>The dashing pattern is reset and begins again at the start of each
+  subpath.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" /></svg></div>
+    <figcaption><code>20 10</code> from x 20 to 140: dashes from 20, 50, 80 and 110, each 20 long.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10 5" /></svg></div>
+    <figcaption><code>20 10 5</code>, as <code>20 10 5 20 10 5</code>: dashes 20 to 40, 50 to 55, 75 to 85,
+    90 to 110 and 120 to 125.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 H 75 M 85 40 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" /></svg></div>
+    <figcaption><code>20 10</code> on two subpaths: each starts with a dash, 20 to 40 and 50 to 70 above, 85 to
+    105 and 115 to 135 below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>All zeros, and percentages</h2>
+  <p><q>If all of the values in the list are zero, then the stroke is rendered as a solid line without any
+  dashing.</q> Percentages <q>refer to the normalized diagonal of the current SVG viewport</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="0 0" /></svg></div>
+    <figcaption><code>0 0</code>: solid, from x 20 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg y="20" width="140" height="20" overflow="visible"><path d="M 20 10 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20% 10%" /></svg></svg></div>
+    <figcaption>In an <code>svg</code> 140 by 20, whose normalized diagonal is 100: <code>20% 10%</code> is
+    <code>20 10</code>, dashes from 20, 50, 80 and 110.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflowing boxes ignore their auto margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  figure { margin-left: 30px; margin-right: 30px; }
+  figure + figure { margin-left: 50px; }
+  .col { flex-direction: column; }
+  .col > div { background: #b9cde6; border: 0; color: #1f2430; }
+  .col > div:nth-child(2) { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.1 Aligning with auto margins, overflow</div>
+  <h1>Overflowing boxes ignore their auto margins</h1>
+  <p class=pr-lede><q>Overflowing boxes ignore their auto margins and overflow in the end direction.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#auto-margins">CSS Flexible Box Layout 2 §8.1</a></span></p>
+</header>
+
+<section>
+  <h2>Centered with margins, or with align-self</h2>
+  <p>The spec's example: <q>The items in the figure on the left are centered with margins, while those in the figure
+  on the right are centered with align-self.</q> A column container 100px wide; "About" is 50px wide, centered at 25px either way,
+  "Authoritarianism" 160px and "Blog" 40px.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow col pr-measure"><div style="margin: 0 auto">About</div><div style="margin: 0 auto">Authoritarianism</div><div style="margin: 0 auto">Blog</div></div>
+    <figcaption><code>margin: 0 auto</code>: Authoritarianism from 0 to 160px, readable.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow col pr-measure" style="align-items: center"><div>About</div><div>Authoritarianism</div><div>Blog</div></div>
+    <figcaption><code>align-items: center</code>: Authoritarianism from −30 to 130px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the main axis, and toward the end</h2>
+  <p>A 100px stage holds one item 140px wide that does not shrink.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-a pr-fit" style="width: 140px; flex-shrink: 0; margin: 0 auto">A</div></div>
+    <figcaption><code>margin: 0 auto</code>: both 0; A from 0 to 140px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="direction: rtl"><div class="pr-a pr-fit" style="width: 140px; flex-shrink: 0; margin: 0 auto">A</div></div>
+    <figcaption><code>rtl</code>: the end is the left; A from −40 to 100px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: center"><div class="pr-a pr-fit" style="width: 140px; flex-shrink: 0">A</div></div>
+    <figcaption>Contrast <code>justify-content: center</code>: −20 to 120px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

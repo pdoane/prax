@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 3; column-gap: 10px; }
+  .fixed { height: 40px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model, column boxes</div>
+  <h1>Column boxes</h1>
+  <p class=pr-lede><q>Multi-column layout introduces a fragmentation context formed of anonymous fragmentation
+  containers called column boxes (or columns for short). These column boxes establish an independent block formatting
+  context into which the multi-column container's content flows, and form the containing block for its non-positioned
+  children.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span>
+  Each stage has three columns of 60px with 10px gaps.</p>
+</header>
+
+<section>
+  <h2>The column box is the containing block</h2>
+  <p><q>Given that the column box creates a new block formatting context, the width is calculated relative to the
+  column box.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure mc"><div class="pr-a pr-fit" style="width: 100%">A</div><div class="pr-b pr-fit" style="width: 50%; break-before: column">B</div></div>
+    <figcaption>A, <code>width: 100%</code>: 60px, the first column's width, not the stage's. B,
+    <code>width: 50%</code>, in the second column: 30px, from 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure mc fixed"><div class="pr-c pr-fit" style="margin-left: 25%">C</div></div>
+    <figcaption>C, <code>margin-left: 25%</code>, in the first column: 15px in, and 45px wide, filling the rest of
+    the 60px column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Content continues in the next column</h2>
+  <p><q>Content overflowing a column box in the block axis fragments and continues in the next column box.</q> The
+  columns are 40px tall (<code>height: 40px; column-fill: auto</code>).</p>
+  <figure>
+    <div class="pr-stage pr-measure mc fixed"><div class="pr-a pr-light pr-fit" style="height: 100px">A</div></div>
+    <figcaption>A, 100px tall: 40px in the first column, 40px in the second, and its last 20px in the
+    third.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc fixed">one two three four five</div>
+    <figcaption>Five lines: two in the first column, two in the second, "five" alone in the third. <span
+    class=pr-flag>Safari</span> One line in each column, and "four" and "five" in columns past the stage's
+    right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The svg element: position and size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .auto { width: auto; height: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.1.4 The ‘svg’ element</div>
+  <h1>The svg element: position and size</h1>
+  <p class=pr-lede><q>The ‘x’ and ‘y’ attributes specify the top-left corner of the rectangular region into which an
+  embedded ‘svg’ element is placed. On an outermost svg element, these attributes have no effect.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SVGElement">SVG 2 §5.1.4</a></span>
+  Each <code>svg</code> holds a purple rect as large as it.</p>
+</header>
+
+<section>
+  <h2>x and y</h2>
+  <p>Each stage is 160 by 60.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="20" width="60" height="30" /><svg x="80" y="20" width="60" height="30"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption>Embedded, <code>x="80" y="20"</code>: at 80, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg x="80" y="20" width="60" height="30"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption>Outermost, <code>x="80" y="20"</code>: no effect, at the stage's top left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>width and height</h2>
+  <p><q>For outermost svg elements, the width and height attributes specify the intrinsic size of the SVG document
+  fragment. For embedded ‘svg’ elements, they specify the size of the rectangular region into which the ‘svg’ element
+  is placed. In either case, a computed style of auto is treated equivalent to 100%.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg x="20" y="10"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption>Embedded at 20, 10 with neither attribute: 100% of the stage's 160 by 60, so from 20, 10 to the
+    stage's edges.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="height: 60px"><svg class=auto width="40" height="20"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption>Outermost, <code>width: auto; height: auto</code> over 40 by 20, in a stage 60 tall: 100%, 160 by
+    60. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 40 by
+    20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

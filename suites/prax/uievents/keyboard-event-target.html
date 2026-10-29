@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where key events go</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.5.5 Keyboard Event Order</div>
+  <h1>Where key events go</h1>
+  <p class=pr-lede><q>The event target of a key event is the currently focused element which is processing the
+  keyboard activity.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">UI Events §3.5.5</a></span></p>
+</header>
+<section>
+  <h2>Tab moves the target</h2>
+  <p><q>The event target might change between different key events. For example, a keydown event for the Tab key will
+  likely have a different event target than the keyup event on the same keystroke.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">§3.5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>one</code> and press Tab: keydown with <code>target=one</code>, then keyup with
+    <code>target=two</code>, which the focus moved to between them.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>With nothing focused</h2>
+  <p><q>If no suitable element is in focus, the event target will be the HTML body element if available, otherwise
+  the root element.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">§3.5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide"><ol class=pr-log data-log="keydown keyup" data-fields="key target" data-on="document" data-lines=3></ol></div>
+    <figcaption>Click an empty part of the page, so that nothing has the focus, and press a key: keydown and keyup
+    with <code>target=body</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

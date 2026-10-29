@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-color, row-rule-color and rule-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; rule-style: solid; rule-width: 6px; }
+  .mc { column-count: 3; gap: 10px; column-rule-style: solid; column-rule-width: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.1 Gap decoration color</div>
+  <h1>column-rule-color, row-rule-color and rule-color</h1>
+  <p class=pr-lede><q>These properties set the color of gap decorations.</q> Their initial value is
+  <code>currentcolor</code>. <q>Property definitions in this section supersede the definitions of properties with the
+  same names in [CSS-MULTICOL-1].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-rule-color">CSS Gaps 1 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>A color for each axis</h2>
+  <p>Each container has <code>rule-style: solid; rule-width: 6px</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="column-rule-color: #27ae60; row-rule-color: #8e44ad"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-color: #27ae60; row-rule-color: #8e44ad</code>: green rules down, a purple rule
+    across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="rule-color: #d68a3c"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-color: #d68a3c</code> sets both: every rule orange. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="color: #c0392b"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption>No color given, and <code>color: #c0392b</code> on the grid: every rule red, its
+    <code>currentcolor</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multicol, as before and with a list</h2>
+  <figure>
+    <div class=pr-stage><div class=mc style="column-rule-color: #27ae60"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>column-rule-color: #27ae60</code>: green rules, as multicol has always drawn them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=mc style="column-rule-color: #27ae60, #8e44ad"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>column-rule-color: #27ae60, #8e44ad</code>: the first rule green, the second purple. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No list: both rules
+    the text color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

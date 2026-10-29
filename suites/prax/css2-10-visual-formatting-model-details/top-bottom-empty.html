@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line height calculations: top, bottom and empty inlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .tall { display: inline-block; width: 30px; height: 40px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8 Line height calculations: the 'line-height' and 'vertical-align' properties</div>
+  <h1>Line height calculations: top, bottom and empty inlines</h1>
+  <p class=pr-lede>Each stage's text is 13px on 20px lines. Blue boxes are empty inline-blocks 40px tall.</p>
+</header>
+
+<section>
+  <h2>Aligned top or bottom</h2>
+  <p><q>In case they are aligned 'top' or 'bottom', they must be aligned so as to minimize the line box height. If such
+  boxes are tall enough, there are multiple solutions and CSS 2.2 does not define the position of the line box's
+  baseline (i.e., the position of the strut, see below).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=tall style="vertical-align: top"></span> b<br>next line</div>
+    <figcaption>A 40px box aligned <code>top</code>: the line is 40px, its minimum, with the text at the
+    top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=tall style="vertical-align: bottom"></span> b<br>next line</div>
+    <figcaption>Aligned <code>bottom</code>: still 40px, with the text at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Empty inline elements</h2>
+  <p><q>Empty inline elements generate empty inline boxes, but these boxes still have margins, padding, borders and a
+  line height, and thus influence these calculations just like elements with content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2
+  §10.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="line-height: 50px"></span> b<br>next line</div>
+    <figcaption>An empty span with <code>line-height: 50px</code>, a sliver of border: the first line is 50px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip></span> b<br>next line</div>
+    <figcaption>The same empty span at the block's 20px line height: the line stays 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background attachment: the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background attachment: the viewport</h1>
+  <p class=pr-lede><code>background-attachment</code> takes <code>scroll | fixed | inherit</code>. Initial
+  <code>scroll</code>, all elements, not inherited. Each frame is a document 300px tall, scrolled down.</p>
+</header>
+
+<section>
+  <h2>Fixed to the viewport, or scrolled with the document</h2>
+  <p><q>If a background image is specified, this property specifies whether it is fixed with regard to the viewport
+  ('fixed') or scrolls along with the containing block ('scroll').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>A 30px square at <code>10px 10px</code>, drawn once; scrolled 60px, a dashed box 110px down is 50px from the
+  top.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) 10px 10px no-repeat scroll } div { margin: 110px 0 0 50px; width: 100px; height: 18px; border: 1px dashed #1f2430 }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>scroll</code>: the square, 10px from the document's top, has scrolled out of view.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) 10px 10px no-repeat fixed } div { margin: 110px 0 0 50px; width: 100px; height: 18px; border: 1px dashed #1f2430 }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>fixed</code>: the square is 10px from the frame's top and left, as if not scrolled.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A band glued to the viewport</h2>
+  <p>The specification's example, <code>body { background: red url("pendant.png"); background-repeat: repeat-y;
+  background-attachment: fixed }</code>, <q>creates an infinite vertical band that remains "glued" to the viewport when
+  the element is scrolled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px; background: red url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='30'><rect width='20' height='30' fill='white'/><path d='M10 2 L18 14 L10 28 L2 14 Z' fill='%236aa36a'/></svg>&quot;); background-repeat: repeat-y }</style><body><script>scrollTo(0, 50)</script>"></iframe></div>
+    <figcaption>Without <code>fixed</code>, scrolled 50px: the 30px pendants moved up; the first whole one is 10px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px; background: red url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='30'><rect width='20' height='30' fill='white'/><path d='M10 2 L18 14 L10 28 L2 14 Z' fill='%236aa36a'/></svg>&quot;); background-repeat: repeat-y; background-attachment: fixed }</style><body><script>scrollTo(0, 50)</script>"></iframe></div>
+    <figcaption>With <code>fixed</code>, scrolled 50px: glued to the frame, a pendant starts at its top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

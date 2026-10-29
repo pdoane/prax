@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-style: the ten styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .grid { padding: 6px 0 0 6px; }
+  .grid div { display: inline-block; vertical-align: top; width: 30px; height: 20px; margin: 0 6px 6px 0; border: 9px #6aa36a; background: #f4f5f7; }
+  .over { width: 100px; height: 20px; margin: 10px; padding: 0; border: 10px solid #2c5a8f; background: #f9cc9d; }
+  .over div { margin: -5px 0 0 -5px; width: 40px; height: 20px; background: #6aa36a; }
+  .cell { border: 6px solid #6aa36a; width: 24px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.2 Line Patterns: the border-style properties</div>
+  <h1>border-style: the ten styles</h1>
+  <p class=pr-lede><q>These properties control whether a border appears, and if it does what style it's drawn in (if
+  it is not overridden by a border image).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-style">CSS Borders and Box Decorations 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Each style, 9px wide, in green</h2>
+  <p><q>double: Two parallel solid lines with some space between them. (The thickness of the lines is not specified,
+  but the sum of the lines and the space must equal 'border-width'.)</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide grid"><div style="border-style: none"></div><div style="border-style: hidden"></div><div style="border-style: dotted"></div><div style="border-style: dashed"></div><div style="border-style: solid"></div><div style="border-style: double"></div><div style="border-style: groove"></div><div style="border-style: ridge"></div><div style="border-style: inset"></div><div style="border-style: outset"></div></div>
+    <figcaption>Top row: <code>none</code> and <code>hidden</code>, no border; round dots; square-ended dashes; one
+    line. Bottom row: two lines, as wide in all as <code>solid</code>; carved; raised; sunken; lifted. <span class=pr-flag>Safari</span> Square dots.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In front of the background, behind the content</h2>
+  <p><q>Borders are drawn in front of the element's background, but behind the element's content (in case it
+  overlaps).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=over><div></div></div></div>
+    <figcaption>The orange background is under the blue border; a green child pulled 5px over the border is in front of
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

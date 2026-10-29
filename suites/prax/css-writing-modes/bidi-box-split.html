@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline boxes split by reordering</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .pr-stage em { font-style: normal; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.5 Reordering-induced Box Fragmentation</div>
+  <h1>Inline boxes split by reordering</h1>
+  <p class=pr-lede><q>Since bidi reordering can split apart and reorder text that is logically contiguous,
+  bidirectional text can cause an inline box containing such text to be split and its fragments reordered within a
+  line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-box-model">CSS Writing Modes 4 §2.4.5</a></span></p>
+</header>
+
+<section>
+  <h2>Split by content outside the box</h2>
+  <p>The specification's example, <code>&lt;p&gt;here is &lt;em&gt;some MIXED&lt;/em&gt; TEXT.&lt;/p&gt;</code>,
+  with the Hebrew word עברית for MIXED and טקסט for TEXT. The tinted <code>em</code> holds "some" and עברית; the two
+  Hebrew words read from the right as one run, so טקסט lands between the <code>em</code>'s two parts.</p>
+  <figure>
+    <div class="pr-stage pr-wide">here is <em>some עברית</em> טקסט.</div>
+    <figcaption>The <code>em</code> in two pieces: "some" and, past the untinted טקסט, the tinted עברית, then the
+    period.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Reordered within the box</h2>
+  <p>Content of one direction inside a box is reordered among itself; the box is not split where nothing outside it
+  comes between.</p>
+  <figure>
+    <div class="pr-stage pr-wide">here is <em>אבג דהו</em> text.</div>
+    <figcaption>The <code>em</code> holds two Hebrew words: one tinted piece, דהו at its left and אבג at its
+    right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters in elements that are not displayed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { counter-reset: count2 heading; }
+  .h2x { counter-increment: count2; }
+  .h2x::before { content: counter(count2) ". "; font-weight: 600; color: #2c5a8f; }
+  .h2x.secret { display: none; }
+  .h2x.hidden { visibility: hidden; }
+  .h1x::before { content: counter(heading) ". "; font-weight: 600; color: #2c5a8f; counter-increment: heading; }
+  .h1x.plain-before::before { content: normal; counter-increment: heading; }
+  .h1x.none-before::before { content: none; counter-increment: heading; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.3 Counters in elements with 'display: none'</div>
+  <h1>Counters in elements that are not displayed</h1>
+  <p class=pr-lede>Each line increments a counter and shows it in blue.</p>
+</header>
+
+<section>
+  <h2>display: none, and visibility: hidden</h2>
+  <p><q>An element that is not displayed ('display' set to 'none') cannot increment or reset a counter.</q> <q>For
+  example, with the following style sheet, H2s with class "secret" do not increment 'count2'.</q> <q>Elements with 'visibility'
+  set to 'hidden', on the other hand, do increment counters.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#undisplayed-counters">CSS 2 §12.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text r"><div class=h2x>one</div><div class="h2x secret">secret</div><div class=h2x>two</div></div>
+    <figcaption>The middle element has <code>counter-increment: count2; display: none</code>: the two shown are 1 and
+    2.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text r"><div class=h2x>one</div><div class="h2x hidden">hidden</div><div class=h2x>three</div></div>
+    <figcaption>The hidden middle element leaves an empty line and counts: 1, then 3.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Pseudo-elements that are not generated</h2>
+  <p><q>Pseudo-elements that are not generated also cannot increment or reset a counter.</q> <q>For example, the
+  following does not increment 'heading'</q>: <code>h1::before { content: normal; counter-increment: heading;
+  }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#undisplayed-counters">CSS 2 §12.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text r"><div class=h1x>one</div><div class="h1x plain-before">normal</div><div class="h1x none-before">none</div><div class=h1x>two</div></div>
+    <figcaption>The middle two have <code>content: normal</code> and <code>content: none</code>: "1. one", "normal",
+    "none", "2. two".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

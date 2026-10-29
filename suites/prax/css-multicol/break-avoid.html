@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Avoiding breaks between boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .h60 { height: 60px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 5.1 Controlling Fragmentation: avoided breaks</div>
+  <h1>Avoiding breaks between boxes</h1>
+  <p class=pr-lede><code>avoid-column</code>: <q>Avoid a column break before/after the principal box.</q> Page break
+  values <q>only have an effect in paginated contexts</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#column-break-values">CSS Fragmentation 4 §3.1.3</a></span>
+  The properties are <q>defined in [CSS3-BREAK]</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#break-before-break-after-break-inside">CSS Multi-column Layout 1 §5.1</a></span>
+  Each stage has three columns of 60px.</p>
+</header>
+
+<section>
+  <h2>Avoided breaks</h2>
+  <p>The columns are 60px tall. B, B and A fill the first column; C and C follow A.</p>
+  <figure>
+    <div class="pr-stage pr-measure h60"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a>A</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption>With no constraint: both Bs and A in the first column, the Cs in the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h60"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a style="break-after: avoid-column">A</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption>A, <code>break-after: avoid-column</code>: A moves to the second column, with the Cs after it. <span class=pr-flag>Safari</span> A stays under the Bs.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h60"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a>A</div><div class=pr-c style="break-before: avoid">C</div><div class=pr-c>C</div></div>
+    <figcaption>The first C, <code>break-before: avoid</code>, <q>Avoid a break before/after the principal box.</q> As above, A moves to
+    the second column. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A stays under the
+    Bs.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure h60"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a style="break-after: avoid-page">A</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>avoid-page</code>, in columns: no effect, as with no constraint.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

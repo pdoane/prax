@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-wrap in columns and other writing modes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; align-content: flex-start; }
+  .h > div { width: 40px; flex: none; }
+  .h.c { flex-direction: column; height: 60px; }
+  .v { writing-mode: vertical-rl; height: 100px; }
+  .v > div { width: 20px; height: 40px; flex: none; text-orientation: upright; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.2 Flex Line Wrapping: the flex-wrap property, writing modes</div>
+  <h1>flex-wrap in columns and other writing modes</h1>
+  <p class=pr-lede><q>For the values that are not wrap-reverse, the cross-start direction is equivalent to either the
+  inline-start or block-start direction of the current writing mode (whichever is in the cross axis) and the
+  cross-end direction is the opposite direction of cross-start.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-wrap-property">CSS Flexible Box Layout 2 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Columns and right to left</h2>
+  <p>Each container holds A, B, C and D, 40px wide, and has <code>align-content: flex-start</code>, so its lines are
+  packed at cross-start rather than stretched.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h c"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>column wrap</code>, 60px tall: A, B, C down the left edge; D's column from
+    40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h c" style="flex-wrap: wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>column wrap-reverse</code>: A, B, C down the right edge; D's column from
+    20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h" style="direction: rtl"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>rtl</code>, <code>row wrap</code>: A, B from the right; C, D on a second line below, from the
+    right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h c" style="direction: rtl"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>rtl</code>, <code>column wrap</code>: A, B, C down the right edge, D's column to their
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical</h2>
+  <p>Each container is <code>vertical-rl</code>, 100px wide and tall, and holds A, B, C and D, 20px wide and 40px
+  tall: two fit in a line.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>row wrap</code>: A, B down the right edge; C, D in a second line to their left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-wrap: wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>row wrap-reverse</code>: A, B down the left edge; C, D to their right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-direction: column"><div class="pr-a pr-fit" style="width: 40px; height: 20px">A</div><div class="pr-b pr-fit" style="width: 40px; height: 20px">B</div><div class="pr-c pr-fit" style="width: 40px; height: 20px">C</div><div class="pr-d pr-fit" style="width: 40px; height: 20px">D</div></div>
+    <figcaption><code>column wrap</code>, items turned 40 by 20: A, B from the right along the top; C, D
+    below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

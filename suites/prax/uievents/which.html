@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>which</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  #pad { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.1.1 Interface UIEvent (supplemental)</div>
+  <h1>which</h1>
+  <p class=pr-lede><q>User agents have traditionally included a which attribute so that KeyboardEvents and
+  MouseEvents could record supplemental event info.</q> The section is informative. <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-interface-UIEvent">UI Events §7.1.1</a></span></p>
+</header>
+<section>
+  <h2>A mouse button</h2>
+  <p><q>For MouseEvents, this contains a value equal to the value stored in button+1.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-interface-UIEvent">§7.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div id=pad></div>
+      <ol class=pr-log data-log="mousedown" data-fields="button which" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>Press the left, middle and right buttons over the area above the log: <code>button=0 which=1</code>,
+    <code>button=1 which=2</code>, <code>button=2 which=3</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A key</h2>
+  <p><q>For KeyboardEvents, this holds a system- and implementation-dependent numerical code signifying the unmodified
+  identifier associated with the key pressed. In most cases, the value is identical to keyCode.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-interface-UIEvent">§7.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key keyCode which" data-on="#field" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box and press A, then Enter: <code>keyCode=65 which=65</code>, then
+    <code>keyCode=13 which=13</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the right button's context menu from covering the figure.
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fonts, glyphs and ligatures</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lit { font: 56px "PR Literata"; }
+  .hand { font: 36px "PR Architects Daughter"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.2 Fonts and glyphs</div>
+  <h1>Fonts, glyphs and ligatures</h1>
+  <p class=pr-lede><q>For this reason SVG requires support for downloadable fonts as defined in the Font Resources
+  section of the CSS Fonts Module. In particular, support for the Web Open Font Format [WOFF] is required.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#FontsGlyphs">SVG 2 §11.1.2</a></span>
+  Each stage is an SVG 160 by 60, the baseline at y 45 dashed in red. The ligature figures set "flo" in 56px PR
+  Literata, whose "fl" is one ligature, the f's hook running into the l's top.</p>
+</header>
+
+<section>
+  <h2>A downloadable font, and a ligature</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=hand x="10" y="45">Woff</text></svg></div>
+    <figcaption>PR Architects Daughter, a WOFF file: "Woff" in a handwriting face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45">flo</text></svg></div>
+    <figcaption>"flo": the f's hook joined to the l, one glyph.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where ligatures should not form</h2>
+  <p><q>Ligature formation should not be enabled when characters are in different DOM text nodes; thus, characters
+  separated by markup should not use ligatures.</q> <q>Discretionary ligatures should not be used when the spacing
+  between two characters is not the same as the default space</q>. Both are recommendations.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45">f<tspan>l</tspan>o</text></svg></div>
+    <figcaption>"f" then a <code>tspan</code> of "l": should be a separate f and l, the f's hook short of the l, as Safari draws them. Chrome and Firefox
+    join them in the ligature.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" style="letter-spacing: 4px">flo</text></svg></div>
+    <figcaption><code>letter-spacing: 4px</code>: should be a separate f and l, 4 further apart, as Chrome, Safari and Firefox draw them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

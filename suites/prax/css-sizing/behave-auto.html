@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Behaving as auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 100px; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2.1 “Behaving as auto”</div>
+  <h1>Behaving as auto</h1>
+  <p class=pr-lede><q>To have a common term for both when width/height computes to auto and when it is defined to
+  behave as if auto were specified (as in the case of block percentage heights resolving against an indefinite size,
+  see CSS2§10.5), the property is said to behave as auto in both of these cases.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#behave-auto">CSS Box Sizing 3 §3.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A percentage height against an indefinite height</h2>
+  <p>In each stage, a dashed parent holds a box of <code>height: 50%</code>.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="height: 80px"><div class="pr-a pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent <code>height: 80px</code>: the block resolves, 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent><div class="pr-a pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent of auto height: the block behaves as auto, its 20px line.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent><img alt="" style="height: 50%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>An 80 by 40 image in a parent of auto height: it behaves as auto, its natural 80 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>As auto, not as zero</h2>
+  <p>Behaving as auto is not the same as resolving against zero.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent><div class="pr-a pr-fit" style="height: 50%"><div style="height: 60px"></div></div></div></div>
+    <figcaption>A <code>height: 50%</code> block holding 60px of content, in a parent of auto height: 60px tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent><div class="pr-a pr-fit" style="height: 50%; min-height: 30px"></div></div></div>
+    <figcaption>An empty <code>height: 50%</code> block with <code>min-height: 30px</code>: as auto, 0, so the
+    minimum's 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

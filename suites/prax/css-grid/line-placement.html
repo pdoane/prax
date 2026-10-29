@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line-based placement: numbers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); grid-auto-columns: 40px; grid-auto-rows: 20px; }
+  .v { writing-mode: vertical-rl; height: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.3 Line-based Placement, numbers</div>
+  <h1>Line-based placement: numbers</h1>
+  <p class=pr-lede>The four properties contribute <q>a line, a span, or nothing (automatic) to its grid placement,
+  thereby specifying the inline-start, block-start, inline-end, and block-end edges of its grid area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#line-placement">CSS Grid Layout 2 §8.3</a></span>
+  Each grid has three explicit 40px columns, lines 1 to 4; columns it adds are 40px too, and rows 20px.</p>
+</header>
+
+<section>
+  <h2>The Nth line, from either end</h2>
+  <p>An integer <q>Contributes the Nth grid line to the grid item’s placement. If a negative integer is given, it
+  instead counts in reverse, starting from the end edge of the explicit grid.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column-start: 2; grid-column-end: 4">A</div><div class=pr-b style="grid-column-start: -3; grid-column-end: -1">B</div></div></div>
+    <figcaption>A from line 2 to 4, 40 to 120px; B from −3 to −1, the same lines.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: 5">A</div><div class=pr-b style="grid-row: 1; grid-column: -5">B</div></div></div>
+    <figcaption>Lines beyond the explicit grid add implicit columns: B at line −5 adds one before line 1, so the
+    explicit columns start at 40px; A at line 5, past line 4, from 200 to 240px, out past the stage's edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Start and end follow the writing mode</h2>
+  <p>Lines count from the start side: in <code>rtl</code> from the right, and in <code>vertical-rl</code> columns from
+  the top and rows from the right. Each item is <code>grid-column: 1 / 3; grid-row: 2</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="grid-column: 1 / 3; grid-row: 2">A</div></div></div>
+    <figcaption><code>direction: rtl</code>: line 1 at the right, A from 120 to 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g v"><div class=pr-a style="grid-column: 1 / 3; grid-row: 2">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: the grid is two 20px rows wide, the first at the right; A in the second, at the left, from 0 to 80px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

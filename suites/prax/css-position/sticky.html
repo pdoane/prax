@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky positioning: kept inside the scrollport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .gap { height: 40px; }
+  .rest { height: 200px; }
+  .st { position: sticky; width: 80px; }
+  .pr-stage { width: 160px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4 Sticky positioning</div>
+  <h1>Sticky positioning: kept inside the scrollport</h1>
+  <p class=pr-lede>If an inset is not auto <q>and the corresponding border edge of the box would be outside the
+  corresponding edge of the sticky view rectangle, then the box must be visually shifted (as for relative positioning)
+  to be inward of that sticky view rectangle edge</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-insets">CSS Positioned Layout 3 §3.4</a></span>
+  A light blue block 40px tall comes first.</p>
+</header>
+
+<section>
+  <h2>Shifted only when it would leave</h2>
+  <figure>
+    <div class="pr-stage sc" data-scroll=0><div class="gap pr-a pr-light"></div><div class="pr-b st" style="top: 10px">top</div><div class=rest></div></div>
+    <figcaption><code>top: 10px</code>, not scrolled: inside the rectangle, not moved, at 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><div class="gap pr-a pr-light"></div><div class="pr-b st" style="top: 10px">top</div><div class=rest></div></div>
+    <figcaption>Scrolled 60px: it would be at −20; shifted, 10px below the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=0><div class="gap pr-a pr-light" style="height: 120px"></div><div class="pr-b st" style="bottom: 10px">bottom</div><div class=rest></div></div>
+    <figcaption><code>bottom: 10px</code>, after a block 120px tall: shifted up, 10px above the
+    bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each axis, and each box, apart</h2>
+  <p><q>If both inset properties in a given axis are auto, no offsets are added in that axis; the element stays where
+  it was laid out in that axis.</q> <q>Multiple sticky positioned boxes in the same container are offset
+  independently, and therefore might overlap.</q> The first two stages hold content 400px wide, scrolled 60px down
+  and 30px right.</p>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60 data-scroll-left=30><div style="width: 400px"><div class="gap pr-a pr-light"></div><div class="pr-b st" style="top: 10px; margin-left: 40px">top</div><div class=rest></div></div></div>
+    <figcaption><code>top: 10px</code>, the box 40px in: held 10px below the top, and scrolled left with the
+    content, to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60 data-scroll-left=30><div style="width: 400px"><div class="gap pr-a pr-light"></div><div class="pr-b st" style="top: 10px; left: 20px; margin-left: 40px">top left</div><div class=rest></div></div></div>
+    <figcaption>Also <code>left: 20px</code>: at 10 it would be outside that edge, so it is held 20px in across
+    too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=100><div class="gap pr-a pr-light"></div><div class="pr-b st" style="top: 0">first</div><div style="height: 20px"></div><div class="pr-c st" style="top: 0; margin-left: 40px">second</div><div class=rest></div></div>
+    <figcaption>Two boxes with <code>top: 0</code>, 20px apart, scrolled 100px: <q>offset independently</q>, both
+    are held at the top, and the second covers the first.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) { s.scrollTop = s.dataset.scroll; s.scrollLeft = s.dataset.scrollLeft || 0; }</script>
+</body>
+</html>

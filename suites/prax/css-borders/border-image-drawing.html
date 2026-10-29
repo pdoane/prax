@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drawing the border image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 60px; margin: 10px; border: solid #2c5a8f; border-width: 10px 30px; background: #f4f5f7; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>") 10 fill; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.6 Drawing the Border Image</div>
+  <h1>Drawing the border image</h1>
+  <p class=pr-lede><q>the resulting nine images are scaled, positioned, and tiled into their corresponding border image
+  regions in four steps</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-process">CSS Borders and Box Decorations 4 §4.6</a></span>
+  Borders 10px top and bottom, 30px at the sides; the image of orange corners, blue dots and a green middle, sliced at
+  10, <code>fill</code>.</p>
+</header>
+
+<section>
+  <h2>Scaled to the regions</h2>
+  <p><q>The corner images are scaled to be as wide and as tall as the their respective border image regions.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption><code>stretch</code>: corners 30 by 10; dots and green stretched.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: repeat"></div></div>
+    <figcaption><code>repeat</code>: 10px dots on the top and bottom, 30px down the sides.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The middle, scaled as the top and the left</h2>
+  <p><q>The middle image's width is scaled by the same factor as the top image</q> <q>The height of the middle image is
+  scaled by the same factor as the left image</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: space; border-width: 20px 30px; width: 78px; height: 50px"></div></div>
+    <figcaption><code>space</code>, a 20px top, a middle 78 by 50: green tiles 20 wide, as the top, 30 tall, as the
+    left: three across, one down, spaced out.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: space; width: 20px; border-width: 30px"></div></div>
+    <figcaption>30px borders round a box 20 wide: no 30px dot fits on the top or bottom, <q>empty border-image side regions</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG groups, isolated or not</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; margin: 10px; }
+  .m { mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.3 Behavior specific to SVG</div>
+  <h1>SVG groups, isolated or not</h1>
+  <p class=pr-lede><q>By default, every element must create a non-isolated group.</q> <q>However, certain operations
+  in SVG will create isolated groups.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#csscompositingrules_SVG">Compositing and Blending 2 §3.3</a></span>
+  Each SVG is a lime rectangle 80 by 40, then a <code>g</code> holding a red 40px square with
+  <code>mix-blend-mode: multiply</code>: black where it blends with the lime, red in an isolated group.</p>
+</header>
+
+<section>
+  <h2>Not isolated, then isolated</h2>
+  <p><q>If one of the following features is used, the group must become isolated</q>: opacity, filters, 3D transforms,
+  blending, masking.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption>A plain <code>g</code>: black.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g transform="translate(0 0) rotate(0)"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption>A 2D <code>transform</code>: <q>2D transforms must NOT cause isolation</q>; black. <span class=pr-flag>Firefox</span> Red.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g opacity=0.99><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption><code>opacity="0.99"</code>: red.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g style="filter: blur(0)"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption><code>filter: blur(0)</code>: red. <span class=pr-flag>Safari</span> Black.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g style="transform: translateZ(0)"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption><code>translateZ(0)</code>, a 3D transform: red. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Black.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g style="isolation: isolate"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption><code>isolation: isolate</code>, which <q>In SVG</q> <q>defines whether an element is isolated</q> (<a href="https://drafts.csswg.org/compositing-2/#isolation">§3.4.2</a>): red.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><rect width=80 height=40 fill=#00ff00 /><g style="mix-blend-mode: screen"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption><code>mix-blend-mode: screen</code> on the <code>g</code>: the red screened onto
+    lime, yellow.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=80 height=40><mask id=all><rect width=80 height=40 fill=white /></mask><rect width=80 height=40 fill=#00ff00 /><g mask="url(#all)"><rect x=20 width=40 height=40 fill=#ff0000 class=m /></g></svg></div>
+    <figcaption>A white <code>mask</code>, which hides nothing: red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

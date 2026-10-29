@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; box-sizing: border-box; background: #4f81bd; mask-border: url(support/frame-alpha.svg) 10 fill; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.4 Masking Areas: the mask-border-width property</div>
+  <h1>mask-border-width</h1>
+  <p class=pr-lede><q>The mask border image is drawn inside an area called the mask border image area. This is an area
+  whose boundaries by default correspond to the border box</q>. <q>See the border-image-width property for the
+  definitions of the property values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-width">CSS Masking 1 §8.4</a></span>
+  Each box is 140 by 60 and blue, masked by the frame of discs, bars and a middle square, sliced at 10.</p>
+</header>
+
+<section>
+  <h2>auto, the initial value, and lengths</h2>
+  <p>Unlike border-image-width, whose initial value is <code>1</code>, a multiple of the border width, this one is
+  <code>auto</code>: the slice's own size.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border: 20px solid #6aa36a"></div></div>
+    <figcaption>A green border 20px wide, <code>auto</code>: discs 10 across, the slices' size, not the border's.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked, green border and
+    all.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-width: 20px"></div></div>
+    <figcaption><code>20px</code>: discs 20 across, bars 8px thick, and the middle square 40 by 8.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multiples of the border width, and percentages</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border: 10px solid #6aa36a; mask-border-width: 2"></div></div>
+    <figcaption><code>2</code> with a 10px border: 20px, discs 20 across; the masked border shows green only in the
+    discs and bars. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-width: 50% 10%"></div></div>
+    <figcaption><code>50% 10%</code> of 60 and 140: 30 tall at the top and bottom, 14 wide at the sides, so the
+    corners are ellipses 14 by 30 and the middle is empty. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

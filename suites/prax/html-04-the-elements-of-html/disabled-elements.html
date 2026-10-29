@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Disabled elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .grid { padding: 10px; font-size: 12px; }
+  .grid > * { display: block; margin: 0 0 6px; box-sizing: border-box; width: 180px; font-size: 12px; }
+  .grid fieldset { padding: 2px 6px 4px; }
+  .grid fieldset input { width: 150px; }
+  .grid :disabled { outline: 3px solid #d68a3c; outline-offset: 1px; }
+  .grid :enabled { outline: 3px solid #6aa36a; outline-offset: 1px; }
+  .grid option:disabled { background: #f6d7b4; outline: 0; }
+  .grid option:enabled, .grid optgroup:enabled { background: #cfe5cf; outline: 0; }
+  .grid optgroup:disabled { background: #f6d7b4; outline: 0; }
+  .act { padding: 10px 20px 0; }
+  .act :disabled { opacity: 0.5; }
+  .act > .pr-target { display: inline-block; width: 120px; margin: 0 6px 10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.15 Disabled elements</div>
+  <h1>Disabled elements</h1>
+  <p class=pr-lede><q>An element is said to be actually disabled if it is one of the following</q>: a disabled
+  form control or fieldset, or an option or optgroup that is disabled or in a disabled select. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#disabled-elements">HTML §4.15</a></span></p>
+</header>
+<section>
+  <h2>What matches :disabled</h2>
+  <p><q>This definition is used to determine what elements are focusable and which elements match the :enabled and
+  :disabled pseudo classes.</q> Here <code>:disabled</code> is outlined orange and <code>:enabled</code> green; an
+  option or optgroup is tinted instead. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#disabled-elements">§4.15</a></span></p>
+  <figure>
+    <div class="pr-stage">
+      <div class=grid>
+        <button disabled>button disabled</button>
+        <input disabled value="input disabled">
+        <fieldset disabled><legend>fieldset disabled</legend><input value="input in it"></fieldset>
+      </div>
+    </div>
+    <figcaption>All three orange, and the input in the fieldset too: a disabled fieldset disables the controls in
+    it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage">
+      <div class=grid>
+        <select size=5><optgroup label="optgroup disabled" disabled><option>option in it</option></optgroup><option disabled>option disabled</option><option>option</option></select>
+        <select disabled size=2><option>in a disabled select</option><option>also disabled</option></select>
+      </div>
+    </div>
+    <figcaption>The first <code>select</code> is green, and in it only "option"; the second select and both its
+    options are orange. <span class=pr-flag>Firefox</span> tints the options of the disabled select green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not focusable</h2>
+  <p>An actually disabled element is not a focusable area, so neither a click nor Tab focuses it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#disabled-elements">§4.15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=first>first</button>
+        <button class=pr-target id=off disabled>disabled</button>
+        <input class=pr-target id=field disabled value="disabled">
+        <button class=pr-target id=last>last</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click "first", then Tab: the focus goes to "last". Click either faded control: nothing takes the
+    focus.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

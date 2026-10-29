@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where two styles meet</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.2 Color and Style Transitions, styles</div>
+  <h1>Where two styles meet</h1>
+  <p class=pr-lede><q>Color and style transitions must be contained within the segment of the border that intersects
+  the smallest rectangle that contains both border radii as well as the center of the inner curve (which may be a
+  point representing the corner of the padding edge, if the border radii are smaller than the border width).</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-transitions">CSS Borders and Box Decorations 4 §3.2</a></span>
+  Each box has a blue border and square corners, so each corner's region is the rectangle the two borders share.</p>
+</header>
+
+<section>
+  <h2>Within the corner, drawn as the user agent chooses</h2>
+  <p><q>However it is not defined what these transitions look like or what function maps from this ratio to a point
+  on the curve.</q> Each border is 10px wide, so each corner is 10 by 10.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-style: solid dotted"></div></div>
+    <figcaption><code>solid</code> top and bottom, <code>dotted</code> sides: the change of style within each
+    corner. <span class=pr-flag>Safari</span> Square dots, <q>round dots</q> being required.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-style: double dashed"></div></div>
+    <figcaption><code>double</code> top and bottom, <code>dashed</code> sides: within each corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-style: groove solid"></div></div>
+    <figcaption><code>groove</code> top and bottom, <code>solid</code> sides: within each corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

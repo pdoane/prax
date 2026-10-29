@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanners deeper in the tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+  .sec { border: 2px solid #c0392b; margin-top: 10px; padding-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, descendants</div>
+  <h1>Spanners deeper in the tree</h1>
+  <p class=pr-lede><q>A spanning element may be lower than the first level of descendants as long as they are part
+  of the same formatting context, and there is nothing between the spanning element and multicol container that
+  establishes a containing block for fixed position descendants.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage has three columns of 60px; A, <code>column-span: all</code>, is inside the tinted block.</p>
+</header>
+
+<section>
+  <h2>A grandchild spans</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one two three<div class=pr-parent>four<div class="pr-a all">A</div>five</div></div>
+    <figcaption>In a plain block: A spans the three columns, the tinted block broken around it, "four" above and
+    "five" below. <span class=pr-flag>Safari</span> "five" is set above A, half under it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one two three<div class=pr-parent style="transform: translateX(0)">four<div class="pr-a all">A</div>five</div></div>
+    <figcaption>In a block with a <code>transform</code>, a containing block for fixed boxes: no spanner; A is in a
+    column, 60px wide. <span class=pr-flag>Safari</span> A spans.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one two three<div class=pr-parent style="display: flow-root">four<div class="pr-a all">A</div>five</div></div>
+    <figcaption>In a <code>flow-root</code>, another formatting context: no spanner; A in a column.
+    <span class=pr-flag>Safari</span> A spans.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

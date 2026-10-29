@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Buttons</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+button svg { width: 12px; height: 12px; vertical-align: -1px; fill: none; stroke: currentColor;
+             stroke-width: 2; }
+.long { max-width: 96px; }
+.large :is(button, input) { font-size: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Buttons</h1>
+  <p>The button element and the input types that are buttons, against each appearance. An author border or background devolves a button to its primitive look.</p>
+</header>
+
+<section>
+  <h2>Kinds and states</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th></tr>
+  <tr><th scope=row>button</th><td><button>Save</button></td><td class=none><button>Save</button></td><td class=base><button>Save</button></td><td class=styled><button>Save</button></td></tr>
+  <tr><th scope=row>input button</th><td><input type=button value=Save></td><td class=none><input type=button value=Save></td><td class=base><input type=button value=Save></td><td class=styled><input type=button value=Save></td></tr>
+  <tr><th scope=row>submit, no value</th><td><input type=submit></td><td class=none><input type=submit></td><td class=base><input type=submit></td><td class=styled><input type=submit></td></tr>
+  <tr><th scope=row>reset, no value</th><td><input type=reset></td><td class=none><input type=reset></td><td class=base><input type=reset></td><td class=styled><input type=reset></td></tr>
+  <tr><th scope=row>empty value</th><td><input type=button value=""></td><td class=none><input type=button value=""></td><td class=base><input type=button value=""></td><td class=styled><input type=button value=""></td></tr>
+  <tr><th scope=row>disabled</th><td><button disabled>Save</button></td><td class=none><button disabled>Save</button></td><td class=base><button disabled>Save</button></td><td class=styled><button disabled>Save</button></td></tr>
+  <tr><th scope=row>icon and text</th><td><button><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg> New</button></td><td class=none><button><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg> New</button></td><td class=base><button><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg> New</button></td><td class=styled><button><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg> New</button></td></tr>
+  <tr><th scope=row>long label</th><td><button class=long>Download the report as a spreadsheet</button></td><td class=none><button class=long>Download the report as a spreadsheet</button></td><td class=base><button class=long>Download the report as a spreadsheet</button></td><td class=styled><button class=long>Download the report as a spreadsheet</button></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><button>Save</button> <input type=submit> <button disabled>Off</button></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><button>Save</button> <input type=submit> <button disabled>Off</button></div></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><div class=strip><button>Save</button> <input type=submit> <button disabled>Off</button></div></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><div class=strip><button>حفظ</button> <input type=submit value="إرسال"></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><button>保存</button></div>
+</div>
+</section>
+</body>
+</html>

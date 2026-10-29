@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where size containment has no effect</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 60px; }
+  .k { contain: size; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; padding-top: 14px; }
+  rt { font-size: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, where it does not apply</div>
+  <h1>Where size containment has no effect</h1>
+  <p class=pr-lede><q>However, giving an element size containment has no effect if any of the following are
+  true</q>: no principal box; a table; an internal table box; <q>an internal ruby box or a non-atomic inline-level
+  box</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  Each figure has <code>contain: size</code> on the box named; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Tables but not captions, and no principal box</h2>
+  <p><q>Internal table boxes, which do not include table captions, are excluded, because the table layout algorithm
+  does not allow boxes to become smaller than their inflow content.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="pr-table k"><div class=pr-table-cell>table</div></div></div>
+    <figcaption>On the table: no effect; the table is 64 wide, around its cell's "table".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="pr-table"><div class="pr-table-cell k">cell</div></div></div>
+    <figcaption>On the cell: no effect; the cell is 54 wide, around "cell".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="pr-table"><div class="pr-table-caption k b" style="caption-side: bottom">caption</div><div class=pr-table-cell>cell</div></div></div>
+    <figcaption>On a caption below the cell: it applies; the caption is 0 tall, its text drawn under the
+    cell.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class=b style="float: left"><div class=k style="display: contents">contents</div></div></div>
+    <figcaption>On a <code>display: contents</code> element in a float: no effect; the float is 80 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline boxes and ruby</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure">an <span class="k b">inline box</span> here</div>
+    <figcaption>On a <code>span</code>: no effect; its background covers its words, wrapped as usual.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure">an <span class="k b" style="display: inline-block">atomic</span></div>
+    <figcaption>On an inline-block, which is atomic: it applies, 0 by 0, on the baseline.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja"><ruby>漢字<rt class="k b">kanji</rt></ruby></div>
+    <figcaption>On a ruby annotation: no effect; "kanji" sits over its base.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja"><ruby class="k b">漢字<rt>kanji</rt></ruby></div>
+    <figcaption>On the <code>ruby</code>, an inline box: no effect.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

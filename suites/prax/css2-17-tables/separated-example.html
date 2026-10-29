@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The separated borders model: the example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex table { border: outset 10pt; border-collapse: separate; border-spacing: 15pt; background: #e7c27d; }
+  .ex td { border: inset 5pt; width: 20px; height: 20px; padding: 0; background: #f4f5f7; }
+  .ex td.special { border: inset 10pt; }
+  .ex table, .ex td { border-color: #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1 The separated borders model</div>
+  <h1>The separated borders model: the example</h1>
+  <p class=pr-lede><q>In this model, each cell has an individual border. The 'border-spacing' property specifies the
+  distance between the borders of adjoining cells.</q></p>
+</header>
+
+<section>
+  <h2>A table with border-spacing</h2>
+  <p><q>The table in the figure below could be the result of a style sheet like this</q>, with a tan table background
+  and grey borders added so the 3D styles show. <q>Note that each cell has its own border, and the table has a separate
+  border as well.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#separated-borders">CSS 2 §17.6.1</a></span></p>
+  <pre class=pr-source>table      { border: outset 10pt;
+             border-collapse: separate;
+             border-spacing: 15pt }
+td         { border: inset 5pt }
+td.special { border: inset 10pt }  /* The top-left cell */</pre>
+  <figure class=ex>
+    <div class="pr-stage pr-wide" style="padding: 10px; width: 280px"><table><tr><td class=special><td><td><tr><td><td><td></table></div>
+    <figcaption>A 10pt outset table border, raised; six cells 15pt (20px) apart and from the border, each sunk in
+    a 5pt inset border, the top left one in a 10pt one.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

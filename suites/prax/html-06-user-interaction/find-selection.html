@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Find-in-page and the selection</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A word to search for, written by generated content so that the search does not find the caption. */
+  .word::before { content: attr(data-word) }
+  .line { margin: 0 0 10px; padding: 0 6px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.9.3 Interaction with selection</div>
+  <h1>Find-in-page and the selection</h1>
+  <p class=pr-lede><q>The find-in-page process is invoked in the context of a document, and may have an effect on the selection of
+  that document. Specifically, the range that defines the active match can dictate the current selection.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#interaction-with-selection">HTML §6.9.3</a></span></p>
+</header>
+<section>
+  <h2>The active match as the selection</h2>
+  <p><q>These selection updates, however, can happen at different times during the find-in-page process (e.g. upon the
+  find-in-page interface dismissal or upon a change in the active match range).</q> The page's script logs each
+  <code>selectionchange</code> with the selected text. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#interaction-with-selection">§6.9.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=line>first: quendor</div>
+        <div class=line>second: quendor</div>
+      </div>
+      <ol class=pr-log id=log data-lines=3></ol>
+    </div>
+    <figcaption>Search for <code class=word data-word="quendor"></code> (Ctrl+F, or ⌘F), advance to the second match,
+    then close the find bar with Esc: the browser may leave the active match selected, drawn in the selection's color,
+    when the bar closes or as the match changes. The specification leaves when to the browser.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs each change of the selection, with the text it now holds.
+  const log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 3);
+  document.addEventListener("selectionchange", () => {
+      const item = document.createElement("li");
+      item.textContent = "selectionchange " + JSON.stringify(String(document.getSelection()));
+      log.append(item);
+      while (log.children.length > 3)
+          log.firstElementChild.remove();
+  });
+</script>
+</body>
+</html>

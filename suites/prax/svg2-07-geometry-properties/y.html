@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>y: the vertical coordinate</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .moved { y: 50px; }
+  .percent { y: 50%; }
+  foreignObject div { height: 100%; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.7 Vertical coordinate: The ‘y’ property</div>
+  <h1>y: the vertical coordinate</h1>
+  <p class=pr-lede><q>The ‘y’ property describes the vertical coordinate of the position of the element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#Y">SVG 2 §7.7</a></span>
+  Each stage is an SVG 160 by 80, each element 60 by
+  20 at x 50.</p>
+</header>
+
+<section>
+  <h2>On each element it applies to, from CSS</h2>
+  <p>A style sheet's <code>y: 50px</code> over <code>y="10"</code>, which the dashed outline marks.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=pr-ghost x="50" y="10" width="60" height="20" /><rect class=moved x="50" y="10" width="60" height="20" fill="#4f81bd" /></svg></div>
+    <figcaption>A blue <code>rect</code>: from y 50 to 70.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=pr-ghost x="50" y="10" width="60" height="20" /><image class=moved href="../shared/resources/flag-40x20.png" x="50" y="10" width="60" height="20" preserveAspectRatio="none" /></svg></div>
+    <figcaption>An <code>image</code>, the flag stretched: from y 50 to 70. <span class=pr-flag>Safari</span> In the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=pr-ghost x="50" y="10" width="60" height="20" /><foreignObject class=moved x="50" y="10" width="60" height="20"><div></div></foreignObject></svg></div>
+    <figcaption>A <code>foreignObject</code> filled by a green <code>div</code>: from y 50 to 70.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=pr-ghost x="50" y="10" width="60" height="20" /><svg class=moved x="50" y="10" width="60" height="20"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption>A nested <code>svg</code> of a purple rect: from y 50 to 70.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> In the outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage, of the viewport's height</h2>
+  <p>Percentages <q>refer to the height of the current SVG viewport</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=percent x="50" width="60" height="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>y: 50%</code> of 80: from y 40 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" viewBox="0 0 80 40"><rect class=percent x="25" width="30" height="10" fill="#4f81bd" /></svg></div>
+    <figcaption>With <code>viewBox="0 0 80 40"</code>, user units of 2px: 50% of 40 units, 20, so the same, from
+    y 40 to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

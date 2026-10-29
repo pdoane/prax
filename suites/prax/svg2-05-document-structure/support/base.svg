@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- An SVG document with an HTML base element: the image's relative URL resolves against it, to the suite's flag, while
+     the fill's fragment-only reference still finds the gradient in this document. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+  <base xmlns="http://www.w3.org/1999/xhtml" href="../../shared/resources/" />
+  <linearGradient id="green"><stop stop-color="#6aa36a" /></linearGradient>
+  <image href="flag-40x20.png" x="20" y="10" width="40" height="40" preserveAspectRatio="none" />
+  <rect x="80" y="10" width="60" height="40" fill="url(#green) #d68a3c" />
+</svg>

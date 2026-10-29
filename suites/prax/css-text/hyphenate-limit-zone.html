@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hyphenate-limit-zone</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.3 Hyphenation Size Limit: the hyphenate-limit-zone property</div>
+  <h1>hyphenate-limit-zone</h1>
+  <p class=pr-lede><q>This property specifies the maximum amount of unfilled space (before justification) that may be
+  left in the line box before hyphenation is triggered to pull part of a word from the next line back up into the
+  current line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphenate-size-limits">CSS Text 4 §6.3.3</a></span>
+  No browser has the property. Each stage is <code>lang=en</code>, <code>hyphens: manual</code>, 120px wide, of 10px
+  letters, and holds "a bit hyper&amp;shy;active".</p>
+</header>
+
+<section>
+  <h2>Hyphenate only past the zone</h2>
+  <p>"a bit" leaves 70px unfilled; "hyper-" would fit in it.</p>
+  <figure>
+    <div class="pr-stage pr-measure" lang=en><span class=t>a bit hyper&shy;active</span></div>
+    <figcaption>The initial <code>0</code>: the gap is wider than the zone, so the word is hyphenated: "a bit
+    hyper-", "active".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-zone: 80px"><span class=t>a bit hyper&shy;active</span></div>
+    <figcaption><code>80px</code>: 70px left is within the zone, so no hyphenation: "a bit", then "hyperactive".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Hyphenate,
+    as at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-zone: 70%"><span class=t>a bit hyper&shy;active</span></div>
+    <figcaption><code>70%</code> <q>refers to length of the line box</q>: 84px, so no hyphenation either. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Hyphenate.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

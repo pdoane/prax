@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gutters of collapsed tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; column-gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.1 Gutters, collapsed</div>
+  <h1>Gutters of collapsed tracks</h1>
+  <p class=pr-lede><q>When a collapsed track’s gutters collapse, they coincide exactly—the two gutters overlap so that
+  their start and end edges coincide. If one side of a collapsed track does not have a gutter (e.g. if it is the first
+  or last track of the implicit grid), then collapsing its gutters results in no gutter on either “side” of the
+  collapsed track.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#gutters">CSS Grid Layout 2 §11.1</a></span></p>
+</header>
+
+<section>
+  <h2>Between two tracks: one gutter</h2>
+  <p>Empty tracks of <code>auto-fit</code> are collapsed <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-repeat">§7.2.3.2</a></span>.
+  Each stage is 200px with <code>column-gap: 10px</code>; <code>40px repeat(auto-fit, 40px) 40px</code> repeats twice:
+  four columns and three gutters are 190px, and a third repetition would make 240px.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px repeat(auto-fit, 40px) 40px"><div class=pr-a>A</div><div class=pr-b style="grid-column: -2">B</div></div></div>
+    <figcaption>A in the first column, B in the last; the two between are empty and collapse, and their three
+    gutters are one: B from 50 to 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px repeat(auto-fit, 40px) 40px"><div class=pr-a>A</div><div class=pr-c style="grid-column: 2">C</div><div class=pr-b style="grid-column: -2">B</div></div></div>
+    <figcaption>C fills the first repeated column; only the second collapses: C at 50px, B at 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At the edge of the grid: no gutter</h2>
+  <p><code>repeat(auto-fit, 40px)</code> alone repeats four times in 200px. A and B fill the first two columns; the
+  last two collapse. <code>justify-content: end</code> shows how wide the grid is.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fit, 40px); justify-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>The last column has no gutter after it, so neither collapsed column keeps one: the grid is 90px, A
+    at 110px and B at 160px, against the end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fit, 40px); justify-content: end"><div class=pr-a style="grid-column: 3">A</div><div class=pr-b style="grid-column: 4">B</div></div></div>
+    <figcaption>A and B in the last two columns; the first two collapse, with no gutter before the first: the same,
+    A at 110px and B at 160px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

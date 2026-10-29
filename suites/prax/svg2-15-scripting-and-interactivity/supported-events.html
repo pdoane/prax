@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>load and error on external elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.2 Supported events</div>
+  <h1>load and error on external elements</h1>
+  <p class=pr-lede><q>The load event is dispatched only to structurally external elements and to the Window, when the
+  corresponding external resources have finished loading.</q> <q>The load event and the error event on structurally
+  external elements are mutually exclusive, only one of these events must be dispatched when processing the element in
+  question.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#SVGEvents">SVG 2 §15.2</a></span></p>
+</header>
+
+<section>
+  <h2>One of the two, once loading is done</h2>
+  <p>Two <code>image</code> elements, <code>#found</code> of the suite's flag and <code>#missing</code> of a file that
+  does not exist; the page's script gives each its <code>href</code> after the log is listening. The log lists the
+  <code>load</code> and <code>error</code> events that reach the stage.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="40"><image id=found x="60" y="10" width="40" height="20" /><image id=missing x="200" y="10" width="40" height="20" /><rect class=pr-ghost x="200" y="10" width="40" height="20" /></svg>
+      <ol class=pr-log data-log="load error" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>The flag at 60, 10, and the missing image's outline at 200, 10. The log: <code>load
+    target=found</code> and <code>error target=missing</code>, one line each, in either order.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("found").setAttribute("href", "../shared/resources/flag-40x20.png");
+  document.getElementById("missing").setAttribute("href", "support/missing.png");
+</script>
+</body>
+</html>

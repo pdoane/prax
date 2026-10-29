@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: a shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: a shorthand</h1>
+  <p class=pr-lede>CSS 2's <code>text-align</code> is one property for every line. Each blue box is 30px wide, and
+  the guides are 10px apart.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></div>
+  <h2>text-align-all and text-align-last</h2>
+  <p><code>text-align</code> <q>sets the 'text-align-all' and 'text-align-last' properties</q>. <q>Values other than
+  'justify-all' or 'match-parent' are assigned to 'text-align-all' and reset 'text-align-last' to 'auto'.</q>
+  <code>justify-all</code> <q>Sets both 'text-align-all' and 'text-align-last' to 'justify', forcing the last line to
+  justify as well.</q> <code>match-parent</code> <q>behaves the same as 'inherit' ... except that an inherited value
+  of 'start' or 'end' is interpreted against the parent’s 'direction' value</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div style="text-align-last: right; text-align: center"><span class="pr-a w">a</span></div></div>
+    <figcaption><code>text-align-last: right; text-align: center</code>: the shorthand resets the last line's value,
+    and the box is centered. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> keep <code>text-align-last: right</code> for the last line: the box is at
+    the right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div style="text-align: justify-all"><span class="pr-a w">a</span> <span class="pr-a w">b</span></div></div>
+    <figcaption><code>text-align: justify-all</code>: the one line is the last, and justified: a at the left, b at
+    the right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw both at the left, the
+    line not justified.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" dir=rtl style="text-align: start"><div dir=ltr style="text-align: match-parent"><span class="pr-a w">a</span></div></div>
+    <figcaption>A left-to-right block with <code>match-parent</code>, in a right-to-left one of <code>start</code>:
+    the parent's start, its right, so the box is at the right. <span class=pr-flag>Chrome</span> puts it at the
+    left, the block's own start.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

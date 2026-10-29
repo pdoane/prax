@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 2: the available space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; }
+  .pr-stage.t { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.2 Line Length Determination, step 2</div>
+  <h1>Step 2: the available space</h1>
+  <p class=pr-lede><q>Determine the available main and cross space for the flex items. For each dimension, if that
+  dimension of the flex container’s content box is a definite size, use that; if that dimension of the flex container
+  is being sized under a min or max-content constraint, the available space in that dimension is that constraint;
+  otherwise, subtract the flex container’s margin, border, and padding from the space available to the flex container
+  in that dimension and use that value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#line-sizing">CSS Flexible Box Layout 2 §9.2</a></span></p>
+</header>
+
+<section>
+  <h2>A definite content box</h2>
+  <p>Items of <code>flex: 1</code> share the content box, padding and border aside, in either writing mode.</p>
+  <figure>
+    <div class="pr-stage flex" style="box-sizing: border-box; padding: 0 20px 0 0"><div class="pr-a pr-fit" style="flex: 1">A</div><div class="pr-b pr-fit" style="flex: 1">B</div></div>
+    <figcaption>A row stage 200px wide with <code>padding-right: 20px</code> and <code>box-sizing: border-box</code>:
+    a content box of 178px, so A and B 89px each, the last 22px empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical flex" style="height: 60px; padding-bottom: 20px"><div class="pr-a pr-fit" style="flex: 1; width: 40px">A</div><div class="pr-b pr-fit" style="flex: 1; width: 40px">B</div></div>
+    <figcaption>A <code>vertical-rl</code> row stage, its content box 60px tall over <code>padding-bottom: 20px</code>: A and B 30px each, top down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise the space around it, less margin, border and padding</h2>
+  <p><q>For example, the available space to a flex item in a floated auto-sized flex container is: the width of the
+  flex container’s containing block minus the flex container’s margin, border, and padding in the horizontal
+  dimension; infinite in the vertical dimension</q>.</p>
+  <figure>
+    <div class="pr-stage" style="height: 50px"><div class="flex pr-parent" style="float: left; flex-wrap: wrap; margin-left: 20px; padding: 0 10px"><div class="pr-a pr-fit" style="width: 60px">A</div><div class="pr-b pr-fit" style="width: 60px">B</div><div class="pr-c pr-fit" style="width: 60px">C</div><div class="pr-d pr-fit" style="width: 60px">D</div></div></div>
+    <figcaption>A float, <code>margin-left: 20px</code>, 10px padding each side, wraps four 60px items: 200 − 40 leaves
+    160px, so two lines, A B and C D, from 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="height: 50px; margin-bottom: 10px"><div class="flex pr-parent" style="flex-direction: column"><div class="pr-a pr-fit" style="height: 20px; flex-grow: 1">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>A column container of auto height in a stage 50px tall: infinite space, so A, of
+    <code>flex-grow: 1</code>, does not grow, and the three 20px items overflow to 60px.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

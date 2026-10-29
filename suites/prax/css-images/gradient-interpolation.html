@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating gradients</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .sq { width: 40px; height: 40px; margin: 10px; }
+  .wide { width: 100px; height: 40px; margin: 10px; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes angle {
+    from { background-image: linear-gradient(0deg, #4f81bd 50%, #d68a3c 50%); }
+    to { background-image: linear-gradient(90deg, #4f81bd 50%, #d68a3c 50%); }
+  }
+  @keyframes keywords {
+    from { background-image: linear-gradient(to left, #4f81bd 50%, #d68a3c 50%); }
+    to { background-image: linear-gradient(to top, #4f81bd 50%, #d68a3c 50%); }
+  }
+  @keyframes stops {
+    from { background-image: linear-gradient(to right, #4f81bd 20%, #d68a3c 20%); }
+    to { background-image: linear-gradient(to right, #4f81bd 80%, #d68a3c 80%); }
+  }
+  @keyframes stop-colors {
+    from { background-image: linear-gradient(to right, #4f81bd 50%, #4f81bd 50%); }
+    to { background-image: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%); }
+  }
+  @keyframes repeating {
+    from { background-image: repeating-linear-gradient(to right, #4f81bd 0 10px, #d68a3c 10px 20px); }
+    to { background-image: repeating-linear-gradient(to right, #4f81bd 0 30px, #d68a3c 30px 60px); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.4 Interpolating &lt;gradient&gt;</div>
+  <h1>Interpolating gradients</h1>
+  <p class=pr-lede><q>Interpolate each component and color-stop of the gradients independently.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-gradients">CSS Images 4 §7.4</a></span>
+  Each gradient is animated to and fro; a still shows it at 50%. Its stops are hard, blue then orange. Each flagged
+  browser shows the end gradient: it switches at 50%.</p>
+</header>
+
+<section>
+  <h2>Linear: the angle</h2>
+  <p><q>For linear gradients, the only component is the angle.</q> Two keyword directions more than 180deg apart:
+  <q>add 360deg to the direction of the gradient with the smaller angle.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="sq half" style="animation-name: angle"></div></div>
+    <figcaption><code>0deg</code> to <code>90deg</code>: <code>45deg</code>, corner to corner, blue at the
+    bottom left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Blue at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="sq half" style="animation-name: keywords"></div></div>
+    <figcaption><code>to left</code> (270deg) to <code>to top</code> (360deg): <code>315deg</code>, corner to
+    corner, blue at the bottom right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Blue below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Color stops: position and color</h2>
+  <p><q>for each pair of color-stops, interpolate the position and color independently.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: stops"></div></div>
+    <figcaption>Stops at 20% to 80%: at 50%, blue for 50px. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Blue for 80px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: stop-colors"></div></div>
+    <figcaption>The second stop blue to orange: blue for 50px, then a color halfway between. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: repeating"></div></div>
+    <figcaption>Repeating stripes 10px to 30px wide: 20px wide. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 30px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

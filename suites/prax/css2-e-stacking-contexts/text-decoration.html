@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: text and its decorations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .big { padding: 0 10px; font: 600 44px/70px Georgia, serif; color: var(--pr-ink); text-decoration-skip-ink: none; }
+  .under { text-decoration: underline #d68a3c; text-decoration-thickness: 8px; text-underline-offset: 0; }
+  .over { text-decoration: overline #d68a3c; text-decoration-thickness: 8px; }
+  .through { text-decoration: line-through #4f81bd; text-decoration-thickness: 8px; }
+  .wide-red { text-decoration: underline #c0392b; text-decoration-thickness: 10px; }
+  .thin-blue { text-decoration: underline #4f81bd; text-decoration-thickness: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: text and its decorations</h1>
+  <p class=pr-lede><q>If this is a run of text, then:</q> underlining, then overlining, then the text, then line-through.
+  The decorations here are made thick, with <code>text-decoration-thickness</code>, so that the order shows.</p>
+</header>
+
+<section>
+  <h2>Under and over lines below the text, line-through above it</h2>
+  <p><q>any underlining affecting the text of the element</q>, <q>any overlining affecting the text of the
+  element</q>, <q>the text.</q>, <q>any line-through affecting the text of the element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2
+  §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage big"><span class=under>py</span> <span class=over>ẪỖ</span></div>
+    <figcaption>The orange underline and overline are under the dark text: the descenders of p and y, and the tildes
+    over Ẫ and Ỗ, cross them in dark.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage big"><span class=through>xox</span></div>
+    <figcaption>The blue line-through is over the text: it crosses the letters in blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The deepest element's decoration on top</h2>
+  <p><q>in tree order of the elements applying the underlining (such that the deepest element's underlining, if any,
+  is painted topmost and the root element's underlining, if any, is drawn bottommost).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2
+  §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage big" style="font-size: 30px"><span class=wide-red>a <span class=thin-blue>b</span> c</span></div>
+    <figcaption>An outer span's 10px red underline, and an inner span's 3px blue one under b: the inner's blue is
+    drawn on the red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

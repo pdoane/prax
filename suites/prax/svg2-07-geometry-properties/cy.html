@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>cy: the vertical center</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { cy: 60px; }
+  .percent { cy: 75%; }
+  /* To and fro between 20 and 60 over 4 seconds; a still shows it a quarter of the way, at 30. */
+  .slide { animation: slide 4s linear -1s infinite alternate both; }
+  @keyframes slide { from { cy: 20px; } to { cy: 60px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.2 Vertical center coordinate: The ‘cy’ property</div>
+  <h1>cy: the vertical center</h1>
+  <p class=pr-lede><q>The ‘cy’ property describes the vertical center coordinate of the position of the
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#CY">SVG 2 §7.2</a></span>
+  It applies to <code>circle</code> and <code>ellipse</code>. Each stage is an SVG 160 by 80, in user units of
+  1px.</p>
+</header>
+
+<section>
+  <h2>A property, from CSS, and animated</h2>
+  <p>A style sheet's <code>cy: 60px</code> over <code>cy="20"</code>. Its animation type is <q>by computed value</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle class=styled cx="80" cy="20" r="20" fill="#4f81bd" /></svg></div>
+    <figcaption>A circle of radius 20: centered on 80, 60, from y 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse class=styled cx="80" cy="20" rx="60" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption>An ellipse 120 by 20: centered on 80, 60, from y 50 to 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="80"><circle class=slide cx="80" cy="0" r="20" fill="#4f81bd" /></svg></div>
+    <figcaption>From <code>cy: 20px</code> to <code>60px</code> over 4 seconds: a quarter of the way, centered on
+    y 30. It slides up and down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage, of the viewport's height, or negative</h2>
+  <p>Percentages <q>refer to the height of the current SVG viewport</q>. <q>Negative values are permitted for ‘cy’; a negative value translates the center of the shape and does not
+  disable rendering</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle class=percent cx="80" cy="0" r="10" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cy: 75%</code> of 80: centered on y 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=pr-ghost x="0.5" y="0.5" width="159" height="39" /><svg width="160" height="40"><circle class=percent cx="80" cy="0" r="10" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>The same circle in a nested <code>svg</code> 40 tall at the top, outlined: 75% of 40, centered
+    on y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="80" cy="-10" r="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cy="-10"</code>, radius 30: centered above the stage, its bottom from y 0 to 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

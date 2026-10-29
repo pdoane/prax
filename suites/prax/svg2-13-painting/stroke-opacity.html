@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-opacity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.2 Stroke paint opacity: the ‘stroke-opacity’ property</div>
+  <h1>stroke-opacity</h1>
+  <p class=pr-lede><q>The 'stroke-opacity' property specifies the opacity of the painting operation used to stroke the
+  current object.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeOpacity">SVG 2 §13.5.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>One painting operation</h2>
+  <p>The stroke is one shape, painted once <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeShape">§13.5.7</a></span>,
+  so where it covers itself it is no darker. The strokes are orange, 10 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" stroke-opacity="0.5" /></svg></div>
+    <figcaption><code>stroke-opacity="0.5"</code> on a blue rectangle: the inner half of the frame mixes with the
+    blue, the outer half with the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 L 140 50 V 10 L 20 50 Z" fill="none" stroke="#d68a3c" stroke-width="10" stroke-opacity="0.5" /></svg></div>
+    <figcaption>A bow tie that crosses itself at 80, 30, at half opacity: one even tint, the crossing no
+    darker.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 L 140 50 V 10 L 20 50 Z" fill="none" stroke="#d68a3c" stroke-width="10" style="stroke-opacity: 50%" /></svg></div>
+    <figcaption><code>stroke-opacity: 50%</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Separate elements, and clamping</h2>
+  <p><q>Any values outside the range 0 (fully transparent) to 1 (fully opaque) must be clamped to this range.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g stroke="#d68a3c" stroke-width="10" stroke-opacity="0.5"><path d="M 20 10 L 140 50" /><path d="M 20 50 L 140 10" /></g></svg></div>
+    <figcaption>The bow tie's two crossing lines as two paths, in a <code>g</code> at half opacity: each painted on
+    its own, darker where they cross.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" stroke-opacity="3" /></svg></div>
+    <figcaption><code>stroke-opacity="3"</code>, clamped to 1: an opaque orange frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

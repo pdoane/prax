@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-wrap-style: balance</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.4 Selecting How to Wrap: the text-wrap-style property</div>
+  <h1>text-wrap-style: balance</h1>
+  <p class=pr-lede><code>balance</code>: <q>Line breaks are chosen to balance the remaining (empty) space in each line
+  box, if better balance than 'auto' is possible. This should avoid changing—and in the case of 5 or fewer lines
+  must not change—the number of line boxes the block would contain if 'text-wrap' were set to 'auto'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-wrap-style">CSS Text 4 §5.4</a></span>
+  Letters are 10px wide; the text is highlighted so each line's length shows.</p>
+</header>
+
+<section>
+  <h2>Even lines, as many as before</h2>
+  <p>Each stage is 200px wide and holds "one two three four five six", 270px of text.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=t>one two three four five six</span></div>
+    <figcaption><code>auto</code>: <q>The UA must not attempt to even out all lines</q>: "one two three four",
+    180px, then "five six", 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-wrap-style: balance"><span class=t>one two three four five six</span></div>
+    <figcaption><code>balance</code>: still two lines, "one two three" and "four five six", 130px each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Groups, and the count of lines</h2>
+  <p><q>Groups of lines separated by a forced line break are processed separately.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="text-wrap-style: balance"><span class=t>one two three four five six<br>seven eight nine ten eleven</span></div>
+    <figcaption>Two groups, each balanced alone: "one two three", "four five six", then two lines of about the
+    same length, such as "seven eight", "nine ten eleven". <span class=pr-flag>Chrome</span> balances only the
+    first: "seven eight nine ten", then "eleven".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-wrap-style: balance; width: 140px"><span class=t>aa bb cc dd ee ff gg hh ii jj kk</span></div>
+    <figcaption>140px wide, where <code>auto</code> gives two full lines and "kk": three lines still, none as short
+    as 20px, such as "aa bb cc dd", "ee ff gg hh", "ii jj kk".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

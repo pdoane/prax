@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: the equation and auto margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: the equation and auto margins</h1>
+  <p class=pr-lede>Each stage is the 200px containing block of the absolutely positioned box in it.</p>
+</header>
+
+<section>
+  <h2>The constraint</h2>
+  <p><q>'left' + 'margin-left' + 'border-left-width' + 'padding-left' + 'width' + 'padding-right' +
+  'border-right-width' + 'margin-right' + 'right' = width of containing block</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2
+  §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class=pr-box style="position: absolute; top: 10px; left: 20px; right: 20px; margin: 0 10px; border-width: 0 10px; padding: 0 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>left</code> and <code>right</code> 20, margins, borders (yellow) and padding (green) 10 each side:
+    the teal content is 200 − 100 = 100px, from 50 to 150.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>None of left, width and right auto: auto margins</h2>
+  <p><q>If none of the three is 'auto': If both 'margin-left' and 'margin-right' are 'auto', solve the equation under
+  the extra constraint that the two margins get equal values, unless this would make them negative, in which case when
+  direction of the containing block is 'ltr' ('rtl'), set 'margin-left' ('margin-right') to zero and solve for
+  'margin-right' ('margin-left'). If one of 'margin-left' or 'margin-right' is 'auto', solve the equation for that
+  value.</q> Each box has <code>left: 0; right: 0</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="left: 0; right: 0; width: 100px; margin: 0 auto">box</div></div>
+    <figcaption><code>width: 100px; margin: 0 auto</code>: equal margins of 50px center the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="left: 0; right: 0; width: 100px; margin: 0 20px 0 auto">box</div></div>
+    <figcaption><code>margin-right: 20px</code> and an auto <code>margin-left</code>, which is 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

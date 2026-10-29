@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self on grid items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 50px 50px 100px; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.5 Grid Items</div>
+  <h1>justify-self on grid items</h1>
+  <p class=pr-lede>The alignment container is <q>The grid item’s grid area, assuming the writing mode of the grid
+  container.</q> The subject is <q>The grid item’s margin box, assuming the writing mode of the grid item.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-grid">CSS Box Alignment 3 §6.1.5</a></span>
+  Grid layout's rules: <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#row-align">CSS Grid Layout 2 §11.3</a></span>.
+  Each stage is a grid of columns 50, 50 and 100px.</p>
+</header>
+
+<section>
+  <h2>The grid area</h2>
+  <p>A spans the first two columns, its area 100px; B is in the third.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 2; justify-self: end">A</div><div class=pr-b style="justify-self: center">B</div></div></div>
+    <figcaption>A <code>end</code>: at 100px, the end of its area; B <code>center</code>: on 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="grid-column: span 2; justify-self: end">A</div><div class=pr-b style="justify-self: self-end; direction: ltr">B</div></div></div>
+    <figcaption>An <code>rtl</code> grid: A's area at the right, A at its left end, at 100px; B, <code>ltr</code>,
+    <code>self-end</code>: at the right of its area, the stage's left 100px, against A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>normal: stretch, or start for replaced items</h2>
+  <p><q>Sizes as either stretch (typical non-replaced elements) or start (typical replaced elements)</q>. <q>The
+  resulting box is then start-aligned.</q> The image is 40 by 20; it is in the 100px column.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 2">A</div><img alt="" style="display: block" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>normal</code>: A 100px wide; the image 40px, at 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 2; justify-self: start">A</div><img alt="" style="display: block; justify-self: stretch; height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>A <code>start</code>: as wide as its text; the image, 20px tall, <code>stretch</code>: 100px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

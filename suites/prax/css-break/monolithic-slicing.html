@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Monolithic content taller than a fragmentainer</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.1 Possible Break Points, monolithic content</div>
+  <h1>Monolithic content taller than a fragmentainer</h1>
+  <p class=pr-lede><q>Some content is not fragmentable, for example many types of replaced elements (such as images or video), scrollable elements, or a single line of text content. Such content is considered monolithic: it contains no possible break points.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#possible-breaks">CSS Fragmentation 4 §4.1</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Taller than a fragmentainer</h2>
+  <p><q>Finally, if there are no possible break points below the top of the fragmentainer, and not all the content
+  fits, the UA may break anywhere in order to avoid losing content off the edge of the fragmentainer. In such cases,
+  the UA may also fragment the contents of monolithic elements by slicing the element’s graphical representation. However, the UA must not break at the top of the page, i.e. it
+  must place at least some content on each fragmentainer</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#unforced-breaks">§4.4</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><img alt="" style="display: block; width: 60px; height: 80px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 8'><rect width='6' height='8' fill='%238e44ad'/><circle cx='3' cy='4' r='1.5' fill='white'/></svg>"></div>
+    <figcaption>An image 80px tall, under B: it starts the second column, where nothing else can break. There the UA may slice it, carrying its last 20px to the third, or let it overflow, as Chrome and Firefox do; it is not pushed on to the third. <span class=pr-flag>Safari</span> Slices it under B, though it could break before it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

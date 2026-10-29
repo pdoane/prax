@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Customized built-in elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.3 Core concepts</div>
+  <h1>Customized built-in elements</h1>
+  <p class=pr-lede><q>A customized built-in element inherits the semantics of the element that it extends.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-core-concepts">HTML §4.13.3</a></span>
+  <q>all of the ways in which button is special apply to such "plastic buttons" as well: their focus behavior, ability to
+  participate in form submission, the disabled attribute, and so on.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-customized-builtin-example">§4.13.1.4</a></span></p>
+</header>
+<section>
+  <h2>A button that counts</h2>
+  <p>The page defines <code>x-counter</code> with <code>{extends: "button"}</code>; its constructor sets the button's
+  text to "clicked 0 times" and adds one on each click. The stage holds <code>&lt;button is=x-counter
+  id=counter&gt;not upgraded&lt;/button&gt;</code>, then the same with <code>disabled</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=before>before</button>
+        <button class=pr-target is=x-counter id=counter>not upgraded</button>
+        <button class=pr-target is=x-counter id=off disabled>not upgraded</button>
+      </div>
+      <ol class=pr-log data-log="focus click" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Both read "clicked 0 times". Click "before" and press Tab: the counter takes the focus; Space or a click
+    counts up, "clicked 1 times". The disabled one: no focus, no clicks, still 0.
+    <span class=pr-flag>Safari</span> "not upgraded" on both, never counting.</figcaption>
+  </figure>
+</section>
+<script>
+  customElements.define("x-counter", class extends HTMLButtonElement {
+    constructor() {
+      super();
+      this.count = 0;
+      this.textContent = "clicked 0 times";
+      this.addEventListener("click", () => this.textContent = `clicked ${++this.count} times`);
+    }
+  }, {extends: "button"});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

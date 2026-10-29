@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Powerless components</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 6px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .bar { height: 30px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 4.4.1 “Powerless” Color Components</div>
+  <h1>Powerless components</h1>
+  <p class=pr-lede>A powerless component <q>indicates that the value of the component doesn't affect the rendered
+  color</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#powerless">CSS Color 4 §4.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Any value, the same color</h2>
+  <p><q>in hsl(), the hue component is powerless when the saturation component is 0%</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(0 0% 50%)"></div><div class=sw style="background: hsl(200 0% 50%)"></div><div class=sw style="background: oklch(0.5 0 40)"></div><div class=sw style="background: oklch(0.5 0 200)"></div></div>
+    <figcaption><code>hsl(0 0% 50%)</code>, <code>hsl(200 0% 50%)</code>: one gray twice. <code>oklch(0.5 0
+    40)</code>, hue <code>200</code>: a darker gray twice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Missing after conversion</h2>
+  <p><q>If a powerless component is manually specified, it acts as normal [...] However, if a color is automatically
+  produced by color space conversion, then any powerless components in the result must instead be set to missing</q>.
+  Each bar is <code>linear-gradient(in hsl to right, A, blue)</code> or <code>in oklch</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>); blue's hue is 240 in HSL, 264 in OkLCh.</p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in hsl to right, white, blue)"></div></div>
+    <figcaption>A is <code>white</code>, converted to HSL: its hue is missing, so it takes blue's. White to blue
+    through pale blues only.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in hsl to right, hsl(0 0% 100%), blue)"></div></div>
+    <figcaption>A is <code>hsl(0 0% 100%)</code>, which computes to sRGB white (<a href="https://drafts.csswg.org/css-color-4/#resolving-sRGB-values">§15.1</a>), so the hue 0 is gone: the same
+    bar. <span class=pr-flag>Firefox</span> keeps hue 0 and runs it down to 240, pink to violet.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in oklch to right, white, blue)"></div></div>
+    <figcaption>In OkLCh, <code>white</code> to <code>blue</code>: white's hue is missing, and the bar is pale
+    blue to blue.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in oklch to right, oklch(1 0 0), blue)"></div></div>
+    <figcaption><code>oklch(1 0 0)</code>, white with hue 0 given, keeps it: the hue runs 360 down to blue's 264,
+    so pinks and violets come between.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

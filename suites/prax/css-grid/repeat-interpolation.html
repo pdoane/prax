@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating repeat()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; animation: 10s linear -4s infinite alternate; }
+  @keyframes same { from { grid-template-columns: repeat(2, 20px); } to { grid-template-columns: repeat(2, 120px); } }
+  @keyframes count { from { grid-template-columns: repeat(2, 20px); } to { grid-template-columns: repeat(3, 120px); } }
+  @keyframes tracks { from { grid-template-columns: repeat(2, 20px); } to { grid-template-columns: repeat(2, 120px 20px); } }
+  @keyframes list { from { grid-template-columns: 20px 20px; } to { grid-template-columns: 120px 120px; } }
+  @keyframes length { from { grid-template-columns: 20px 20px; } to { grid-template-columns: 120px 120px 120px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.3.3 Interpolation/Combination of repeat()</div>
+  <h1>Interpolating repeat()</h1>
+  <p class=pr-lede><q>If two repeat() notations that have the same first argument (repetition count) and the same
+  number of tracks in their second argument (the track listing), they are combined by combining each component of
+  their computed track lists by computed value (just like combining a top-level track list). They otherwise combine
+  discretely.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#repeat-interpolation">CSS Grid Layout 2 §7.2.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Two repeat() notations</h2>
+  <p>Each grid runs an animation of <code>grid-template-columns</code> running to and fro, which a still shows 40% of the way, and holds A, B and
+  C. Smoothly, 20px goes to 60px there; discretely, the value stays the first one until halfway.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=g style="animation-name: same"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>repeat(2, 20px)</code> to <code>repeat(2, 120px)</code>: combined, two 60px columns; C under
+    A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=g style="animation-name: count"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>To <code>repeat(3, 120px)</code>: another count, so discrete: two 20px columns.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=g style="animation-name: tracks"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>To <code>repeat(2, 120px 20px)</code>: another number of tracks, discrete: two 20px columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A top-level track list</h2>
+  <p>The animation type: <q>if the list lengths match, by computed value type per item in the computed track list
+  ...; discrete otherwise</q>.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=g style="animation-name: list"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>20px 20px</code> to <code>120px 120px</code>: two 60px columns.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=g style="animation-name: length"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>To three tracks: discrete, two 20px columns, C under A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

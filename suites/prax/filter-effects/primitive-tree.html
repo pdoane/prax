@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The filter primitive tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40. The source is an orange rectangle from x 0 to 40. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="chain" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset dx="40"/>
+    <feOffset dx="40"/>
+  </filter>
+  <filter id="restart" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset dx="40"/>
+    <feOffset in="SourceGraphic" dx="120"/>
+  </filter>
+  <filter id="two-trees" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset dx="40"/>
+    <feOffset dx="40"/>
+    <feFlood flood-color="#6aa36a" result="flood"/>
+    <feComposite in="flood" in2="SourceAlpha" operator="in"/>
+  </filter>
+  <filter id="empty" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40"></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.3 Filter primitive tree</div>
+  <h1>The filter primitive tree</h1>
+  <p class=pr-lede><q>Filter primitives with no or one filter primitive input can be linked together to a filter
+  chain.</q> <q>Every filter primitive takes the result of the previous filter primitive as input.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterPrimitiveTree">Filter Effects 1 §9.3</a></span>
+  Each canvas, 160 by 40, holds an orange rectangle from x 0 to 40.</p>
+</header>
+
+<section>
+  <h2>A chain</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#chain)"/></svg></div>
+    <figcaption>Two <code>feOffset</code>s of 40: the second offsets the first's result, so the orange at x 80 to
+    120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#restart)"/></svg></div>
+    <figcaption>The second given <code>in="SourceGraphic"</code> and 120: it starts again from the rectangle, x 120
+    to 160.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The primary tree</h2>
+  <p><q>Only the primary filter primitive tree contributes to the filter process.</q> <q>If a filter element has no
+  filter primitive tree then the element the filter applies to does not get rendered.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#two-trees)"/></svg></div>
+    <figcaption>The two offsets, then a green flood cut to the rectangle's alpha, which nothing ties to them: green at
+    x 0 to 40, not moved.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#empty)"/></svg></div>
+    <figcaption>A <code>filter</code> with no primitives: the rectangle is not drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Clipping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .ring { outline: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 14.1.1 Clipping</div>
+  <h1>Clipping</h1>
+  <p class=pr-lede>The section is not normative. <q>The simplest and least acceptable method is simply to clip the
+  component values to the displayable range.</q> <q>This changes the proportions of the three primary colors (for an
+  RGB display), resulting in a hue shift.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#GM-clip">CSS Color 4 §14.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>A hue shift</h2>
+  <p><q>consider the color color(srgb-linear 0.5 1 3).</q> <q>There is six times as much blue primary as red. In OkLCh,
+  this color has a hue angle of 265.1°. If we now clip this color to bring it into gamut for sRGB, we get
+  color(srgb-linear 0.5 1 1).</q> <q>In OkLCh, this color has a hue angle of 196.1°, a substantial change of
+  69°.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb-linear 0.5 1 1)"></div><div class=sw style="background: oklch(0.8 0.1 265.1)"></div></div>
+    <figcaption>The clipped color, <code>color(srgb-linear 0.5 1 1)</code>, a pale cyan, beside a blue of the
+    original's hue, <code>oklch(0.8 0.1 265.1)</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb-linear 0.5 1 3)"></div><div class="sw ring" style="background: white"></div></div>
+    <figcaption>CSS maps the color itself, whose OkLCh lightness is 1.019, to white (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>). <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips it to the pale cyan.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>When clipping is close enough</h2>
+  <p><q>When colors are not too far out of gamut, clipping can give acceptable results. This is particularly true for
+  darker (or negative) component values.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0.95 0.25 100)"></div><div class=sw style="background: rgb(100% 94.1% 15.4%)"></div><div class=sw style="background: rgb(100% 93.4% 0%)"></div></div>
+    <figcaption><code>oklch(0.95 0.25 100)</code>, then the color CSS maps it to, then the clipped one: three
+    yellows hard to tell apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Empty cells: hidden cells, and rows of them</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #f2e394; empty-cells: hide; font-size: 12px; line-height: 18px; }
+  td { width: 40px; padding: 0 4px; box-sizing: border-box; background: #4f81bd; border: 2px solid #1f2430; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1.1 Borders and Backgrounds around empty cells: the 'empty-cells' property</div>
+  <h1>Empty cells: hidden cells, and rows of them</h1>
+  <p class=pr-lede>Tables have <code>empty-cells: hide</code> and <code>border-spacing: 10px</code>; cells have a 2px
+  border, and are 22px tall when they hold text.</p>
+</header>
+
+<section>
+  <h2>Hidden cells, and rows of them</h2>
+  <p><q>Empty cells and cells with the 'visibility' property set to 'hidden' are considered to have no visible
+  content.</q> <q>Furthermore, if all the cells in a row have a value of 'hide' and have no visible content, then the
+  row has zero height and there is vertical border-spacing on only one side of the row.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#empty-cells">CSS 2
+  §17.6.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td style="visibility: hidden">2<td>3</table></div>
+    <figcaption>Cell 2 has text but <code>visibility: hidden</code>: with <code>hide</code>, it is drawn like an empty
+    cell, yellow with no border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tr><td><td><tr><td>5<td>6</table></div>
+    <figcaption>A row of empty cells has no height: rows 1 and 3 are 10px apart, not 20. <span class="pr-flag
+    pr-since">Since CSS 2</span> Tables 3 keeps its 4px of borders: 24px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#empty-cell-rendering">CSS Table 3 §5.2</a></div>
+  <h2>hide only stops painting</h2>
+  <p><q>In separated-borders mode, when this property has the value hide, no borders or backgrounds are drawn
+  around/behind empty cells.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#empty-cell-rendering">CSS Table 3 §5.2</a></span> No rule collapses a row of them any
+  more: it keeps its height, with spacing on both sides.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tr><td style="border-width: 0"><td style="border-width: 0"><tr><td>5<td>6</table></div>
+    <figcaption>Empty cells with no border: the row is 0px tall; rows 1 and 3 are 20px apart, a spacing each
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tr><td style="height: 20px"><td><tr><td>5<td>6</table></div>
+    <figcaption>An empty cell of <code>height: 20px</code>: nothing is drawn, and rows 1 and 3 are 40px
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

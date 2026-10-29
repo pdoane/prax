@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:user-valid and :user-invalid</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows input { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; font-size: 12px; border: 3px solid #b5bcc7; }
+  .rows button { font-size: 12px; margin: 0 0 8px; }
+  .rows :user-valid { border-color: #3f9a3f; }
+  .rows :user-invalid { border-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:user-valid and :user-invalid</h1>
+  <p class=pr-lede><code>:user-valid</code> and <code>:user-invalid</code> match <q>input, textarea, and select
+  elements whose user validity is true</q> and that do, or do not, satisfy their constraints. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>After the user commits a change</h2>
+  <p>User validity starts false. It becomes true when the user commits a change, or leaves a field whose value they
+  changed. Borders: green <code>:user-valid</code>, orange <code>:user-invalid</code>, grey neither. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#a-form-control's-value">§4.10.18.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <input type=email required placeholder="an email address, required">
+        <input placeholder="somewhere to Tab to">
+      </div>
+    </div>
+    <figcaption>The first is grey, though empty and required. Type <code>x</code> into it: still grey. Press Tab: it
+    turns orange. Click it and make it <code>x@y</code>: green as soon as it is valid.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>After an attempt to submit</h2>
+  <p>Submitting a form sets the user validity of each of its <q>submittable elements</q> to true. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-algorithm">§4.10.22.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <form class=rows onsubmit="return false">
+        <input required placeholder="required">
+        <input value="filled in" required>
+        <button>submit</button>
+      </form>
+    </div>
+    <figcaption>Both fields and the button are grey. Click "submit": the first field turns orange and the second
+    green, and the browser reports the empty field. <span class=pr-flag>Firefox</span> borders the button green from
+    the start, as <code>:user-valid</code>, which matches no button.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

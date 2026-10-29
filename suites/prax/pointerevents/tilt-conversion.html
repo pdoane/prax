@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tilt and angles agree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { display: block; margin: 10px 20px; touch-action: none; background: var(--pr-plain);
+         border: 1px solid var(--pr-accent); }
+  .axis { stroke: #4f81bd; stroke-width: 6px; stroke-linecap: round; }
+  .angles { stroke: #d68a3c; stroke-width: 2px; stroke-dasharray: 4px 3px; }
+  .ring { fill: none; stroke: var(--pr-line); stroke-dasharray: 3px 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.5 Converting between tiltX / tiltY and altitudeAngle / azimuthAngle</div>
+  <h1>Tilt and angles agree</h1>
+  <p class=pr-lede><q>Depending on the specific hardware and platform, user agents will likely only receive one set of
+  values for the transducer orientation relative to the screen plane — either tiltX / tiltY or altitudeAngle /
+  azimuthAngle. User agents MUST use the following algorithm for converting these values.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#converting-between-tiltx-tilty-and-altitudeangle-azimuthangle">Pointer Events §3.1.5</a></span></p>
+</header>
+<section>
+  <h2>One pen, two descriptions</h2>
+  <p><q>The altitude (in radians) of the transducer (e.g. pen/stylus), in the range [0,π/2] — where 0 is parallel to the
+  surface (X-Y plane), and π/2 is perpendicular to the surface.</q> <q>where 0 represents a transducer whose cap is
+  pointing in the direction of increasing X values (point to "3 o'clock" if looking straight down) on the X-Y plane, and
+  the values progressively increase when going clockwise</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg class=pad id=pen width=258 height=140 viewBox="-129 -70 258 140">
+        <circle class=ring r=60 />
+        <line class=axis id=fromTilt x1=0 y1=0 x2=0 y2=0 />
+        <line class=angles id=fromAngles x1=0 y1=0 x2=0 y2=0 />
+      </svg>
+      <ol class=pr-log data-log="pointermove pointerdown" data-fields="tiltX tiltY altitudeAngle azimuthAngle" data-on="#pen" data-lines=2></ol>
+    </div>
+    <figcaption>Needs a pen that reports tilt. The pen seen from above, tip at the centre: the thick blue line is
+    drawn from <code>tiltX</code> and <code>tiltY</code>, the dashed orange one from <code>altitudeAngle</code> and
+    <code>azimuthAngle</code>. Lean the pen any way: the two lines lie on each other, since one set is converted
+    from the other. A mouse gives a dot for both, an <code>altitudeAngle</code> of π/2 (1.57), and no tilt.</figcaption>
+  </figure>
+</section>
+<script>
+  // Projects the pen's axis on the screen twice: from the tilt angles, and from the altitude and azimuth.
+  const fromTilt = document.getElementById("fromTilt"), fromAngles = document.getElementById("fromAngles");
+  const tan = degrees => Math.tan(Math.max(-89.9, Math.min(89.9, degrees)) * Math.PI / 180);
+  for (const type of ["pointermove", "pointerdown"]) {
+    document.getElementById("pen").addEventListener(type, event => {
+      const x = tan(event.tiltX), y = tan(event.tiltY), length = Math.hypot(1, x, y);
+      fromTilt.setAttribute("x2", 60 * x / length);
+      fromTilt.setAttribute("y2", 60 * y / length);
+      const flat = 60 * Math.cos(event.altitudeAngle);
+      fromAngles.setAttribute("x2", flat * Math.cos(event.azimuthAngle));
+      fromAngles.setAttribute("y2", flat * Math.sin(event.azimuthAngle));
+    });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

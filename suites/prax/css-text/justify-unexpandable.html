@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A line that cannot be stretched</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+  .x { display: inline-block; width: 90px; }
+  .pr-stage { width: 100px; text-align: justify; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5.3 Unexpandable Text</div>
+  <h1>A line that cannot be stretched</h1>
+  <p class=pr-lede><q>If the inline contents of a line cannot be stretched to the full width of the line box, then they
+  must be aligned as specified by the 'text-align-last' property. (If 'text-align-last' is 'justify', then they must
+  be aligned as for 'center'.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#justify-limits">CSS Text 4 §7.5.3</a></span>
+  Each stage is 100px wide, <code>text-align: justify</code>. A line of one box has no opportunity to stretch.</p>
+</header>
+
+<section>
+  <h2>A line that is not the last</h2>
+  <p>A 90px box, then a 30px one on the next line.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text" style="text-align-last: center"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>text-align-last: center</code>: a is centered, 5px in. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the left.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text" style="text-align-last: end"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>end</code>: a at the right, 10px in. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>auto</code>, which for <code>justify</code> is <code>start</code>: at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The last line, under justify</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text" style="text-align-last: justify"><span class="pr-b w">b</span></div>
+    <figcaption><code>text-align-last: justify</code>, one box: centered, 35px in. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the left.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text" style="text-align: justify-all"><span class="pr-b w">b</span></div>
+    <figcaption><code>text-align: justify-all</code>: the same, centered. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text" style="text-align-last: justify"><span class="pr-b w">b</span> <span class="pr-c w">c</span></div>
+    <figcaption>Two boxes and a space: the space stretches, b at the left, c at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

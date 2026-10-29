@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filling and stroking paths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.13 Drawing paths to the canvas</div>
+  <h1>Filling and stroking paths</h1>
+  <p class=pr-lede>fill <q>Fills the subpaths of the current default path or the given path with the current fill style, obeying the given
+  fill rule.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-paths-to-the-canvas">HTML §4.12.5.1.13</a></span></p>
+</header>
+<section>
+  <h2>Fill rules, and open subpaths</h2>
+  <p><q>The "nonzero" value indicates the nonzero winding rule</q>; <q>The "evenodd" value indicates the even-odd
+  rule</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#2dcontext">§4.12.5.1</a></span>
+  <q>Open subpaths must be implicitly closed when being filled (without affecting the actual subpaths).</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=rules></canvas></div>
+    <figcaption>A five-pointed star drawn in one stroke: <code>nonzero</code> at the left, solid; <code>evenodd</code>
+    at the right, its pentagon empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=open></canvas></div>
+    <figcaption>An open "V", (40, 20) to (100, 80) to (160, 20), filled blue and then stroked orange: a filled
+    triangle, but no stroke across its top.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>One stroke, and the paths that are used</h2>
+  <p><q>overlapping parts of the paths in one stroke operation are treated as if their union was what was painted.</q> A
+  Path2D is transformed when used; <q>When the intended path is the current default path, it is not affected by the
+  transform.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=union></canvas></div>
+    <figcaption>Half-transparent blue, 16 wide. Left, one stroke of an "X": the crossing no darker. Right, the "X" as two
+    strokes: the crossing darker.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=paths></canvas></div>
+    <figcaption>A square at (10, 10) in the default path and in a Path2D, then <code>translate(100, 40)</code>: the
+    default path's blue fill stays at (10, 10); the Path2D's orange one is at (110, 50).</figcaption>
+  </figure>
+</section>
+<script>
+  function star(context, cx) {
+    context.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = -Math.PI / 2 + i * 4 * Math.PI / 5;
+      context.lineTo(cx + 40 * Math.cos(angle), 52 + 40 * Math.sin(angle));
+    }
+    context.closePath();
+  }
+  const draw = {
+    rules(context) {
+      context.fillStyle = "#4f81bd";
+      star(context, 50);
+      context.fill("nonzero");
+      star(context, 150);
+      context.fill("evenodd");
+    },
+    open(context) {
+      context.beginPath();
+      context.moveTo(40, 20);
+      context.lineTo(100, 80);
+      context.lineTo(160, 20);
+      context.fillStyle = "#4f81bd";
+      context.fill();
+      context.strokeStyle = "#d68a3c";
+      context.lineWidth = 4;
+      context.stroke();
+    },
+    union(context) {
+      context.strokeStyle = "rgb(79 129 189 / 0.5)";
+      context.lineWidth = 16;
+      context.beginPath();
+      context.moveTo(15, 15); context.lineTo(85, 85);
+      context.moveTo(85, 15); context.lineTo(15, 85);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(115, 15); context.lineTo(185, 85);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(185, 15); context.lineTo(115, 85);
+      context.stroke();
+    },
+    paths(context) {
+      context.beginPath();
+      context.rect(10, 10, 40, 40);
+      const square = new Path2D();
+      square.rect(10, 10, 40, 40);
+      context.translate(100, 40);
+      context.fillStyle = "#4f81bd";
+      context.fill();
+      context.fillStyle = "#d68a3c";
+      context.fill(square);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

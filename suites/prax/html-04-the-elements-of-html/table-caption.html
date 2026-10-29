@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The caption element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; }
+  .t caption { background: #f6d7b4; font-size: 12px; line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.2 The caption element</div>
+  <h1>The caption element</h1>
+  <p class=pr-lede><q>The caption element represents the title of the table that is its parent, if it has a parent and
+  that is a table element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-caption-element">HTML §4.9.2</a></span>
+  Each caption is orange; each table's edge is dashed.</p>
+</header>
+<section>
+  <h2>A title above the table, centered</h2>
+  <p><code>caption { display: table-caption }</code>, <code>caption { text-align: center }</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><caption>Dice</caption><tr><td>one<td>two<td>three</table>
+    </div>
+    <figcaption>"Dice" in an orange band above the cells, as wide as the table, the word in its middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><caption>Totals of two dice</caption><tr><td>1<td>2</table>
+    </div>
+    <figcaption>A caption longer than its two cells: the table is only as wide as the caption's longest word, "Totals",
+    so the caption breaks after each word, every line centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td>one<td>two<td>three</tr><caption>Dice</caption></table>
+    </div>
+    <figcaption>The caption written after the row: still drawn above the cells.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

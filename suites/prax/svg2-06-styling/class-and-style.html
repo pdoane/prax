@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The class and style attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .info { fill: #4f81bd; }
+  .wide { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.5 Element-specific styling: the ‘class’ and ‘style’ attributes</div>
+  <h1>The class and style attributes</h1>
+  <p class=pr-lede><q>As with HTML, SVG supports the ‘class’ and ‘style’ attributes on all elements to support
+  element-specific styling.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#ElementSpecificStyling">SVG 2 §6.5</a></span>
+  Each stage is an SVG 160 by 60 with a rect at 20, 10, orange by its <code>fill</code> attribute.</p>
+</header>
+
+<section>
+  <h2>class</h2>
+  <p><q>The ‘class’ attribute assigns one or more class names to an element, which can then be used for addressing by
+  the styling language.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=info x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>class="info"</code>, which a style sheet fills blue: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class="info wide" x="20" y="10" width="40" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>class="info wide"</code>, two names: blue, and 120 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>style</h2>
+  <p><q>The ‘style’ attribute is used to supply a CSS declaration of an element. The attribute is parsed as a
+  declaration-list.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect style="fill: #4f81bd; stroke: #2c5a8f; stroke-width: 6px" x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>style="fill: #4f81bd; stroke: …"</code>: blue, stroked dark blue 6 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=info style="fill: #6aa36a" x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>class="info"</code> and <code>style="fill: #6aa36a"</code>: green, the attribute's declaration
+    winning.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

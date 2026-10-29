@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>direction: the inline base direction</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.1 Specifying Directionality: the direction property</div>
+  <h1>direction: the inline base direction</h1>
+  <p class=pr-lede><q>This property specifies the inline base direction or directionality of any bidi paragraph,
+  embedding, isolate, or override established by the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#direction">CSS Writing Modes 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>ltr and rtl</h2>
+  <p><q>ltr: This value sets inline base direction (bidi directionality) to line-left-to-line-right.</q> <q>rtl: This
+  value sets inline base direction (bidi directionality) to line-right-to-line-left.</q></p>
+  <figure>
+    <div class=pr-stage>Hello, world!</div>
+    <figcaption><code>ltr</code>: "Hello, world!" from the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl">Hello, world!</div>
+    <figcaption><code>rtl</code>: the words still read left to right, but the line starts at the right edge and the
+    "!", a neutral, goes to the left end: "!Hello, world".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one אבג two</div>
+    <figcaption><code>ltr</code>: "one" at the left, then the Hebrew word, then "two".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl">one אבג two</div>
+    <figcaption><code>rtl</code>: "one" at the right, the Hebrew word left of it, "two" at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On an inline box with unicode-bidi: normal</h2>
+  <p><q>The direction property has no effect on bidi reordering when specified on inline boxes whose unicode-bidi
+  value is normal, because the box does not open an additional level of embedding</q>.</p>
+  <figure>
+    <div class=pr-stage>one <span class=pr-hl style="direction: rtl">two three!</span> four</div>
+    <figcaption>The highlighted span is <code>rtl</code>: no effect, "one two three! four".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one <span class=pr-hl dir=rtl>two three!</span> four</div>
+    <figcaption>With HTML's <code>dir=rtl</code>, which also sets <code>unicode-bidi: isolate</code>: the "!" moves
+    to the span's left end, "one !two three four".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

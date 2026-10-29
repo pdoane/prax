@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mask processing: alpha and luminance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .sq { width: 60px; height: 40px; margin: 10px 20px; background: #2c5a8f; }
+  .lum { mask-mode: luminance; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.10.1 Mask processing</div>
+  <h1>Mask processing: alpha and luminance</h1>
+  <p class=pr-lede><q>The effect of a mask is identical to what would have happened if there were no mask but instead the
+  alpha channel of the given object were multiplied with the mask's resulting mask values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#MaskValues">CSS Masking 1 §7.10.1</a></span>
+  Each box is 60 by 40 and dark blue on the stage, so a mask value reads as how much of the blue shows over the grey.</p>
+</header>
+
+<section>
+  <h2>Luminance, times alpha</h2>
+  <p><q>apply the luminance-to-alpha coefficients (as defined in the feColorMatrix filter primitive) to convert the RGB
+  color values to luminance values.</q> <q>Multiply the computed luminance value by the corresponding alpha value to
+  produce the mask value.</q> The coefficients are 0.2125 for red, 0.7154 for green and 0.0721 for blue. Each mask is
+  one color, <code>mask-mode: luminance</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="sq lum" style="mask-image: linear-gradient(lime, lime)"></div></div>
+    <figcaption><code>lime</code>: 0.7154, 72% of the blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="sq lum" style="mask-image: linear-gradient(red, red)"></div></div>
+    <figcaption><code>red</code>: 0.2125, 21%.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="sq lum" style="mask-image: linear-gradient(blue, blue)"></div></div>
+    <figcaption><code>blue</code>: 0.0721, 7%, nearly gone.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="sq lum" style="mask-image: linear-gradient(rgb(255 255 255 / 50%), rgb(255 255 255 / 50%))"></div></div>
+    <figcaption>White at 50% alpha: 1 × 0.5, half the blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alpha, and what no image covers</h2>
+  <p><q>In this case the mask value at a given point is simply the value of the alpha channel at that point. The color
+  channels do not contribute to the mask value.</q> <q>Regions not covered by a mask image are treated as transparent
+  black. The mask value is 0.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=sq style="mask-image: linear-gradient(blue, blue)"></div></div>
+    <figcaption>Opaque <code>blue</code>, <code>alpha</code>: 1, the blue whole.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=sq style="mask-image: url(../shared/resources/flag-40x20.png)"></div></div>
+    <figcaption>A PNG with no alpha channel, as if <q>uniformly set to 1</q>: tiled, the blue whole.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=sq style="mask-image: linear-gradient(black, black); mask-size: 20px 20px; mask-repeat: no-repeat"></div></div>
+    <figcaption>One 20px tile, <code>no-repeat</code>: the blue 20 by 20 at the top left, nothing elsewhere.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=sq style="mask-image: linear-gradient(black, black); mask-size: 15px 15px; mask-repeat: space"></div></div>
+    <figcaption>15px tiles, <code>space</code>: four by two, with the gaps between them, 0, hidden.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

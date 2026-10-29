@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: the parent's tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; }
+  .s { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, tracks and span</div>
+  <h1>Subgrids: the parent's tracks</h1>
+  <p class=pr-lede><q>Placing the subgrid creates a correspondence between its subgridded tracks and those that it
+  spans in its parent grid. The grid lines thus shared between the subgrid and its parent form the subgrid’s explicit
+  grid, and its track sizes are governed by the parent grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px; the tinted, outlined box is the subgrid.</p>
+</header>
+
+<section>
+  <h2>Tracks taken from the parent</h2>
+  <p>The parent also has rows of 20 and 40px. The subgrid has <code>grid-column: 2 / 4; grid-row: 1 / 3; grid:
+  subgrid / subgrid</code>, and holds A, auto-placed, and B at <code>grid-area: 2 / 2</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-rows: 20px 40px"><div class="s pr-parent" style="grid-column: 2 / 4; grid-row: 1 / 3; grid: subgrid / subgrid"><div class=pr-a>A</div><div class=pr-b style="grid-area: 2 / 2">B</div></div></div></div>
+    <figcaption>A fills the parent's second column and first row: 60 by 20 at 40px. B fills its third column and
+    second row: 80 by 40, from 100px across and 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-rows: 20px 40px; column-gap: 10px"><div class="s pr-parent" style="grid-column: 2 / 4; grid-row: 1 / 3; grid: subgrid / subgrid"><div class=pr-a>A</div><div class=pr-b style="grid-area: 2 / 2">B</div></div></div></div>
+    <figcaption>The same with <code>column-gap: 10px</code> on the parent: A from 50 to 110px, B from 120 to 200px;
+    the subgrid's gap is the parent's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

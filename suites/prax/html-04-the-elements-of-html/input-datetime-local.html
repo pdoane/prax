@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Local date and time controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.11 Local Date and Time state (type=datetime-local)</div>
+  <h1>Local date and time controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing a
+  local date and time, with no time-zone offset information.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#local-date-and-time-state-(type=datetime-local)">HTML §4.10.5.1.11</a></span></p>
+</header>
+
+<section>
+  <h2>A date and a time, together</h2>
+  <p><q>An input element whose type attribute is in the Local Date and Time state is a devolvable widget expected to
+  render as an 'inline-block' box depicting a local date and time control.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-domain-specific-widgets">§15.5.7</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><input type=datetime-local value="2026-10-25T09:30"></div>
+        <div><input type=datetime-local value="2026-10-25T09:30:15" step=1></div>
+      </div>
+    </div>
+    <figcaption>25 October 2026 at 9:30, no time zone. With <code>step=1</code>, the second has seconds too, 15.
+    Both green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><input type=datetime-local value="2026-10-25T09:30"></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Clear the hour with Backspace: red, a date without a whole time is bad input. Type 10: green, and
+    <code>input</code> is logged.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

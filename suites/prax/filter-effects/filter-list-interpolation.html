@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating filter lists</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: #4f81bd; animation: 100s linear -50s infinite alternate both; }
+  .bar { width: 60px; height: 10px; margin: 0 10px; }
+  @keyframes same { from { filter: grayscale(0) brightness(1); } to { filter: grayscale(1) brightness(0); } }
+  @keyframes longer { from { filter: brightness(1); } to { filter: brightness(1) grayscale(1); } }
+  @keyframes from-none { from { filter: none; } to { filter: grayscale(1); } }
+  @keyframes reorder { from { filter: grayscale(0) invert(0); } to { filter: invert(1) grayscale(1); } }
+  @keyframes reference { from { filter: grayscale(0); } to { filter: url(#gray); } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute"><filter id="gray"><feColorMatrix type="saturate" values="0" /></filter></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 14.1 Interpolation of Filter Function Lists</div>
+  <h1>Interpolating filter lists</h1>
+  <p class=pr-lede><q>For interpolation between one filter and a second, the steps corresponding to the first matching
+  condition in the following list must be run</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#interpolation-of-filters">Filter Effects 1 §14.1</a></span>
+  Each box is 60 by 30 and blue, its <code>filter</code> animated to and fro; each still is at 50%. A bar under a box
+  is the color expected.</p>
+</header>
+
+<section>
+  <h2>Lists that match</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="animation-name: same"></div><div class=bar style="background: rgb(50 63 78)"></div></div>
+    <figcaption><code>grayscale(0) brightness(1)</code> to <code>grayscale(1) brightness(0)</code>: each pair, so
+    <code>grayscale(0.5) brightness(0.5)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="animation-name: longer"></div><div class=bar style="background: rgb(101 126 156)"></div></div>
+    <figcaption>One function to two: the missing <code>grayscale</code> added at its initial value, 0, so
+    <code>grayscale(0.5)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="animation-name: from-none"></div><div class=bar style="background: rgb(101 126 156)"></div></div>
+    <figcaption><code>none</code> to <code>grayscale(1)</code>: <code>none</code> as <code>grayscale(0)</code>, so
+    the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise, discrete</h2>
+  <p>Otherwise, <q>Use discrete interpolation.</q> At 50%, the end value.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="animation-name: reorder"></div><div class=bar style="background: rgb(132 132 132)"></div></div>
+    <figcaption>The same functions in another order: the end, inverted and then gray.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="animation-name: reference"></div><div class=bar style="background: rgb(126 126 126)"></div></div>
+    <figcaption>To a <code>url()</code>: the end, the SVG filter's full gray, in linearRGB.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

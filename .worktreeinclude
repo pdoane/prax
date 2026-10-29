@@ -1,0 +1,3 @@
+# Copied into a new worktree: the benchmark baseline its work is measured against.
+perf/baseline/
+AGENTS.md

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating each filter function</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 20px 0; }
+  .box { width: 60px; height: 30px; margin: 0 20px; background: #4f81bd; }
+  .bar { width: 60px; height: 10px; margin: 0 20px; }
+  .move { animation: 100s linear -50s infinite alternate both; }
+  .quarter { animation: 100s linear -25s infinite alternate both; }
+  @keyframes blur { from { filter: blur(0); } to { filter: blur(8px); } }
+  @keyframes bright { from { filter: brightness(0%); } to { filter: brightness(2); } }
+  @keyframes turn { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(720deg); } }
+  @keyframes shadow { from { filter: drop-shadow(0 0 #8e44ad); } to { filter: drop-shadow(20px 20px #6aa36a); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 6.4 Interpolation of Filter Functions</div>
+  <h1>Interpolating each filter function</h1>
+  <p class=pr-lede><q>For interpolation of values in &lt;filter-function&gt;s, the steps corresponding to the first
+  matching condition in the following list must be run</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#interpolation-of-filter-functions">Filter Effects 1 §6.4</a></span>
+  Each box is 60 by 30 and blue, its filter animated to and fro (a still shows the frame the caption gives); a bar under
+  it is the color expected.</p>
+</header>
+
+<section>
+  <h2>As lengths, numbers, and shadow lists</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class="box move" style="animation-name: blur"></div></div>
+    <figcaption><code>blur(0)</code> to <code>blur(8px)</code>, as a length: at 50%, <code>blur(4px)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class="box move" style="animation-name: bright"></div><div class=bar style="background: #4f81bd"></div></div>
+    <figcaption><code>brightness(0%)</code> to <code>brightness(2)</code>: <q>0% being relative to 0</q>, so at 50%,
+    1: unchanged.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class="box quarter" style="animation-name: turn"></div><div class=bar style="background: rgb(166 116 56)"></div></div>
+    <figcaption><code>hue-rotate</code> from <code>0deg</code> to <code>720deg</code>, as a number: at 25%, 180deg,
+    brown.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class="box move" style="animation-name: shadow"></div></div>
+    <figcaption>A purple shadow at 0 0 to a green one at 20px 20px, as a shadow list: at 50%, 10px 10px, between
+    the two colors.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

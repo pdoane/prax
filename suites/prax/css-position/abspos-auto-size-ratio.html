@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic sizes with an aspect ratio, and no automatic minimum</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ab { position: absolute; aspect-ratio: 4; background: rgba(214, 138, 60, 0.6); outline: 1px solid #9c5f22; outline-offset: -1px; }
+  .flow { aspect-ratio: 4; width: 160px; background: rgba(79, 129, 189, 0.4); outline: 1px solid #2c5a8f; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 80px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4.1 Automatic Sizes of Absolutely-Positioned Boxes</div>
+  <h1>Automatic sizes with an aspect ratio, and no automatic minimum</h1>
+  <p class=pr-lede><q>However, if the box has an aspect-ratio, then an automatic size in the ratio-dependent axis is
+  instead resolved as a max-content size. When both axes have an automatic size, if only one axis has an auto inset
+  then that axis is the ratio-dependent axis, else the block axis is the ratio-dependent axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-auto-size">CSS Positioned Layout 3 §4.1</a></span>
+  Each stage is relative, 160 by 80; the orange box has <code>aspect-ratio: 4</code> and no width or height.</p>
+</header>
+
+<section>
+  <h2>Which axis follows the ratio</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=ab style="inset: 0"></div></div>
+    <figcaption><code>inset: 0</code>: no auto inset, so the height follows: the width stretches to 160, and the
+    height is 40, not 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=ab style="top: 0; bottom: 0; left: 0"></div></div>
+    <figcaption><code>top: 0; bottom: 0; left: 0</code>: the width has the auto inset and follows: the height
+    stretches to 80, and the width is 320, past the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No automatic minimum size</h2>
+  <p><q>The automatic minimum size of an absolutely-positioned box is always zero.</q> A box in flow with an aspect
+  ratio has a minimum height from its content; each box holds four lines of 10px letters, 80px of text.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 100px"><div class=flow>one<br>two<br>three<br>four</div></div>
+    <figcaption>In flow, blue, 160 wide: not 40 tall but 80, as tall as its text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure" style="height: 100px"><div class=ab style="inset: 0 0 auto 0">one<br>two<br>three<br>four</div></div>
+    <figcaption>Absolute, <code>top: 0; left: 0; right: 0</code>: 160 by 40, and the text overflows it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline self-alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; }
+  .f { display: flex; column-gap: 4px; height: 60px; }
+  .gc { display: grid; grid-template-columns: 200px; height: 90px; }
+  .g > div, .f > div, .gc > div { background: #f9cc9d; line-height: 1; padding: 0 3px; }
+  .gc > div { padding: 3px 0; writing-mode: vertical-rl; text-orientation: sideways; }
+  .s { font-size: 13px; }
+  .l { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.4 Baseline Self-Alignment</div>
+  <h1>Baseline self-alignment</h1>
+  <p class=pr-lede><q>Baseline self-alignment effectively increases the margins on the box to align its alignment
+  baseline with that of other baseline-aligned boxes in its baseline-sharing group.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-align-self">CSS Box Alignment 3 §6.4</a></span>
+  Items are highlighted; "Ag" at 13 and 32px.</p>
+</header>
+
+<section>
+  <h2>Flex items, and grid items in a row</h2>
+  <p>A flex item <q>in its flex line</q>; a grid item <q>in its startmost/endmost row or column</q>, by
+  <code>align-self</code> for a row.</p>
+  <figure>
+    <div class=pr-stage><div class=f><div class=s style="align-self: baseline">Ag</div><div class=l style="align-self: baseline">Ag</div><div class=s style="align-self: last baseline">Ag<br>Ag</div><div class=l style="align-self: last baseline">Ag</div></div></div>
+    <figcaption>A flexbox 60px tall: the first two on one baseline at the top; the last two, <code>last
+    baseline</code>, on another at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="background: rgba(79, 129, 189, 0.16)"><div class=s style="align-self: baseline; padding-bottom: 20px">Ag</div><div class=l style="align-self: baseline">Ag</div></div></div>
+    <figcaption>An <code>auto</code> row, tinted; the 13px item has 20px of bottom padding. <q>can increase the
+    intrinsic size contribution</q>: shifted down, it makes the row taller than either item.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Grid items in a column: justify-self</h2>
+  <p>By <code>justify-self</code>, items share <q>the grid’s column (block) axis</q>. The two items, in one 200px
+  column, are <code>vertical-rl</code> with sideways text, so their baselines run down the page.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=gc style="grid-template-rows: 45px 45px"><div class=s style="justify-self: baseline">Ag</div><div class=l style="justify-self: baseline">Ag</div></div></div>
+    <figcaption><code>justify-self: baseline</code>: the two on one vertical baseline, at the right, the fallback
+    <code>self-start</code> of a <code>vertical-rl</code> item. <span class=pr-flag>Safari</span> Both at the
+    left, as <code>start</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=gc style="grid-template-rows: 45px 45px"><div class=s style="justify-self: start">Ag</div><div class=l style="justify-self: start">Ag</div></div></div>
+    <figcaption><code>justify-self: start</code>, to compare: both at the left, their baselines apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Feature precedence</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Face Smcp"; src: url(../../../third_party/fonts/Literata.ttf); font-feature-settings: "smcp"; }
+  @font-face { font-family: "Face Heavy"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-variation-settings: "wght" 900; font-weight: 100 1000; }
+  .pr-sample { font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 7.2 Feature and variation precedence</div>
+  <h1>Feature precedence</h1>
+  <p class=pr-lede>Settings apply <q>in ascending order of precedence</q>: defaults, the variations of 'font-weight',
+  'font-width' and 'font-style', the language, the @font-face descriptors, 'font-variant' and its subproperties,
+  other properties, 'font-variation-settings', and last 'font-feature-settings'. <q>For situations where the combined
+  list of font feature settings contains more than one value for the same feature, the last value is used.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#feature-variation-precedence">CSS Fonts 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>Properties over descriptors</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Face Smcp'">Paris</div>
+    <figcaption>The descriptor's <code>"smcp"</code>: small capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Face Smcp'; font-feature-settings: 'smcp' 0">Paris</div>
+    <figcaption>The property's <code>"smcp" 0</code> comes later: lowercase.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'Face Heavy'; font-weight: 100">Paris</div>
+    <figcaption>'font-weight: 100' is step 2; the descriptor's <code>"wght" 900</code>, step 6, wins:
+    black. <span class=pr-flag>Safari</span> ignores the descriptor's variation: thin.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Face Heavy'; font-variation-settings: 'wght' 100">Paris</div>
+    <figcaption>The property's <code>"wght" 100</code>, step 12, wins: thin.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>font-feature-settings over font-variant</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-variant-numeric: oldstyle-nums; font-feature-settings: 'onum' 0">1983</div>
+    <figcaption><code>oldstyle-nums</code> and <code>"onum" 0</code>: lining figures.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-variant-ligatures: no-common-ligatures; font-feature-settings: 'liga'">fit</div>
+    <figcaption><code>no-common-ligatures</code> and <code>"liga"</code>: fi joined.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

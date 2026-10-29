@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background: areas and inheritance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .boxed { margin: 20px; padding: 10px; border: 10px dashed #2c5a8f; }
+  .tile { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10' fill='%23d68a3c'/><rect x='10' y='10' width='10' height='10' fill='%23d68a3c'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The background: areas and inheritance</h1>
+  <p class=pr-lede><q>Authors may specify the background of an element (i.e., its rendering surface) as either a color or
+  an image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+</header>
+
+<section>
+  <h2>Content, padding and border areas</h2>
+  <p><q>In terms of the box model, "background" refers to the background of the content, padding and border areas.
+  Border colors and styles are set with the border properties. Margins are always transparent.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=boxed style="background-color: #d68a3c"><div class=pr-content-area></div></div></div>
+    <figcaption>An orange color shows through the gaps of the blue dashed border, out to the border edge. The 20px
+    margin shows the stage's guides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="boxed tile"><div class=pr-content-area></div></div></div>
+    <figcaption>A checkered image, the same: it tiles under the content, the 10px padding and the border's gaps, and
+    not the margin.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not inherited, but transparent</h2>
+  <p><q>Background properties are not inherited, but the parent box's background will shine through by default because
+  of the initial 'transparent' value on 'background-color'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div style="padding: 10px; background-color: #d68a3c"><div class=pr-plain style="background: none; border-width: 1px"></div></div></div>
+    <figcaption>An orange parent with 10px padding. Its child, outlined in blue, has no background: the orange shows
+    through it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=tile style="padding: 10px"><div class=pr-plain style="background: none; border-width: 1px; height: 40px"></div></div></div>
+    <figcaption>A checkered parent: its child is not given the image to tile afresh. The checks run on unbroken from the
+    parent's padding into the child.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

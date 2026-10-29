@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The logical keyword on four-sided shorthands</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.7 Four-Directional Shorthand Properties</div>
+  <h1>The logical keyword on four-sided shorthands</h1>
+  <p class=pr-lede><q>authors can specify the logical keyword at the beginning of the property value to indicate that the values map to the flow-relative properties instead of the physical ones.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#logical-shorthand-keyword">CSS Logical Properties and Values 1 §4.7</a></span> <q>The proposed syntax for this feature is under discussion and is almost guaranteed to change from what is described here.</q> No browser accepts it; under that open issue (#1282) no browser is flagged. A browser that drops the declaration draws no margin.</p>
+</header>
+
+<section>
+  <h2>Four values</h2>
+  <p><q>If four values are set, they apply to the block-start, inline-start, block-end, and inline-end sides in that order.</q> Each A has <code>margin: logical 10px 20px 30px 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="margin: logical 10px 20px 30px 40px">A</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px above, 20px at the left, 30px below, 40px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-margin-area><div class=pr-a style="margin: logical 10px 20px 30px 40px">A</div></div></div>
+    <figcaption><code>rtl</code>: 10px above, 20px at the right, 30px below, 40px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-margin-area><div class=pr-a style="margin: logical 10px 20px 30px 40px">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: 10px at the right, 20px above, 30px at the left, 40px below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two values</h2>
+  <p><q>If two values are set, the first is for block-start and block-end, the second is for inline-start and inline-end.</q> Each A has <code>margin: logical 0 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="margin: logical 0 40px">A</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 40px at the left and right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-margin-area><div class=pr-a style="margin: logical 0 40px">A</div></div></div>
+    <figcaption><code>rtl</code>: the same.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-margin-area><div class=pr-a style="margin: logical 0 40px">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: 40px above and below.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>symbol: refX and refY</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <symbol id="none" width="40" height="20" viewBox="0 0 20 10"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <symbol id="zero" width="40" height="20" viewBox="10 0 20 10" refX="0" refY="0"><rect x="10" width="20" height="10" fill="#4f81bd" /><circle cx="20" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <symbol id="unset" width="40" height="20" viewBox="10 0 20 10"><rect x="10" width="20" height="10" fill="#4f81bd" /><circle cx="20" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <symbol id="center" width="40" height="20" viewBox="0 0 20 10" refX="center" refY="center"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <symbol id="corner" width="40" height="20" viewBox="0 0 20 10" refX="right" refY="bottom"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.4.1 Attributes</div>
+  <h1>symbol: refX and refY</h1>
+  <p class=pr-lede><q>The ‘refX’ and ‘refY’ attributes define the reference point of the symbol which is to be placed
+  exactly at the symbol's x,y positioning coordinate</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SymbolAttributes">SVG 2 §5.4.1</a></span>
+  Each stage is an SVG 160 by 60 with a crosshair at 80, 30, where each <code>use</code> puts the symbol. Each symbol
+  is 40 by 20, blue with an orange dot in its middle.</p>
+</header>
+
+<section>
+  <h2>Keywords</h2>
+  <p><q>Keyword values have the same meaning as for the ‘refX’ and ‘refY’ attributes on the ‘marker’ element,
+  resolving to 0%, 50%, or 100% in the applicable direction.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#none" x="80" y="30" /><path class=pr-baseline d="M 80 0 V 60 M 0 30 H 160" /></svg></div>
+    <figcaption>Neither: its top left at 80, 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#center" x="80" y="30" /><path class=pr-baseline d="M 80 0 V 60 M 0 30 H 160" /></svg></div>
+    <figcaption><code>center center</code>: its middle at 80, 30, the dot on the crosshair.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Its top
+    left there.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#corner" x="80" y="30" /><path class=pr-baseline d="M 80 0 V 60 M 0 30 H 160" /></svg></div>
+    <figcaption><code>right bottom</code>: its bottom right at 80, 30. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Its top left there.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the viewBox's coordinates; unset is not 0</h2>
+  <p><q>Unlike other positioning attributes, ‘refX’ and ‘refY’ are interpreted as being in the coordinate system of the
+  symbol contents, after application of the ‘viewBox’ and ‘preserveAspectRatio’ attributes.</q> <q>For backwards
+  compatibility, the behavior when ‘refX’ and ‘refY’ are not specified on a ‘symbol’ is different from when they are
+  specified with a value of 0</q>. Each <code>viewBox</code> starts at x 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#unset" x="80" y="30" /><path class=pr-baseline d="M 80 0 V 60 M 0 30 H 160" /></svg></div>
+    <figcaption>Unset: <q>the top or left side of the symbol's rectangular viewport region (regardless of the
+    ‘viewBox’ coordinates)</q> at 80, 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#zero" x="80" y="30" /><path class=pr-baseline d="M 80 0 V 60 M 0 30 H 160" /></svg></div>
+    <figcaption><code>refX="0" refY="0"</code>: x 0 of the contents, 10 units, 20 px left of the symbol's edge, at
+    80, so the symbol from x 100. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> From x 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

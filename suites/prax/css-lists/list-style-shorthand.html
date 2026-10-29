@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style shorthand: strings and symbols()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .arrow { list-style: "→ " inside; }
+  .foot { list-style: symbols("*" "†" "‡") outside; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.6 Styling Markers: the list-style shorthand property</div>
+  <h1>The list-style shorthand: strings and symbols()</h1>
+  <p class=pr-lede><q>The 'list-style' property is a shorthand notation for setting the three properties
+  'list-style-type', 'list-style-image', and 'list-style-position' at the same place in the style sheet.</q> Since CSS 2,
+  its type may be a string or <code>symbols()</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-style-property">CSS Lists and Counters 3 §3.6</a></span></p>
+</header>
+
+<section>
+  <h2>A string, and an anonymous counter style</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=arrow><li>one<li>two</ul></div>
+    <figcaption><code>list-style: "→ " inside</code>: an arrow inside each tinted item, "→ one", "→ two".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol class=foot><li>one<li>two<li>three<li>four</ol></div>
+    <figcaption><code>list-style: symbols("*" "†" "‡") outside</code>: *, †, ‡, then ** outside the items. <span class=pr-flag>Safari</span> Has no <code>symbols()</code>: 1. to 4.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

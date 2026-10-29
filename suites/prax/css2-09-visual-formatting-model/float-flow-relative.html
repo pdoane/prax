@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The float property: start and end</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.1 Positioning the float: the 'float' property</div>
+  <h1>The float property: start and end</h1>
+  <p class=pr-lede>CSS 2's <code>float</code> names a physical side, <code>left</code> or <code>right</code>, whatever
+  the direction of the text. A later specification adds values that name the start or the end of the line. Each float
+  is 60 by 40.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-logical-1/#float-clear">CSS Logical Properties and Values 1 §2.2</a></div>
+  <h2>inline-start and inline-end</h2>
+  <p>The values <code>inline-start | inline-end</code> are new for <code>float</code>. <q>The mapping on these
+  properties uses the writing mode of the element’s containing block.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit f" style="float: inline-start">start</div>Text that runs from left to right.</div>
+    <figcaption><code>float: inline-start</code> in a left-to-right block: at the left, as <code>left</code>
+    is.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl"><div class="pr-a pr-fit f" style="float: inline-start">start</div>Text that runs from right to left.</div>
+    <figcaption>The same float in a block with <code>direction: rtl</code>: its line starts at the right, and so does
+    the float.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl"><div class="pr-b pr-fit f" style="float: inline-end">end</div>Text that runs from right to left.</div>
+    <figcaption><code>float: inline-end</code> with <code>direction: rtl</code>: at the left, where the line
+    ends.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

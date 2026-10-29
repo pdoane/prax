@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-self and blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.2.1 Block-Level Boxes</div>
+  <h1>align-self and blocks</h1>
+  <p class=pr-lede><q>The 'align-self' property does not apply to block-level boxes (including floats), because there
+  is more than one item in the block axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-block">CSS Box Alignment 3 §6.2.1</a></span>
+  Each stage is a block 60px tall.</p>
+</header>
+
+<section>
+  <h2>No effect on blocks or floats</h2>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="align-self: end">A</div><div class=pr-b style="align-self: center">B</div></div>
+    <figcaption>A <code>align-self: end</code>, B <code>center</code>: A and B at the top, one after the other.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="float: left; align-self: end">A</div></div>
+    <figcaption>The float A, <code>align-self: end</code>: at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The block's contents move with align-content</h2>
+  <p>The block itself aligns its contents as a whole: see <a href="align-content-block.html">align-content on
+  blocks</a>.</p>
+  <figure>
+    <div class=pr-stage style="align-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption>The stage <code>align-content: end</code>: A and B together at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-items: end"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption>The stage <code>align-items: end</code>: no effect, A and B at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

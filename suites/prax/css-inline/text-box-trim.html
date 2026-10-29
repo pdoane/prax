@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-box-trim on blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .t { font: 20px/40px "PR Baseline Diagnostic"; background: rgba(214, 138, 60, 0.5); }
+  .in { background: rgba(79, 129, 189, 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6.2 Trimming Over/Under Text: the text-box-trim property</div>
+  <h1>text-box-trim on blocks</h1>
+  <p class=pr-lede><q>On block containers … specifies whether to
+  trim half-leading at the start/end of the box's content to better match its content edge to its text
+  content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-box-trim">CSS Inline Layout 3 §6.2</a></span>
+  Each orange block: 20px PR Baseline Diagnostic on 40px lines, █ its ascent to its descent, the edge
+  <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>The first and last lines</h2>
+  <p><code>trim-start</code>: <q>trim the block-start side of the first formatted line to the specified metric of its
+  root inline box.</q> <code>trim-end</code>: <q>trim the block-end side of the last formatted line</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t>██<br>██</div></div>
+    <figcaption><code>none</code>: 10px of leading at each end.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-start">██<br>██</div></div>
+    <figcaption><code>trim-start</code>: the block starts at the first █'s top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-end">██<br>██</div></div>
+    <figcaption><code>trim-end</code>: it ends at the last █'s bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both">██<br>██</div></div>
+    <figcaption><code>trim-both</code>: both, 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Through child blocks, not through padding</h2>
+  <p><q>If there is no such line, or if there is intervening non-zero padding or borders, there is no effect.</q> The orange block has <code>trim-both</code>; its blue child
+  holds the lines.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both"><div class=in>██<br>██</div></div></div>
+    <figcaption>The child's lines trimmed: 60px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both"><div class=in style="padding-bottom: 1px">██<br>██</div></div></div>
+    <figcaption>The child with 1px of bottom padding: its end untrimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both"><div><span></span></div>██<br>██</div></div>
+    <figcaption>After a phantom line, an empty span's: trimmed. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Untrimmed at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

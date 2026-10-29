@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-spacing shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 4px; font: 30px/44px "PR Noto Sans JP"; white-space: nowrap; }
+  .pr-stage { width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.6 Character Class Spacing Shorthand: the text-spacing property</div>
+  <h1>The text-spacing shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for setting 'text-spacing-trim' and 'text-autospace' in a single
+  declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-spacing-property">CSS Text 4 §8.6</a></span>
+  Each stage, at 30px, is 漢A」「字: an autospace of 3.75px either side of "A", and 」「, which collapse unless
+  <code>space-all</code>.</p>
+</header>
+
+<section>
+  <h2>none, and one half reset</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: ideograph-alpha">漢A」「字</div>
+    <figcaption><code>text-autospace: ideograph-alpha</code> alone, for comparison: spaced after 漢, 」「
+    collapsed. <span class=pr-flag>Chrome</span> No autospace. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 」「 full-width.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-spacing: none">漢A」「字</div>
+    <figcaption><code>none</code>: <q>sets 'text-spacing-trim' to 'space-all' and 'text-autospace' to
+    'no-autospace'</q>: "A" tight, 」「 full-width each. <span class=pr-flag>Chrome</span> 」「 collapsed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-spacing: space-all ideograph-alpha">漢A」「字</div>
+    <figcaption><code>space-all ideograph-alpha</code>: both longhands at once: spaced after 漢, 」「
+    full-width. <span class=pr-flag>Chrome</span> No autospace, 」「 collapsed. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No autospace.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: no-autospace; text-spacing: trim-both">漢A」「字</div>
+    <figcaption><code>text-autospace: no-autospace</code>, then <code>text-spacing: trim-both</code>: autospace
+    reset to its initial <code>normal</code>, so spaced after 漢. <span class=pr-flag>Chrome</span> No autospace. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No autospace, 」「 full-width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

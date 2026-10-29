@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 4: the container's main size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; background: #f6d7b4; }
+  .t { background: #b9cde6; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.2 Line Length Determination, step 4</div>
+  <h1>Step 4: the container's main size</h1>
+  <p class=pr-lede><q>Determine the main size of the flex container using the rules of the formatting context in which
+  it participates.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#line-sizing">CSS Flexible Box Layout 2 §9.2</a></span>
+  Each container is orange, its items 40px wide or tall.</p>
+</header>
+
+<section>
+  <h2>A row container: a width as a block's</h2>
+  <figure>
+    <div class="pr-stage"><div class="flex" style="margin: 0 30px"><div class="pr-a pr-fit" style="width: 40px">A</div></div></div>
+    <figcaption>Block-level, <code>width: auto</code>, <code>margin: 0 30px</code>: it fills the stage less its
+    margins, 140px from 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">ab <div class="flex" style="display: inline-flex; vertical-align: top"><div class="pr-a pr-fit" style="width: 40px">A</div><div class="pr-b pr-fit" style="width: 40px">B</div></div> cd</div>
+    <figcaption><code>inline-flex</code> between "ab" and "cd": shrink-to-fit, 80px, from 30px to 110px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A column container: a height as a block's</h2>
+  <p><q>The automatic block size of a block-level flex container is its max-content size.</q></p>
+  <figure>
+    <div class="pr-stage" style="height: 80px"><div class="flex" style="flex-direction: column"><div class="pr-a pr-fit" style="height: 20px">A</div><div class="pr-b pr-fit" style="height: 40px">B</div></div></div>
+    <figcaption><code>height: auto</code>: 60px, as its items, with no orange below them.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="height: 80px"><div class="flex" style="flex-direction: column; height: 50%"><div class="pr-a pr-fit" style="height: 20px">A</div></div></div>
+    <figcaption><code>height: 50%</code> of the stage's 80px: 40px, orange below A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a vertical writing mode</h2>
+  <p>A <code>vertical-rl</code> stage 100px tall: a row container's main size is its height, which fills the stage
+  as a block's inline size does.</p>
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 100px"><div class="flex" style="margin-top: 20px"><div class="pr-a pr-fit" style="height: 40px; width: 20px"></div></div></div>
+    <figcaption>A row container of <code>margin-top: 20px</code>: 80px tall from 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 100px"><div class="flex" style="flex-direction: column"><div class="pr-a pr-fit" style="height: 20px; width: 40px"></div><div class="pr-b pr-fit" style="height: 20px; width: 20px"></div></div></div>
+    <figcaption>A column container: its main size is its width, from its items, 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

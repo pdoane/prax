@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Matching style</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: Slants; src: url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: Slants; src: url(../../../third_party/fonts/Cousine.ttf); font-style: oblique 20deg; }
+  @font-face { font-family: Cursive Only; src: url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: Cursive Only; src: url(../../../third_party/fonts/AD.woff); font-style: italic; }
+  @font-face { font-family: Not Upright; src: url(../../../third_party/fonts/AD.woff); font-style: italic; }
+  @font-face { font-family: Not Upright; src: url(../../../third_party/fonts/Cousine.ttf); font-style: oblique 20deg; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 4.2</div>
+  <h1>Matching style</h1>
+  <p class=pr-lede>For 'italic', italic faces first, then <q>oblique values greater than or equal to 11deg</q>, then
+  the rest. For 'oblique' of 11deg or more, oblique faces first, then italic. For 'normal', <q>Oblique values greater
+  than or equal to 0 are checked in ascending order</q> before any italic. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4
+  §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Italic without an italic face</h2>
+  <p>"Slants" has Tinos upright and Cousine declared <code>oblique 20deg</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Slants; font-style: italic">Handgloves</div>
+    <figcaption><code>italic</code>: no italic face; the 20deg oblique is at least 11deg: Cousine.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Slants">Handgloves</div>
+    <figcaption><code>normal</code>: 0deg first: Tinos.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Oblique without an oblique face</h2>
+  <p>"Cursive Only" has Tinos upright and a handwriting face declared <code>italic</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Cursive Only'; font-style: oblique 20deg; font-synthesis-style: none">Handgloves</div>
+    <figcaption><code>oblique 20deg</code>, no synthesis: no oblique face, so the italic: handwriting.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Normal without an upright face</h2>
+  <p>"Not Upright" has a handwriting face declared <code>italic</code> and Cousine declared <code>oblique
+  20deg</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'Not Upright'">Handgloves</div>
+    <figcaption><code>normal</code>: oblique values above 0 before italic: Cousine. <span class=pr-flag>Safari</span> takes the italic face: handwriting.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Aligning the grid in its container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .cb { position: relative; display: grid; height: 40px; place-content: end; }
+  .abs { position: absolute; inset: 0; grid-area: 1 / 1 / auto / auto; background: #8e44ad; }
+  .pr-stage.pr-vertical { height: 120px; }
+  .n .pr-stage { width: 150px; }
+  .n figcaption { max-width: 150px; }
+  .n figure { margin-right: 12px; }
+  .n .pr-stage.pr-vertical { width: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.5 Aligning the Grid: the justify-content and align-content properties</div>
+  <h1>Aligning the grid in its container</h1>
+  <p class=pr-lede><q>If the grid’s outer edges do not correspond to the grid container’s content edges (for example,
+  if no columns are flex-sized), the grid tracks are aligned within the content box according to the justify-content
+  and align-content properties on the grid container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-align">CSS Grid Layout 2 §11.5</a></span>
+  The values: <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-grid">CSS Box Alignment 3 §5.1.4</a></span>.</p>
+</header>
+
+<section class=n>
+  <h2>Only when the grid does not fill the container</h2>
+  <p>Each grid is <code>justify-content: end</code>; the first two stages are 150px wide.</p>
+  <figure>
+    <div class=pr-stage><div style="display: grid; grid-template-columns: 40px 40px; justify-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>40px 40px</code>: the columns at the end, A at 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: grid; grid-template-columns: 40px 1fr; justify-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>40px 1fr</code>: the grid fills the container; A stays at 0.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical"><div style="display: grid; grid-template-columns: 40px 40px; justify-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>vertical-rl</code>, 120px tall: the columns at the bottom, from 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No tracks</h2>
+  <p><q>If there are no grid tracks (the explicit grid is empty, and no tracks were created in the implicit grid), the
+  sole grid line in each axis is aligned with the start edge of the grid container.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide"><div class=cb><div class=abs></div></div></div>
+    <figcaption>An empty grid 40px tall, <code>place-content: end</code>; a purple box, absolutely positioned from line
+    1 to the far edges in both axes, fills it, as line 1 is at its top left. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> align line 1 to the bottom right, and the box is empty.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

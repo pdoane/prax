@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style shorthand: on lists, not items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .warn ol.alpha li  { list-style: lower-alpha }
+  .warn ul li        { list-style: disc }
+  .child ol.alpha > li  { list-style: lower-alpha }
+  .child ul li   { list-style: disc }
+  .lists ol.alpha  { list-style: lower-alpha }
+  .lists ul        { list-style: disc }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style shorthand: on lists, not items</h1>
+  <p class=pr-lede><q>Although authors may specify 'list-style' information directly on list item elements (e.g., "li" in
+  HTML), they should do so with care.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span> Each figure is the specification's
+  markup: an <code>ol class=alpha</code> item "level 1" holding a <code>ul</code> item "level 2".</p>
+</header>
+
+<section>
+  <h2>Unexpected results due to cascade</h2>
+  <p><q>The desired rendering would have level 1 list items with 'lower-alpha' labels and level 2 items with 'disc'
+  labels. However, the cascading order will cause the first style rule (which includes specific class information) to
+  mask the second.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <pre class=pr-source>ol.alpha li  { list-style: lower-alpha }
+ul li        { list-style: disc }</pre>
+  <figure>
+    <div class="pr-stage pr-text warn"><ol class=alpha><li>level 1<ul><li>level 2</ul></ol></div>
+    <figcaption>"a." before level 1, and "a." before level 2 as well: the more specific rule wins.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two solutions</h2>
+  <p><q>The following rules solve the problem by employing a child selector instead</q>. <q>Another solution would be to
+  specify 'list-style' information only on the list type elements</q>: <q>Inheritance will transfer the 'list-style'
+  values from OL and UL elements to LI elements. This is the recommended way to specify list style information.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text child"><ol class=alpha><li>level 1<ul><li>level 2</ul></ol></div>
+    <figcaption><code>ol.alpha &gt; li</code> and <code>ul li</code>: "a." before level 1, a disc before level
+    2.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text lists"><ol class=alpha><li>level 1<ul><li>level 2</ul></ol></div>
+    <figcaption><code>ol.alpha</code> and <code>ul</code>, inherited by the items: the same, "a." and a
+    disc.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

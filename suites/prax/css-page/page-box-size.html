@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The size of the page box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 3 The Page Model</div>
+  <h1>The size of the page box</h1>
+  <p class=pr-lede><q>The containing block of the page box is specified using the 'size' property in the page context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-model">CSS Paged Media 3 §3</a></span> The root's blue background marks the page area. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Its size and margins, as a block's</h2>
+  <p><q>The width and horizontal margins of the page box are then calculated exactly as for a non-replaced block element in normal flow.</q> <q>The height and vertical margins of the page box are calculated analogously</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; width: 160px; height: 100px; margin: auto; background: #f9cc9d } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div>"></iframe>
+    <figcaption>With <code>width: 160px; height: 100px; margin: auto</code>, each page area is 160 by 100, centered: margins of 40px at the sides and 30px above and below. Page 1: lines 1 to 5; page 2: 6 and 7. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The width and height are ignored and the margins are 0: one page holds the seven lines.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; width: 160px; margin: 20px } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div>"></iframe>
+    <figcaption><code>width: 160px; margin: 20px</code> is over-constrained, so <q>the containing block is resized to coincide with the margin edges of the page box</q>: the page is 200 by 160, its page area 160 by 120. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The width is ignored: the page is 240 wide, its page area 200.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

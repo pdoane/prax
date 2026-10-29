@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows: automatic columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; overflow: hidden; height: 160px; }
+  .cb { max-height: 60px; outline: 1px dashed #c0392b; }
+  .v { writing-mode: vertical-rl; background: #b9cde6; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3.2 Auto-sizing Block Containers in Orthogonal Flows</div>
+  <h1>Orthogonal flows: automatic columns</h1>
+  <p class=pr-lede>A block container in an orthogonal flow whose inline size is auto gets columns:
+  <q>Note that this requirement automatically triggers multi-column flow on all block containers.</q> <q>The automatic
+  triggering of multi-column flow is at-risk and may be dropped during CR.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#auto-multicol">CSS Writing Modes 4 §7.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Columns in the containing block's flow</h2>
+  <p>The column width is <code>min(max-content, max(min-content, constraint))</code>; the constraint here is the
+  containing block's <code>max-height: 60px</code>, outlined in red. The <q>used column length</q> is the blue
+  <code>vertical-rl</code> block's stretch-fit block size, the stage's 200px width. The stages clip at 160px.
+  <q>If the content neither line-wraps nor fragments within the multi-column container, then the used inline size is
+  the max-content inline size of the box's contents.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=cb><div class=v>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www xxx yyy zzz</div></div></div>
+    <figcaption>Long text: columns 60px tall and 200px wide, read from the right, the second below the first, past
+    the red outline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> make no columns: one block 60px tall, its first lines off the stage's right
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cb><div class=v>ab cd</div></div></div>
+    <figcaption>"ab cd" fits in one line: no columns, the block as tall as the line and 20px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

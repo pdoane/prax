@@ -1,0 +1,6 @@
+# Pages that a plain run or a run of modules leaves out because they test what the engine has decided not to build, as
+# tools/suite/wpt/web_features.txt rules. An entry is the file on one line, then the reason, indented. The reason starts
+# with what is cut. A listed file that no longer exists fails the run. --match and --all run these pages like any other.
+
+css/css-color/at-color-profile-001.html
+    @color-profile: no engine ships it, and its colors would wait on profiles that load.

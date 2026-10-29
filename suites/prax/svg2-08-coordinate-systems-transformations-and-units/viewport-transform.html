@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The viewport's equivalent transform</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="content"><rect width="40" height="20" fill="#4f81bd" /><circle cx="20" cy="10" r="5" fill="#d68a3c" /></g>
+  <g id="shifted"><rect x="10" y="5" width="40" height="20" fill="#4f81bd" /><circle cx="30" cy="15" r="5" fill="#d68a3c" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.2 Computing the equivalent transform of an SVG viewport</div>
+  <h1>The viewport's equivalent transform</h1>
+  <p class=pr-lede><q>This process converts the min-x, min-y, width and height values of a viewBox attribute, the
+  position and size of the element on which the viewBox attribute is defined, and the value of the
+  preserveAspectRatio attribute on that element into a translation and a scale that is applied to content contained
+  by the element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#ComputingAViewportsTransform">SVG 2 §8.2</a></span>
+  Each stage is an SVG 160 by 60. The content is a blue rect as large as the <code>viewBox</code>, with an orange
+  dot of radius 5 at its middle.</p>
+</header>
+
+<section>
+  <h2>Scale, then translate</h2>
+  <p><q>If align is not ‘none’ and meetOrSlice is ‘meet’, set the larger of scale-x and scale-y to the smaller.</q>
+  <q>Initialize translate-x to e-x - (vb-x * scale-x).</q> <q>If align contains ‘xMid’, add (e-width - vb-width *
+  scale-x) / 2 to translate-x.</q> <q>The transform applied to content contained by the element is given by
+  translate(translate-x, translate-y) scale(scale-x, scale-y).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 40 20"><use href="#content" /></svg></div>
+    <figcaption><code>viewBox="0 0 40 20"</code>: scales 4 and 3, so 3; translate 20, 0. The rect 120 by 60 from
+    x 20, the dot of radius 15 at 80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="10 5 40 20"><use href="#shifted" /></svg></div>
+    <figcaption><code>viewBox="10 5 40 20"</code>, the content at 10, 5: translate 0 − 30 + 20 and 0 − 15, so the
+    same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="10" y="10" width="60" height="40" /><svg x="10" y="10" width="60" height="40" viewBox="0 0 40 20"><use href="#content" /></svg></svg></div>
+    <figcaption>A nested <code>svg</code> 60 by 40 at 10, 10, outlined: scale 1.5; translate 10, 10 + 5. The
+    rect 60 by 30 from 10, 15.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none, and slice</h2>
+  <p><q>Otherwise, if align is not ‘none’ and meetOrSlice is ‘slice’, set the smaller of scale-x and scale-y to the
+  larger.</q> With <code>none</code>, each scale stays its own.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 40 20" preserveAspectRatio="none"><use href="#content" /></svg></div>
+    <figcaption><code>none</code>: scales 4 and 3; the rect fills the stage, the dot an ellipse 40 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 40 20" preserveAspectRatio="xMidYMid slice"><use href="#content" /></svg></div>
+    <figcaption><code>xMidYMid slice</code>: scale 4; translate 0, −10. The rect fills the stage, the dot of
+    radius 20 at 80, 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

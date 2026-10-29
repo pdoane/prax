@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: from notch to square</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; border-radius: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.7 Corner Shaping: the corner-*-shape properties</div>
+  <h1>corner-shape: from notch to square</h1>
+  <p class=pr-lede><q>The different corner shapes can all be expressed as different parameters to a superellipse.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shaping">CSS Borders and Box Decorations 4 §3.7</a></span> Each blue box is 120 by 60 with <code>border-radius: 30px</code>.</p>
+</header>
+
+<section>
+  <h2>The keywords</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: round"></div></div>
+    <figcaption><code>round</code>: quarter circles.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: squircle"></div></div>
+    <figcaption><code>squircle</code>, K = 2. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: square"></div></div>
+    <figcaption><code>square</code>: square corners. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel"></div></div>
+    <figcaption><code>bevel</code>, K = 0: diagonals. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop"></div></div>
+    <figcaption><code>scoop</code>, K = −1: concave. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: notch"></div></div>
+    <figcaption><code>notch</code>: 30 by 30 cut out. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>superellipse(K)</h2>
+  <p><q>Values larger than 1 make it more "square"</q> <q>Values between 0 and 1 make it "flatter"</q> <q>Negative values define concave curves</q> (a note)</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: superellipse(0.5)"></div></div>
+    <figcaption><code>superellipse(0.5)</code>: flatter than round. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: superellipse(-0.5)"></div></div>
+    <figcaption><code>superellipse(-0.5)</code>: a shallow scoop. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: superellipse(-infinity)"></div></div>
+    <figcaption><code>superellipse(-infinity)</code>: as <code>notch</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

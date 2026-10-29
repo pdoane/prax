@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pseudo-elements on text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .letter::first-letter { fill: #d68a3c; }
+  .line::first-line { fill: #d68a3c; }
+  .before::before { content: "XX"; }
+  .after::after { content: "XX"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10 Properties and pseudo-elements</div>
+  <h1>Pseudo-elements on text</h1>
+  <p class=pr-lede><q>Additionally, the @font-face rule must be supported for font selection as well as the
+  ::first-line and ::first-letter pseudo-elements must be supported on ‘text’ elements.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextProperties">SVG 2 §11.10</a></span>
+  Each stage is an SVG 160 by 60 holding text in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter, at
+  <code>x="20" y="35"</code>, filled blue.</p>
+</header>
+
+<section>
+  <h2>::first-letter and ::first-line</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="pr-measure letter" x="20" y="35">first letter</text></svg></div>
+    <figcaption><code>::first-letter { fill: #d68a3c }</code>: the f orange, the rest blue.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> All blue. <span class=pr-flag>Firefox</span>
+    All orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="pr-measure line" x="20" y="35">first line</text></svg></div>
+    <figcaption><code>::first-line { fill: #d68a3c }</code>: the one line, all orange.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> All blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No ::before or ::after</h2>
+  <p><q>Additionally, the ::before and ::after generated content pseudo-elements must not apply to SVG text
+  elements.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="pr-measure before" x="20" y="35">abc</text></svg></div>
+    <figcaption><code>::before { content: "XX" }</code>: no XX, "abc" from 20 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class=pr-measure x="20" y="35">a<tspan class=after>b</tspan>c</text></svg></div>
+    <figcaption><code>::after { content: "XX" }</code> on a <code>tspan</code> of "b": no XX, "abc" from 20 to
+    50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

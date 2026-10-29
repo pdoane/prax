@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: attr()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t1::before { content: attr(title) ": "; font-weight: 600; }
+  .t2::after { content: " (" attr(data-unit) ")"; color: #2c5a8f; }
+  .t3::before { content: "[" attr(data-missing) "] "; }
+  .t4::before { content: attr(data-markup) " "; }
+  .t5::before { content: attr(DATA-UNIT) " "; }
+  .t6 .child::before { content: "[" attr(title) "] "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: attr()</h1>
+  <p class=pr-lede><q>attr(X): This function returns as a string the value of attribute X for the subject of the
+  selector.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+</header>
+
+<section>
+  <h2>The value of an attribute, as a string</h2>
+  <p><q>The string is not parsed by the CSS processor. If the subject of the selector does not have an attribute X, an
+  empty string is returned. The case-sensitivity of attribute names depends on the document language.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t1 title=Warning>text</div></div>
+    <figcaption><code>title=Warning</code>, <code>attr(title) ": "</code>: "<b>Warning:</b> text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t2 data-unit=kg>12</div></div>
+    <figcaption><code>data-unit=kg</code> after the content: "12 (kg)", "(kg)" in blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t3>text</div></div>
+    <figcaption>No such attribute: the empty string, so "[] text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t4 data-markup='&lt;b&gt;bold&lt;/b&gt; "q" counter(n)'>text</div></div>
+    <figcaption>The attribute is <code>&lt;b&gt;bold&lt;/b&gt; "q" counter(n)</code>, and that exact text is shown,
+    unparsed and not bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t5 data-unit=kg>text</div></div>
+    <figcaption>In HTML, attribute names are not case-sensitive: <code>attr(DATA-UNIT)</code> finds
+    <code>data-unit</code>, "kg text".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the subject's attributes</h2>
+  <p><q>In CSS 2.2, it is not possible to refer to attribute values for other elements than the subject of the
+  selector.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=t6 title=outer><div class=child>text</div></div></div>
+    <figcaption><code>.t6 .child:before { content: "[" attr(title) "] " }</code>: the parent's title is not used, so
+    "[] text".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>APIs gated by user activation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A lamp: lit green while the window has transient activation. The page's script lights it. */
+  .lamp { display: block; height: 20px; margin: 0 0 10px; padding: 0 6px; background: #c9ced6; color: #1f2430;
+          font-size: 12px; line-height: 20px }
+  .lamp.on { background: #6aa36a; color: white }
+  #full:fullscreen { background: var(--pr-stage); padding: 40px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.4.3 APIs gated by user activation</div>
+  <h1>APIs gated by user activation</h1>
+  <p class=pr-lede><q>APIs that are dependent on user activation are classified into different levels</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#user-activation-gated-apis">HTML §6.4.3</a></span></p>
+</header>
+<section>
+  <h2>Gated: only while the activation lasts</h2>
+  <p>Transient activation-gated APIs <q>require the transient activation state to be true, but they don't consume
+  it</q>. <code>showPicker()</code> is one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#user-activation-gated-apis">§6.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input type=color id=color style="display: block; width: 40px; height: 20px; margin: 0 0 10px">
+        <button class=pr-target id=now>showPicker() now</button>
+        <button class=pr-target id=later>showPicker() in 10 seconds</button>
+      </div>
+      <ol class=pr-log id=log1 data-lines=2></ol>
+    </div>
+    <figcaption>Click the first button: the color picker opens. Close it, click the second and wait: after 10
+    seconds the activation has expired, nothing opens, and the log shows <code>NotAllowedError</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Consuming: once per activation</h2>
+  <p>Transient activation-consuming APIs <q>require the transient activation state to be true, and they consume user
+  activation in each call to prevent multiple calls per user activation.</q> <code>requestFullscreen()</code> is
+  one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#user-activation-gated-apis">§6.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" id=full>
+      <div style="padding: 10px 20px 0">
+        <span class=lamp id=lamp>transient activation</span>
+        <button class=pr-target id=fullscreen>requestFullscreen()</button>
+      </div>
+    </div>
+    <figcaption>Click the button: this stage fills the screen, and its lamp is grey at once, though a click has just
+    lit it: the call consumed the activation. Press Esc to come back.</figcaption>
+  </figure>
+</section>
+<script>
+  // Calls showPicker() now or later and logs what it throws; requests fullscreen for the second stage; lights the lamp
+  // while the window has transient activation.
+  const log1 = document.getElementById("log1");
+  log1.style.setProperty("--pr-log-lines", 2);
+  function pick() {
+      const item = document.createElement("li");
+      try {
+          document.getElementById("color").showPicker();
+          item.textContent = "showPicker() opened";
+      } catch (error) {
+          item.textContent = "showPicker() threw " + error.name;
+      }
+      log1.append(item);
+      while (log1.children.length > 2)
+          log1.firstElementChild.remove();
+  }
+  document.getElementById("now").addEventListener("click", pick);
+  document.getElementById("later").addEventListener("click", () => setTimeout(pick, 10000));
+  document.getElementById("fullscreen").addEventListener("click", () => document.getElementById("full").requestFullscreen());
+  const lamp = document.getElementById("lamp");
+  (function update() {
+      lamp.classList.toggle("on", navigator.userActivation.isActive);
+      requestAnimationFrame(update);
+  })();
+</script>
+</body>
+</html>

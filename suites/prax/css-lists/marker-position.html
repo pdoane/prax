@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outside markers: on the inline-start side</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .pr-stage ol { padding: 0; padding-inline-start: 30px; }
+  .pr-stage.v { font-family: "PR Noto Sans JP"; width: 80px; height: 100px; }
+  .vrl { writing-mode: vertical-rl; }
+  .vlr { writing-mode: vertical-lr; }
+  .slr { writing-mode: sideways-lr; }
+  .rtl { direction: rtl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.5 Positioning Markers: The list-style-position property</div>
+  <h1>Outside markers: on the inline-start side</h1>
+  <p class=pr-lede><q>CSS does not specify the precise location of the marker box or its position in the
+  painting order, but does require that it be placed on the inline-start side of the box, using the writing mode of the
+  box indicated by 'marker-side'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a></span>
+  Each list has two items, tinted blue, and 30px of <code>padding-inline-start</code>.</p>
+</header>
+
+<section>
+  <h2>Horizontal and vertical, left to right</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol><li>one<li>two</ol></div>
+    <figcaption><code>horizontal-tb</code>: "1." and "2." left of the items.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text v vrl"><ol><li>一番<li>二番</ol></div>
+    <figcaption><code>vertical-rl</code>: the markers above the items, the first column at the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text v vlr"><ol><li>一番<li>二番</ol></div>
+    <figcaption><code>vertical-lr</code>: the markers above, the first column at the left.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text v slr"><ol><li>one<li>two</ol></div>
+    <figcaption><code>sideways-lr</code>: lines run up, so the markers are below the items. <span class=pr-flag>Safari</span> Turns the glyphs to read down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Right to left</h2>
+  <p>With <code>direction: rtl</code>, inline-start is the right in horizontal text and the bottom in vertical
+  text.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text rtl"><ol><li>one<li>two</ol></div>
+    <figcaption><code>horizontal-tb</code>: the markers right of the items.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text v vrl rtl"><ol><li>一番<li>二番</ol></div>
+    <figcaption><code>vertical-rl</code>: the markers below the items.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-text v vlr rtl"><ol><li>一番<li>二番</ol></div>
+    <figcaption><code>vertical-lr</code>: the markers below the items.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-text v slr rtl"><ol><li>one<li>two</ol></div>
+    <figcaption><code>sideways-lr</code>: the markers above the items. <span class=pr-flag>Safari</span> The glyphs read down, the markers over the items.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Metadata before the image data</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 80px; height: 80px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 2.1.2 Image Metadata</div>
+  <h1>Metadata before the image data</h1>
+  <p class=pr-lede><q>User agents should ignore any layout-impacting metadata (such as orientation or resolution) that
+  occurs after the image data begins.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#url-metadata">CSS Images 3 §2.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>An orientation, early and late</h2>
+  <p>Each PNG holds an upright letter F, with an <code>eXIf</code> chunk whose orientation turns it a quarter turn
+  clockwise. Each is drawn 80 by 80, with <code>image-orientation</code>'s initial <code>from-image</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/F-exif-chunk-early.png" alt=""></div>
+    <figcaption>The EXIF data before the image data: the F turned, its stem across the top and its arms hanging
+    down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/F-exif-late.png" alt=""></div>
+    <figcaption>The EXIF data after the image data: ignored, so the F upright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A decoder that cannot tell</h2>
+  <p><q>If a user agent cannot ignore the metadata based its location in the image (for example, if the decoder being
+  used does not report where in the image the metadata was located), it must use the metadata in all cases.</q> Such
+  a user agent turns the third F as well; which kind a user agent is, a page cannot see.</p>
+</section>
+
+</body>
+</html>

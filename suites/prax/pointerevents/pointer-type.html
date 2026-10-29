@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerType and pointerId</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 60px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1 PointerEvent interface</div>
+  <h1>pointerType and pointerId</h1>
+  <p class=pr-lede><q>A unique identifier for the pointer causing the event.</q> <q>Indicates the device type that caused
+  the event (such as mouse, pen, touch).</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">Pointer Events §3.1</a></span></p>
+</header>
+<section>
+  <h2>The device, by type</h2>
+  <p><q>If the user agent is to fire a pointer event for a mouse, pen/stylus, or touch input device, then the value of
+  pointerType MUST be according to the following table</q> <q>all active pointers in the top-level browsing context (as
+  defined by [HTML]) must be unique</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press here with each device you have.</div>
+      <ol class=pr-log data-log="pointerdown" data-fields="pointerType pointerId" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Press the box with the mouse: <code>pointerType="mouse"</code>. With a pen,
+    <code>"pen"</code>; with a finger, <code>"touch"</code>. Put two fingers down together, if you can: their two
+    <code>pointerId</code>s differ, and neither is the mouse's.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The same device, by persistentDeviceId</h2>
+  <p><q>If the pointer is uniquely identifiable, the assigned persistentDeviceId to that pointing device will remain
+  constant for the remainder of the session. The persistentDeviceId value of 0 MUST be reserved and used to indicate
+  events whose generating device could not be identified.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class="pr-erratum pr-beside">
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pens>Press here with each pen you have.</div>
+      <ol class=pr-log data-log="pointerdown" data-fields="pointerType persistentDeviceId" data-on="#pens" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a pen. Press the box several times with one pen: the same nonzero
+    <code>persistentDeviceId</code> each time, if the hardware identifies it, or 0 if it cannot. A second pen gets
+    an ID of its own. <span class=pr-flag>Safari</span> has no <code>persistentDeviceId</code>, and logs none.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

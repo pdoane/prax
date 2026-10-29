@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic table layout: column widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; font-size: 0; line-height: 0; vertical-align: top; }
+  .blk { display: inline-block; width: 30px; height: 18px; background: #4f81bd; outline: 1px solid white; outline-offset: -1px; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.2 Automatic table layout</div>
+  <h1>Automatic table layout: column widths</h1>
+  <p class=pr-lede><q>In this algorithm (which generally requires no more than two passes), the table's width is given by
+  the width of its columns (and intervening borders).</q> The algorithm is non-normative. Cells hold 30px blocks with
+  line breaks allowed between them, and have a 1px border.</p>
+</header>
+
+<section>
+  <h2>Minimum and maximum cell widths</h2>
+  <p><q>Calculate the minimum content width (MCW) of each cell: the formatted content may span any number of lines but
+  may not overflow the cell box.</q> <q>Also, calculate the "maximum" cell width of each cell: formatting the content
+  without breaking lines other than where explicit line breaks occur.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2 §17.5.2.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><span class=blk></span> <span class=blk></span> <span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>Room for both maximums: three blocks on one line, 92px, and 32px for the orange one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow"><table><tr><td><span class=blk></span> <span class=blk></span> <span class=blk></span><td><span class="blk o"></span> <span class="blk o"></span> <span class="blk o"></span></table></div>
+    <figcaption>In a 100px stage the maximums do not fit: the table is 100px, and the cells' blocks break onto more
+    lines; no block overflows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

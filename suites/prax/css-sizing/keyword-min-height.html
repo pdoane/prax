@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A keyword minimum or maximum on a fixed height</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 100px; height: 190px; }
+  figure.f { margin-right: 8px; }
+  figure.f figcaption { max-width: 118px; }
+  .art { background: rgba(214, 138, 60, 0.25); outline: 1px dashed #6b7381; }
+  .aside { background: rgba(79, 129, 189, 0.45); }
+  .sec { height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2.1 Intrinsic Contributions of Percentage-Sized Boxes, keyword limits</div>
+  <h1>A keyword minimum or maximum on a fixed height</h1>
+  <p class=pr-lede><q>Letting percentages still resolve against a definite height when the min-height is intrinsic is an
+  open issue.</q> The spec's example: <q>we must calculate the min-height, by substituting it in for height. This
+  causes the percentage on the &lt;aside&gt; to behave as auto</q>; <q>since the percentage could originally resolve
+  against the (100px) height, it now resolves against the 180px height</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#cyclic-percentage-contribution">CSS Box Sizing 3 §5.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The spec's three articles, and a maximum</h2>
+  <p>A dashed article holds a blue aside around content of a fixed height, then an orange section 20px tall. The
+  article's and the aside's heights read back below.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=a1 class=art style="height: 50px; min-height: min-content"><div id=a1c class=aside style="height: 50%"><div style="height: 70px"></div></div><div class=sec></div></div></div>
+    <figcaption><code>height: 50px; min-height: min-content</code>, an aside of 50% around 70px: the article 90px, the
+    aside 45px. Reads <code class=pr-computed data-of=a1 data-dom=offsetHeight></code>, <code class=pr-computed data-of=a1c data-dom=offsetHeight></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 50 and 25.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=a2 class=art style="height: 50px; min-height: min-content"><div id=a2c class=aside style="height: 200%"><div style="height: 70px"></div></div><div class=sec></div></div></div>
+    <figcaption>The aside at 200%: 90px and 180px, overflowing. Reads <code class=pr-computed data-of=a2 data-dom=offsetHeight></code>, <code class=pr-computed data-of=a2c data-dom=offsetHeight></code>.
+    <span class=pr-flag>Chrome</span> 120 and 100. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 50 and 100.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=a3 class=art style="height: 50px; min-height: max-content"><div id=a3c class=aside style="height: 50%"><div style="height: 70px"></div></div><div class=sec></div></div></div>
+    <figcaption><code>min-height: max-content</code>: as the first, 90 and 45. Reads <code class=pr-computed data-of=a3 data-dom=offsetHeight></code>, <code class=pr-computed data-of=a3c data-dom=offsetHeight></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 50 and 25.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=a4 class=art style="height: 80px; max-height: min-content"><div id=a4c class=aside style="height: 50%"><div style="height: 10px"></div></div><div class=sec></div></div></div>
+    <figcaption><code>height: 80px; max-height: min-content</code>, an aside of 50% around 10px: substituted, the
+    content is 30px, so the article 30px and the aside 15px. Reads <code class=pr-computed data-of=a4 data-dom=offsetHeight></code>, <code class=pr-computed data-of=a4c data-dom=offsetHeight></code>.
+    <span class=pr-flag>Chrome</span> 60 and 40. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80 and 40.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

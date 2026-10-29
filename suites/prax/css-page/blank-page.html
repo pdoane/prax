@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The :blank page</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 4.2.3 Blank-page pseudo-class: :blank</div>
+  <h1>The :blank page</h1>
+  <p class=pr-lede><q>The :blank pseudo-class matches content-empty pages that appear as a result of forced page breaks.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#blank-pseudo">CSS Paged Media 3 §4.2.3</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>The page a forced break leaves empty</h2>
+  <p><code>break-before: right</code> on a box that would start on a left page forces two breaks, so that it starts on a right page, and leaves a content-empty left page between them. The root's blue background marks each page area.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :blank { margin: 50px } html { background: #8cb6c0 } .r { break-before: right }</style><div>line 1</div><div>line 2</div><div class=r><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Three pages: lines 1 and 2 on page 1, a right page; page 2, a left page, empty, its page area 50px in from the edges; lines 3 and 4 on page 3. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Two pages: a plain page break, as for <code>left</code>, and no blank page.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Also matched by :left or :right</h2>
+  <p><q>A page matched by :blank can also be matched by other page pseudo-classes.</q> <code>:blank</code> is the more specific, so its <code>content: none</code> removes the header.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px 10px } @page :blank { @top-center { content: none } } @page :left { @top-center { content: 'Preliminary' } @bottom-center { content: counter(page) } } @page :right { @top-center { content: 'Preliminary' } @bottom-center { content: counter(page) } }  .r { break-before: right }</style><div>line 1</div><div>line 2</div><div class=r><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Page 2, blank, has its number, 2, but no header; pages 1 and 3 have both. <span class=pr-flag>Chrome</span> Two pages, neither blank. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Two pages, and no page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

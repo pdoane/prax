@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-palette</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-palette-values --blue { font-family: "PR Nabla"; base-palette: 2; }
+  @font-palette-values --purple { font-family: "PR Nabla"; base-palette: 6; }
+  .pr-sample { font-family: 'PR Nabla'; font-size: 32px; line-height: 56px; }
+  .glaze { font-family: 'PR Kalnia Glaze'; }
+  .night { background: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.1 Controlling color font palettes: the 'font-palette' property</div>
+  <h1>font-palette</h1>
+  <p class=pr-lede>'font-palette' is <code>normal | light | dark | &lt;palette-identifier&gt; |
+  &lt;palette-mix()&gt;</code>. <q>The names 'light' and 'dark' describe the background the color palette is usable
+  on, not the colors in the color palette themselves.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-palette-prop">CSS Fonts 4 §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>Palettes of PR Nabla</h2>
+  <p>PR Nabla has seven palettes: 0 is yellow and orange, 2 blue, 6 purple and red.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: normal">Nabla</div>
+    <figcaption><code>normal</code>: palette 0, yellow and orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --blue">Nabla</div>
+    <figcaption><code>--blue</code>, palette 2: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: --undefined">Nabla</div>
+    <figcaption>An identifier no rule defines: <q>behaves as 'normal'</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-palette: palette-mix(in srgb, --blue, --purple)">Nabla</div>
+    <figcaption><code>palette-mix(in srgb, --blue, --purple)</code>: each color halfway between the two.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>light and dark</h2>
+  <p>PR Kalnia Glaze marks its palette 0 for light backgrounds and palette 1 for dark ones. PR Nabla marks
+  none.</p>
+  <figure>
+    <div class="pr-stage pr-sample glaze" style="font-palette: light">Glaze</div>
+    <figcaption><code>light</code>: palette 0, deep purples and pinks. Safari, which draws no COLRv1, draws the outlines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample glaze night" style="font-palette: dark">Glaze</div>
+    <figcaption><code>dark</code> on a dark stage: palette 1, pale pinks and blue. Safari, which draws no COLRv1, draws the outlines in the text color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

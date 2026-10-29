@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stop: the offset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="three"><stop offset="0" stop-color="#4f81bd" /><stop offset="0.5" stop-color="white" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="numbers"><stop offset="0.25" stop-color="#4f81bd" /><stop offset="0.25" stop-color="#d68a3c" /><stop offset="0.75" stop-color="#d68a3c" /><stop offset="0.75" stop-color="#6aa36a" /></linearGradient>
+  <linearGradient id="percents"><stop offset="25%" stop-color="#4f81bd" /><stop offset="25%" stop-color="#d68a3c" /><stop offset="75%" stop-color="#d68a3c" /><stop offset="75%" stop-color="#6aa36a" /></linearGradient>
+  <radialGradient id="ring" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="25" fr="5"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></radialGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.4.1 Attributes</div>
+  <h1>stop: the offset</h1>
+  <p class=pr-lede>The ‘offset’ attribute <q>Indicates were the gradient stop is placed.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#GradientStopAttributes">SVG 2 §14.2.4.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>Stops along the vector</h2>
+  <p><q>The vector of colors to use in a gradient is defined by the ‘stop’ elements</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#GradientStops">§14.2.4</a></span>.
+  <q>For linear gradients, the ‘offset’ attribute represents a location along the gradient vector.</q> It is a
+  <q>&lt;number&gt;</q> or a <q>&lt;percentage&gt;</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#three)" /></svg></div>
+    <figcaption>Blue at 0, white at 0.5, orange at 1: white at x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#numbers)" /></svg></div>
+    <figcaption>Edges at <code>0.25</code> and <code>0.75</code>: blue to x 50, orange to 110, green after.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#percents)" /></svg></div>
+    <figcaption>Edges at <code>25%</code> and <code>75%</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>For a radial gradient, from the inner circle</h2>
+  <p><q>For radial gradients, it represents a fractional distance from the edge of the innermost/smallest circle to
+  the edge of the outermost/largest circle.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#ring)" /><circle class=pr-ghost cx="80" cy="30" r="5" /><circle class=pr-ghost cx="80" cy="30" r="25" /></svg></div>
+    <figcaption>Circles of radius 5 and 25, dashed, and an edge at <code>0.5</code>: blue out to radius 15,
+    halfway between them, not 12.5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

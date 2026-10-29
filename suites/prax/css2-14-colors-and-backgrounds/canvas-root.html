@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas: the root element's background</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The canvas: the root element's background</h1>
+  <p class=pr-lede>Each figure is a frame, a document of its own, whose root element has <code>margin: 20px; height:
+  60px</code> and a dashed outline, which takes no room. Its body has no margin. The guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>It covers the entire canvas</h2>
+  <p><q>The background of the root element becomes the background of the canvas and covers the entire canvas</q>
+  <q>The root element does not paint this background again.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: #d68a3c } body { margin: 0 }</style>"></iframe></div>
+    <figcaption><code>html { background: #d68a3c }</code>: the whole frame is orange, the root's 20px margin
+    too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: rgba(214, 138, 60, 0.5) } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>A half transparent orange: one even tint over the frame, no darker inside the outline, as a second
+    painting would make it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Anchored at the root element</h2>
+  <p>The background is <q>anchored (for 'background-position') at the same point as it would be if it was painted only
+  for the root element itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) no-repeat } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>A 30px blue square, <code>no-repeat</code>, at <code>0 0</code>: at the root's top left, 20px in from the
+    frame's corner. <span class=pr-flag>Safari</span> At the frame's corner.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) 100% 100% no-repeat } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>At <code>100% 100%</code>: in the root's bottom right corner, 20px from the frame's right and bottom.
+    <span class=pr-flag>Safari</span> 20px up and to the left: the root's size, measured from the frame's
+    corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

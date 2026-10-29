@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: line numbers and names</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; }
+  .s { display: grid; grid-template-columns: subgrid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, line numbers and names</div>
+  <h1>Subgrids: line numbers and names</h1>
+  <p class=pr-lede><q>The grid-placement properties of the subgrid’s grid items and the line numbers they use are
+  scoped to the lines covered by the subgrid</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px; the tinted, outlined box is a subgrid of its columns.</p>
+</header>
+
+<section>
+  <h2>Numbers count from the subgrid</h2>
+  <p><q>numeric indices count starting from the first line of the subgrid rather than the first line of the parent
+  grid.</q> <q>Line numbering and placement rules obey the subgrid’s own writing mode</q>. The subgrid spans the
+  parent's columns 2 to 4, and A is at <code>grid-column: 1</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4"><div class=pr-a style="grid-column: 1">A</div><div class=pr-b style="grid-column: -2 / -1">B</div></div></div></div>
+    <figcaption>A in the subgrid's first column, the parent's 60px one, at 40px; B, at <code>-2 / -1</code>, in its
+    last, the 80px one at 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4; direction: rtl"><div class=pr-a style="grid-column: 1">A</div><div class=pr-b style="grid-column: 2">B</div></div></div></div>
+    <figcaption>The subgrid is <code>direction: rtl</code>: its line 1 is at its right, so A is in the 80px column
+    at 100px and B in the 60px one at 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The parent's line names</h2>
+  <p><q>the subgridded lines automatically receive the explicitly-assigned line names specified on the corresponding
+  lines of the parent grid.</q> <q>These names are in addition to any line names specified locally on the
+  subgrid.</q> The parent is <code>[x] 40px [y] 60px [z] 80px [w]</code>, and the subgrid spans it all.</p>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-columns: [x] 40px [y] 60px [z] 80px [w]"><div class="s pr-parent" style="grid-column: 1 / 4"><div class=pr-a style="grid-column: y / z">A</div></div></div></div>
+    <figcaption>A at <code>grid-column: y / z</code>: in the 60px column, from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-columns: [x] 40px [y] 60px [z] 80px [w]"><div class="s pr-parent" style="grid-column: 1 / 4; grid-template-columns: subgrid [] [] [m]"><div class=pr-a style="grid-column: m / w">A</div><div class=pr-b style="grid-column: x / m">B</div></div></div></div>
+    <figcaption><code>subgrid [] [] [m]</code> names line 3 locally: A at <code>m / w</code> in the 80px column,
+    B at <code>x / m</code> across the first two, 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

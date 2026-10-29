@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-justify: auto, at least</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; text-align-last: justify; }
+  .ja { font: 20px/30px "PR Noto Sans JP", "PR Noto Sans KR"; }
+  .th { font: 20px/36px "PR Noto Sans Thai"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5.5 Minimum Requirements for auto Justification</div>
+  <h1>text-justify: auto, at least</h1>
+  <p class=pr-lede><q>Unless contraindicated by the typographic traditions of the content language or adjacent
+  symbols/punctuation, each of the following provides a justification opportunity: Word separators, The boundary
+  between a typographic character unit of any block scripts and any other typographic character unit, The boundary
+  between a typographic character unit of any clustered scripts and any other typographic character unit</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#justify-algos">CSS Text 4 §7.5.5</a></span>
+  Each stage is 200px wide, <code>text-justify: auto</code>, its one line justified.</p>
+</header>
+
+<section>
+  <h2>Block scripts</h2>
+  <p>Block scripts are CJK, <q>Bopomofo, Han, Hangul, Hiragana, Katakana, and Yi</q>. <q>All letters belonging to all
+  block scripts are treated the same</q>: <q>no distinction is made between the justification opportunity between a
+  Han letter followed by another Han letter, vs. the justification opportunity between a Han letter followed by a
+  Hangul letter.</q></p>
+  <figure>
+    <div class="pr-stage ja j" lang=ja><span class=t>漢字かなカナ</span></div>
+    <figcaption>Six Japanese characters: five equal gaps, from edge to edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja j" lang=ko><span class=t>漢字한글</span></div>
+    <figcaption>Han then Hangul: three equal gaps, the Han–Hangul one as the others. <span class=pr-flag>Firefox</span> No
+    opportunity in <code>lang=ko</code>: at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clustered scripts, and word separators</h2>
+  <p><q>Clustered scripts have discrete units and break only at word boundaries, but do not use visible word
+  separators. They prioritize stretching spaces, but comfortably admit inter-character spacing for
+  justification.</q></p>
+  <figure>
+    <div class="pr-stage th j" lang=th><span class=t>ภาษาไทย</span></div>
+    <figcaption>Thai, no spaces: gaps between its clusters, from edge to edge. All three browsers find no opportunity and leave the word at the left; no one is
+    flagged.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure j"><span class=t>one two six</span></div>
+    <figcaption>Latin: the spaces stretch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

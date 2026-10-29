@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: double and the background</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: double and the background</h1>
+  <p class=pr-lede><code>border-*-style</code> and <code>border-style</code> take <code>none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset</code>.</p>
+</header>
+
+<section>
+  <h2>double</h2>
+  <p>Two lines and the space between them make up the width. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: double; border-width: 3px"></div></div>
+    <figcaption><code>3px</code>: two 1px lines, 1px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: double; border-width: 30px"></div></div>
+    <figcaption><code>30px</code>: two 10px lines, 10px apart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Borders are drawn over the background</h2>
+  <p><q>All borders are drawn on top of the box's background.</q> The box's background runs under its border, and
+  shows in the gaps of a dotted, dashed or double border. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: dashed; background: #d68a3c"></div></div>
+    <figcaption><code>dashed</code> over an orange background.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: dotted; background: #d68a3c"></div></div>
+    <figcaption><code>dotted</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: double; background: #d68a3c"></div></div>
+    <figcaption><code>double</code></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

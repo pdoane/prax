@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What a form submits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 12px; line-height: 20px; }
+  .pad input, .pad button, .pad select { margin: 0 0 10px; font-size: 12px; vertical-align: top; }
+  iframe.pr-result { height: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.22.4 Constructing the entry list</div>
+  <h1>What a form submits</h1>
+  <p class=pr-lede><q>Let controls be a list of all the submittable elements whose form owner is form, in tree
+  order.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set">HTML §4.10.22.4</a></span></p>
+</header>
+
+<section>
+  <h2>Which controls, which values, and formdata</h2>
+  <p>A control is skipped if it is disabled, if it <q>is a button but it is not submitter</q>, if it is an unchecked
+  checkbox or radio button, or if it has no <code>name</code>. A select adds <q>each option element in the select
+  element's list of options whose selectedness is true and that is not disabled</q>; a checkbox without
+  <code>value</code>, the string <q>on</q>. Then, <q>Fire an event named formdata at form</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set">§4.10.22.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=entries-result>
+        <input name=a value=1 size=1>
+        <input value=anon size=3>
+        <input name=a value=2 size=1>
+        <input name=off value=3 size=1 disabled>
+        <label><input type=checkbox name=yes checked>yes</label>
+        <label><input type=checkbox name=no>no</label>
+        <select name=s multiple size=3><option selected>x<option selected disabled>y<option selected>z</select>
+        <button name=by value=this>Submit</button>
+        <button name=by value=other>Other</button>
+      </form>
+      <iframe class=pr-result name=entries-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Submit: <code>a=1</code>, <code>a=2</code>, <code>yes=on</code>, <code>s=x</code>,
+    <code>s=z</code>, <code>by=this</code>, in that order; nothing of the unnamed, disabled or unchecked controls,
+    the disabled option, or Other.</figcaption>
+  </figure><figure>
+    <div class="pr-stage">
+      <form class=pad id=extended action=support/form-echo.html target=extended-result>
+        <input name=typed value=text size=6> <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=extended-result src=support/form-echo.html style="height: 40px"></iframe>
+    </div>
+    <figcaption>The page's script appends to the <code>formdata</code> event's entries. Submit: <code>typed=text</code>, then <code>added=by-script</code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Adds an entry to the second form's entry list as it is constructed.
+  document.getElementById("extended").addEventListener("formdata", event => {
+      event.formData.append("added", "by-script");
+  });
+</script>
+</body>
+</html>

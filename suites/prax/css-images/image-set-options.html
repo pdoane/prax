@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-set(): the options that remain</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .border { width: 40px; height: 20px; border: 10px solid #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.4 Resolution/Type Negotiation: the image-set() notation</div>
+  <h1>image-set(): the options that remain</h1>
+  <p class=pr-lede><q>First, remove any &lt;image-set-option&gt;s from the list that specify an unknown or unsupported
+  MIME type in their type() value. Second, remove any &lt;image-set-option&gt;s from the list that have the same
+  &lt;resolution&gt; as a previous option in the list. If there are no &lt;image-set-option&gt; left at this point,
+  the function represents an invalid image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#image-set-notation">CSS Images 4 §2.4</a></span>
+  Blue and orange are 20px squares; each box is 60 by 40, <code>no-repeat</code>. Where one option remains, the UA has
+  no choice to make.</p>
+</header>
+
+<section>
+  <h2>Removed options</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image-set(url(support/image-set-orange.png) type('image/x-unknown'), url(support/image-set-blue.png) type('image/png'))"></div></div>
+    <figcaption>Orange of an unknown type, then blue as PNG: orange is removed, so blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image-set(url(support/image-set-blue.png) 1x, url(support/image-set-orange.png) 1x)"></div></div>
+    <figcaption>Blue at <code>1x</code>, then orange at <code>1x</code>: orange repeats a resolution, so blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image-set(url(support/image-set-blue.png), url(support/image-set-orange.png) 1x)"></div></div>
+    <figcaption>Blue with no resolution, which <q>behaves as 1x</q>, then orange at <code>1x</code>: blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box border" style="border-image: image-set(url(support/image-set-orange.png) type('image/x-unknown')) 10"></div></div>
+    <figcaption>A <code>border-image</code> of one option, of an unknown type: none left, an invalid image, so the
+    blue 10px solid border style draws instead.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What an option names</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image-set(url(support/image-set-orange.png) 1x type('image/jpeg'))"></div></div>
+    <figcaption>A PNG declared <code>image/jpeg</code>: <q>It does not have any effect on the image itself</q>, so
+    orange.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image-set('support/image-set-blue.png' 1x)"></div></div>
+    <figcaption>A string: <q>Each &lt;string&gt; inside image-set() represents a &lt;url&gt;</q>, so blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

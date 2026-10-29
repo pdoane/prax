@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block widths: the constraint equation</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.3 Block-level, non-replaced elements in normal flow</div>
+  <h1>Block widths: the constraint equation</h1>
+  <p class=pr-lede>A block's horizontal margins, borders, padding and width add up to its containing block's width, here
+  the 200px stage.</p>
+  <p class=pr-legend style="margin: 6px 0 0"><span class="pr-swatch pr-margin"></span>margin <span class="pr-swatch pr-border"></span>border <span class="pr-swatch pr-padding"></span>padding <span class="pr-swatch pr-content"></span>content</p>
+</header>
+
+<section>
+  <h2>The equation, and an auto width</h2>
+  <p><q>'margin-left' + 'border-left-width' + 'padding-left' + 'width' + 'padding-right' + 'border-right-width' +
+  'margin-right' = width of containing block</q> <q>If 'width' is set to 'auto', any other 'auto' values become '0'
+  and 'width' follows from the resulting equality.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 0 20px; border-width: 0 10px; padding: 0 10px"><div class=pr-content-area></div></div></div></div>
+    <figcaption>Margins 20, borders 10 and padding 10 each side, <code>width: auto</code>: the content is 200 − 80 =
+    120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 0 auto 0 20px; border-width: 0 10px; padding: 0 10px"><div class=pr-content-area></div></div></div></div>
+    <figcaption>The same with <code>margin-right: auto</code>: the auto margin is 0, and the content is 200 − 60 =
+    140px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Exactly one auto</h2>
+  <p><q>If there is exactly one value specified as 'auto', its used value follows from the equality.</q> Each blue box
+  has <code>width: 100px</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin-left: auto; margin-right: 20px">box</div></div>
+    <figcaption><code>margin-left: auto; margin-right: 20px</code>: the left margin is 200 − 100 − 20 = 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin-left: 30px; margin-right: auto">box</div></div>
+    <figcaption><code>margin-left: 30px; margin-right: auto</code>: the box is at 30, and the right margin is
+    70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

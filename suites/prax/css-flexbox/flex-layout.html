@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex layout, a layout mode of its own</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage > div { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 1 Introduction</div>
+  <h1>Flex layout, a layout mode of its own</h1>
+  <p class=pr-lede><q>This module introduces a new layout mode, flex layout, which is designed for laying out more
+  complex applications and webpages.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intro">CSS Flexible Box Layout 2 §1</a></span></p>
+</header>
+
+<section>
+  <h2>The same children, block layout and flex layout</h2>
+  <p>CSS 2.1's layout modes include <q>block layout, designed for laying out documents</q>. Each stage holds the same
+  three children 40px wide: A of one 20px line, B 40px tall and C 30px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="height: 40px">B</div><div class="pr-c pr-fit" style="height: 30px">C</div></div>
+    <figcaption>Block layout: A, B and C stacked down the stage, 90px in all.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: flex"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="height: 40px">B</div><div class="pr-c pr-fit" style="height: 30px">C</div></div>
+    <figcaption><code>display: flex</code>: A, B and C side by side from the left; A, with no height of its
+    own, stretched to B's 40px, and C keeps its 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flexing and aligning</h2>
+  <p>Flex layout <q>is designed for laying out more complex applications</q>: its items grow into the space there is
+  and align in both axes.</p>
+  <figure>
+    <div class=pr-stage style="display: flex"><div class="pr-a pr-fit" style="flex: 1">A</div><div class="pr-b pr-fit" style="flex: 3">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>A <code>flex: 1</code> and B <code>flex: 3</code> share the 160px C leaves: A 40px and B 120px
+    wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: flex; height: 60px; justify-content: center; align-items: center"><div class="pr-a pr-fit">A</div></div>
+    <figcaption>A centered both ways in a 60px tall stage: from 80px to 120px across, 20px to 40px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

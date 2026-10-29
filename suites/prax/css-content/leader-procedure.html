@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Procedure for rendering leaders</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .toc div { margin: 0; }
+  .toc span::after { content: leader(dotted) "9"; }
+  .rtl { direction: rtl; font-family: "PR Noto Sans Mono", "PR Noto Sans Arabic"; }
+  .toc.rtl span::after { content: leader(dotted) "\0669"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.5.3 Procedure for rendering leaders</div>
+  <h1>Procedure for rendering leaders</h1>
+  <p class=pr-lede><q>A leader is a row of these boxes, drawn from the end edge to the start edge, where only those
+  boxes not overlaid by the before or after content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leader-alignment">CSS Generated Content 3 §2.5.3</a></span>
+  Each line is a <code>span</code> with <code>::after { content: leader(dotted) "9" }</code>, in
+  <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>On the line where the before content ends</h2>
+  <p><q>Lay out the before content, until reaching the line where the before content ends.</q> <q>On this line, draw
+  the leader string, starting from the end edge, repeating as many times as possible until reaching the start edge.</q>
+  <q>Draw the before and after content on top of the leader. If any part of the before content or after content
+  overlaps a glyph in a leader string box, that glyph is not displayed.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc"><div><span>Call me Ishmael. Some years ago</span></div></div>
+    <figcaption>The title wraps after "Ishmael."; on the second line, "Some years ago", five dots, and "9" at the
+    right edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No leader.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc rtl"><div><span>Loomings</span></div></div>
+    <figcaption>Right to left, with an Arabic-Indic nine after, which bidi keeps at the end: "٩" at the left edge,
+    dots, "Loomings" at the right.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    leader.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No full copy: a line of its own</h2>
+  <p><q>If one full copy of the leader string is not visible:</q> <q>Insert a line break after the before content, draw
+  the leader on the next line, and draw the after content on top, and hide any leader strings that are not fully
+  displayed.</q> Also, <q>A leader only appears on a single line, even if the before content and after content are on
+  different lines.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leader-rules">§2.5.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc"><div><span>Loomings and then Ishmael speaks now!</span></div></div>
+    <figcaption>The second line, "Ishmael speaks now!", is 190px: "9" would fit, but no full dot. So a third line: a
+    row of nineteen dots, and "9" on top of them at the right edge.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    leader.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc"><div><span>Loomings and then Ishmael speaks now</span></div></div>
+    <figcaption>One character less, "Ishmael speaks now" is 180px, and one dot and "9" fill the 20px left.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    leader.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positions for ligatures</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lit { font: 40px "PR Literata"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.2 Notes on 'x', 'y', 'dx', 'dy' and 'rotate'</div>
+  <h1>Positions for ligatures</h1>
+  <p class=pr-lede><q>The following additional rules apply to attributes ‘x’, ‘y’, ‘dx’, ‘dy’, and ‘rotate’ when they
+  contain a list of numbers</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanNotes">SVG 2 §11.2.2</a></span>
+  Each stage is an SVG 160 by 60, the baseline at y 45 dashed in red. The ligature figures set "flo" in 40px PR
+  Literata, whose "fl" is one glyph.</p>
+</header>
+
+<section>
+  <h2>Two characters, one glyph</h2>
+  <p><q>the n-th value for the ‘x’, ‘y’, ‘dx’, ‘dy’, and ‘rotate’ attributes all apply when rendering the glyph. The
+  (n+1)-th values, however, for ‘x’, ‘y’, and ‘rotate’ are ignored (exception: the final ‘rotate’ value in the list
+  would still apply to subsequent characters), whereas the ‘dx’ and ‘dy’ are applied to the subsequent character</q>. An <code>x</code> or <code>y</code> would also start a new text chunk, in
+  which the ligature should not form at all, so the figures use <code>dy</code> and <code>rotate</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160 M0 30H160" class=pr-baseline /><text class=lit x="20" y="45" dy="0 -15">flo</text></svg></div>
+    <figcaption><code>dy="0 -15"</code>: the l's −15 moves the o, which stands on y 30; "fl" on 45. <span class=pr-flag>Safari</span> A separate f and l, the l and o raised.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="20" y="45" rotate="0 30">flo</text></svg></div>
+    <figcaption><code>rotate="0 30"</code>: "fl" upright, the l's 30 ignored; the o turned 30°, the last value
+    applying on. <span class=pr-flag>Safari</span> A separate f and l, the l and o turned.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

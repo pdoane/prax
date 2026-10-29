@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative color()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 5.1 Relative Color-Function Colors</div>
+  <h1>Relative color()</h1>
+  <p class=pr-lede><q>r, g, and b are all &lt;number&gt;s that correspond to the origin color's red, green, and blue components
+  after conversion, if required to the predefined RGB color space.</q> <q>x, y, z are all &lt;number&gt;s that
+  correspond to the origin color's X, Y and Z components</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-color-function">CSS Color 5
+  §5.1</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Half the luminance</h2>
+  <p><q>Relative Color Syntax in the CIE XYZ D65 colorspace is used to generate a color
+  which has the same chromaticity but exactly half the luminance of the base color</q>. <code>#d68a3c</code> is
+  <code>color(xyz-d65 0.3763 0.328 0.0862)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #d68a3c"></div><div class=sw style="background: color(from #d68a3c xyz-d65 calc(x / 2) calc(y / 2) calc(z / 2))"></div><div class=sw style="background: color(xyz-d65 0.1882 0.164 0.0431)"></div></div>
+    <figcaption>The orange, then half its light beside <code>color(xyz-d65 0.1882 0.164 0.0431)</code>: one brown.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>RGB components</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(from #d68a3c srgb b g r)"></div><div class=sw style="background: color(srgb 0.2353 0.5412 0.8392)"></div></div>
+    <figcaption><code>color(from #d68a3c srgb b g r)</code>, red and blue swapped: a blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(from #d68a3c srgb-linear r g b)"></div><div class=sw style="background: #d68a3c"></div></div>
+    <figcaption>Through <code>srgb-linear</code> unchanged: the same orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

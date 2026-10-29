@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .pr-stage.pr-vertical { height: 160px; }
+  .rule { column-rule: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 3.1 The Inline Size of Columns: the column-width property</div>
+  <h1>column-width</h1>
+  <p class=pr-lede>&lt;length&gt; <q>describes the optimal column width. The actual column width may be wider (to fill
+  the available space), or narrower (only if the available space is smaller than the specified column width).</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cw">CSS Multi-column Layout 1 §3.1</a></span>
+  Each letter is 10px wide; a dashed rule marks each gap.</p>
+</header>
+
+<section>
+  <h2>Wider, to fill the space, and narrower where there is less</h2>
+  <p><q>There is room for two 45px wide columns inside the 100px wide element. In order to fill the available space
+  the actual column width will be increased to 50px.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure rule" style="column-width: 45px; column-gap: 0">one two six ten</div>
+    <figcaption>The 100px stage, <code>column-width: 45px</code>, no gap: two columns of 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="column-width: 70px; column-gap: 10px">one two three four</div>
+    <figcaption>200px, <code>column-width: 70px</code>, 10px gaps: a third would need 230px, so two columns of
+    95px, "one two" and "three" in the first.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="pr-parent rule" style="width: 40px; column-width: 45px; column-gap: 0">one two six</div></div>
+    <figcaption>A 40px block, <code>column-width: 45px</code>: one column, 40px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At least 1px, and the length of the lines</h2>
+  <figure>
+    <div class="pr-stage pr-measure rule" style="width: 150px; column-width: 0; column-gap: 9px">a b c d e f g h i j k l m n o</div>
+    <figcaption><code>column-width: 0</code>, 9px gaps: <q>Used values will be clamped to a minimum of 1px</q>,
+    so fifteen columns of 1.6px in the 150px stage; each letter overflows its column, the letters 10.6px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical pr-measure"><div class=rule style="column-width: 70px; column-gap: 10px">one two three four</div></div>
+    <figcaption><q>column width means the length of the line boxes inside the columns</q>: <code>vertical-rl</code>,
+    160px tall, <code>column-width: 70px</code>: two columns whose lines
+    are 75px long, one above the other.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

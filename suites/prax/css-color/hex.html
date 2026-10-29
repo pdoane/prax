@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hex colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 5.2 The RGB Hexadecimal Notations: #RRGGBB</div>
+  <h1>Hex colors</h1>
+  <p class=pr-lede><q>The number of hex digits given determines how to decode the hex notation into an RGB
+  color</q>. Each pair is the hex color, then <code>rgb()</code> with the same components. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hex-notation">CSS Color 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Six digits and three</h2>
+  <p>Six digits: <q>The first pair of digits, interpreted as a hexadecimal number, specifies the red component of the
+  color, where 00 represents the minimum value and ff (255 in decimal) represents the maximum.</q> Three: <q>a
+  shorter variant of the 6-digit notation</q>, each digit doubled.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #d68a3c"></div><div class=sw style="background: rgb(214 138 60)"></div><div class=sw style="background: #D68A3C"></div></div>
+    <figcaption><code>#d68a3c</code>, <code>rgb(214 138 60)</code> and <code>#D68A3C</code>: the same orange
+    three times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #c84"></div><div class=sw style="background: #cc8844"></div><div class=sw style="background: rgb(204 136 68)"></div></div>
+    <figcaption><code>#c84</code>, <code>#cc8844</code> and <code>rgb(204 136 68)</code>: the same orange three
+    times.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Eight digits and four: alpha</h2>
+  <p><q>The last pair of digits [...] specifies the alpha component of the color, where 00 represents a fully
+  transparent color and ff represent a fully opaque color.</q> The stage is a checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: #0000ffcc"></div><div class=sw style="background: rgb(0 0 100% / 80%)"></div><div class=sw style="background: #d68a3c00"></div></div>
+    <figcaption><code>#0000ffcc</code> beside <code>rgb(0 0 100% / 80%)</code>: the same slightly transparent blue.
+    <code>#d68a3c00</code>: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: #c848"></div><div class=sw style="background: #cc884488"></div><div class=sw style="background: rgb(204 136 68 / 0.5333)"></div></div>
+    <figcaption><code>#c848</code>, <code>#cc884488</code> and <code>rgb(204 136 68 / 0.5333)</code>: the same
+    half-transparent orange three times.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

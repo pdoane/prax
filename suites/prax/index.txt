@@ -1,0 +1,91 @@
+# The directories, in the order of their names, the chapters of CSS 2, HTML and SVG 2 among the modules. Each line
+# names a directory and every specification it walks, its base level first, or names a directory alone if it walks
+# none (tools/suite/prax/suite.py). A comment above a line is about that directory.
+
+compositing compositing-2
+css-align css-align-3
+# Backgrounds and Borders 3's borders, corners, border images and shadows are walked in css-borders.
+css-backgrounds css-backgrounds-4
+css-borders css-borders-4
+css-box css-box-4
+css-break css-break-4
+# CSS Color 6 is not walked yet.
+css-color css-color-4 css-color-5
+css-color-adjust css-color-adjust-1
+css-color-hdr css-color-hdr-1
+# CSS Containment 3 is empty: its container queries moved to CSS Conditional 5, which is not walked yet.
+css-contain css-contain-2 css-contain-3
+css-content css-content-3
+css-counter-styles css-counter-styles-3
+css-display css-display-4
+css-flexbox css-flexbox-2
+# CSS Fonts 4 replaces CSS 2's chapter 15. CSS Fonts 5 is not walked yet.
+css-fonts css-fonts-4
+# CSS Box Alignment 3's §8, gaps, moved to CSS Gaps 1, which css-gaps walks.
+css-gaps css-gaps-1
+# CSS Grid Layout 3 (masonry) is not walked yet.
+css-grid css-grid-2
+css-images css-images-3 css-images-4 css-images-5
+css-inline css-inline-3
+css-lists css-lists-3
+css-logical css-logical-1
+css-masking css-masking-1
+css-multicol css-multicol-1 css-multicol-2
+# CSS Overflow 5 is not walked yet.
+css-overflow css-overflow-3 css-overflow-4
+# CSS Paged Media 4 is not walked yet.
+css-page css-page-3
+css-position css-position-3 css-position-4
+css-pseudo css-pseudo-4
+css-sizing css-sizing-3 css-sizing-4
+css-tables css-tables-3
+# CSS Text 5 is not walked yet.
+css-text css-text-4
+css-text-decor css-text-decor-4
+css-transforms css-transforms-1 css-transforms-2
+css-ui css-ui-4
+# CSS Values 5 is not walked yet.
+css-values css-values-4
+css-writing-modes css-writing-modes-4
+
+css2-08-box-model CSS2/#box-model
+css2-09-visual-formatting-model CSS2/#visuren
+css2-10-visual-formatting-model-details CSS2/#visudet
+css2-11-visual-effects CSS2/#visufx
+css2-12-generated-content CSS2/#generated-text
+css2-13-paged-media CSS2/#the-page
+css2-14-colors-and-backgrounds CSS2/#color-bg
+# CSS Fonts replaces this chapter, and the chapter's pages point to css-fonts.
+css2-15-fonts CSS2/#fonts
+css2-16-text CSS2/#text
+css2-17-tables CSS2/#tables
+css2-18-user-interface CSS2/#ui
+css2-e-stacking-contexts CSS2/#elaborate-stacking-contexts
+
+filter-effects filter-effects-1 filter-effects-2
+# A gallery of the form controls, each against every appearance (README.md, "Pages that walk no
+# specification").
+forms
+
+html-04-the-elements-of-html html/semantics.html
+html-06-user-interaction html/interaction.html
+pointerevents pointerevents4
+svg2-02-conformance-criteria SVG2/conform.html
+svg2-03-rendering-model SVG2/render.html
+svg2-05-document-structure SVG2/struct.html
+svg2-06-styling SVG2/styling.html
+svg2-07-geometry-properties SVG2/geometry.html
+svg2-08-coordinate-systems-transformations-and-units SVG2/coords.html
+svg2-09-paths SVG2/paths.html
+svg2-10-basic-shapes SVG2/shapes.html
+svg2-11-text SVG2/text.html
+svg2-12-embedded-content SVG2/embedded.html
+svg2-13-painting SVG2/painting.html
+svg2-14-paint-servers SVG2/pservers.html
+svg2-15-scripting-and-interactivity SVG2/interact.html
+svg2-16-linking SVG2/linking.html
+
+uievents uievents uievents-key uievents-code
+
+# Real pages that pull features together (README.md, "Pages that walk no specification").
+workloads

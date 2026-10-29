@@ -1,0 +1,102 @@
+<!doctype html>
+<style>body { margin: 0 } svg { display: block }</style>
+<svg id=root width=200 height=100 viewBox="0 0 100 50">
+  <rect id=rect x="10%" y=5 width=20 height=10 stroke=black stroke-width=4 tabindex=0 />
+  <line id=line x1=0 y1=40 x2=60 y2=40 stroke=black stroke-width=4 stroke-dasharray="10 10" />
+  <a id=link href="#target"><circle id=circle cx=80 cy=20 r=5 /></a>
+  <use id=use href="#rect" />
+  <rect id=handler width=1 height=1 onclick="window.handled = evt.type + ' ' + event.type" />
+  <script id=svgScript>window.ranInline = (window.ranInline || 0) + 1;</script>
+</svg>
+<p id=target>target</p>
+<script>
+"use strict";
+function check(value, message) {
+    if (!value) throw new Error(message);
+}
+function throws(name, f, message) {
+    let thrown = null;
+    try { f(); } catch (error) { thrown = error.name; }
+    check(thrown === name, message + ": expected " + name + ", got " + thrown);
+}
+const $ = id => document.getElementById(id);
+
+// Interfaces.
+check($("rect") instanceof SVGRectElement && $("rect") instanceof SVGGeometryElement
+      && $("rect") instanceof SVGGraphicsElement, "rect is a geometry element of its own interface");
+check($("circle") instanceof SVGCircleElement && $("line") instanceof SVGLineElement, "circle and line");
+check($("circle").r.baseVal.value === 5 && $("circle").x === undefined && $("line").x2.baseVal.value === 60,
+      "each shape reflects its own lengths");
+check($("link") instanceof SVGAElement && $("use") instanceof SVGUseElement, "a and use have their interfaces");
+check($("svgScript") instanceof SVGScriptElement && !($("svgScript") instanceof SVGGraphicsElement),
+      "script is an SVGScriptElement");
+for (const name of ["SVGEllipseElement", "SVGPathElement", "SVGPolylineElement", "SVGPolygonElement",
+                    "SVGViewElement", "SVGSymbolElement", "SVGSwitchElement", "SVGAnimateElement",
+                    "SVGAnimationElement", "SVGLength", "SVGAnimatedLength", "SVGAnimatedString"])
+    check(typeof window[name] === "function", name + " is exposed");
+check(SVGAnimateElement.prototype instanceof SVGAnimationElement.prototype.constructor,
+      "SVGAnimateElement derives from SVGAnimationElement");
+check(window.ranInline === 1, "an inline SVG script runs once");
+
+// SVGGraphicsElement.
+const box = $("line").getBBox();
+check(box.x === 0 && box.y === 40 && box.width === 60 && box.height === 0, "getBBox of a line");
+const stroked = $("line").getBBox({stroke: true});
+check(stroked.y === 38 && stroked.height === 4, "getBBox with the stroke");
+throws("TypeError", () => $("line").getBBox(5), "getBBox of a number");
+const ctm = $("rect").getCTM();
+check(ctm.a === 2 && ctm.d === 2 && ctm.e === 0, "getCTM through the viewBox");
+const screen = $("rect").getScreenCTM();
+check(screen.a === 2 && screen.e === 0 && screen.f === 0, "getScreenCTM from the page's top left");
+const rect = $("rect").getBoundingClientRect();
+check(rect.x === 20 && rect.y === 10 && rect.width === 40 && rect.height === 20, "a client rect is the fill box");
+check($("rect").getClientRects().length === 1, "one client rect");
+
+// SVGGeometryElement.
+check($("line").isPointInStroke({x: 5, y: 40}) && !$("line").isPointInStroke({x: 15, y: 40}), "dashes count");
+check($("circle").isPointInFill(new DOMPoint(80, 20)), "isPointInFill");
+check(!$("circle").isPointInFill({x: NaN, y: 20}), "a point that is not finite is outside");
+check(Math.abs($("line").getTotalLength() - 60) < 1e-3, "getTotalLength");
+const along = $("line").getPointAtLength(15);
+check(along.x === 15 && along.y === 40, "getPointAtLength");
+throws("TypeError", () => $("line").getPointAtLength(Infinity), "a distance that is not finite");
+
+// Hit testing.
+check(document.elementFromPoint(50, 20) === $("use"), "elementFromPoint finds the use over its instance");
+check(document.elementFromPoint(160, 40) === $("circle"), "elementFromPoint finds the circle");
+check(document.elementFromPoint(190, 90) === $("root"), "elementFromPoint finds the svg where nothing paints");
+
+// SVGLength and SVGAnimatedLength.
+const x = $("rect").x;
+check(x === $("rect").x && x.baseVal === x.baseVal && x.baseVal !== x.animVal, "lengths keep their identity");
+check(x.baseVal.unitType === SVGLength.SVG_LENGTHTYPE_PERCENTAGE && x.baseVal.valueInSpecifiedUnits === 10,
+      "a percentage");
+check(x.baseVal.value === 10 && x.baseVal.valueAsString === "10%", "a percentage of the viewBox's width");
+x.baseVal.value = 12;
+check($("rect").getAttribute("x") === "12" && x.animVal.value === 12, "setting the base value writes the attribute");
+throws("NoModificationAllowedError", () => { x.animVal.value = 1; }, "an animated value is read only");
+throws("SyntaxError", () => { x.baseVal.valueAsString = "nonsense"; }, "a string that is not a length");
+throws("NotSupportedError", () => x.baseVal.newValueSpecifiedUnits(0, 1), "an unknown unit type");
+x.baseVal.convertToSpecifiedUnits(SVGLength.SVG_LENGTHTYPE_PERCENTAGE);
+check($("rect").getAttribute("x") === "12%", "converting keeps the value in user units");
+check($("root").width.baseVal.value === 200, "an svg's width");
+const detached = $("root").createSVGLength();
+check(detached instanceof SVGLength && detached.value === 0, "createSVGLength");
+check($("circle").x === undefined && $("circle").r.baseVal.value === 5, "a shape has its own lengths");
+
+// SVGAnimatedString.
+check($("link").href.baseVal === "#target" && $("link").href === $("link").href, "an href");
+$("use").href.baseVal = "#circle";
+check($("use").getAttribute("href") === "#circle", "setting an href writes the attribute");
+
+// Links and focus.
+check($("link").matches(":link") && $("link").tabIndex === 0, "an a element with an href is a link");
+$("rect").focus();
+check(document.activeElement === $("rect"), "a rect with a tabindex takes the focus");
+
+// An SVG element's event handler names its event evt as well as event.
+$("handler").dispatchEvent(new MouseEvent("click"));
+check(window.handled === "click click", "an SVG event handler names evt: " + window.handled);
+
+print("svg dom tests passed");
+</script>

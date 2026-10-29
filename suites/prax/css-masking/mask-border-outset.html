@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-outset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; box-sizing: border-box; background: #4f81bd; box-shadow: 0 0 0 10px #d68a3c; mask-border: url(support/frame-alpha.svg) 10 fill; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.5 Edge Overhang: the mask-border-outset property</div>
+  <h1>mask-border-outset</h1>
+  <p class=pr-lede><q>The values specify the amount by which the mask border image area extends beyond the border
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-outset">CSS Masking 1 §8.5</a></span>
+  Each box is 100 by 40 and blue, with an orange box-shadow spread 10px around it, masked by the frame of discs, bars
+  and a middle square, sliced at 10. Where the mask border image area does not reach, nothing is drawn.</p>
+</header>
+
+<section>
+  <h2>The border box, or beyond it</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption><code>0</code>, the initial value: the frame on the blue border box, 100 by 40; the orange shadow
+    outside it is masked away. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box and its
+    shadow unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-outset: 10px"></div></div>
+    <figcaption><code>10px</code>: the area is 120 by 60, the shadow's edge, so the discs and bars fall on the orange
+    shadow, and the middle on the blue box. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The
+    box and its shadow unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border: 5px solid #6aa36a; mask-border-outset: 2"></div></div>
+    <figcaption><code>2</code> with a 5px green border: <q>a &lt;number&gt; represents a multiple of the corresponding
+    border-width</q>, so 10px, as before. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box
+    and its shadow unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

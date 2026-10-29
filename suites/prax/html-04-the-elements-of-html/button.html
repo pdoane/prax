@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The button element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0 0 10px; font-size: 13px; }
+  .swatch { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 0; background: #4f81bd; }
+  .note { padding: 6px 10px; background: #f9cc9d; border: 2px solid #d68a3c; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.6 The button element</div>
+  <h1>The button element</h1>
+  <p class=pr-lede><q>The button element represents a button labeled by its contents.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">HTML §4.10.6</a></span></p>
+</header>
+
+<section>
+  <h2>Labeled by its contents</h2>
+  <p>Its content is phrasing content, and <q>The button element, when it generates a CSS box, is expected to depict a
+  button and to use button layout.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-button-element-2">§15.5.4</a></span></p>
+  <figure>
+    <div class="pr-stage pad">
+      <button><span class=swatch></span>Save <b>all</b></button>
+      <button>Two<br>lines</button>
+    </div>
+    <figcaption>Two buttons, each drawn around its content: a blue square, "Save" and a bold "all" on one line; "Two"
+    above "lines".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Submit, reset, or nothing</h2>
+  <p><q>A button (and its value) is only
+  included in the form submission if the button itself was used to initiate the form submission.</q> Without
+  <code>type</code>, a button is a submit button if <q>both the command and commandfor content attributes are not
+  present, and the parent node is not a select element</q>; the page's script cancels the second form's
+  submission. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">§4.10.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=typed-result>
+        <input name=q value=cats size=8>
+        <button id=go name=by value=go>Go</button>
+        <button id=reset type=reset>Reset</button>
+        <button id=nothing type=button name=by value=nothing>Nothing</button>
+      </form>
+      <ol class=pr-log data-log="click submit reset" data-fields="target" data-lines=3></ol>
+      <iframe class=pr-result name=typed-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Type in the field and click Go, a button without <code>type</code>: the frame turns green, the field's
+    text and <code>by=go</code>. Click Reset: the field says "cats" again and <code>reset</code> is logged. Click
+    Nothing: only its <code>click</code> is logged.</figcaption>
+  </figure><figure>
+    <div class=pr-stage>
+      <form class=pad id=commanding-form>
+        <button id=commanding commandfor=pop command=toggle-popover>commandfor</button>
+      </form>
+      <div id=pop class=note popover>Popover</div>
+      <ol class=pr-log data-log="submit command" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>A button without <code>type</code>, with <code>commandfor</code>: click it, and an orange "Popover"
+    toggles in the middle of the window; only <code>command</code> is logged, no <code>submit</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the second form from navigating the page, should it submit.
+  document.getElementById("commanding-form").addEventListener("submit", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filter Effects 1 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · Support</div>
+  <h1>Filter Effects 1 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>The properties</h2>
+  <code class=pr-decl>filter: blur(4px) brightness(1.5)</code>
+  <code class=pr-decl>filter: drop-shadow(4px 4px 2px #8e44ad)</code>
+  <code class=pr-decl>filter: grayscale(1) sepia(50%) saturate(2)</code>
+  <code class=pr-decl>filter: hue-rotate(90deg) invert() opacity(0.5)</code>
+  <code class=pr-decl>filter: contrast(2) url(#f)</code>
+  <code class=pr-decl>backdrop-filter: blur(4px)</code>
+  <code class=pr-decl>flood-color: #4f81bd</code>
+  <code class=pr-decl>flood-opacity: 0.5</code>
+  <code class=pr-decl>lighting-color: #f6d7b4</code>
+  <code class=pr-decl>color-interpolation-filters: sRGB</code>
+  <code class=pr-decl>background-image: filter(url(a.png), blur(2px))</code>
+</section>
+
+<section>
+  <h2>Used beside them</h2>
+  <code class=pr-decl>animation: fade 100s linear infinite</code>
+  <code class=pr-decl>animation-composition: add</code>
+  <code class=pr-decl>animation-name: fade</code>
+  <code class=pr-decl>background-position: center</code>
+  <code class=pr-decl>background-repeat: no-repeat</code>
+  <code class=pr-decl>bottom: 10px</code>
+  <code class=pr-decl>box-shadow: 10px 10px #8e44ad</code>
+  <code class=pr-decl>clip-path: circle(40%)</code>
+  <code class=pr-decl>gap: 10px</code>
+  <code class=pr-decl>mask-image: url(a.svg)</code>
+  <code class=pr-decl>mix-blend-mode: multiply</code>
+  <code class=pr-decl>opacity: 0.5</code>
+  <code class=pr-decl>right: 10px</code>
+  <code class=pr-decl>text-shadow: 2px 2px #8e44ad</code>
+  <code class=pr-decl>top: 10px</code>
+  <code class=pr-decl>transform: rotate(45deg)</code>
+  <code class=pr-decl>will-change: filter</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

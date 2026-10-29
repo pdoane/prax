@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>order and painting</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .flex { display: flex; height: 40px; padding-left: 30px; }
+  .flex > div { width: 70px; height: 40px; box-sizing: border-box; }
+  .flex > div { margin-left: -30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 3 Display Order: the order property, painting</div>
+  <h1>order and painting</h1>
+  <p class=pr-lede><q>This also affects the painting order, exactly as if the flex/grid items were reordered in the
+  source document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#order-property">CSS Display 4 §3</a></span></p>
+</header>
+
+<section>
+  <h2>Later in order, painted later</h2>
+  <p>Each stage is a flex row of 70px items, each pulled 30px over the one before it by a negative margin.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=flex><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>In source order: A, B, C, each over the one to its left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=flex><div class=pr-a style="order: 1">A 1</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>A with <code>order: 1</code>: B, C, A, A rightmost and drawn over C.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positioned items too</h2>
+  <p>Positioned descendants with <code>z-index: auto</code> paint in the order of the tree, so reordering them
+  reorders their painting. <q>Absolutely-positioned children of a flex/grid container are treated as having order: 0
+  for the purpose of determining their painting order relative to flex/grid items.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking"><div class=flex><div class=pr-a style="order: 1; position: relative">A 1</div><div class=pr-b style="position: relative">B</div><div class=pr-c style="position: relative">C</div></div></div>
+    <figcaption>All three <code>position: relative</code>, A with <code>order: 1</code>: B, C, A, A drawn over
+    C. <span class=pr-flag>Safari</span> paints them in source order: C over A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=flex style="position: relative"><div class=pr-a style="order: -1; position: relative">A −1</div><div class=pr-d style="position: absolute; left: 20px; top: 10px; width: 50px; height: 20px; margin: 0">D</div><div class=pr-b style="order: 1; position: relative">B 1</div></div></div>
+    <figcaption>D, absolutely positioned, between A (order −1) and B (order 1): D is drawn over A and under
+    B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

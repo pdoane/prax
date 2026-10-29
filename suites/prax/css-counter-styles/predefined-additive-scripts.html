@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Numeric styles: Armenian, Georgian and Hebrew</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.1 Numeric, Armenian, Georgian and Hebrew</div>
+  <h1>Numeric styles: Armenian, Georgian and Hebrew</h1>
+  <p class=pr-lede><q>The following stylesheet uses the @counter-style rule to redefine all of the counter styles defined in CSS 2 and CSS 2.1. This stylesheet is normative-- UAs must include it in their UA stylesheet</q>. The markers are inside; each item's text is its value in decimal. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-numeric">CSS Counter Styles 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Armenian</h2>
+  <p><q>Traditional uppercase Armenian numbering (e.g., Ա, Բ, Գ, ..., ՂԸ, ՂԹ, Ճ).</q> <q>Lowercase Armenian numbering (e.g., ա, բ, գ, ..., ղը, ղթ, ճ).</q> Range 1 to 9999.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: armenian; font-family: "PR Noto Sans Armenian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=100>100<li value=9999>9999</ol></div>
+    <figcaption><code>armenian</code>: <bdi dir=ltr>"Ա."</bdi>, <bdi dir=ltr>"Բ."</bdi>, <bdi dir=ltr>"Ճ."</bdi>, <bdi dir=ltr>"ՔՋՂԹ."</bdi>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: upper-armenian; font-family: "PR Noto Sans Armenian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li>3<li value=10000>10000</ol></div>
+    <figcaption><code>upper-armenian</code>: <bdi dir=ltr>"Ա."</bdi>, <bdi dir=ltr>"Բ."</bdi>, <bdi dir=ltr>"Գ."</bdi>, <bdi dir=ltr>"10000."</bdi>, past its range. <span class=pr-flag>Chrome</span> Goes past 9999: "Ա̂." for 10000, Ա under a circumflex.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: lower-armenian; font-family: "PR Noto Sans Armenian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>lower-armenian</code>: <bdi dir=ltr>"ա."</bdi>, <bdi dir=ltr>"բ."</bdi>, <bdi dir=ltr>"ղթ."</bdi>, <bdi dir=ltr>"ճ."</bdi>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Georgian and Hebrew</h2>
+  <p><q>Traditional Georgian numbering (e.g., ა, ბ, გ, ..., ჟჱ, ჟთ, რ).</q> Range 1 to 19999. Hebrew <q>manually specifies the values for 19-15 to force the correct display of 15 and 16</q>; range 1 to 10999.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: georgian; font-family: "PR Noto Sans Georgian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>georgian</code>: <bdi dir=ltr>"ა."</bdi>, <bdi dir=ltr>"ბ."</bdi>, <bdi dir=ltr>"ჟთ."</bdi>, <bdi dir=ltr>"რ."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: georgian; font-family: "PR Noto Sans Georgian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=10000>10000<li value=19999>19999<li>20000</ol></div>
+    <figcaption><code>georgian</code>, past 10000: <bdi dir=ltr>"ჵ."</bdi>, <bdi dir=ltr>"ჵჰშჟთ."</bdi>, <bdi dir=ltr>"20000."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: hebrew; font-family: "PR Noto Sans Hebrew", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=15>15<li>16<li value=100>100</ol></div>
+    <figcaption><code>hebrew</code>: <bdi dir=ltr>"א."</bdi>, <bdi dir=ltr>"טו."</bdi>, <bdi dir=ltr>"טז."</bdi>, <bdi dir=ltr>"ק."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: hebrew; font-family: "PR Noto Sans Hebrew", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1000>1000<li value=10999>10999<li>11000</ol></div>
+    <figcaption><code>hebrew</code>, thousands: <bdi dir=ltr>"א׳."</bdi>, <bdi dir=ltr>"י׳תתקצט."</bdi>, <bdi dir=ltr>"11000."</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-sizing: content-box and border-box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .b { height: 20px; padding-left: 10px; border-left: 10px solid #2c5a8f; background: #c3d08b; }
+  .b > div { height: 20px; background: #8cb6c0; }
+  .split { box-sizing: border-box; width: 50%; float: left; border: 5px ridge silver; font: 11px/14px "PR Arimo"; }
+  .cont { border: 5px solid black; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.3 Box Edges for Sizing: the box-sizing property</div>
+  <h1>box-sizing: content-box and border-box</h1>
+  <p class=pr-lede><q>The box-sizing property defines whether fixed sizes (such as &lt;length&gt;s and
+  &lt;percentage&gt;s) are assigned to the content box or to the border box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#box-sizing">CSS Box Sizing 3 §3.3</a></span></p>
+  <p class=pr-legend><span class="pr-swatch pr-border" style="background: #2c5a8f"></span>border <span class="pr-swatch pr-padding"></span>padding <span class="pr-swatch pr-content"></span>content</p>
+</header>
+
+<section>
+  <h2>The spec's three boxes</h2>
+  <p>Each has <code>width: 100px; padding-left: 10px; border-left: 10px solid</code>, but the third
+  <code>padding-left: 60px; border-left: 60px solid</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=b style="box-sizing: content-box; width: 100px"><div></div></div></div>
+    <figcaption><code>content-box</code>: the content box is 100px, the border box 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=b style="box-sizing: border-box; width: 100px"><div></div></div></div>
+    <figcaption><code>border-box</code>: the border box is 100px, the content box 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=b style="box-sizing: border-box; width: 100px; padding-left: 60px; border-left-width: 60px"><div></div></div></div>
+    <figcaption><code>border-box</code> with 120px of padding and border: the content box floors at 0px, and the
+    border box is 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two halves with borders</h2>
+  <p>The spec's second example: two floats of <code>box-sizing: border-box; width: 50%</code> with ridged borders, in
+  a container with a black border.</p>
+  <figure>
+    <div class="pr-stage pr-wide"><div class=cont><div class=split>This div occupies the left half.</div><div class=split>This div occupies the right half.</div><div style="clear: both"></div></div></div>
+    <figcaption>Side by side, each with its border exactly half the container's content width, 145px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><div class=cont><div class=split style="box-sizing: content-box">This div occupies the left half.</div><div class=split style="box-sizing: content-box">This div occupies the right half.</div><div style="clear: both"></div></div></div>
+    <figcaption>The same with <code>content-box</code>: each 155px with its borders, too wide for two, so they stack.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

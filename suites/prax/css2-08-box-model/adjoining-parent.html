@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adjoining margins: parent and child</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Adjoining margins: parent and child</h1>
+  <p class=pr-lede>Adjoining vertical margins collapse into one. Every box is 20px tall and the guides are 10px apart. A dashed outline is a parent, which has no border or padding.</p>
+</header>
+
+<section>
+  <h2>A box and its first child</h2>
+  <p>The <q>top margin of a box and top margin of its first in-flow child</q> adjoin. The combined margin is outside the
+  parent, so the parent starts where its child does. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption>Parent mt 20, child mt 40: one 40px gap above both.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 40px"><div class=pr-b style="margin-top: 20px">child: mt 20</div></div></div>
+    <figcaption>Parent mt 40, child mt 20: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent><div class=pr-parent style="margin-top: 10px"><div class=pr-b style="margin-top: 30px">grandchild: mt 30</div></div></div></div>
+    <figcaption>Down a chain: 0, 10 and 30 collapse to one 30px gap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A box and its last child</h2>
+  <p>The <q>bottom margin of a last in-flow child and bottom margin of its parent if the parent has 'auto' computed
+  height</q> adjoin. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin-bottom: 20px"><div class=pr-b style="margin-bottom: 40px">child: mb 40</div></div><div class=pr-a>anchor</div></div>
+    <figcaption>Parent mb 20, child mb 40: one 40px gap below both, and the parent ends where its child does.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="height: 30px; margin-bottom: 20px"><div class=pr-b style="margin-bottom: 40px">child: mb 40</div></div><div class=pr-a>anchor</div></div>
+    <figcaption>With <code>height: 30px</code> the margins do not adjoin: the anchor is 20px below the 30px
+    parent.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

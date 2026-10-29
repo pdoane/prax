@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The fallback descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style to-ten { system: cyclic; symbols: "★"; range: 1 10; fallback: upper-roman; suffix: " "; }
+  @counter-style chain { system: fixed; symbols: "a" "b"; fallback: to-ten; suffix: " "; }
+  @counter-style unknown-fb { system: fixed; symbols: "a"; fallback: no-such-style; suffix: " "; }
+  @counter-style odd { system: cyclic; symbols: "odd"; range: 1 1, 3 3, 5 5; fallback: even; suffix: " "; }
+  @counter-style even { system: cyclic; symbols: "even"; range: 2 2, 4 4, 6 6; fallback: odd; suffix: " "; }
+  @counter-style loop-x { system: fixed; symbols: "x"; fallback: loop-y; suffix: " "; }
+  @counter-style loop-y { system: fixed 2; symbols: "y"; fallback: loop-x; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.7 Defining fallback: the fallback descriptor</div>
+  <h1>The fallback descriptor</h1>
+  <p class=pr-lede><q>The 'fallback' descriptor specifies a fallback counter style to be used when the current counter
+  style can't create a representation for a given counter value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-fallback">CSS Counter Styles 3 §3.7</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>A fallback, and the fallback's fallback</h2>
+  <p><q>if a counter style defined with a range of 1-10 is asked to represent a counter value of 11, the counter value's
+  representation is instead constructed with the fallback counter style (or possibly the fallback style's fallback
+  style</q></p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: to-ten" start=9><li>9<li>10<li>11<li>12</ol></div>
+    <figcaption>Range 1 to 10, fallback <code>upper-roman</code>: ★, ★, XI, XII.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: chain"><li>1<li>2<li>3<li value=11>11</ol></div>
+    <figcaption>Fixed a, b, falling back to that style: a, b, ★, XI.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unknown names and loops: decimal</h2>
+  <p><q>If the value of the 'fallback' descriptor isn't the name of any defined counter style, the used value of the
+  'fallback' descriptor is 'decimal' instead. Similarly, while following fallbacks to find a counter style that can
+  render the given counter value, if a loop in the specified fallbacks is detected, the 'decimal' style must be used
+  instead.</q> A circle that is no loop is not an error.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: unknown-fb"><li>1<li>2</ol></div>
+    <figcaption>Fallback names no style: a, then 2.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: loop-x"><li>1<li>2<li>3</ol></div>
+    <figcaption>x for 1, y for 2, each the other's fallback; 3 loops: x, y, 3.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: odd"><li>1<li>2<li>3<li>4</ol></div>
+    <figcaption>The note's odd and even styles, each the other's fallback: odd, even, odd, even.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

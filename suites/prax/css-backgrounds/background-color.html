@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-color: clipped as the bottom layer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed #2c5a8f; background-color: #b9cde6; }
+  .a { background-image: none, none; background-clip: border-box, content-box; }
+  .b { background-image: none, none; background-clip: content-box, border-box; }
+  .c { background-image: none; background-clip: padding-box, content-box; }
+  .d {
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>");
+    background-repeat: no-repeat; background-position: center; background-clip: padding-box;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.1 Base Color: the background-color property</div>
+  <h1>background-color: clipped as the bottom layer</h1>
+  <p class=pr-lede><q>The background color is clipped according to the 'background-clip' value associated with the
+  bottom-most background image layer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-color">CSS Backgrounds 4 §2.1</a></span>
+  Each box has a 10px dashed border, 10px of padding and a content box 80 by 20, and a light blue background
+  color.</p>
+</header>
+
+<section>
+  <h2>The last value of background-clip</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box a"></div></div>
+    <figcaption>Two <code>none</code> layers, <code>border-box, content-box</code>: color only in the content box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box b"></div></div>
+    <figcaption>Two layers, <code>content-box, border-box</code>: color under the dashes too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box c"></div></div>
+    <figcaption>One layer, <code>padding-box, content-box</code>: color in the padding box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Behind the images</h2>
+  <p><q>This color is drawn behind any background images.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box d"></div></div>
+    <figcaption>An orange 20px square over the color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

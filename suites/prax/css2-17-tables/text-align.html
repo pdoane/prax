@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Horizontal alignment in a column</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { width: 100%; border-spacing: 0; background: #f4f5f7; font-size: 13px; line-height: 20px; }
+  td, th { padding: 0 4px; border: 1px solid #b5bcc7; }
+  .blk { display: inline-block; vertical-align: top; width: 30px; height: 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.4 Horizontal alignment in a column</div>
+  <h1>Horizontal alignment in a column</h1>
+  <p class=pr-lede>Each table is as wide as its stage; cells hold 30px inline blocks or text.</p>
+</header>
+
+<section>
+  <h2>text-align on the cell</h2>
+  <p><q>The horizontal alignment of inline-level content within a cell box can be specified by the value of the
+  'text-align' property on the cell.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#column-alignment">CSS 2 §17.5.4</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="text-align: left"><span class=blk></span><tr><td style="text-align: center"><span class=blk></span><tr><td style="text-align: right"><span class=blk></span></table></div>
+    <figcaption><code>left</code>, <code>center</code> and <code>right</code>, top to bottom: the block 4px from the
+    left, centered, and 4px from the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr style="text-align: right"><td><span class=blk></span><td style="text-align: left"><span class=blk></span></table></div>
+    <figcaption>A row with <code>text-align: right</code>: it inherits to the first cell, whose block is at the right;
+    the second cell's own <code>left</code> wins.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Aligning a column</h2>
+  <p>The specification's introduction: <code>th { text-align: center; font-weight: bold }</code> <q>centers the text
+  horizontally in the header cells</q>. A whole column is aligned through its cells. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#tables-intro">CSS 2 §17.1</a>,
+  <a href="https://drafts.csswg.org/css2/#column-alignment">§17.5.4</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><th style="text-align: center">Head<th style="text-align: center">Head<tr><td style="text-align: right">1.5<td style="text-align: left">a<tr><td style="text-align: right">12.25<td style="text-align: left">bc</table></div>
+    <figcaption>Centered bold header cells; the numbers of the first column at its right edge, the letters of the
+    second at its left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

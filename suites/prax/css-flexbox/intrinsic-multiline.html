@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The min-content size of a multi-line flex container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; flex-wrap: wrap; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.1.3 Multi-line Min-content Algorithm</div>
+  <h1>The min-content size of a multi-line flex container</h1>
+  <p class=pr-lede><q>For a multi-line container, the min-content main size is simply the largest min-content
+  contribution of all the non-collapsed flex items in the flex container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-multiline">CSS Flexible Box Layout 2 §9.10.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>The largest contribution, not the sum</h2>
+  <p>Each dashed container has <code>width: min-content</code>, and items "aaa bb", "cccc" and "dd": min-content
+  contributions of 30px, 40px and 20px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bb</div><div class=i2>cccc</div><div class=i3>dd</div></div></div>
+    <figcaption><code>wrap</code>: 40px, the largest. "aaa bb" shrinks to 40px on a line of its own, "aaa" over
+    "bb"; "cccc" on the next; "dd" on a third.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content; flex-wrap: nowrap"><div class=i1>aaa bb</div><div class=i2>cccc</div><div class=i3>dd</div></div></div>
+    <figcaption><code>nowrap</code>, single-line, for comparison: the sum, 90px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bb</div><div class=i2>cccc</div><div class=i3 style="visibility: collapse">dddddddd</div></div></div>
+    <figcaption>A third item "dddddddd", 80px, <code>visibility: collapse</code>, is not counted: still 40px,
+    "aaa" over "bb", then "cccc". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Count it:
+    80px, "aaa bb" on one line, "cccc" on the next, and an empty third.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa bb</div><div class=i2>cccc</div><div class=i3>dd</div></div></div>
+    <figcaption>The max-content size is not a single item's but follows <a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-compat">§9.10.1.2</a>: <code>wrap</code> at
+    <code>width: max-content</code> is 120px, the items on one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

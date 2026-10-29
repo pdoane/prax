@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks: the example in flow</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.1 Definition of "containing block"</div>
+  <h1>Containing blocks: the example in flow</h1>
+  <p class=pr-lede>The specification's example document, with <code>div1</code> dashed, its paragraphs blue,
+  <code>em1</code> orange and <code>strong1</code> in blue text. The frame is a viewport 300 wide.</p>
+</header>
+
+<section>
+  <h2>Example: with no positioning</h2>
+  <p><q>With no positioning, the containing blocks (C.B.) in the following document</q> are each element's nearest
+  block container: <code>html</code> for <code>body</code>, <code>body</code> for <code>div1</code>, <code>div1</code>
+  for <code>p1</code> and <code>p2</code>, <code>p2</code> for <code>em1</code> and <code>strong1</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2 §10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide"><iframe class=pr-view style="width: 300px" srcdoc="<style>html { background: #e7eaef } body { font: 13px/20px sans-serif } #div1 { outline: 1px dashed #6b7381 } p { margin: 0; background: #dbe6f3 } #p2 { margin-top: 8px } em { background: #f9cc9d } strong { color: #2c5a8f }</style><div id=div1><p id=p1>This is text in the first paragraph...</p><p id=p2>This is text <em id=em1> in the <strong id=strong1>second</strong> paragraph.</em></p></div>"></iframe></div>
+    <figcaption>The document of the example: <code>div1</code> dashed, its paragraphs blue, <code>em1</code> orange
+    around a blue <code>strong1</code>. All lie in the flow inside <code>body</code>'s 8px margin.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic table layout: rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; font-size: 0; line-height: 0; vertical-align: top; }
+  .blk { display: inline-block; width: 30px; height: 18px; background: #4f81bd; outline: 1px solid white; outline-offset: -1px; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.2 Automatic table layout</div>
+  <h1>Automatic table layout: rows and columns</h1>
+  <p class=pr-lede>Cells hold 30px blocks with line breaks allowed between them, have a 1px border and no padding.</p>
+</header>
+
+<section>
+  <h2>Rows and columns constrain each other</h2>
+  <p><q>In this algorithm, rows (and row groups) and columns (and column groups) both constrain and are constrained by
+  the dimensions of the cells they contain. Setting the width of a column may indirectly influence the height of a
+  row, and vice versa.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2 §17.5.2.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><col style="width: 100px"><col><tr><td><span class=blk></span> <span class=blk></span> <span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>The first column is 100px: its three blocks fit on one line, and the row is one block tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><col style="width: 2px"><col style="width: 198px"><tr><td><span class=blk></span> <span class=blk></span> <span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>The first column narrowed as far as it goes, to 32px: the blocks stack, and the row is three blocks
+    tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

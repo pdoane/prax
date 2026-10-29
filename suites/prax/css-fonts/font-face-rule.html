@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The @font-face rule</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Rule Ok"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Rule No Src"; }
+  @font-face { src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Rule Twice"; src: url(../../../third_party/fonts/Cousine.ttf); src: url(../../../third_party/fonts/Literata.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.1 The @font-face rule</div>
+  <h1>The @font-face rule</h1>
+  <p class=pr-lede><q>The @font-face rule allows for linking to fonts that are automatically fetched and activated when
+  needed.</q> <q>fonts defined using these rules are considered before other available fonts on a system.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-face-rule">CSS Fonts 4 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>A family and a source</h2>
+  <p>Each stage names a family and then <code>monospace</code>, so a stage whose rule is not used is monospace.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Rule Ok', monospace">Handgloves</div>
+    <figcaption><code>font-family</code> and <code>src</code>: Literata, a book serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Rule No Src', monospace">Handgloves</div>
+    <figcaption>No <code>src</code>: the rule <q>must not be considered</q>, so monospace.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Rule Twice', monospace">Handgloves</div>
+    <figcaption><code>src</code> twice: <q>only the last descriptor declaration is used</q>, so Literata, not
+    Cousine.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Descriptors are not properties</h2>
+  <p>The descriptors <q>apply solely within the context of the @font-face rule in which they are defined, and do not
+  apply to document language elements.</q> A rule with no <code>font-family</code> adds nothing for any element.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace">Handgloves</div>
+    <figcaption>The rule with a <code>src</code> and no family changes no text: monospace.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

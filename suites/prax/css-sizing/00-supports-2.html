@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Box Sizing declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · Support</div>
+  <h1>CSS Box Sizing declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Box Sizing 4</h2>
+  <code class=pr-decl>size: 120px 40px</code>
+  <code class=pr-decl>min-size: 90px 50px</code>
+  <code class=pr-decl>max-size: 60px</code>
+  <code class=pr-decl>width: fit-content(80px)</code>
+  <code class=pr-decl>max-width: fit-content(80px)</code>
+  <code class=pr-decl>width: contain</code>
+  <code class=pr-decl>height: contain</code>
+  <code class=pr-decl>width: calc-size(max-content, size + 20px)</code>
+  <code class=pr-decl>height: calc-size(auto, size / 2)</code>
+  <code class=pr-decl>aspect-ratio: 2 / 1</code>
+  <code class=pr-decl>aspect-ratio: auto 2 / 1</code>
+  <code class=pr-decl>aspect-ratio: 0 / 1</code>
+  <code class=pr-decl>contain-intrinsic-size: 100px 40px</code>
+  <code class=pr-decl>contain-intrinsic-size: auto 10px</code>
+  <code class=pr-decl>contain-intrinsic-size: none 50px</code>
+  <code class=pr-decl>contain-intrinsic-width: 80px</code>
+  <code class=pr-decl>contain-intrinsic-height: 40px</code>
+  <code class=pr-decl>contain-intrinsic-block-size: 30px</code>
+  <code class=pr-decl>contain-intrinsic-inline-size: none</code>
+  <code class=pr-decl>frame-sizing: content-height</code>
+  <code class=pr-decl>frame-sizing: content-block-size</code>
+  <code class=pr-decl>min-intrinsic-sizing: zero-if-scroll</code>
+  <code class=pr-decl>min-intrinsic-sizing: zero-if-extrinsic</code>
+  <code class=pr-decl>column-width: fit-content(40px)</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

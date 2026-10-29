@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>click</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .tall { margin: 10px 20px; font-size: 12px; line-height: 40px; background: #f6d7b4; }
+  .pad { height: 30px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.2 click</div>
+  <h1>click</h1>
+  <p class=pr-lede><q>The click event type MUST be dispatched on the topmost event target indicated by the pointer, when
+  the user presses down and releases the primary pointer button, or otherwise activates the pointer in a manner that
+  simulates such an action.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#click">Pointer Events §11.4.2</a></span></p>
+</header>
+<section>
+  <h2>Between the lines of one element</h2>
+  <p><q>If a user mouses down on a text node child of a &lt;p&gt; element which has been styled with a large
+  line-height, shifts the mouse slightly such that it is no longer over an area containing text but is still within the
+  containing block of that &lt;p&gt; element (i.e., the pointer is between lines of the same text block, but not over
+  the text node per se), then subsequently mouses up, this will likely still trigger a click event</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#click">§11.4.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <p class=tall id=tall>Press on a word, slide into the space between these lines, and release.</p>
+      <ol class=pr-log data-log="mousedown mouseup click" data-fields="target" data-on="#tall" data-lines=3></ol>
+    </div>
+    <figcaption>Do as the paragraph says: <code>mousedown</code>, <code>mouseup</code> and <code>click</code>, all at
+    <code>tall</code>; mouse events never target the text itself.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Activation, and not for other buttons</h2>
+  <p><q>In addition to being associated with pointer devices, the click event type MUST be dispatched as part of an
+  element activation.</q> <q>Secondary buttons (like the middle or right button on a standard mouse) MUST NOT fire click
+  events.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#click">§11.4.2</a></span>
+  The page cancels the context menu over the button.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <button class="pr-target pad" id=button>a button</button>
+      <ol class=pr-log data-log="click auxclick" data-fields="button detail" data-on="#button" data-lines=3></ol>
+    </div>
+    <figcaption>Click the button: <code>click detail=1</code>. Right-click it: <code>auxclick</code>, no
+    <code>click</code>. Tab to it and press Space: <code>click</code> once more, with no mouse at all.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu from opening over the button.
+  document.getElementById("button").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margin at-rules</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.1 At-rules for page-margin boxes</div>
+  <h1>Margin at-rules</h1>
+  <p class=pr-lede><q>Page-margin boxes are created by margin at-rules inside the page context.</q> <q>A margin at-rule is an at-rule that identifies the page-margin box (e.g. @top-left) and a block of descriptors (said to be in the margin context).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#margin-at-rules">CSS Paged Media 3 §5.1</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>A page header</h2>
+  <p>The specification's example: <q>The following style sheet establishes a page header containing the title ("Hamlet") on the left side and the page number, preceded by "Page ", on the right side</q>, here with margins of 15% and 10%.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 15% 10%; @top-left { content: 'Hamlet' } @top-right { content: 'Page ' counter(page) } } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Above each page area, 24px from the top and sides: 'Hamlet' at the left, and 'Page 1' or 'Page 2' at the right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes, and margins of 0: the percentages are not applied.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 20px } @page :first { @top-center { content: 'Act I'; color: white; background: #2c5a8f } } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>A margin at-rule in <code>@page :first</code>: 'Act I', white on dark blue, centered above page 1's page area; none on page 2. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

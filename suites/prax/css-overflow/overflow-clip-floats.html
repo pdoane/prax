@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow: clip beside floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .fl { float: left; width: 60px; height: 50px; }
+  .txt { font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, clip and floats</div>
+  <h1>overflow: clip beside floats</h1>
+  <p class=pr-lede><q>A block box that becomes a scroll container also establishes an independent formatting
+  context.</q> <code>clip</code> <q>does not cause the element to establish a new formatting context.</q> <q>Authors
+  who also want the box to establish a formatting context can use display: flow-root together with overflow:
+  clip.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Floats</h2>
+  <p>Each stage begins with an orange float 60 by 50, then a dashed box holding a line of text and a blue float of
+  its own, 20px tall.</p>
+  <figure>
+    <div class="pr-stage txt" style="height: 80px"><div class="pr-b fl pr-fit"></div><div class=pr-frame style="overflow: hidden">text by both<div class="pr-a pr-fit" style="float: right; width: 30px; height: 30px"></div></div></div>
+    <figcaption><code>hidden</code>: the box sits beside the orange float, and grows to hold the blue one,
+    30px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage txt" style="height: 80px"><div class="pr-b fl pr-fit"></div><div class=pr-frame style="overflow: clip">text by both<div class="pr-a pr-fit" style="float: right; width: 30px; height: 30px"></div></div></div>
+    <figcaption><code>clip</code>: the box spans the stage under the orange float, its line beside it; it is 20px
+    tall, and the blue float is cut at its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage txt" style="height: 80px"><div class="pr-b fl pr-fit"></div><div class=pr-frame style="overflow: clip; display: flow-root">text by both<div class="pr-a pr-fit" style="float: right; width: 30px; height: 30px"></div></div></div>
+    <figcaption><code>clip</code> with <code>display: flow-root</code>: as <code>hidden</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

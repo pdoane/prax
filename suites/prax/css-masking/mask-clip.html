@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-clip: the mask painting area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.small { width: 120px; }
+  .small + figcaption { max-width: 120px; }
+  .subj { width: 40px; height: 10px; padding: 10px; margin: 20px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6;
+          box-shadow: 0 0 0 10px #6aa36a; mask-image: linear-gradient(black, black); }
+  svg.art { display: block; overflow: visible; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.5 Masking Area: the mask-clip property</div>
+  <h1>mask-clip: the mask painting area</h1>
+  <p class=pr-lede><q>mask-clip determines the mask painting area, which determines the area that is affected by the
+  mask. The painted content of an element must be restricted to this area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-clip">CSS Masking 1 §7.5</a></span>
+  Each box is 80 by 50 at 20, 20 with a green 10px shadow around it. Its mask is opaque, so only the painting area
+  decides what is drawn.</p>
+</header>
+
+<section>
+  <h2>The boxes, and no-clip</h2>
+  <figure>
+    <div class="pr-stage small"><div class=subj></div></div>
+    <figcaption>The initial <code>border-box</code>: the box, but not its shadow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-clip: padding-box"></div></div>
+    <figcaption><code>padding-box</code>: no border either, 30 to 90 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-clip: content-box"></div></div>
+    <figcaption><code>content-box</code>: the blue content alone, 40 to 80 across.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class=subj style="mask-clip: no-clip"></div></div>
+    <figcaption><code>no-clip</code>: <q>not restricted</q>, and the repeated mask covers the shadow.
+    <span class=pr-flag>Safari</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's boxes</h2>
+  <p><q>For elements with associated CSS layout box, the used values for fill-box compute to content-box</q>. <q>For
+  SVG elements without associated CSS layout box, the used values for content-box and padding-box compute to fill-box
+  and for border-box compute to stroke-box.</q> Each SVG rectangle is 60 by 30 at 30, 20, its orange stroke 20
+  wide.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class=subj style="mask-clip: fill-box"></div></div>
+    <figcaption>A CSS box with <code>fill-box</code>: as <code>content-box</code>. <span class=pr-flag>Safari</span>
+    The whole box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><svg class="art" width="120" height="70"><rect x="30" y="20" width="60" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="20" style="mask-image: linear-gradient(black, black); mask-clip: content-box" /></svg></div>
+    <figcaption><code>content-box</code>, so the fill box: the stroke's outer half cut, 30 to 90 across.
+    <span class=pr-flag>Safari</span> The whole stroke.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><svg class="art" width="120" height="70"><rect x="30" y="20" width="60" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="20" style="mask-image: linear-gradient(black, black)" /></svg></div>
+    <figcaption>The initial <code>border-box</code>, so the stroke box: the whole stroke, 20 to 100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

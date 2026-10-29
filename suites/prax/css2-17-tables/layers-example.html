@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table layers: the example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex table { background: #ff0; border: solid black; empty-cells: hide; font-size: 12px; line-height: 18px; }
+  .ex tr.top { background: red; }
+  .ex td { border: solid black; }
+  .sp table { border-spacing: 10px; background: #f2e394; font-size: 12px; line-height: 18px; }
+  .sp td { width: 40px; height: 20px; box-sizing: border-box; padding: 0 6px; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.1 Table layers and transparency</div>
+  <h1>Table layers: the example</h1>
+  <p class=pr-lede><q>In the following example, the first row contains four non-empty cells, but the second row contains
+  only one non-empty cell, and thus the table background shines through, except where a cell from the first row spans
+  into this row.</q></p>
+</header>
+
+<section>
+  <h2>Empty cells in the bottom row</h2>
+  <p>The style is <code>TABLE { background: #ff0; border: solid black; empty-cells: hide }</code>, <code>TR.top {
+  background: red }</code>, <code>TD { border: solid black }</code>, and the second row has cell 5 and an empty cell.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layers">CSS 2 §17.5.1</a></span></p>
+  <pre class=pr-source>&lt;TR CLASS="top">
+  &lt;TD> 1 &lt;TD rowspan="2"> 2
+  &lt;TD> 3 &lt;TD> 4
+&lt;TR>
+  &lt;TD> 5 &lt;TD></pre>
+  <figure class=ex>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr class="top"><td> 1 <td rowspan="2"> 2 <td> 3 <td> 4 <tr><td> 5 <td></table></div>
+    <figcaption>Cells 1 to 4 are red, cell 2 down through both rows. In the second row, 5 has a black border on
+    yellow; the empty cell and the missing fourth show only the yellow table, with no borders.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The spacing is the table's</h2>
+  <p><q>Note that if the table has 'border-collapse: separate', the background of the area given by the
+  'border-spacing' property is always the background of the table element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layers">CSS 2
+  §17.5.1</a></span></p>
+  <figure class=sp>
+    <div class=pr-stage><table><col style="background: #6aa36a"><col style="background: #6aa36a"><tr style="background: #4f81bd"><td><td><tr><td><td></table></div>
+    <figcaption><code>border-spacing: 10px</code>; green columns, and a blue first row. The 10px between and around
+    the cells is the table's yellow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

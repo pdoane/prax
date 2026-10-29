@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Unreachable overflow: past the scroll origin</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .stage { height: 60px; }
+  .bar { width: 200px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); color: white; font-size: 12px; font-weight: 600; line-height: 20px; display: flex; justify-content: space-between; padding: 0 4px; box-sizing: border-box; direction: ltr; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2.3 Scrolling Overflow, unreachable overflow</div>
+  <h1>Unreachable overflow: past the scroll origin</h1>
+  <p class=pr-lede><q>the area beyond the scroll origin in either axis is considered the unreachable scrollable overflow
+  region: content rendered here is not accessible to the reader</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span>
+  <q>UAs must clip any content in the unreachable scrollable overflow region.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">§3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Before the start, cut and out of reach</h2>
+  <p>Each dashed box is 120 by 40 with <code>overflow: auto</code> and holds a bar 200px wide labelled at both ends,
+  pulled 60px past the box's start by a negative margin. Captions read <code>scrollWidth</code>, the
+  scrollable overflow rectangle's width.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=u1 class="pr-frame sc"><div class=bar style="margin-left: -60px"><span>start</span><span>end</span></div></div></div>
+    <figcaption><code>ltr</code>, 60px past the left: "start" is cut and cannot be reached.
+    <code>scrollWidth</code> <code class=pr-computed data-of=u1 data-dom=scrollWidth></code>, to the bar's right
+    end at 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=u2 class="pr-frame sc" dir=rtl><div class=bar style="margin-right: -60px"><span>end</span><span>start</span></div></div></div>
+    <figcaption><code>rtl</code>, 60px past the right: "start" is cut; <code>scrollWidth</code> <code class=pr-computed
+    data-of=u2 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=u3 class="pr-frame sc" style="height: 40px"><div class=bar style="position: relative; top: -10px; width: 100px"><span>top</span></div><div class=bar style="position: relative; top: 10px; width: 100px"><span>low</span></div></div></div>
+    <figcaption>Two bars moved by <code>position: relative</code>, the first 10px above the top, the second 10px down:
+    the first is cut at the top and out of reach, the second scrolls down: <code>scrollHeight</code> <code
+    class=pr-computed data-of=u3 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

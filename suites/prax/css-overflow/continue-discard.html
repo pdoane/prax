@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>continue: discard</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px 0; background: #f4f5f7; }
+  .stage { height: 100px; }
+  .mc { width: 120px; margin: 10px 0; column-count: 2; column-gap: 0; column-fill: auto; height: 40px; background: #f4f5f7; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.3.2 Discarding Content</div>
+  <h1>continue: discard</h1>
+  <p class=pr-lede><q>Content that is "not rendered" due to continue: discard is discarded, similar to display:
+  none</q>. <q>Note: continue: discard, and thus this subsection, is at risk</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#discarding-content">CSS Overflow 4 §5.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>After a break, forced or not</h2>
+  <p>The box <q>becomes a fragmentation container that captures region breaks</q>; the break <q>might be forced (e.g.
+  imposed by max-lines or by another mechanism, such as the break-before/break-after properties) or unforced (e.g. if
+  the content would otherwise overflow this fragmentation container due to its size constraints).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#continue">CSS Overflow 4 §5.3</a></span>
+  Each dashed box holds four lines of <code>.pr-measure</code> text.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="continue: discard; height: 50px">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>height: 50px</code>: broken after two lines; the rest not drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> discard nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="continue: discard">line one<div style="break-before: region">line two</div>line three</div></div>
+    <figcaption><code>break-before: region</code> on "line two": only "line one". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> discard nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="continue: discard; height: 50px; block-ellipsis: ellipsis">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption>With <code>block-ellipsis: ellipsis</code>: "line two…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> discard nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A multi-column container's overflow columns</h2>
+  <p><q>if the box is a multi-column container, any overflow columns are also not rendered, nor is any subsequent
+  content</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#discarding-content">CSS Overflow 4 §5.3.2</a></span> The box is 120 by 40, two columns filled in turn (<code>column-fill: auto</code>), with six lines.</p>
+  <figure>
+    <div class="pr-stage" style="height: 60px"><div class="pr-frame pr-measure mc">one<br>two<br>three<br>four<br>five<br>six</div></div>
+    <figcaption><code>continue: normal</code>: a third column, "five" and "six", overflows to the right. Safari: one line a column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage" style="height: 60px"><div class="pr-frame pr-measure mc" style="continue: discard">one<br>two<br>three<br>four<br>five<br>six</div></div>
+    <figcaption><code>continue: discard</code>: the overflow column is not drawn: "one" to "four". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> discard nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-align in vertical writing modes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-vertical { height: 120px; }
+  .w { display: inline-block; height: 30px; width: 18px; }
+  figure { margin-right: 8px; }
+  figure.pr-narrow figcaption { max-width: 92px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.1 Text Alignment: the text-align shorthand</div>
+  <h1>text-align in vertical writing modes</h1>
+  <p class=pr-lede><code>left</code>: <q>Inline-level content is aligned to the line-left edge of the line box. (In
+  vertical writing modes, this can be either the physical top or bottom, depending on 'writing-mode'.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-align-property">CSS Text 4 §7.1</a></span>
+  Each stage is 120px tall and holds one 30px box on a vertical line.</p>
+</header>
+
+<section>
+  <h2>vertical-rl and vertical-lr: line-left is the top</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="text-align: left"><span class="pr-a w"></span></div>
+    <figcaption><code>vertical-rl</code>, <code>left</code>: at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="text-align: right"><span class="pr-a w"></span></div>
+    <figcaption><code>right</code>: at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="text-align: left; direction: rtl"><span class="pr-a w"></span></div>
+    <figcaption><code>left</code>, <code>rtl</code>: still the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="text-align: start; direction: rtl"><span class="pr-a w"></span></div>
+    <figcaption><code>start</code>, <code>rtl</code>: the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="writing-mode: vertical-lr; text-align: right"><span class="pr-a w"></span></div>
+    <figcaption><code>vertical-lr</code>, <code>right</code>: the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>sideways-lr: line-left is the bottom</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="writing-mode: sideways-lr; text-align: left"><span class="pr-a w"></span></div>
+    <figcaption><code>sideways-lr</code>, <code>left</code>: at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="writing-mode: sideways-lr; text-align: right"><span class="pr-a w"></span></div>
+    <figcaption><code>right</code>: at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-vertical pr-text" style="writing-mode: sideways-rl; text-align: left"><span class="pr-a w"></span></div>
+    <figcaption><code>sideways-rl</code>, <code>left</code>: at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

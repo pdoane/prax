@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fonts and spacing in a canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  canvas { display: block; }
+  .measure { font-size: calc(50px / 3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.5 Text styles</div>
+  <h1>Fonts and spacing in a canvas</h1>
+  <p class=pr-lede>Text is laid out in <q>a hypothetical infinitely-wide CSS line box containing a single inline box
+  containing the text</q>, its font and spacing taken from the context. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#text-styles">HTML §4.12.5.1.5</a></span>
+  In the first card each letter of PR Noto Sans Mono is 0.6em wide, so 10px at <code>calc(50px / 3)</code>.</p>
+</header>
+<section>
+  <h2>Relative sizes, letter and word spacing</h2>
+  <p>'em' units are <q>interpreted relative to the computed value of the 'font-size' property of the font style source
+  object</q>, the canvas, whose <code>font-size</code> is <code>calc(50px / 3)</code> here.</p>
+  <figure>
+    <div class=pr-stage><canvas class=measure width=200 height=60 data-draw=em></canvas></div>
+    <figcaption><code>1em</code>: "abcdefghij" from x 0 to 100 on the top line. <code>2em</code>: "abcde" from 0 to
+    100 below it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas class=measure width=200 height=60 data-draw=spacing></canvas></div>
+    <figcaption><code>letterSpacing = "10px"</code>: "abcde", a letter every 20, "e" at x 80. <code>wordSpacing =
+    "20px"</code>: "ab cd", the space 30 wide, "d" ending at x 70.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Stretch, capitals and kerning</h2>
+  <p><q>Same as CSS 'font-stretch'</q>, <q>Same as CSS 'font-variant-caps'</q>; fontKerning <q>none: Kerning is not
+  applied.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=stretch></canvas></div>
+    <figcaption>"Stretch" in 24px PR Roboto Flex: <code>ultra-condensed</code>, narrow; <code>normal</code>;
+    <code>ultra-expanded</code>, wide. <span class=pr-flag>Safari</span> All three alike.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=caps></canvas></div>
+    <figcaption>PR Noto Sans: "Small Caps" with <code>small-caps</code>, in small capitals; "AVAWAY" with kerning
+    <code>none</code>, then <code>normal</code>, shorter. <span class=pr-flag>Safari</span> Lowercase; the two lines
+    alike.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    em(context) {
+      context.fillStyle = "#1f2430";
+      context.font = "1em 'PR Noto Sans Mono'";
+      context.fillText("abcdefghij", 0, 20);
+      context.font = "2em 'PR Noto Sans Mono'";
+      context.fillText("abcde", 0, 52);
+    },
+    spacing(context) {
+      context.fillStyle = "#1f2430";
+      context.font = "1em 'PR Noto Sans Mono'";
+      context.letterSpacing = "10px";
+      context.fillText("abcde", 0, 20);
+      context.letterSpacing = "0px";
+      context.wordSpacing = "20px";
+      context.fillText("ab cd", 0, 50);
+    },
+    stretch(context) {
+      context.fillStyle = "#1f2430";
+      context.font = "24px 'PR Roboto Flex'";
+      ["ultra-condensed", "normal", "ultra-expanded"].forEach((stretch, i) => {
+        context.fontStretch = stretch;
+        context.fillText("Stretch", 10, 22 + i * 24);
+      });
+    },
+    caps(context) {
+      context.fillStyle = "#1f2430";
+      context.font = "22px 'PR Noto Sans'";
+      context.fontVariantCaps = "small-caps";
+      context.fillText("Small Caps", 10, 22);
+      context.fontVariantCaps = "normal";
+      context.font = "26px 'PR Noto Sans'";
+      context.fontKerning = "none";
+      context.fillText("AVAWAY", 10, 48);
+      context.fontKerning = "normal";
+      context.fillText("AVAWAY", 10, 75);
+    },
+  };
+  Promise.all([
+    document.fonts.load("20px 'PR Noto Sans Mono'"),
+    document.fonts.load("20px 'PR Noto Sans'"),
+    document.fonts.load("20px 'PR Roboto Flex'"),
+  ]).then(() => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

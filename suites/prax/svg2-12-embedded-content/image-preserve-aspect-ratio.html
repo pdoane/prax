@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: preserveAspectRatio on a raster</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: preserveAspectRatio on a raster</h1>
+  <p class=pr-lede><q>The ‘preserveAspectRatio’ attribute determines how the referenced image is scaled and
+  positioned to fit into the concrete object size determined from the positioning rectangle and the object-fit and
+  object-position properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> at 20, 10, 120 by 40, outlined dashed grey, of a flag 40
+  by 20 in quarters, blue, orange, green, purple.</p>
+</header>
+
+<section>
+  <h2>A raster image</h2>
+  <p><q>if the image element referenced a PNG or JPEG and preserveAspectRatio="xMinYMin meet", then the aspect ratio
+  of the raster would be preserved</q>, <q>the raster would be sized as large as possible while ensuring that the
+  entire raster fits within the viewport, and the top/left of the raster would be aligned with the top/left of the
+  viewport</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>None given, so <code>xMidYMid meet</code>: 80 by 40, centered, from 40 to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMinYMin meet" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMinYMin meet</code>: 80 by 40 at the left, from 20 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMaxYMax meet" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMaxYMax meet</code>: 80 by 40 at the right, from 60 to 140.</figcaption>
+  </figure>
+  <p><q>If the value of ‘preserveAspectRatio’ was 'none' then aspect ratio of the image would not be preserved. The
+  image would be fit such that the top/left corner of the raster exactly aligns with coordinate ('x', 'y') and the
+  bottom/right corner of the raster exactly aligns with coordinate ('x'+width, 'y'+height).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>none</code>: stretched from 20, 10 to 140, 50, the seam at x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMidYMid slice" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMidYMid slice</code>: 120 by 60, centered, cut to the rectangle; the seam at y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMinYMin slice" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMinYMin slice</code>: 120 by 60 from the top, cut at 50: blue and orange 30 tall, green and
+    purple 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

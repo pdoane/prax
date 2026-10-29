@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-origin: the positioning area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed rgba(44, 90, 143, 0.6); background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>") no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.9 Positioning Area: the background-origin property</div>
+  <h1>background-origin: the positioning area</h1>
+  <p class=pr-lede><q>This property determines the background positioning area: the area within which any background
+  images are positioned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-origin">CSS Backgrounds 4 §2.9</a></span>
+  Each box has a 10px dashed border, 10px of padding and a content box 60 by 20, and an orange 20px square drawn once.</p>
+</header>
+
+<section>
+  <h2>Padding, border or content box</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption><code>padding-box</code>, the initial value, at <code>0 0</code>: in the padding box's top left
+    corner, inside the dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-origin: border-box"></div></div>
+    <figcaption><code>border-box</code>: in the outer corner, under the dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-origin: content-box; background-position: 100% 100%"></div></div>
+    <figcaption><code>content-box</code> at <code>100% 100%</code>: in the content box's bottom right corner,
+    10px in from the dashes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positioned in one area, clipped to another</h2>
+  <p>A note: <q>If 'background-clip' is padding-box, 'background-origin' is border-box, 'background-position' is top
+  left (the initial value), and the element has a non-zero border, then the top and left edges of the background
+  image will be clipped.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-origin: border-box; background-clip: padding-box"></div></div>
+    <figcaption>Only the square's bottom right 10 by 10 shows, in the padding box's corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

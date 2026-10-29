@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-position: offsets from any edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.7 Background Positioning Shorthand: the background-position shorthand property</div>
+  <h1>background-position: offsets from any edge</h1>
+  <p class=pr-lede><q>If three or four values are given, then each &lt;length-percentage&gt; represents an offset and
+  must be preceded by a keyword, which specifies from which edge the offset is given.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-position">CSS Backgrounds 4 §2.7</a></span>
+  Each dashed box is 140 by 60, with a blue 20px square drawn once.</p>
+</header>
+
+<section>
+  <h2>Four values, or three</h2>
+  <p><q>If three values are given, the missing offset is assumed to be zero.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: right 10px bottom 10px"></div></div>
+    <figcaption><code>right 10px bottom 10px</code>: 10px in from the right and bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: bottom 10px right 20px"></div></div>
+    <figcaption><code>bottom 10px right 20px</code>: 20px from the right, 10px from the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: right 20px top"></div></div>
+    <figcaption><code>right 20px top</code>: 20px from the right, at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages, center, and offsets outward</h2>
+  <p><q>Positive values represent an offset inward from the edge of the background positioning area. Negative values
+  represent an offset outward from the edge of the background positioning area.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: right 25% bottom 50%"></div></div>
+    <figcaption><code>right 25% bottom 50%</code>: 25% of 140 − 20, 30px, from the right; halfway down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: center bottom 10px"></div></div>
+    <figcaption><code>center bottom 10px</code>: 60px from the left, 10px from the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: right -10px bottom -10px"></div></div>
+    <figcaption><code>right -10px bottom -10px</code>: half outside two edges; its top left 10 by 10 shows in the corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The display property: two keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sized { width: 60px; height: 30px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.4 The 'display' property</div>
+  <h1>The display property: two keywords</h1>
+  <p class=pr-lede>Each of CSS 2's <code>display</code> values is one keyword. A later specification names each by two:
+  how the box takes part in the flow around it, and how it lays out its content.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-display-4/#the-display-properties">CSS Display 4 §2</a></div>
+  <h2>An outer and an inner display type</h2>
+  <p><q>The 'display' property defines an element's display type, which consists of the two basic qualities of how an
+  element generates boxes</q>: the inner display type and the outer. Each orange box has <code>width: 60px; height: 30px; margin: 0 10px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: inline flow-root">x</span> after</div>
+    <figcaption><code>inline flow-root</code> is CSS 2's <code>inline-block</code>: on the line, 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: block flow">x</span> after</div>
+    <figcaption><code>block flow</code> is <code>block</code>: its own lines, 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-chip sized" style="display: inline flow">x</span> after</div>
+    <figcaption><code>inline flow</code> is <code>inline</code>: as wide as its text.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-chip style="display: block flow-root"><div class=pr-b style="margin-top: 10px">child: mt 10</div></div></div>
+    <figcaption><code>block flow-root</code>, a block that is a flow root: its child's margin stays inside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

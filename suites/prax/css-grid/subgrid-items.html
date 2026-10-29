@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested and subgridded items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  ul.f { display: grid; grid: auto-flow / auto 1fr; margin: 0; padding: 0; list-style: none; }
+  ul.f li { grid-column: span 2; display: grid; border: 1px solid #2c5a8f; }
+  ul.f label { grid-column: 1; background: #f6d7b4; }
+  ul.f span { grid-column: 2; color-scheme: light; color: var(--pr-ink); background: white; border-left: 1px dashed #6b7381; }
+  .pr-stage ul.f { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 3.4 Nested vs. Subgridded Items</div>
+  <h1>Nested and subgridded items</h1>
+  <p class=pr-lede><q>A grid item can itself be a grid container by giving it display: grid. In the general case the
+  layout of this nested grid’s contents will be independent of the layout of the parent grid it participates in.</q>
+  <q>A nested grid can defer the definition of its rows and/or columns to its parent grid container, making it a
+  subgrid. In this case, the grid items of the subgrid participate in sizing the parent grid, allowing the contents of
+  both grids to align.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrid-items">CSS Grid Layout 2 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's form</h2>
+  <p>A list of labels and fields: the <code>ul</code> is <code>grid: auto-flow / auto 1fr</code>; each bordered
+  <code>li</code> spans both columns and is a grid, its label in column 1 and its white field in column 2.
+  <q>We want the labels and inputs to align</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><ul class=f><li style="grid-template-columns: auto 1fr"><label>Name:</label><span>ann</span></li><li style="grid-template-columns: auto 1fr"><label>Address:</label><span>1 rue</span></li><li style="grid-template-columns: auto 1fr"><label>Phone:</label><span>555</span></li></ul></div>
+    <figcaption>Each <code>li</code> a nested grid with <code>auto 1fr</code> columns of its own: each label column
+    fits its own label, 50, 80 and 60px, and the fields do not line up.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><ul class=f><li style="grid-template-columns: subgrid"><label>Name:</label><span>ann</span></li><li style="grid-template-columns: subgrid"><label>Address:</label><span>1 rue</span></li><li style="grid-template-columns: subgrid"><label>Phone:</label><span>555</span></li></ul></div>
+    <figcaption><code>grid-template-columns: subgrid</code>: the labels size the list's one <code>auto</code> column,
+    81px with each border's 1px, the widest label's; every field starts at the same place.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Either axis, or both</h2>
+  <p><q>A subgrid is established by the subgrid keyword of grid-template-rows or grid-template-columns, and can be
+  subgridded in either axis or in both. A grid that has no subgridded axis is a standalone grid.</q> The outer grid has
+  rows <code>20px 40px</code>; the tinted item spans both and holds A and B, one per row.</p>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template-rows: 20px 40px; grid-template-columns: 100px"><div class=pr-parent style="grid-row: span 2; display: grid; grid-template-rows: subgrid"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>grid-template-rows: subgrid</code>: A in the 20px row, B in the 40px row from 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template-rows: 20px 40px; grid-template-columns: 100px"><div class=pr-parent style="grid-row: span 2; display: grid"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>A standalone grid: its own <code>auto</code> rows share its 60px, 30px each, B from 30px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

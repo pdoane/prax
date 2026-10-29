@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>shape-rendering</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.10.1 The ‘shape-rendering’ property</div>
+  <h1>shape-rendering</h1>
+  <p class=pr-lede><q>The 'shape-rendering' property provides a hint to the implementation about what tradeoffs to
+  make as it renders vector graphics elements such as ‘path’ elements and basic shapes such as circles and
+  rectangles.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#ShapeRendering">SVG 2 §13.10.1</a></span>
+  Each stage is an SVG 160 by 60 with a blue circle of radius 20 at 50, 30 and a blue rectangle from 90.5, 10.5 to
+  130.5, 50.5, half a pixel off the guides. What each value draws is the user agent's choice.</p>
+</header>
+
+<section>
+  <h2>Precision and crisp edges</h2>
+  <p><b>crispEdges</b>: <q>To achieve crisp edges, the user agent might turn off anti-aliasing for all lines and
+  curves or possibly just for straight lines which are close to vertical or horizontal. Also, the user agent might
+  adjust line positions and line widths to align edges with device pixels.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="50" cy="30" r="20" fill="#4f81bd" /><rect x="90.5" y="10.5" width="40" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption><code>auto</code>, the initial value: <q>geometric precision given more importance than speed and
+    crisp edges</q>, so smooth edges, the rectangle's half covering its edge pixels.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" shape-rendering="crispEdges"><circle cx="50" cy="30" r="20" fill="#4f81bd" /><rect x="90.5" y="10.5" width="40" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption><code>crispEdges</code>: may draw the circle stepped, and the rectangle with hard edges on whole
+    pixels.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" shape-rendering="optimizeSpeed"><circle cx="50" cy="30" r="20" fill="#4f81bd" /><rect x="90.5" y="10.5" width="40" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption><code>optimizeSpeed</code>: <q>will sometimes cause the user agent to turn off shape
+    anti-aliasing</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

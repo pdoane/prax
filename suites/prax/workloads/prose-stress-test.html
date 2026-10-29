@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Dense prose and inline typography. Justified prose exercises hyphenation, drop caps, inline semantics, a cited quotation, nested numbering and footnotes. -->
+<title>Prose stress test</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.doc { background:#fffdf8; border:1px solid #ddd6c8; border-radius:8px; padding:16px 20px; color:#2a2622; font-family:serif; font-size:13.5px; line-height:1.6; text-align:justify; hyphens:auto }
+.doc h2 { font-family:serif; font-size:19px; line-height:1.25; margin:0 0 2px; font-weight:normal }
+.doc .by { font-variant:small-caps; letter-spacing:.06em; font-size:12px; color:#6b6255; margin-bottom:10px; border-bottom:1px solid #e3dccd; padding-bottom:6px }
+.doc p { margin:0 0 7px; text-indent:1.2em }
+.doc p.lead { text-indent:0 }
+.doc p.lead::first-letter { font-size:2.6em; float:left; line-height:.85; padding:2px 5px 0 0; color:#7a3b1e }
+blockquote { margin:8px 18px; padding-left:10px; border-left:3px solid #cdbb9a; font-style:italic; color:#4a423a; text-indent:0 }
+blockquote p { text-indent:0; margin:0 }
+blockquote cite { display:block; font-style:normal; font-size:11px; color:#7a7266; margin-top:3px }
+ol.body { margin:6px 0 8px 22px; text-indent:0 }
+ol.body ul { margin:2px 0 2px 18px; list-style:square }
+ol.body li { margin-bottom:2px }
+mark { background:#fbeaa8 }
+kbd { font-family:monospace; font-size:11px; border:1px solid #cfc7b6; border-bottom-width:2px; border-radius:3px; padding:0 4px; background:#f4f0e6 }
+var { font-style:italic; color:#5a3f7a }
+samp { font-family:monospace; font-size:11.5px; color:#3a5a3a }
+abbr { border-bottom:1px dotted #8a8175 }
+dfn { font-style:italic; font-weight:bold }
+sup.fn { font-size:.7em; vertical-align:super; color:#7a3b1e; font-weight:bold }
+.notes { margin-top:10px; border-top:1px solid #e3dccd; padding-top:6px; font-size:11px; line-height:1.5; color:#5a5348; text-align:left }
+.notes p { text-indent:0; margin:0 0 3px }
+.notes sup { color:#7a3b1e; font-weight:bold }
+.sc { font-variant:small-caps }
+del { color:#8a5a52 } ins { text-decoration:underline; color:#2f6b3f }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h2>Setting the Verrier telescope by hand</h2>
+  <div class="by">Field notes &#183; Ana&#239;s Berger &#183; Observatory of Haute-Provence</div>
+
+  <p class="lead">The mount arrived in eleven crates with no manual. We had typed
+  pages from 1962, hand-drawn plates, and two former students who remembered
+  the drive. The first evening went to the counterweights, the second to the
+  <dfn>polar axis</dfn>, about which the mount turns to follow the sky.<sup class="fn">1</sup></p>
+
+  <p>Alignment is a loop, not a step. You point at a star near the meridian,
+  you correct in azimuth; you point at a star near the horizon, you correct in
+  altitude; then you begin again, because each correction spoils a little of the
+  other. The typed pages call this <q>chasing the residual</q>, and give a
+  tolerance of <var>&#948;</var> &lt; 30&#8243; before the drive can hold a plate
+  for an hour. Our fourth night ended at 22&#8243;.</p>
+
+  <blockquote>
+    <p>A telescope is not aimed. It is persuaded, slowly, into agreement with the
+    Earth.</p>
+    <cite>H&#233;l&#232;ne Verrier, <i>Notes on Equatorial Mounts</i>, 1958</cite>
+  </blockquote>
+
+  <p>The working procedure we settled on, after four nights, runs as follows:</p>
+
+  <ol class="body">
+    <li>Level the pier and lock the clutches. The bubble reads to
+      <abbr title="arcminutes">arcmin</abbr>, which is enough at this stage.</li>
+    <li>Set the latitude scale to 43&#176;55&#8242; and tighten in two passes:
+      <ul>
+        <li>a light pass by hand, felt rather than measured;</li>
+        <li>a second pass with the <span class="sc">C</span>-spanner, quarter turn
+          on each bolt in a star pattern.</li>
+      </ul>
+    </li>
+    <li>Photograph a field near the celestial equator for 300 <span class="sc">s</span>
+      and measure the trail with the eyepiece reticle.<sup class="fn">2</sup></li>
+  </ol>
+
+  <p>Two conventions from the old pages have survived unchanged. Temperatures go
+  in the log as <samp>T = 4.5 &#176;C</samp>, and every reading of the drive rate is
+  recorded as a fraction of the sidereal rate, so <var>r</var><sub>0</sub> is
+  the nominal rate and <var>r</var><sub>1</sub> the rate we set. The correction
+  we apply on a cold night, <mark>2.1 &#215; 10<sup>&#8722;4</sup></mark>, has
+  been in the folder since <time datetime="1971-11">November 1971</time>. What we did change is the log itself: the
+  old sheets said <del>observer initials only</del>, and we now write
+  <ins>the full name and the seeing estimate</ins>.</p>
+
+  <p>On the control box, <kbd>F1</kbd> releases the clutch, <kbd>F2</kbd>
+  engages the drive, and <kbd>Shift</kbd> doubles the slew rate. The handwritten
+  label <strong>DO NOT SLEW WITH DOME CLOSED</strong> is <em>still</em> the
+  instrument’s only warning.</p>
+
+  <div class="notes">
+    <p><sup>1</sup> The mount is a German equatorial, cast in Marseille.</p>
+    <p><sup>2</sup> The reticle divisions are 15&#8243; at the prime focus. A
+    trail shorter than one division was our working definition of success.</p>
+  </div>
+</div>
+</body>
+</html>

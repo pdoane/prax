@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fonts load when used</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Used"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Unused"; src: url(../../../third_party/fonts/Cousine.ttf); }
+  @font-face { font-family: "Hidden Use"; src: url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: "Second Choice"; src: url(../../../third_party/fonts/Arimo.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.8.1 Font loading guidelines</div>
+  <h1>Fonts load when used</h1>
+  <p class=pr-lede><q>user agents must only download those fonts that are referred to within the style rules
+  applicable to a given page. User agents that download all fonts defined in @font-face rules without considering
+  whether those fonts are in fact used within a page are considered non-conformant.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-face-loading">CSS Fonts 4
+  §4.8.1</a></span></p>
+</header>
+
+<section>
+  <h2>Each face's status once the page has loaded</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Used, sans-serif">Handgloves</div>
+    <figcaption>"Used" sets this text: <code data-face=Used>?</code>, expected <code>loaded</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: sans-serif">Handgloves</div>
+    <figcaption>"Unused" sets no text: <code data-face=Unused>?</code>, expected <code>unloaded</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Hidden Use', sans-serif; display: none">Handgloves</div>
+    <div class="pr-stage pr-sample">(not rendered)</div>
+    <figcaption>"Hidden Use" sets text that is not rendered: <code data-face='Hidden Use'>?</code>, expected
+    <code>unloaded</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Used, 'Second Choice', sans-serif">Handgloves</div>
+    <figcaption>"Second Choice" is after a family that has every character: <code data-face='Second Choice'>?</code>;
+    a user agent <q>may download</q> it.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.fonts.ready.then(() => {
+    for (const face of document.fonts)
+      for (const out of document.querySelectorAll("[data-face]"))
+        if (out.dataset.face === face.family.replace(/"/g, ""))
+          out.textContent = face.status;
+  });
+</script>
+</body>
+</html>

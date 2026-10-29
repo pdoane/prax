@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>filter: a list applied in order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <filter id="rotate"><feColorMatrix type="hueRotate" values="180" /></filter>
+  <linearGradient id="gradient"><stop offset="0" stop-color="red" /></linearGradient>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 5 Graphic filters: the filter property</div>
+  <h1>filter: a list applied in order</h1>
+  <p class=pr-lede><q>The list of functions are applied in the order provided.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">Filter Effects 1 §5</a></span>
+  Each blue box is 60 by 30.</p>
+</header>
+
+<section>
+  <h2>Each function takes the one before's output</h2>
+  <p><q>Subsequent operations take the output from the previous filter function or filter reference as the input
+  image.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: drop-shadow(10px 10px #8e44ad) hue-rotate(180deg)"></div></div>
+    <figcaption>Purple shadow, then <code>hue-rotate(180deg)</code>: a brown box, its shadow turned green.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: hue-rotate(180deg) drop-shadow(10px 10px #8e44ad)"></div></div>
+    <figcaption>The other order: the same brown box, its shadow still purple.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="filter: url(#rotate) drop-shadow(10px 10px #8e44ad)"></div></div>
+    <figcaption>An SVG <code>filter</code> that turns hues 180deg, in its default linearRGB, then the shadow: an
+    olive box, its shadow purple. <span class=pr-flag>Chrome</span> A light purple shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A reference to nothing, or to something not a filter</h2>
+  <p><q>If the filter references a non-existent object or the referenced object is not a filter element, then the
+  whole filter chain is ignored. No filter is applied to the object.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="filter: hue-rotate(180deg) url(#missing)"></div></div>
+    <figcaption><code>url(#missing)</code> after a hue turn: no filter at all, the box blue. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Brown: the turn applied. <span
+    class=pr-flag>Firefox</span> No box; one drawn at the page's top left.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="filter: hue-rotate(180deg) url(#gradient)"></div></div>
+    <figcaption>A reference to a <code>linearGradient</code>: the same, blue. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Brown. <span class=pr-flag>Firefox</span> No box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

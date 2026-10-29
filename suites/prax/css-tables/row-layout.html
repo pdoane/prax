@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Row layout: percentage heights in the first pass</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; height: 40px; }
+  td { padding: 0; width: 60px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .tall { height: 100%; background: rgba(214, 138, 60, 0.45); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.2 Row layout (first pass)</div>
+  <h1>Row layout: percentage heights in the first pass</h1>
+  <p class=pr-lede><q>The minimum height of a row (without spanning-related height distribution) is defined as the
+  height of a hypothetical linebox containing the cells originating in the row and where cells spanning multiple rows
+  are considered having a height of 0px (but their correct baseline).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-layout">CSS Table 3 §3.10.2</a></span></p>
+</header>
+
+<section>
+  <h2>Auto, or 0px</h2>
+  <p><q>descendants of table cells whose height depends on percentages of their parent cell's height</q> <q>are
+  considered to have an auto height if they have 'overflow' set to visible, clip, or hidden or if they are replaced
+  elements, and a 0px height if they have not.</q> Each table is <code>height: 40px</code>, one row: a blue cell
+  holding an orange block of <code>height: 100%</code> with four lines of <code>.pr-measure</code> text, 80px, and an
+  orange cell of two lines.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 20px"><div class=tall>a b c d</div></td><td>e f</td></tr></table></div>
+    <figcaption><code>overflow: visible</code>: auto, 80px, in the first pass, so the row and the table are 80px;
+    then the block is 100% of that.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 20px"><div class=tall style="overflow: auto">a b c d</div></td><td>e f</td></tr></table></div>
+    <figcaption><code>overflow: auto</code>: 0px in the first pass, so the row is 40px, and the block, 100% of it,
+    scrolls.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

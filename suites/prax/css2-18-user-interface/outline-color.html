@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ol { outline: 10px solid; }
+  .halves { background: linear-gradient(to right, #1f2430 50%, #f4f5f7 50%); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline color</h1>
+  <p class=pr-lede><code>outline-color</code> takes <code>&lt;color&gt; | invert | inherit</code>. Initial
+  <code>invert</code>, not inherited; computed as specified. Every figure's outline is solid and 10px wide.</p>
+</header>
+
+<section>
+  <h2>&lt;color&gt;</h2>
+  <p><q>The 'outline-color' accepts all colors, as well as the keyword 'invert'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2
+  §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-color: #c0392b"></div></div>
+    <figcaption><code>outline-color: #c0392b</code>: red.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-color: rgb(39, 174, 96)"></div></div>
+    <figcaption><code>rgb(39, 174, 96)</code>: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>invert, and the initial value</h2>
+  <p><q>'Invert' is expected to perform a color inversion on the pixels on the screen.</q> <q>Conformant UAs may ignore
+  the 'invert' value on platforms that do not support color inversion of the pixels on the screen. If the UA does not
+  support the 'invert' value then the initial value of the 'outline-color' property is the value of the 'color'
+  property</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class="pr-stage halves" style="padding: 20px"><div class="pr-plain ol" style="color: #2c5a8f; outline-color: invert"></div></div>
+    <figcaption><code>outline-color: invert</code> on a stage half dark, half light: inverted, the outline is light
+    over the dark half and dark over the light. A UA that ignores it draws <code>color</code>, blue. <span class="pr-flag pr-since">Since CSS
+    2</span> <code>invert</code> is gone.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="color: #c0392b"></div></div>
+    <figcaption>No <code>outline-color</code>, and <code>color: #c0392b</code>: inverted pixels where <code>invert</code> is supported, red where
+    it is not. <span class="pr-flag pr-since">Since CSS 2</span> the initial value is <code>auto</code>: red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

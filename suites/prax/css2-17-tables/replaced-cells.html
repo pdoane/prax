@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table model: replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols .pr-table-cell { width: 50px; }
+  .image { padding: 0; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2 The CSS table model</div>
+  <h1>The table model: replaced elements</h1>
+  <p class=pr-lede>A blue 30 by 30 image given a table <code>display</code> value, in a table of 50px cells.</p>
+</header>
+
+<section>
+  <h2>A replaced element as a cell</h2>
+  <p><q>Replaced elements with these 'display' values are treated as their given display types during layout. For
+  example, an image that is set to 'display: table-cell' will fill the available cell space, and its dimensions might
+  contribute towards the table sizing algorithms, as with an ordinary cell.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2
+  §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table cols"><div class=pr-table-row><div class=pr-table-cell style="height: 40px">cell</div><img alt="" class="pr-table-cell image" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'/%3E"></div></div></div>
+    <figcaption>A blue image styled as the other cell, <code>display: table-cell</code> and 50px wide, beside a
+    40px tall cell: it fills the cell space, 50 by 40. <span class="pr-flag pr-since">Since CSS 2</span>
+    CSS Display 3 lays it out as an inline: 50 by 20, at the row's top.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-display-3/#layout-specific-display">CSS Display 3 §2.4</a></div>
+  <h2>A replaced element is never a table box</h2>
+  <p><q>When the display property of a replaced element computes to one of the layout-internal values, it is handled
+  as having a used value of inline. White space collapsing and anonymous box generation must happen around those
+  replaced elements based on that inline value, as if they never had a layout-internal display value applied to
+  them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-3/#layout-specific-display">CSS Display 3 §2.4</a></span> CSS Tables 3 agrees: <q>This is a breaking change from CSS
+  2.1 but matches implementations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-structure">CSS Table 3 §2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table cols"><div class=pr-table-row><div class=pr-table-cell style="height: 40px">cell</div><img alt="" style="display: table-cell; background: #4f81bd" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'/%3E"></div></div></div>
+    <figcaption><code>display: table-cell</code> on a 30 by 30 image: an anonymous cell holds it as an inline, beside
+    the 40px cell, and it stays 30 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

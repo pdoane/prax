@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rem, rex, rcap, rch, ric, rlh: the root's font</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { width: 100px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, the root units</div>
+  <h1>rem, rex, rcap, rch, ric, rlh: the root's font</h1>
+  <p class=pr-lede>The <q>root font-relative lengths</q> refer to the font metrics <q>of the root element</q>: rem is
+  <q>the computed value of the em unit on the root element</q>, and rex, rcap, rch, ric and rlh are each <q>equal to
+  the value of the</q> ex, cap, ch, ic and lh units <q>on the root element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Against the root, not the element</h2>
+  <p>Each frame's root is <code>font: 40px/50px "PR Baseline Diagnostic Zero"</code>: an x-height of 10px, a cap
+  height of 22px, a 0 40px wide and 50px lines. Its body is 10px text on 20px lines, and holds a blue bar.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Baseline Diagnostic Zero&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Baseline Diagnostic Zero&quot;'>x水</span><div style='width: 2rem; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>2rem</code>: 80px, not the body's 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Baseline Diagnostic Zero&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Baseline Diagnostic Zero&quot;'>x水</span><div style='width: 4rex; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>4rex</code>: 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Baseline Diagnostic Zero&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Baseline Diagnostic Zero&quot;'>x水</span><div style='width: 3rcap; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>3rcap</code>: 66px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Baseline Diagnostic Zero&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Baseline Diagnostic Zero&quot;'>x水</span><div style='width: 2rch; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>2rch</code>: 80px, two of the root font's full-em zeros.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Noto Sans JP&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Noto Sans JP&quot;'>x水</span><div style='width: 2ric; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption>With the root in 40px PR Noto Sans JP, <code>2ric</code>: 80px, two of its 水.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="height: 70px" srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><html style='font: 40px/50px &quot;PR Baseline Diagnostic Zero&quot;'><body style='margin: 10px 0; font: 10px/20px sans-serif'><span style='position: absolute; color: transparent; font: 1px &quot;PR Baseline Diagnostic Zero&quot;'>x水</span><div style='width: 60px; height: 1rlh; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>height: 1rlh</code>: 50px, the root's line, not the body's 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

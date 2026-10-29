@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Range</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+.grid input[type=range] { width: 100px; }
+/* What sites write to restyle a range: no look of the control's own, and the prefixed parts drawn anew. */
+.restyled input[type=range] { appearance: none; background: transparent; }
+.restyled input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: #e4c9d6; }
+.restyled input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -4px;
+  border-radius: 50%; background: #c0477a; border: 2px solid Canvas; }
+.panel input[type=range] { width: 110px; }
+output { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Range</h1>
+  <p>Drag a range or click its track, or focus it and use the arrow keys, Page Up and Page Down, Home and End.</p>
+</header>
+
+<section>
+  <h2>Values and states</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>restyled parts</th></tr>
+  <tr><th scope=row>at 0</th><td><input type=range value=0></td><td class=none><input type=range value=0></td><td class=base><input type=range value=0></td><td class=restyled><input type=range value=0></td></tr>
+  <tr><th scope=row>at 30</th><td><input type=range value=30></td><td class=none><input type=range value=30></td><td class=base><input type=range value=30></td><td class=restyled><input type=range value=30></td></tr>
+  <tr><th scope=row>at 100</th><td><input type=range value=100></td><td class=none><input type=range value=100></td><td class=base><input type=range value=100></td><td class=restyled><input type=range value=100></td></tr>
+  <tr><th scope=row>disabled</th><td><input type=range value=60 disabled></td><td class=none><input type=range value=60 disabled></td><td class=base><input type=range value=60 disabled></td><td class=restyled><input type=range value=60 disabled></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>Live, with a step of 5</h2>
+<div class=strip><input type=range id=live min=0 max=50 step=5 value=25>
+  <span><output id=liveinput for=live>25</output> on input, <output id=livechange for=live>25</output> on change</span></div>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><input type=range value=40></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><input type=range value=40></div></div>
+  <div class="panel accent"><span class=cap>accent-color</span><div class=strip><input type=range value=40></div></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><div class=strip><input type=range value=20></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><input type=range value=20></div>
+</div>
+</section>
+
+<script>
+const live = document.getElementById('live');
+live.addEventListener('input', () => { document.getElementById('liveinput').value = live.value; });
+live.addEventListener('change', () => { document.getElementById('livechange').value = live.value; });
+</script>
+</body>
+</html>

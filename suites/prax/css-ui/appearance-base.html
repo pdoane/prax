@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>appearance: base and base-select</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > div { margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2 Switching appearance, base</div>
+  <h1>appearance: base and base-select</h1>
+  <p class=pr-lede><q>Using appearance: base gives widgets a base appearance. Widgets in base appearance have their
+  native appearance suppressed where CSS can be used to restyle them, just like primitive appearance, but also have
+  default styles which are usable and interoperable.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-switching">CSS Basic User Interface 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>base-select</h2>
+  <p>For <code>base-select</code>, <q>The select element or ::picker(select)</q> <q>is rendered as for base.</q>
+  <q>Everything else</q> <q>is rendered as for auto.</q> HTML defines the base appearance of
+  <code>select</code>.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><div><select><option>Select</select></div><div><input type=checkbox checked></div></div>
+    <figcaption><code>auto</code>, for comparison: a native <code>select</code> and checkbox.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage pr-medium"><div><select style="appearance: base-select"><option>Select</select></div><div><input type=checkbox checked style="appearance: base-select"></div></div>
+    <figcaption><code>base-select</code>: the <code>select</code> in HTML's base style, a bordered box with a
+    down-pointing arrow after its text; the checkbox as for <code>auto</code>. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw the native <code>select</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>base</h2>
+  <p><q>Widgets which don't have a base appearance must be rendered as for auto.</q> But <q>appearance:base is not
+  ready to ship until its stylesheet has been fully defined in the HTML specification</q>, so what a widget looks like
+  in it is not settled.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><div><select style="appearance: base"><option>Select</select></div><div><input type=checkbox checked style="appearance: base"></div></div>
+    <figcaption><code>appearance: base</code>: no expected rendering yet. Chrome, Safari and Firefox draw both
+    natively.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

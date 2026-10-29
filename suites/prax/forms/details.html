@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Details and summary</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+details { margin-bottom: 4px; }
+.boxed details { border: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); border-radius: 6px; }
+.boxed summary { padding: 3px 8px; }
+.boxed details > :not(summary) { margin: 0; padding: 3px 8px 5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Details and summary</h1>
+  <p>Click a summary, or focus it and press Enter or Space. Details that share a name keep at most one open.</p>
+</header>
+
+<section>
+  <h2>Closed and open</h2>
+<div class=boxed>
+  <details><summary>Closed</summary><p>The content of a closed details is not rendered.</p></details>
+  <details open><summary>Open</summary><p>The content of an open details follows its summary.</p></details>
+  <details><p>A details without a summary shows a default summary.</p></details>
+  <details open><summary>Nested</summary>
+    <details><summary>Inner, closed</summary><p>Inner content.</p></details>
+    <details open><summary>Inner, open</summary><p>Inner content.</p></details></details>
+</div>
+</section>
+
+<section>
+  <h2>An exclusive group</h2>
+  <p class=note>The three share a name. The line lists their toggle events, which come in a task after each change.</p>
+<div class=boxed>
+  <details name=faq open><summary>Shipping</summary><p>Orders leave the same day.</p></details>
+  <details name=faq><summary>Returns</summary><p>Thirty days, unused.</p></details>
+  <details name=faq><summary>Warranty</summary><p>Two years on every item.</p></details>
+</div>
+<p id=toggles class=log>No toggle yet.</p>
+</section>
+
+<script>
+const lines = [];
+for (const details of document.querySelectorAll('details[name=faq]')) {
+  details.addEventListener('toggle', event => {
+    lines.push(details.querySelector('summary').textContent + ': ' + event.oldState + ' to ' + event.newState);
+    document.getElementById('toggles').textContent = lines.slice(-3).join(', ');
+  });
+}
+</script>
+</body>
+</html>

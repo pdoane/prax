@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The style element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  .pr-stage.pr-medium { width: 150px; }
+  .pr-medium + figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.6 The style element</div>
+  <h1>The style element</h1>
+  <p class=pr-lede><q>The style element allows authors to embed CSS style sheets in their documents.</q> In each frame,
+  a style element's sheet turns the box green, or orange.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-style-element">HTML §4.2.6</a></span></p>
+</header>
+<section>
+  <h2>media and type</h2>
+  <p><q>The user agent must apply the styles when the media attribute's value matches the environment and the other
+  relevant conditions apply, and must not apply them otherwise.</q> <q>If element's type attribute is present and its
+  value is neither the empty string nor an ASCII case-insensitive match for "text/css", then return.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="width: 150px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><style media='(min-width: 300px)'>.styled { background: #6aa36a; color: white }</style><div class=styled>(min-width: 300px)</div>"></iframe></div>
+    <figcaption>The 150px frame does not match: plain.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="width: 150px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><style type=''>.styled { background: #6aa36a; color: white }</style><div class=styled>type=&quot;&quot;</div>"></iframe></div>
+    <figcaption>An empty type is CSS: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="width: 150px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><style type='text/css; charset=utf-8'>.styled { background: #6aa36a; color: white }</style><div class=styled>charset=utf-8</div>"></iframe></div>
+    <figcaption>A type with parameters is not <code>text/css</code>: plain.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Titles name style sheet sets</h2>
+  <p><q>The title attribute on style elements defines CSS style sheet sets.</q> The first title is the preferred set,
+  and a sheet of another title is not applied.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><style title=Green>.styled { background: #6aa36a; color: white }</style><style title=Orange>.styled { background: #d68a3c; color: white }</style><div class=styled>title=Green, then Orange</div>"></iframe></div>
+    <figcaption>Green: the later sheet, titled Orange, is not applied.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

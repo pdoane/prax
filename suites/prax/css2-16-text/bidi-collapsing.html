@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>White space collapsing in bidirectional text</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ltr { direction: ltr; unicode-bidi: embed; background: #a9c4e4; }
+  .rtl { direction: rtl; unicode-bidi: embed; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.2 Example of bidirectionality with white space collapsing</div>
+  <h1>White space collapsing in bidirectional text</h1>
+  <p class=pr-lede>The specification's example, <code>&lt;ltr&gt;A &lt;rtl&gt; B &lt;/rtl&gt; C&lt;/ltr&gt;</code>, with
+  <code>white-space: normal</code>. The left-to-right embedding is blue and the right-to-left one orange, so each
+  space shows in the color of the element that holds it.</p>
+</header>
+
+<section>
+  <h2>Two spaces between A and B, none between B and C</h2>
+  <p><q>The space before the B would collapse with the space after the A.</q> <q>The space before the C would collapse
+  with the space after the B.</q> <q>This would leave two spaces, one after the A in the left-to-right embedding level,
+  and one after the B in the right-to-left embedding level. This is then rendered according to the Unicode
+  bidirectional algorithm, with the end result being: A&nbsp;&nbsp;BC</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#egbidiwscollapse">CSS 2 §16.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span class=ltr>A <span class=rtl> B </span> C</span></div></div>
+    <figcaption>"A", a blue space, an orange space, "B", then "C" right against it: the orange space after "B" is
+    drawn on B's left, as right-to-left text puts it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Avoiding it</h2>
+  <p><q>This can sometimes be avoided by using the natural bidirectionality of characters instead of explicit embedding
+  levels. Also, it is good to avoid spaces immediately inside start and end tags, as these tend to do weird things when
+  dealing with white space collapsing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#egbidiwscollapse">CSS 2 §16.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span class=ltr>A <span class=rtl>B</span> C</span></div></div>
+    <figcaption><code>&lt;ltr&gt;A &lt;rtl&gt;B&lt;/rtl&gt; C&lt;/ltr&gt;</code>: one blue space each side of the
+    orange "B", "A B C".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

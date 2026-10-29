@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow inside the columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .h40 { height: 40px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 8.1 Overflow Inside Multicol Containers</div>
+  <h1>Overflow inside the columns</h1>
+  <p class=pr-lede><q>Except for cases where this would cause a column break, content that extends outside column
+  boxes visibly overflows and is not clipped to the column box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#overflow-inside-multicol-elements">CSS Multi-column Layout 1 §8.1</a></span>
+  Each stage has three columns of 60px with 10px gaps.</p>
+</header>
+
+<section>
+  <h2>Across the gap, not clipped</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h40"><div class="pr-a pr-light pr-fit" style="width: 90px">A</div>one two</div>
+    <figcaption>A, 90px wide, in the first column: it runs over the gap and the second column's first 20px, drawn
+    whole, with "two", at the top of the second column, over it.
+    <span class=pr-flag>Safari</span> One line to a column: "one" in the second, over A, "two" in the
+    third.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h40">overflow two</div>
+    <figcaption>"overflow", 80px and unbreakable, runs 20px past its column, over the 10px gap and 10px into the next; "two"
+    under it. <span class=pr-flag>Safari</span> "two" in the second column, over the end of "overflow".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the block direction, a break instead</h2>
+  <p>Content taller than the column is not drawn overflowing: it continues in the next column.</p>
+  <figure>
+    <div class="pr-stage pr-measure h40"><div class="pr-a pr-light pr-fit" style="height: 60px">A</div></div>
+    <figcaption>A, 60px tall in 40px columns: 40px in the first column, 20px in the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

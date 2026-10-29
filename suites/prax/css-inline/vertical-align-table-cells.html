@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vertical-align in table cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; white-space: nowrap; }
+  .tall { line-height: 50px; }
+  .big { font-size: 30px; }
+  .sq { display: inline-block; width: 10px; height: 10px; background: #4f81bd; }
+  .ib { display: inline-block; width: 60px; white-space: normal; }
+  .cell { height: 60px; width: 90px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2 Transverse Box Alignment, table cells</div>
+  <h1>vertical-align in table cells</h1>
+  <p class=pr-lede><q>This shorthand property specifies how an inline-level box is aligned within the line by
+  specifying its alignment baseline type (alignment-baseline), baseline alignment preference (baseline-source), and
+  post-alignment shift (baseline-shift) in a single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#transverse-alignment">CSS Inline Layout 3 §4.2</a></span></p>
+</header>
+
+
+<section>
+  <h2>Table cells</h2>
+  <p><q>vertical-align can also affect the alignment of table cells when align-content is normal. Specifically, top
+  (baseline-shift: top) maps it to start, bottom (baseline-shift: bottom) to end, and otherwise middle
+  (alignment-baseline: middle) to center.</q> Each cell is 60px tall.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class="pr-table-cell cell" style="vertical-align: top">top</div><div class="pr-table-cell cell" style="vertical-align: bottom">bottom</div></div></div></div>
+    <figcaption><code>top</code> at the cell's top, <code>bottom</code> at its bottom.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class="pr-table-cell cell" style="vertical-align: middle">middle</div><div class="pr-table-cell cell" style="vertical-align: bottom; align-content: start">start</div></div></div></div>
+    <figcaption><code>middle</code> centered; <code>bottom</code> with <code>align-content: start</code> at the
+    top, since <code>align-content</code> is not <code>normal</code>. <span class=pr-flag>Firefox</span> At the bottom.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

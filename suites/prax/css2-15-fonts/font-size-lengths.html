@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: lengths and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sizes { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.25; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: lengths and percentages</h1>
+  <p class=pr-lede><q>Length and percentage values should not take the font size table into account when calculating the
+  font size of the element.</q> <q>Negative values are not allowed.</q> Each grey bar is 10em wide. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-size.html">font-size</a>.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt; and &lt;percentage&gt;</h2>
+  <p>A percentage refers to the inherited font size, and <q>On the 'font-size' property, these length units refer to
+  the computed font size of the parent element.</q> The specification's <code>em { font-size: 150% }</code> and
+  <code>em { font-size: 1.5em }</code> are the same. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage sizes"><div style="font-size: 16px">16px<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>16px</code>: the bar is 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div style="font-size: 150%">150% of 10px<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>150%</code> in a 10px parent: 15px, the bar 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div style="font-size: 1.5em">1.5em of 10px<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>1.5em</code> in a 10px parent: the parent's em, so 15px too, the bar 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div style="font-size: 12px; font-size: -20px">-20px<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>font-size: 12px; font-size: -20px</code>: the text stays 12px, the bar 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>em elsewhere is the element's own size, which children inherit</h2>
+  <p><q>On all other properties, 'em' and 'ex' length values refer to the computed font size of the current
+  element.</q> The computed value is an absolute length, and that is what is inherited. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2
+  §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div style="font-size: 2em; width: 5em; background: #d68a3c; color: white">2em</div></div>
+    <figcaption>In a 10px parent, <code>font-size: 2em; width: 5em</code>: 20px, so the box is 100px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div style="font-size: 150%"><div>child<div class=pr-expect style="width: 10em"></div></div></div></div>
+    <figcaption>A child of a <code>150%</code> box in a 10px parent inherits 15px, not 150%: the bar is 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

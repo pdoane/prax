@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Widths: inline, replaced elements with no ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.2 Inline, replaced elements</div>
+  <h1>Widths: inline, replaced elements with no ratio</h1>
+  <p class=pr-lede>Each purple box is an inline <code>img</code> of an SVG image with no intrinsic ratio.</p>
+</header>
+
+<section>
+  <h2>An intrinsic width alone, and nothing at all</h2>
+  <p><q>Otherwise, if 'width' has a computed value of 'auto', and the element has an intrinsic width, then that
+  intrinsic width is the used value of 'width'.</q> <q>Otherwise, if 'width' has a computed value of 'auto', but none
+  of the conditions above are met, then the used value of 'width' becomes 300px.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-replaced-width">CSS 2
+  §10.3.2</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An intrinsic width of 60 and no ratio, with <code>height: 20px</code>: 60px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>No intrinsic width, height or ratio, with <code>height: 20px</code>: 300px wide. <span class="pr-flag pr-since">Since
+    CSS 2</span> Unless a min-width length says otherwise.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></div>
+  <h2>300px, or the min-width</h2>
+  <p>For a replaced element with no ratio and no size, for its max-content size: <q>If the box has a &lt;length&gt; as
+  its computed minimum size (min-width/min-height) in that dimension, use that size. Otherwise, use 300px for the width
+  and/or 150px for the height as needed.</q> CSS 2's auto width is that max-content size. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide"><img alt="" style="height: 20px; min-width: 100px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>No intrinsic size or ratio, with <code>height: 20px; min-width: 100px</code>: 100px wide.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 300px
+    wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><img alt="" style="height: 20px; min-width: 10%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>With <code>min-width: 10%</code>, a percentage and not a length: 300px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

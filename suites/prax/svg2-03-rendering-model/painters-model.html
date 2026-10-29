@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The painters model</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.3 The painters model</div>
+  <h1>The painters model</h1>
+  <p class=pr-lede><q>Paint is applied in successive operations to the output device such that each operation paints
+  onto some area of the output device, possibly obscuring paint that has previously been laid down. After each object
+  or group is painted, it becomes part of the background for the next painting operation.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#PaintersModel">SVG 2 §3.3</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Later paint over earlier</h2>
+  <p>A blue square 60 by 40 at 20, 10 and an orange one at 60, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="60" height="40" fill="#4f81bd" /><rect x="60" y="10" width="60" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption>Blue, then orange: orange over the overlap, 60 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="60" height="40" fill="#d68a3c" /><rect x="20" y="10" width="60" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>Orange, then blue: blue over it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="60" height="40" fill="#4f81bd" /><rect x="60" y="10" width="60" height="40" fill="#d68a3c" fill-opacity="0.5" /></svg></div>
+    <figcaption>Orange at half opacity, painted onto the blue as its background: a mix of the two over the
+    overlap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The HTML link element in SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.3 External style sheets: the effect of the HTML ‘link’ element</div>
+  <h1>The HTML link element in SVG</h1>
+  <p class=pr-lede><q>An HTML ‘link’ element in an SVG document (that is, an element in the HTML namespace with local
+  name "link") with its ‘rel’ attribute set to ‘stylesheet’ must be processed as defined in the HTML specification and
+  cause external style sheets to be loaded and applied to the document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#LinkElement">SVG 2 §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>In an SVG document</h2>
+  <p><q>when parsing an SVG document using XML syntax, XML namespace declarations can be used to place the element in
+  the HTML namespace.</q> The stage is an <code>iframe</code> of an SVG document 160 by 60 whose rect, 120 by 40 at
+  20, 10, is orange by its <code>fill</code> attribute; the linked style sheet makes it blue.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/linked.svg"></iframe></div>
+    <figcaption>An XHTML <code>link</code> to <code>blue.css</code>: blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In an HTML document</h2>
+  <p><q>Such elements in HTML documents outside of an inline SVG fragment must also apply to the SVG content.</q> This
+  page's own <code>link</code>, to <code>page.css</code>, styles the stage.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A rect of class <code>pr-ghost</code>, which <code>page.css</code> outlines dashed: a dashed
+    outline 120 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

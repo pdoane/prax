@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>alignment-baseline: inline boxes and inline-blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 72px/100px "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .half { font-size: 36px; }
+  .pr-stage { width: 160px; }
+  figcaption { max-width: 160px; }
+  .ib { display: inline-block; line-height: 1; outline: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.2 Alignment Baseline Type, boxes</div>
+  <h1>alignment-baseline: inline boxes and inline-blocks</h1>
+  <p class=pr-lede><q>When performing baseline alignment, these values specify which baseline of the box is aligned to
+  the corresponding baseline of its alignment context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a></span>
+  Each stage is 72px PR Baseline Diagnostic, the span 36px.</p>
+</header>
+
+<section>
+  <h2>An inline box by its text</h2>
+  <p><code>text-top</code> uses <q>the metric used as the line-over edge of an inline’s content box</q>, its ascent,
+  and <code>middle</code> <q>halfway between the alphabetic and x-height baselines</q>, <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-types">§3.2</a></span>
+  of the span's own text, not the box its line height makes, as CSS 2 has it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span>
+  █ fills the ascent to the descent, and x the alphabetic baseline to the x-height.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>█<span class=half style="vertical-align: text-top">█</span></div>
+    <figcaption><code>text-top</code>: the tops level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> By its 100px line height: lower.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>█<span class=half style="vertical-align: text-bottom">█</span></div>
+    <figcaption><code>text-bottom</code>: the bottoms level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> By its line height: higher.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>x<span class=half style="vertical-align: middle">x</span></div>
+    <figcaption><code>middle</code>: the centers of the two x level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Its box's midpoint, as CSS 2: lower.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An inline-block by its line</h2>
+  <p>An inline-block's baseline set <q>is nominally derived from its contents</q>, <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-tables">§3.3</a></span>
+  here its line of 36px text, outlined, whose
+  baselines it aligns by.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="line-height: 80px">H<span class="half ib" style="vertical-align: hanging">H</span></div>
+    <figcaption><code>hanging</code>: the tops of the H level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> Its alphabetic baseline on
+    hanging.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="line-height: 80px">I<span class="half ib" style="vertical-align: central">I</span></div>
+    <figcaption><code>central</code>: the centers of the I level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> Its alphabetic baseline on
+    central.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

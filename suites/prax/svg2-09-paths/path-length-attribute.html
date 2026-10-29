@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pathLength: the author's length</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.6.1 The ‘pathLength’ attribute</div>
+  <h1>pathLength: the author's length</h1>
+  <p class=pr-lede><q>The author's computation of the total length of the path, in user units.</q> <q>The user agent
+  will scale all distance-along-a-path computations by the ratio of ‘pathLength’ to the user agent's own computed
+  value for total path length.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathLengthAttribute">SVG 2 §9.6.1</a></span>
+  Each stage is an SVG 160 by 60 with a shape stroked dark blue, 6 wide, and dashed.</p>
+</header>
+
+<section>
+  <h2>Dashes measured in the author's length</h2>
+  <p><q>‘pathLength’ potentially affects calculations for text on a path, motion animation and various stroke
+  operations.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" pathLength="12" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 30 H 140</code>, 120 long, <code>pathLength="12"</code>, dashes of 1: six dashes 10
+    long, from 20, 40, 60, 80, 100 and 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" pathLength="12" stroke-dasharray="2 100" stroke-dashoffset="-6" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption>The same line, <code>stroke-dasharray="2 100"</code> and <code>stroke-dashoffset="-6"</code>:
+    the offset is scaled too, so one dash from 80 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" pathLength="4" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption>A <code>circle</code> of radius 20, <code>pathLength="4"</code>: dashed in quarters, from 100, 30
+    down to 80, 50, and from 60, 30 up to 80, 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero</h2>
+  <p><q>A value of zero is valid and must be treated as a scaling factor of infinity. A value of zero scaled
+  infinitely must remain zero, while any non-percentage value greater than zero must become +Infinity.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" pathLength="0" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>pathLength="0"</code>, dashes of 1: the first dash is infinitely long, so the line is solid
+    from 20 to 140. <span class=pr-flag>Safari</span> Dashes 1 long.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" pathLength="0" stroke-dasharray="0 1" stroke-linecap="round" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>pathLength="0"</code>, <code>stroke-dasharray="0 1"</code>, round caps: a dash of zero
+    stays zero, then an infinite gap, so one dot, at 20, 30. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    A solid line, a dot every 1 along it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

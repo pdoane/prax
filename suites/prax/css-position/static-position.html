@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The static position: the hypothetical box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ab { position: absolute; background: #d68a3c; color: white; }
+  .fl { float: left; width: 60px; height: 40px; background: #6aa36a; }
+  .lead { height: 30px; background: #b9cde6; }
+  .pr-stage.pr-cb { width: 160px; height: 60px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.5.3 Calculating the Static Position and the “Static-Position Rectangle”</div>
+  <h1>The static position: the hypothetical box</h1>
+  <p class=pr-lede><q>When both inset properties in a given axis are auto, they are resolved into a static position by
+  aligning the box into its static-position rectangle</q>, as if static. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#staticpos-rect">CSS Positioned Layout 3 §3.5.3</a></span>
+  Each stage is relative, the containing block; the orange boxes have all four insets <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>As if not floated, not cleared, with no auto margins</h2>
+  <p><q>Finding the static position and the static-position rectangle assumes that both float and clear (as well as
+  position) have their initial values</q>. <q>Lastly, all auto margins on the box itself are treated as zero.</q> In
+  the first two, a green float 60px wide comes first.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=fl></div><div class=ab style="clear: both; width: 40px">box</div></div>
+    <figcaption>A block with <code>clear: both</code>: over the float, not below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=fl></div>abc<span class=ab style="float: right">box</span></div>
+    <figcaption>An inline span with <code>float: right</code>: on the line, after "abc", not at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=lead></div><div class=ab style="width: 40px; margin: 0 auto">box</div></div>
+    <figcaption>A block with <code>margin: 0 auto</code>, after a block 30px tall: at the left, not
+    centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The static-position containing block's writing mode</h2>
+  <p>Alignment uses <q>the static-position containing block as the effective containing block, including using its
+  writing mode for resolving alignment axes and directions.</q> Here a dashed static block has its own writing
+  mode.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=pr-frame style="direction: rtl"><div class=lead></div><div class=ab>abc</div></div></div>
+    <figcaption>An <code>rtl</code> block: the box starts at its right, under the light blue block.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-measure"><div class=pr-frame style="writing-mode: vertical-rl; margin-left: 100px; height: 60px"><div class=lead style="width: 30px; height: auto"></div><div class=ab>abc</div></div></div>
+    <figcaption>A <code>vertical-rl</code> block 100px in, filled by the light blue block: the static position is
+    its left edge, and the box's right edge is there. <span class=pr-flag>Firefox</span> Puts the box's left edge
+    there.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

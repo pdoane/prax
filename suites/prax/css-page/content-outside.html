@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Content outside the page box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 3.2 Content outside the page box</div>
+  <h1>Content outside the page box</h1>
+  <p class=pr-lede><q>When formatting content in the page model, some content may end up outside the page box.</q> <q>A specification for the exact formatting of such elements lies outside the scope of this document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#content-outside-box">CSS Paged Media 3 §3.2</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Recommended principles</h2>
+  <p><q>Content should be allowed slightly beyond the page box to allow pages to "bleed".</q> <q>User agents SHOULD avoid generating a large number of content-empty pages to honor the positioning of elements</q> These are recommendations: the captions say what each browser does.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px } html { background: #8cb6c0 } pre { margin: 0; font: inherit }</style><pre>a line of pre text that is wider than the page box</pre><div>text 2</div>"></iframe>
+    <figcaption>The <code>white-space: pre</code> line is wider than the page. Chrome and Safari scale the page's content down until the line fits; Firefox cuts it at the page area's right edge.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px } html { background: #8cb6c0 } .far { position: absolute; top: 700px }</style><div>text 1</div><div>text 2</div><div class=far>far</div>"></iframe>
+    <figcaption>A box at <code>top: 700px</code>: Chrome and Firefox print seven pages, five of them content-empty, 'far' on page 6; Safari prints it on page 7, after five empty pages.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Content-empty pages</h2>
+  <p><q>A Content-empty page is a page box whose page area contains no printable content other than backgrounds and/or borders.</q> <q>A page box whose page area contains generated content, or content whose visibility is hidden, or invisible content such as a zero-width space is not a content-empty page.</q> The term decides which pages <code>:blank</code> matches, shown in <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#blank-pseudo">§4.2.3</a></span>.</p>
+
+</section>
+
+</body>
+</html>

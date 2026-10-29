@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line breaking: Unicode's classes, boxes and priorities</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+  .pr-stage { width: 60px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.5 Line Breaking Details</div>
+  <h1>Line breaking: Unicode's classes, boxes and priorities</h1>
+  <p class=pr-lede><q>Except where explicitly defined otherwise (e.g. for 'line-break: anywhere' or 'overflow-wrap:
+  anywhere') line breaking behavior defined for the CM, and SG, WJ, ZW, GL, and ZWJ Unicode line breaking classes must
+  be honored.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-details">CSS Text 4 §6.5</a></span>
+  Each stage is 60px wide, six 10px letters to a line, and holds "aaa", a character, "bbb".</p>
+</header>
+
+<section>
+  <h2>Glue and joiners</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>aaa bbb</span></div>
+    <figcaption>A space: "aaa", "bbb".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>aaa&nbsp;bbb</span></div>
+    <figcaption>U+00A0, GL: no break.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>aaa&#x2060;bbbb</span></div>
+    <figcaption>U+2060, WJ, then "bbbb": no break.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>aaaa&#x200B;bbbb</span></div>
+    <figcaption>U+200B, ZW: a break, "aaaa", then "bbbb".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Boxes do not break the text; priorities</h2>
+  <p><q>Out-of-flow boxes and inline box boundaries do not introduce a forced line break or soft wrap opportunity in
+  the flow.</q> A break at a box's first or last character <q>occurs immediately before/after the box (at its margin
+  edge)</q>. UAs that break at punctuation <q>should prioritize breakpoints</q>, so that <q>“check /etc” will never break
+  between the "/" and the "e"</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>aaaa</span><span class=u>bbbb</span></div>
+    <figcaption>Two spans: one word, no break between them.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure">aa <span class=u style="padding-left: 10px">bbbb</span></div>
+    <figcaption>A span with 10px of left padding: its padding starts the second line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=u style="padding-right: 10px">aaa </span>bbbb</div>
+    <figcaption>A span "aaa " with 10px of right padding: its padding ends the first line.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="width: 80px"><span class=t>check /etc</span></div>
+    <figcaption>80px: "check", "/etc". <span class=pr-flag>Firefox</span> "check /",
+    "etc".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The form owner</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad form { margin: 0 0 10px; padding: 4px 6px; outline: 1px dashed var(--pr-line); }
+  .pad input, .pad button { margin: 0; font-size: 13px; }
+  .pad > input, .pad > button { margin: 0 0 10px 6px; }
+  iframe.pr-result { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.18.3 Association of controls and forms</div>
+  <h1>The form owner</h1>
+  <p class=pr-lede><q>A form-associated element is, by default, associated with its nearest ancestor form element</q>, <q>but,
+  if it is listed, may have a form attribute specified to override this.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#association-of-controls-and-forms">HTML §4.10.18.3</a></span></p>
+</header>
+
+<section>
+  <h2>The form attribute</h2>
+  <p><q>If the first element in element's tree, in tree order, to have an ID that is identical to element's form
+  content attribute's value, is a form element, then associate the element with that form element.</q> The dashed box is the form <code>first</code>; the form
+  <code>second</code> is empty and hidden. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#association-of-controls-and-forms">§4.10.18.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <form id=first action=support/form-echo.html target=owner-result>
+        <input name=inside value=a size=5>
+        <input name=elsewhere value=b size=5 form=second>
+        <button>Submit</button> <button type=reset>Reset</button>
+      </form>
+      <input name=outside value=c size=5 form=first>
+      <input name=loose value=d size=5>
+      <button onclick="document.querySelector('[name=loose]').setAttribute('form', 'first')">loose.form = "first"</button>
+      <form id=second action=support/form-echo.html target=owner-result hidden></form>
+      <iframe class=pr-result name=owner-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Submit: <code>inside=a</code> and <code>outside=c</code>, not <code>elsewhere</code>, of the second
+    form, nor <code>loose</code>, of none. Edit all four, then Reset: only a and c go back. Click
+    <code>loose.form = "first"</code>, then Submit: <code>loose=d</code> too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Associated by the parser</h2>
+  <p><q>rules in the HTML parser that, for historical reasons, can result in a form-associated element being associated
+  with a form element that is not its ancestor.</q> A form start tag in a table makes an empty form, with which the cells'
+  controls are associated. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#association-of-controls-and-forms">§4.10.18.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <table><form action=support/form-echo.html target=parsed-result><tr><td><input name=cell value=x size=5></td><td><button>Submit</button></td></tr></form></table>
+      <iframe class=pr-result name=parsed-result src=support/form-echo.html style="height: 20px"></iframe>
+    </div>
+    <figcaption>Click Submit: <code>cell=x</code>, though the field is not inside the form.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

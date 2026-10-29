@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The reverse side of an element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 20px; width: 80px; height: 40px; }
+  .hide { backface-visibility: hidden; }
+  .card { position: absolute; left: 50px; top: 10px; width: 60px; height: 60px; transform-style: preserve-3d;
+          transform: rotateY(30deg); animation: flip 6s linear -0.5s infinite; }
+  @keyframes flip { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; }
+  .back { transform: rotateY(180deg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.5 Backface Visibility</div>
+  <h1>The reverse side of an element</h1>
+  <p class=pr-lede><q>the reverse side looks like a mirror-image of the front side</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#backface-visibility">CSS Transforms 2 §4.1.5</a></span>
+  Each blue box is 80 by 40, on the dashed outline, with "AB" at its top left.</p>
+</header>
+
+<section>
+  <h2>A mirror image, or nothing</h2>
+  <p><q>the backface-visibility property allows the author to make an element invisible when its reverse side is
+  towards the viewer</q>, <q>useful when you place two elements back-to-back, as you would to create a playing
+  card.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotateY(180deg)">AB</div></div>
+    <figcaption><code>rotateY(180deg)</code>: its back, "AB" mirrored at the top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotateY(180deg)">AB</div></div>
+    <figcaption>With <code>backface-visibility: hidden</code>: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion" style="perspective: 300px"><div class=card><div class="pr-a pr-fit face">front</div><div class="pr-b pr-fit face back">back</div></div></div>
+    <figcaption>A card, blue "front" and orange "back", each <code>hidden</code>. Still: turned 30deg, the front. As it
+    turns, each face shows while it faces the viewer, the right way round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Relative to the parent of the context's root</h2>
+  <p>It <q>is considered using the accumulated 3D transformation matrix, and is thus relative to the parent of the
+  element that establishes the 3D rendering context.</q> A box with <code>rotateY(180deg)</code> holds the blue box,
+  untransformed and <code>hidden</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=g style="transform-style: preserve-3d; transform: rotateY(180deg)"><div class="pr-a pr-fit hide" style="height: 40px">AB</div></div></div>
+    <figcaption>The parent <code>preserve-3d</code>: the box's back faces the viewer: hidden.
+    <span class=pr-flag>Firefox</span> draws it mirrored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=g style="transform: rotateY(180deg)"><div class="pr-a pr-fit hide" style="height: 40px">AB</div></div></div>
+    <figcaption>The parent flat: the box faces its parent's plane, whose back shows: mirrored.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

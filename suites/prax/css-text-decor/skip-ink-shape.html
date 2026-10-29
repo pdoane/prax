@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where ink skipping breaks a line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { padding: 0 6px; font: 80px/110px "PR Literata"; text-decoration: underline rgb(192 57 43 / 0.8) 8px; text-decoration-skip-ink: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10.5 Shaping Interruptions</div>
+  <h1>Where ink skipping breaks a line</h1>
+  <p class=pr-lede><q>When the UA interrupts underlines or overlines at glyph boundaries, the shape of the line at that
+  boundary should follow the shape of the glyph.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#ink-skip-shape">CSS Text Decoration 4 §2.10.5</a></span>
+  A note leaves the method to the browser: square ends, trapezoids, or the curve itself.</p>
+</header>
+
+<section>
+  <h2>The ends of the pieces</h2>
+  <p>"goal" at 80px in PR Literata with an 8px red underline, <code>text-decoration-skip-ink: auto</code>, which every
+  browser that skips ink applies to Latin text.</p>
+  <figure>
+    <div class="pr-stage pr-wide g">goal</div>
+    <figcaption>The line stops short of the "g"'s lower bowl on both sides; each end may be square or follow the bowl's
+    curve. Whether the line shows inside the bowl is the browser's choice.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage g" style="text-underline-offset: 6px; width: 140px">gy</div>
+    <figcaption>6px lower: the line crosses only the bottoms of the descenders, and breaks around them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

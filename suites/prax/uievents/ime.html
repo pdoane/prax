@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An input method editor</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.3 Input Method Editors</div>
+  <h1>An input method editor</h1>
+  <p class=pr-lede><q>Keyboard events cannot be used to determine the current state of the input method editor, which
+  can be obtained through the data attribute of the CompositionEvent interface.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-IME">UI Events §4.3.3</a></span></p>
+</header>
+<section>
+  <h2>市, by way of 詩</h2>
+  <p>The example types <code>s</code> and <code>i</code>, giving し; Convert gives 詩 (<q>poem</q>), Convert again
+  市 (<q>city</q>), and Accept commits it. <q>The keys Convert and Accept MAY be replaced by others depending on the
+  input device in use and the configuration of the IME, e.g., it can be respectively U+0020 (Space key) and
+  Enter.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-IME">§4.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown compositionstart compositionupdate compositionend" data-fields="key data isComposing" data-on="#field" data-lines=8></ol>
+    </div>
+    <figcaption>Turn on a Japanese input method in Romaji mode, click the field and type <code>si</code>, then Space,
+    Space again (or until 市 is chosen), then Enter. Each compositionupdate's <code>data</code> is what the input method
+    holds: <code>"s"</code>, <code>"し"</code>, <code>"詩"</code>, <code>"市"</code>; compositionend has
+    <code>"市"</code>. Every keydown after the first has <code>isComposing</code>, while the key it reports says nothing
+    of the input method's state.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

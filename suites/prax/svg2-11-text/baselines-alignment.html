@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alignment baselines and shifts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .diag { font: 30px "PR Baseline Diagnostic Zero"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.3 Glyph metrics and layout</div>
+  <h1>Alignment baselines and shifts</h1>
+  <p class=pr-lede><q>Alignment between an object relative to its parent is determined by the alignment baseline.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphsMetrics">SVG 2 §11.1.3</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Baseline Diagnostic Zero at 30px, whose "H" fills the band from
+  its alphabetic baseline up to its hanging baseline, 0.65 em above; the text's <code>y</code> is dashed in
+  red.</p>
+</header>
+
+<section>
+  <h2>The alignment baseline, and nested shifts</h2>
+  <p>In CSS Inline Layout, <q>In SVG text layout, these values instead specify the baseline
+  that is aligned to the SVG current text position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a></span>
+  <q>Note that shifts can be nested, each shift added to the previous shift.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 60H160" class=pr-baseline /><text class=diag x="20" y="60">H<tspan font-size="15" alignment-baseline="hanging">H</tspan></text></svg></div>
+    <figcaption>A 15px "H" with <code>alignment-baseline="hanging"</code>: its hanging baseline, its top, at the
+    current text position, y 60, its bottom at 69.75. <span class=pr-flag>Firefox</span> Stands on y
+    60.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 60H160 M0 50H160 M0 40H160" class=pr-baseline /><text class=diag x="20" y="60">H<tspan baseline-shift="10">H<tspan baseline-shift="10">H</tspan></tspan></text></svg></div>
+    <figcaption><code>baseline-shift="10"</code> on a <code>tspan</code>, and on one inside it: the second H
+    stands on y 50, the third on 40. <span class=pr-flag>Safari</span> The third on 50 too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

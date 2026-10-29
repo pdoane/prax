@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Building paths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.6 Building paths</div>
+  <h1>Building paths</h1>
+  <p class=pr-lede><q>A path has a list of zero or more subpaths. Each subpath consists of a list of one or more points,
+  connected by straight or curved line segments, and a flag indicating whether the subpath is closed or not.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#building-paths">HTML §4.12.5.1.6</a></span>
+  Every path is stroked blue, 3 wide; red marks the points the methods were given.</p>
+</header>
+<section>
+  <h2>Lines, curves, and closing</h2>
+  <p><q>A closed subpath is one where the last point of the subpath is connected to the first point of the subpath by a
+  straight line.</q> quadraticCurveTo and bezierCurveTo connect <q>using a quadratic Bézier curve with control point
+  (cpx, cpy)</q> and <q>a cubic Bézier curve with the given control points</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=lines></canvas></div>
+    <figcaption>(10, 80), (50, 20), (90, 80): closed, a triangle. The same from x 110: not closed, two sides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=curves></canvas></div>
+    <figcaption>A quadratic curve from (10, 80) to (90, 80) pulled toward (50, 0); a cubic from (110, 80) to (190, 80)
+    with control points (110, 10) and (190, 10).</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Rectangles</h2>
+  <p>rect ends by creating <q>a new subpath with the point (x, y) as the only point in the subpath</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=rect></canvas></div>
+    <figcaption>A rect from (20, 10), 60 by 60, then <code>lineTo(180, 70)</code>: the line starts from (20, 10), the
+    rect's first point.</figcaption>
+  </figure>
+</section>
+<script>
+  function mark(context, points) {
+    context.save();
+    context.fillStyle = "#c0392b";
+    for (const [x, y] of points)
+      context.fillRect(x - 2, y - 2, 4, 4);
+    context.restore();
+  }
+  const draw = {
+    lines(context) {
+      context.beginPath();
+      context.moveTo(10, 80); context.lineTo(50, 20); context.lineTo(90, 80); context.closePath();
+      context.moveTo(110, 80); context.lineTo(150, 20); context.lineTo(190, 80);
+      context.stroke();
+      mark(context, [[10, 80], [50, 20], [90, 80], [110, 80], [150, 20], [190, 80]]);
+    },
+    curves(context) {
+      context.beginPath();
+      context.moveTo(10, 80); context.quadraticCurveTo(50, 0, 90, 80);
+      context.moveTo(110, 80); context.bezierCurveTo(110, 10, 190, 10, 190, 80);
+      context.stroke();
+      mark(context, [[10, 80], [50, 0], [90, 80], [110, 80], [110, 10], [190, 10], [190, 80]]);
+    },
+    arcs(context) {
+      context.beginPath();
+      context.arc(50, 50, 30, 0, Math.PI);
+      context.stroke();
+      context.beginPath();
+      context.arc(150, 50, 30, 0, Math.PI, true);
+      context.stroke();
+      mark(context, [[50, 50], [150, 50]]);
+    },
+    arcto(context) {
+      context.beginPath();
+      context.moveTo(20, 20);
+      context.arcTo(180, 20, 180, 90, 40);
+      context.stroke();
+      mark(context, [[20, 20], [180, 20], [180, 90]]);
+    },
+    ellipse(context) {
+      context.beginPath();
+      context.moveTo(10, 90);
+      context.ellipse(110, 50, 70, 30, Math.PI / 12, 0, 2 * Math.PI);
+      context.stroke();
+      mark(context, [[10, 90], [110, 50]]);
+    },
+    rect(context) {
+      context.beginPath();
+      context.rect(20, 10, 60, 60);
+      context.lineTo(180, 70);
+      context.stroke();
+      mark(context, [[20, 10], [180, 70]]);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]")) {
+    const context = canvas.getContext("2d");
+    context.strokeStyle = "#4f81bd";
+    context.lineWidth = 3;
+    draw[canvas.dataset.draw](context, canvas);
+  }
+</script>
+</body>
+</html>

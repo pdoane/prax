@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-hdr() between its colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 5.1 Interpolating colors based on headroom</div>
+  <h1>color-hdr() between its colors</h1>
+  <p class=pr-lede><q>Colors are interpolated in Absolute D65 CIE XYZ</q>, as a geometric mean of the two colors weighted by where the display's headroom lies between theirs. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#headroom-interpolation">CSS Color HDR 1
+  §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Two hues apart</h2>
+  <q>Let w1 = clamp((H - H2) / (H1 - H2), 0, 1)</q>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 1 0.5 0)"></div><div class=sw style="background: color-hdr(color(srgb 1 0.5 0) 0, color(rec2100-linear 0 0.6 2) 3)"></div><div class=sw style="background: color(rec2100-linear 0 0.6 2)"></div></div>
+    <figcaption>Orange at headroom 0, the mix, and a bright blue at headroom 3. An SDR display shows the middle swatch
+    orange, a display with three stops of headroom or more shows it blue, and one between shows a color between them,
+    darker than a straight mix. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color-hdr()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-hdr(color(display-p3 1 1 0.33) 0.5, jzczhz(70% 0.14 100) 4)"></div><div class=sw style="background: color(display-p3 1 1 0.33)"></div></div>
+    <figcaption>The specification's second example: <q>c1 will be used unmodified at all headroom values &lt;=
+    0.5</q>, so an SDR display shows the first swatch like the second. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color-hdr()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Path2D objects</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.7 Path2D objects</div>
+  <h1>Path2D objects</h1>
+  <p class=pr-lede><q>Path2D objects can be used to declare paths that are then later used on objects implementing the
+  CanvasDrawPath interface.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#path2d-objects">HTML §4.12.5.1.7</a></span></p>
+</header>
+<section>
+  <h2>From SVG path data</h2>
+  <p>new Path2D(path): <q>When path is a string, creates the path described by the argument, interpreted as SVG path
+  data.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=svg></canvas></div>
+    <figcaption><code>M 20 80 L 60 20 L 100 80 Z M 120 50 a 30 30 0 1 0 60 0 a 30 30 0 1 0 -60 0</code>, filled
+    blue: a triangle from x 20 to 100, and a circle of radius 30 round (150, 50).</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=reuse></canvas></div>
+    <figcaption>One path, a square of 30 at (10, 10), filled three times with the context translated by 0, 60 and 120
+    across and 0, 25, 50 down: three squares in a descending row.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>addPath, with a transform</h2>
+  <p>addPath: <q>Transform all the coordinates and lines in c by the transform matrix matrix.</q> <q>Add all the
+  subpaths in c to a.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=add></canvas></div>
+    <figcaption>A triangle, (10, 80), (60, 80), (35, 20), added to a path as it is, then scaled by 2 across and moved
+    80 right: two triangles, x 10 to 60, and x 100 to 200 with its apex at 150.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    svg(context) {
+      context.fillStyle = "#4f81bd";
+      context.fill(new Path2D("M 20 80 L 60 20 L 100 80 Z M 120 50 a 30 30 0 1 0 60 0 a 30 30 0 1 0 -60 0"));
+    },
+    reuse(context) {
+      const square = new Path2D();
+      square.rect(10, 10, 30, 30);
+      context.fillStyle = "#4f81bd";
+      for (let i = 0; i < 3; i++) {
+        context.setTransform(1, 0, 0, 1, i * 60, i * 25);
+        context.fill(square);
+      }
+    },
+    add(context) {
+      const triangle = new Path2D("M 10 80 L 60 80 L 35 20 Z");
+      const both = new Path2D();
+      both.addPath(triangle);
+      both.addPath(triangle, {a: 2, d: 1, e: 80});
+      context.fillStyle = "#4f81bd";
+      context.fill(both);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

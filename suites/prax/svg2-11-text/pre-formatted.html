@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pre-formatted text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.6 Pre-formatted text</div>
+  <h1>Pre-formatted text</h1>
+  <p class=pr-lede><q>In this layout method, no automatic line breaking or word wrapping is done. Nominally, the text
+  is rendered as a single line inside a rectangular content area of infinite width and height. Multiple lines of
+  text can be obtained by precomputing line breaks</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPre">SVG 2 §11.6</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>, each letter 10
+  wide, its baselines dashed in red.</p>
+</header>
+
+<section>
+  <h2>No wrapping</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160" class=pr-baseline /><text class=pr-measure x="20" y="30" style="overflow-wrap: anywhere; word-break: break-all">one long unbroken line</text></svg></div>
+    <figcaption>With <code>overflow-wrap: anywhere; word-break: break-all</code>, which do not apply: one line from
+    20, off the stage after "one long unbr".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lines broken in advance</h2>
+  <p><q>Use a single ‘text’ element with one or more ‘tspan’ child elements with appropriate values for attributes
+  ‘x’, ‘y’, ‘dx’ and ‘dy’ to set new start positions for those characters which start new lines.</q> <q>Use multiple
+  ‘text’ elements, one for each line of text.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="20" y="30">first line<tspan x="30" y="50">second</tspan></text></svg></div>
+    <figcaption>A <code>tspan</code> with <code>x="30" y="50"</code>: "first line" from 20 on y 30, "second" from
+    30 on 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="20" y="30">first line<tspan x="20" dy="20">second</tspan></text></svg></div>
+    <figcaption>A <code>tspan</code> with <code>x="20" dy="20"</code>: "second" from 20, 20 below, on y 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="20" y="30">first line</text><text class=pr-measure x="20" y="50">second</text></svg></div>
+    <figcaption>Two <code>text</code> elements: the same two lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

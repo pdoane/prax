@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 7: the hypothetical cross size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; align-items: flex-start; }
+  .t { background: #b9cde6; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 7</div>
+  <h1>Step 7: the hypothetical cross size</h1>
+  <p class=pr-lede><q>Determine the hypothetical cross size of each item by performing layout as if it were an in-flow
+  block-level box with the used main size and the given available space, treating auto as fit-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span>
+  Items are <code>align-self: flex-start</code>, so each shows its hypothetical cross size.</p>
+</header>
+
+<section>
+  <h2>With the used main size, after flexing</h2>
+  <p>In blue, "aaaa bbbb cccc dddd", 190px on one line; B is <code>flex: none</code>.</p>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t>aaaa bbbb cccc dddd</div><div class="pr-b pr-fit" style="flex: none; width: 100px">B</div></div>
+    <figcaption>It shrinks from 190px to the 100px left by B, and its text wraps there: two lines, 40px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex pr-measure" style="width: 100px"><div class=t style="flex: 1 1 0">aaaa bbbb cccc dddd</div></div>
+    <figcaption><code>flex: 1 1 0</code> in a container 100px wide: from a flex base size of 0 it grows to 100px,
+    so 40px tall, not the 80px of four lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto is fit-content</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="flex" style="flex-direction: column"><div class=t>aa bb</div></div></div>
+    <figcaption>In a column container, "aa bb": fit-content, so its max-content width, 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="flex" style="flex-direction: column"><div class=t>aaaa bbbb cccc dddd eeee</div></div></div>
+    <figcaption>240px of text in a column container: fit-content is the 200px available, so two lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a vertical writing mode</h2>
+  <figure>
+    <div class="pr-stage pr-vertical flex pr-measure" style="height: 100px"><div class=t>aaaa bbbb cccc</div></div>
+    <figcaption>A <code>vertical-rl</code> row container 100px tall: the item shrinks to 100px and its text wraps
+    into two columns, so it is 40px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

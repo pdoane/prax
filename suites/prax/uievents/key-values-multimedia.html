@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Multimedia key values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 3.10 Multimedia Keys</div>
+  <h1>Multimedia key values</h1>
+  <p class=pr-lede><q>"MediaPlayPause"</q>, <q>"MediaTrackNext"</q>, <q>"MediaTrackPrevious"</q>, <q>"MediaStop"</q> and the rest are for keyboards that have them. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-multimedia">UI Events KeyboardEvent key Values §3.10</a></span></p>
+</header>
+<section>
+  <h2>Play and pause</h2>
+  <p>A media key that reaches the page has its name. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-multimedia">§3.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press a keyboard's play/pause, next or previous track key: <code>key="MediaPlayPause"</code>, <code>"MediaTrackNext"</code>, <code>"MediaTrackPrevious"</code>, where the system passes the key to the page.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

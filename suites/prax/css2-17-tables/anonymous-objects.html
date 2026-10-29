@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous table objects</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .row-box { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2.1 Anonymous table objects</div>
+  <h1>Anonymous table objects</h1>
+  <p class=pr-lede><q>Document languages other than HTML may not contain all the elements in the CSS 2.2 table model. In
+  these cases, the "missing" elements must be assumed in order for the table model to work.</q> The anonymous tables
+  inherit each stage's <code>border-spacing: 10px</code>: cells 10px apart and from the edges.</p>
+</header>
+
+<section>
+  <h2>At least a table, a row and a cell</h2>
+  <p><q>Any table element will automatically generate necessary anonymous table objects around itself, consisting of
+  at least three nested objects corresponding to a 'table'/'inline-table' element, a 'table-row' element, and a
+  'table-cell' element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-cell blue">cell</div></div>
+    <figcaption>A lone blue <code>table-cell</code> in a block: an anonymous table and row are around it, so it is
+    10px from the stage's top and left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-row row-box">row text</div></div>
+    <figcaption>A lone orange <code>table-row</code> of text: the text is in an anonymous cell in an anonymous
+    table, 10px from the stage's top and left; the row's background fills the cell.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out-of-flow elements</h2>
+  <p><q>For the purposes of these rules, out-of-flow elements are represented as inline elements of zero width and
+  height. Their containing blocks are chosen accordingly.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced pr-cb" style="height: 60px"><div class=pr-table><div class=pr-table-row><div class="pr-table-cell blue">A</div><div class=pr-c style="position: absolute; left: 100px; top: 30px">abs</div><div class="pr-table-cell blue">B</div></div></div></div>
+    <figcaption>An absolute green box between cells A and B stands for a zero-size inline, wrapped in an
+    anonymous cell: A and B are 20px apart, two spacings around an empty cell of no width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-table><div class=pr-table-row><div class="pr-table-cell blue">A</div><div class=pr-c style="float: left">float</div><div class="pr-table-cell blue">B</div></div></div></div>
+    <figcaption>A green float between A and B is in an anonymous cell of its own, between them, 10px from
+    each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

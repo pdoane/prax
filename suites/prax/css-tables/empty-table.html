@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tables without slots</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; box-sizing: border-box; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  caption { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.2 Table layout algorithm, empty tables</div>
+  <h1>Tables without slots</h1>
+  <p class=pr-lede>The algorithm runs in full <q>If the row/column grid has at least one slot</q>. <q>Else, an empty
+  table is laid out</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-layout-algorithm">CSS Table 3 §3.2</a></span>
+  Each table is blue and outlined, with <code>box-sizing: border-box</code>; captions are orange,
+  <code>.pr-measure</code> text.</p>
+</header>
+
+<section>
+  <h2>Its width and height</h2>
+  <p>The width: <q>returning the largest value of CAPMIN and the computed width of the table grid box (including
+  borders and paddings) if it is definite (use zero otherwise).</q> The height: <q>the sum of all table-caption
+  heights (their width being set to the table width, with margins taken into consideration appropriately) and the
+  computed height of the table grid box (including borders and paddings) if it is definite (use zero
+  otherwise).</q></p>
+  <figure>
+    <div class=pr-stage><table style="width: 100px; height: 40px"></table></div>
+    <figcaption>No rows, <code>width: 100px; height: 40px</code>: a 100 by 40 blue box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="height: 20px"><caption>a caption</caption></table></div>
+    <figcaption>Only a caption, and <code>height: 20px</code>: CAPMIN, the caption's min-content width, makes the
+    table 70px wide; "a" and "caption" on two lines, and 20px of blue below. <span class=pr-flag>Firefox</span>
+    makes the 20px but draws no blue there.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table style="border-spacing: 10px"><colgroup><col><col></colgroup></table></div>
+    <figcaption>Two columns but no rows: no slots, so the table is empty, and with an auto width and height it is
+    0 by 0, its 10px spacing no matter: only a dot of its outline shows. <span class=pr-flag>Firefox</span> makes it
+    20px wide, two spacings.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The quotes property: languages and characters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Specify pairs of quotes for two levels in two languages */
+  .qt:lang(en) { quotes: '"' '"' "'" "'" }
+  .qt:lang(no) { quotes: "«" "»" '"' '"' }
+  /* Insert quotes before and after Q element content */
+  .qt:before { content: open-quote }
+  .qt:after  { content: close-quote }
+  .ch { font-size: 16px; }
+  .qt.angle-single { quotes: "\2039" "\203A"; }
+  .qt.angle-double { quotes: "\00AB" "\00BB"; }
+  .qt.high { quotes: "\201C" "\201D" "\2018" "\2019"; }
+  .qt.low { quotes: "\201E" "\201C"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.3.1 Specifying quotes with the 'quotes' property</div>
+  <h1>The quotes property: languages and characters</h1>
+  <p class=pr-lede>The specification's example chooses the quotation marks by language, with <code>:lang()</code>.</p>
+</header>
+
+<section>
+  <h2>Two levels in two languages</h2>
+  <p>With the style sheet below, an English quotation <q>would allow a user agent to produce</q> "Quote me!", and a
+  Norwegian one <q>would produce: «Trøndere gråter når "Vinsjan på kaia" blir deklamert.»</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-specify">CSS 2
+  §12.3.1</a></span></p>
+  <pre class=pr-source>q:lang(en) { quotes: '"' '"' "'" "'" }
+q:lang(no) { quotes: "«" "»" '"' '"' }
+q:before { content: open-quote }
+q:after  { content: close-quote }</pre>
+  <figure>
+    <div class="pr-stage pr-text" lang=en><span class=qt>Quote me!</span></div>
+    <figcaption><code>lang=en</code>: "Quote me!" in straight double marks.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide pr-text" lang=no><span class=qt>Trøndere gråter når <span class=qt>Vinsjan på kaia</span> blir deklamert.</span></div>
+    <figcaption><code>lang=no</code>: guillemets « » outside, and straight double marks around "Vinsjan på
+    kaia".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Typographic marks</h2>
+  <p><q>high quality typesetting would require different ISO 10646 characters.</q> Four of the table's pairs, given as
+  escapes. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-specify">CSS 2 §12.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text ch"><span class="qt angle-single">single</span> <span class="qt angle-double">double</span></div>
+    <figcaption>2039 and 203A: ‹single›; 00AB and 00BB: «double».</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text ch"><span class="qt high">high <span class="qt high">six</span></span> <span class="qt low">low</span></div>
+    <figcaption>201C 201D with 2018 2019 nested: “high ‘six’”; 201E and 201C: „low“.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

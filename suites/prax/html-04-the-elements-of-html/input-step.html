@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The step attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 120px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+  .pad input[type=number] { width: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.8 The step attribute</div>
+  <h1>The step attribute</h1>
+  <p class=pr-lede><q>The step attribute indicates the granularity that is expected (and required) of the value or
+  values, by limiting the allowed values.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-step-attribute">HTML §4.10.5.3.8</a></span></p>
+</header>
+
+<section>
+  <h2>Counted from the step base</h2>
+  <p>A value is a step mismatch when <q>that number subtracted from the step base is not an integral multiple of the
+  allowed value step</q>; the step base is <code>min</code>, or else the <code>value</code> attribute, or else the type's
+  default, or zero. <q>any</q> leaves no allowed value step.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-step-attribute">§4.10.5.3.8</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>step=3 value=7</code><input type=number step=3 value=7></div>
+        <div><code>step=3 min=1 value=7</code><input type=number step=3 min=1 value=7></div>
+        <div><code>step=3 min=0 value=7</code><input type=number step=3 min=0 value=7></div>
+        <div><code>min=0 value=0.5</code><input type=number min=0 value=0.5></div>
+        <div><code>step=any value=0.5</code><input type=number step=any min=0 value=0.5></div>
+      </div>
+    </div>
+    <figcaption>Green: 7 is its own step base. Green: 7 is 1 + 2 × 3. Red: 7 is no multiple of 3. Red: the default step
+    is 1. Green: <code>any</code> step.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

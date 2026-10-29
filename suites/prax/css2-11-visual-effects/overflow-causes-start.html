@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow: past the start side</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; margin: 10px 40px; }
+  .long { width: 160px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); color: white;
+          font-size: 12px; font-weight: 600; line-height: 20px; direction: ltr; }
+  .long span { padding: 0 6px; }
+  .long span + span { float: right; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1 Overflow and clipping</div>
+  <h1>Overflow: past the start side</h1>
+  <p class=pr-lede>Each dashed box is 120px wide, 40px from the stage's left, and holds a bar 160px wide, blue at its
+  left end and orange at its right, with <code>margin-left: -40px</code>: it overflows the box on the left. The
+  captions read the box's <code>scrollWidth</code> back.</p>
+</header>
+
+<section>
+  <h2>Overflow to the left</h2>
+  <p><q>In certain cases, a box may overflow, meaning its content lies partly or entirely outside of the box</q>, in
+  any direction. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame box1" style="height: 40px"><div class=long style="margin-left: -40px"><span>left end</span><span>right</span></div></div></div>
+    <figcaption><code>overflow: visible</code>: the bar's left 40px is outside the dashed box, and shows.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a>, <a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">§3.3</a></div>
+  <h2>Unreachable</h2>
+  <p><q>the area beyond the scroll origin in either axis is considered the unreachable scrollable overflow region:
+  content rendered here is not accessible to the reader</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span>
+  <q>UAs must clip any content in the unreachable scrollable overflow region.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=s1 class="pr-frame box1" style="height: 40px; overflow: auto"><div class=long style="margin-left: -40px"><span>left end</span><span>right</span></div></div></div>
+    <figcaption><code>overflow: auto</code>: the left 40px is clipped, and the box does not scroll to it:
+    <code>scrollWidth</code> is <code class=pr-computed data-of=s1 data-dom=scrollWidth></code>, its own
+    width.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=s2 class="pr-frame box1" dir=rtl style="height: 40px; overflow: auto"><div class=long style="margin-left: -40px"><span>left end</span><span>right</span></div></div></div>
+    <figcaption>In <code>dir=rtl</code> the scroll origin is at the right, and the left is the end: the box scrolls to
+    the bar's left end, here by script. <code>scrollWidth</code> is <code class=pr-computed data-of=s2
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("s2").scrollLeft = -10000;
+</script>
+<script src=../shared/computed.js></script>
+</body>
+</html>

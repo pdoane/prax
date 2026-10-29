@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The br element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 13px/20px "PR Noto Sans"; }
+  .float { float: left; width: 40px; height: 40px; margin-right: 10px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.27 The br element</div>
+  <h1>The br element</h1>
+  <p class=pr-lede><q>The br element represents a line break.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-br-element">HTML §4.5.27</a></span></p>
+</header>
+<section>
+  <h2>A new line</h2>
+  <p><q>br { display-outside: newline; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage t">first line<br>second line</div>
+    <figcaption>Two lines, though the stage has room for both on one.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>clear</h2>
+  <p>As presentational hints, <q>br[clear=left i] { clear: left; }</q> <q>User agents are expected to support the
+  'clear' property on inline elements (in order to render br elements with clear attributes) in the manner described
+  in the non-normative note to this effect in CSS.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> Each stage has a blue float 40px tall at the left.</p>
+  <figure>
+    <div class="pr-stage t"><div class=float></div>beside<br clear=left>below</div>
+    <figcaption><code>clear=left</code>: "beside" next to the float, "below" under it, at the stage's left, 40px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class=float></div>beside<br>next</div>
+    <figcaption>No clear: "next" on the second line, still beside the float.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

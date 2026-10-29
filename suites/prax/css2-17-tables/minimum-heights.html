@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table height algorithms: minimum heights</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; outline: 1px dashed #6b7381; }
+  td { width: 50px; padding: 0; box-sizing: border-box; border: 1px solid #2c5a8f; vertical-align: top; }
+  .blk { height: 18px; background: #4f81bd; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.3 Table height algorithms</div>
+  <h1>Table height algorithms: minimum heights</h1>
+  <p class=pr-lede>Cells have a 1px border and hold an 18px block, so rows are 20px unless something makes them taller.
+  Tables are outlined.</p>
+</header>
+
+<section>
+  <h2>A table's height is a minimum</h2>
+  <p>For the table's 'height', <q>Any other value is treated as a minimum height.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2
+  §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="height: 10px"><tr><td><div class=blk></div><tr><td><div class=blk></div></table></div>
+    <figcaption><code>height: 10px</code> is a minimum: the table is 40px, its rows' height.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A row's height</h2>
+  <p>A row's height <q>is the maximum of the row's computed 'height', the computed 'height' of each cell in the row,
+  and the minimum height (MIN) required by the cells.</q> <q>The sum of the row heights involved must be great enough
+  to encompass the cell spanning the rows.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr style="height: 30px"><td><div class=blk></div><td style="height: 50px"><div class="blk o" style="height: 40px"></div></table></div>
+    <figcaption>Row <code>height: 30px</code>, a cell <code>height: 50px</code>, content needing 42px: the row is
+    50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td><div class=blk></div><td rowspan=2><div class="blk o" style="height: 78px"></div><tr><td><div class=blk></div></table></div>
+    <figcaption>An orange cell spanning two rows holds 78px: the two rows together are 80px, enough for
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

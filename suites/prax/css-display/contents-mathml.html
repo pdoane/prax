@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: contents on MathML elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Noto Serif"; }
+  math { font-family: "PR Noto Serif"; }
+  .c { display: contents; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · B.3 MathML Elements</div>
+  <h1>display: contents on MathML elements</h1>
+  <p class=pr-lede><q>For all MathML elements, display: contents computes to display: none.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox-mathml">CSS Display 4 §B.3</a></span></p>
+</header>
+
+<section>
+  <h2>Gone, not unwrapped</h2>
+  <p>Each stage is a <code>math</code> element of x + a over b, between words.</p>
+  <figure>
+    <div class=pr-stage>so <math><mi>x</mi><mo>+</mo><mfrac><mi>a</mi><mi>b</mi></mfrac></math> here</div>
+    <figcaption>As usual: x + a over b.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>so <math><mi>x</mi><mo>+</mo><mfrac id=m1 class=c><mi>a</mi><mi>b</mi></mfrac></math> here</div>
+    <figcaption>The <code>mfrac</code> <code>contents</code>: "x +" and no a or b, which are not hoisted, as for
+    <code>display: none</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>so <math id=m2 class=c><mi>x</mi><mo>+</mo><mfrac><mi>a</mi><mi>b</mi></mfrac></math> here</div>
+    <figcaption>The <code>math</code> <code>contents</code>: nothing between "so" and "here".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>so <math><mrow id=m3 class=c><mi>x</mi><mo>+</mo></mrow><mi>y</mi></math> here</div>
+    <figcaption>An <code>mrow</code> of "x +" <code>contents</code>, then y: y alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

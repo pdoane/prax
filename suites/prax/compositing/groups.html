@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Compositing groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .lime { position: absolute; left: 10px; top: 10px; width: 140px; height: 40px; background: #00ff00; }
+  .group { position: absolute; left: 20px; top: 0; width: 100px; height: 40px; }
+  .a, .b { position: absolute; top: 0; width: 50px; height: 40px; }
+  .a { left: 0; background: #ff0000; }
+  .b { left: 30px; background: #0000ff; }
+  .m { mix-blend-mode: multiply; }
+  .sw { position: absolute; left: 60px; top: 50px; width: 20px; height: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 8 Compositing Groups</div>
+  <h1>Compositing groups</h1>
+  <p class=pr-lede><q>A compositing group is rendered by first compositing the elements of the group onto the initial
+  backdrop. The result of this is a single element containing color and alpha information. This element is then
+  composited onto the group backdrop.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#groups">Compositing and Blending 2 §8</a></span>
+  Each stage has a lime band 140 by 40; the group holds a red square 50 wide at x 30 and a blue one at x 60, overlapping
+  from x 60 to 80.</p>
+</header>
+
+<section>
+  <h2>The initial backdrop</h2>
+  <p><q>This will be the same as the group backdrop in a non-isolated group, or a fully transparent backdrop for an
+  isolated group.</q> Both squares have <code>mix-blend-mode: multiply</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group><div class="a m"></div><div class="b m"></div></div></div></div>
+    <figcaption>Not isolated: each square multiplies with the lime, black, x 30 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group style="isolation: isolate"><div class="a m"></div><div class="b m"></div></div></div></div>
+    <figcaption>Isolated: red, black where blue multiplies with red, x 60 to 80, then blue; the group then laid on the
+    lime.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A single contribution</h2>
+  <p><q>Steps shall be taken to ensure the group backdrop makes only a single contribution to the final composite.</q>
+  The group, <code>opacity: 0.5</code>, holds the opaque squares, normal.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group style="opacity: 0.5"><div class=a></div><div class=b></div></div></div><div class=sw style="background: rgb(0% 50% 50%)"></div></div>
+    <figcaption>Where they overlap, the group is blue at 0.5 over the lime once: <code>rgb(0% 50% 50%)</code>, as the
+    swatch below; no red shows through.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

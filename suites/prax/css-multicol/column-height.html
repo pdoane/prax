@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; column-fill: auto; gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.2 The Block Size of Columns: the column-height property</div>
+  <h1>column-height</h1>
+  <p class=pr-lede>&lt;length&gt; <q>describes the desired column height.</q> <q>When column-height is not auto the
+  size in the block direction is not flexible. If there is not enough content to fill a row of columns at the set
+  size, empty space is left.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#ch">CSS Multi-column Layout 2 §4.2</a></span>
+  With a column-height, column-wrap's <code>auto</code> <q>behaves as the value wrap</q>: <q>Overflow columns create a
+  new multicol row in the block direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#cwr">§4.4</a></span>
+  Each stage has <code>gap: 10px</code>, <code>column-fill: auto</code> and red rules.</p>
+</header>
+
+<section>
+  <h2>Rows of columns of that height</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="columns: 3; column-height: 40px">one two six ten red big fat sun</div>
+    <figcaption><code>columns: 3; column-height: 40px</code>: a row of three 40px columns, two lines in each; then,
+    10px below, a second row, "fat" and "sun" in its first column; the stage 90px tall. <span
+    class=pr-flag>Safari</span> No rows: three columns, balanced. <span class=pr-flag>Firefox</span> No rows: all
+    eight lines in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="columns: 3; column-height: 40px">one two six</div>
+    <figcaption>Three lines: "one" and "two" in the first column, "six" in the second, and the row keeps its
+    40px. <span class=pr-flag>Safari</span> A line in each column, the stage 20px tall. <span
+    class=pr-flag>Firefox</span> All three in the first column, the stage 60px tall.</figcaption>
+  </figure>
+</section>
+
+
+
+</body>
+</html>

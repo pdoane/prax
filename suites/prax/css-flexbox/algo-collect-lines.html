@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 5: collecting items into lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; align-items: flex-start; }
+  .pr-stage > div { flex-shrink: 0; }
+  .w50 > div { width: 50px; }
+  .w60 > div { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.3 Main Size Determination, step 5</div>
+  <h1>Step 5: collecting items into lines</h1>
+  <p class=pr-lede><q>starting from the first uncollected item, collect consecutive items one by one until the first
+  time that the next collected item would not fit into the flex container's inner main size [...]. If the very first
+  uncollected item wouldn't fit, collect just it into the line.</q> <q>For this step, the size of a flex item is its
+  outer hypothetical main size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#main-sizing">CSS Flexible Box Layout 2 §9.3</a></span>
+  Each stage is a 200px <code>flex-wrap: wrap</code> container of items that do not shrink.</p>
+</header>
+
+<section>
+  <h2>As many as fit, by their outer hypothetical sizes</h2>
+  <figure>
+    <div class="pr-stage w60"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption>Four of 60px: A, B and C make 180px; D would make 240px, so it starts a second line.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="pr-stage w60"><div class="pr-a pr-fit" style="margin-right: 10px">A</div><div class="pr-b pr-fit" style="margin-right: 10px">B</div><div class="pr-c pr-fit" style="margin-right: 10px">C</div></div>
+    <figcaption>60px items with <code>margin-right: 10px</code>: 70px each outside, so two to a line, C on the
+    second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage w50" style="column-gap: 10px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>column-gap: 10px</code> between 50px items: four would need 230px, so D wraps. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-gap">CSS Gaps 1 §2.1</a></span></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><div class="pr-a pr-fit" style="width: 80px; min-width: 110px">A</div><div class="pr-b pr-fit" style="width: 80px">B</div><div class="pr-c pr-fit" style="width: 30px; max-width: 10px">C</div></div>
+    <figcaption>A <code>width: 80px; min-width: 110px</code>: 110px, so B, 80px, wraps; C, <code>max-width:
+    10px</code>, fits beside B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><div class="pr-a pr-fit" style="width: 50px">A</div><div class="pr-b pr-fit" style="width: 210px">B</div><div class="pr-c pr-fit" style="width: 50px">C</div></div>
+    <figcaption>B, 210px, wider than the line: on a line of its own, overflowing; A before it and C after it on
+    lines of their own.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 100px"><div class="pr-a pr-fit" style="height: 40px; width: 20px">A</div><div class="pr-b pr-fit" style="height: 40px; width: 20px">B</div><div class="pr-c pr-fit" style="height: 40px; width: 20px">C</div></div>
+    <figcaption>A <code>vertical-rl</code> row container 100px tall: A and B down the right, C on a second line to
+    their left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

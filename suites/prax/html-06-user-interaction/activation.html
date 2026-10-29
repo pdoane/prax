@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Activation without a click</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.5 Activation behavior of elements</div>
+  <h1>Activation without a click</h1>
+  <p class=pr-lede><q>Certain elements in HTML have an activation behavior, which means that the user can activate them. This is
+  always caused by a click event.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#activation">HTML §6.5</a></span></p>
+</header>
+<section>
+  <h2>By the keyboard</h2>
+  <p><q>When the user triggers an element with a defined activation behavior in a manner other than clicking it, the
+  default action of the interaction event must be to fire a click event at the element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#activation">§6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=button>a button</button>
+        <a class=pr-target id=link href="#activation">a link</a>
+      </div>
+      <ol class=pr-log data-log="keydown click" data-fields="key target" data-lines=2></ol>
+    </div>
+    <figcaption>Tab to the button and press Enter, then Space: each fires a click at the button. Tab to the link and
+    press Enter: a click at the link. The keys themselves are logged before each click.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>click() acts as a click</h2>
+  <p><code>click()</code> <q>Acts as if the element was clicked.</q> <q>If this element is a form control that is
+  disabled, then return.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#activation">§6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=caller>click() both checkboxes</button>
+        <div id=boxes>
+          <label class=pr-target><input type=checkbox id=enabled> enabled</label>
+          <label class=pr-target><input type=checkbox id=disabled disabled> disabled</label>
+        </div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-on="#boxes" data-lines=1></ol>
+    </div>
+    <figcaption>Click the button: the enabled checkbox is checked, its activation behavior run by the click that
+    <code>click()</code> fires, and the disabled one stays unchecked, with no click fired at it. Click again: the first
+    is unchecked.</figcaption>
+  </figure>
+</section>
+<script>
+  // Calls click() on both checkboxes.
+  document.getElementById("caller").addEventListener("click", () => {
+      document.getElementById("enabled").click();
+      document.getElementById("disabled").click();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

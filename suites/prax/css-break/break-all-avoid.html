@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>all and avoid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.1 Generic Break Values</div>
+  <h1>all and avoid</h1>
+  <p class=pr-lede><q>These values have an effect regardless of the type of fragmented context containing the
+  flow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#generic-break-values">CSS Fragmentation 4 §3.1.1</a></span>
+  Each frame prints on pages whose content areas are 140px tall; in two of them, a multi-column container of two
+  columns, filled in order, holds the blocks. In columns alone, <code>always</code> and <code>avoid</code> are shown in
+  <a href="../css-multicol/break-between.html">break-before and break-after in columns</a> and <a
+  href="../css-multicol/break-avoid.html">avoiding breaks between boxes</a>.</p>
+</header>
+
+<section>
+  <h2>all, and avoid</h2>
+  <p><code>all</code>: <q>This value breaks through all containing fragmentation contexts.</q> B has the value.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto }</style><body class=pr-measure><div class=m><div class=pr-a>A</div><div class=pr-b style='break-before: all'>B</div><div class=pr-c>C</div></div>"></iframe>
+    <figcaption><code>all</code>, in columns: a column break and a page break. A on the first page; B and C in the
+    first column of the second. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No break: one page, A, B and C in the first column, or with
+    no columns in Safari.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<br>six<div class=pr-b style='height: 40px; box-sizing: border-box; break-inside: avoid; break-before: avoid'>B</div>"></iframe>
+    <figcaption><code>avoid</code>: <q>Avoid a break before/after the principal box.</q> B, 40px and kept whole (<code>break-inside: avoid</code>), does not fit under
+    "six"; rather than break before B, the page breaks after "five", and "six" goes with B. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break before B: "six" stays on the first page, B alone on the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

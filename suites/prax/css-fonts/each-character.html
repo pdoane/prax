@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A font for each character</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5 Font matching algorithm</div>
+  <h1>A font for each character</h1>
+  <p class=pr-lede><q>For each character in the run a font family is chosen and a particular font face is selected
+  containing a glyph for that character.</q> <q>The set of installed fonts available to the Font Matching Algorithm is
+  explicitly undefined.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-matching-algorithm">CSS Fonts 4 §5</a></span></p>
+</header>
+
+<section>
+  <h2>One run, several families</h2>
+  <p>The stage is one text node in <code>'PR Architects Daughter', 'PR Tinos', 'PR Noto Sans JP', serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample pr-wide" style="font-family: 'PR Architects Daughter', 'PR Tinos', 'PR Noto Sans JP', serif">Aa αβ אב あア</div>
+    <figcaption>"Aa" handwritten; Greek and Hebrew, which the handwriting face lacks, from PR Tinos; kana, which
+    both lack, from PR Noto Sans JP.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Characters no listed family has</h2>
+  <p>The stage names PR Tinos only. Each script it lacks still draws, from an installed font that has it.</p>
+  <figure>
+    <div class="pr-stage pr-sample pr-wide" style="font-family: 'PR Tinos'">Aa ไทย हिन्दी ქართ</div>
+    <figcaption>"Aa" from PR Tinos; Thai, Devanagari and Georgian each from an installed font.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

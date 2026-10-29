@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Values beyond what an engine supports</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .z { position: absolute; width: 100px; height: 60px; }
+  .clip { overflow: hidden; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5 Numeric Data Types</div>
+  <h1>Values beyond what an engine supports</h1>
+  <p class=pr-lede><q>The precision and supported range of numeric values in CSS is implementation-defined</q>.
+  <q>When a value cannot be explicitly supported due to range/precision limitations, it must be converted to the
+  closest value supported by the implementation</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#numeric-types">CSS Values and Units 4 §5</a></span></p>
+</header>
+
+<section>
+  <h2>An integer too large</h2>
+  <p>Blue A is <code>z-index: 99999999999</code>; orange B, after it, is <code>z-index: 2147483647</code>, the largest
+  32-bit integer, which all three browsers support.</p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="height: 100px"><div class="pr-a pr-fit z" style="z-index: 99999999999; left: 20px; top: 10px">A</div><div class="pr-b pr-fit z" style="z-index: 2147483647; left: 80px; top: 30px">B</div></div>
+    <figcaption>A is converted to the closest value supported, B's: at one level, B paints over A, the later.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A length too large</h2>
+  <figure>
+    <div class="pr-stage clip"><div class="pr-a pr-fit" style="width: 1e30px">A</div></div>
+    <figcaption><code>width: 1e30px</code> is converted to the largest width supported: the box runs past the
+    stage, clipped at its edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage clip"><div class="pr-a pr-fit" style="width: 100px; margin-left: -1e30px">A</div></div>
+    <figcaption><code>margin-left: -1e30px</code>: as far left as supported, out of sight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

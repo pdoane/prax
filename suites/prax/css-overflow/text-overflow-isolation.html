@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ellipsis string: isolated, and after the block ellipsis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 140px; margin: 10px 30px; overflow: hidden; white-space: nowrap; background: #f4f5f7; font-family: "PR Cousine"; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 4.3 ellipsing details</div>
+  <h1>The ellipsis string: isolated, and after the block ellipsis</h1>
+  <p class=pr-lede><q>For bidi purposes, the ellipsis and string values must be treated as if they were wrapped in an
+  anonymous inline with unicode-bidi: isolate which inherits direction from the bidi paragraph.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#ellipsing-details">CSS Overflow 4 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>A string of mixed direction</h2>
+  <p>Each box is 140px wide with <code>text-overflow: "שלום ABC"</code>, and holds "abcdefghijklmnopqrst" in
+  <code>.pr-measure</code> text, in PR Cousine, which has Hebrew; 10px a letter, so 14 fit.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: "שלום ABC"'>abcdefghijklmnopqrst</div></div>
+    <figcaption>Left to right: the string is a left-to-right isolate: the Hebrew word, then "ABC", at the
+    line's end. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw no string.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: "שלום ABC"' dir=rtl>abcdefghijklmnopqrst</div></div>
+    <figcaption><code>dir=rtl</code>: a right-to-left isolate at the left end: "ABC" left of the Hebrew word,
+    then the letters' end. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw no
+    string.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The block overflow ellipsis first</h2>
+  <p><q>If a line has a block overflow ellipsis, then any handling relating to it, including displacing content from
+  the end of the line, occurs first. If the line still overflows after that (e.g. because the block overflow ellipsis
+  is too long), then it is ellipsed according to the text-overflow property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#ellipsing-details">CSS Overflow 4 §4.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage" style="height: 60px"><div class="pr-frame pr-measure t" style='white-space: normal; line-clamp: 1 " (continued on next page)"; text-overflow: ellipsis'>first line<br>second line</div></div>
+    <figcaption><code>line-clamp: 1 " (continued on next page)"</code>: "first line" is displaced, the 25-letter
+    string still overflows 140px, and <code>ellipsis</code> cuts it: " (continued o…". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no
+    <code>line-clamp</code> string.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-origin: none with fixed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed rgba(44, 90, 143, 0.6); background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%23d68a3c'/></svg>") no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.9 Positioning Area: the background-origin property, fixed</div>
+  <h1>background-origin: none with fixed</h1>
+  <p class=pr-lede>Each figure is a frame, a document of its own, 200 by 100. <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-origin">CSS Backgrounds 4 §2.9</a></span></p>
+</header>
+
+<section>
+  <h2>No effect with fixed</h2>
+  <p><q>If the 'background-attachment' value for this layer is fixed, then this property has no effect: in this case
+  the background positioning area is the initial containing block.</q> Each frame's body has no margin, and holds a box as
+  before, <code>fixed</code>, with an orange 30px square.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { width: 60px; height: 20px; padding: 10px; border: 10px dashed rgba(44, 90, 143, 0.6); background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%23d68a3c'/></svg>&quot;) 0 0 no-repeat fixed padding-box border-box }</style><div></div>"></iframe></div>
+    <figcaption><code>padding-box</code>, <code>fixed</code>, at <code>0 0</code>: in the frame's top left corner,
+    under the dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { width: 60px; height: 20px; padding: 10px; border: 10px dashed rgba(44, 90, 143, 0.6); background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%23d68a3c'/></svg>&quot;) 0 0 no-repeat fixed content-box border-box }</style><div></div>"></iframe></div>
+    <figcaption><code>content-box</code>, <code>fixed</code>, at <code>0 0</code>: in the frame's top left corner,
+    under the dashes, not 20px in at the content box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

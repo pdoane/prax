@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-image property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='%23d68a3c'/></svg>"); }
+  .missing { list-style-image: url(missing-marker.png); }
+  .square { list-style-type: square; }
+  .none { list-style-image: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-image property</h1>
+  <p class=pr-lede><code>list-style-image</code> takes <code>&lt;uri&gt; | none</code>. Initial <code>none</code>,
+  inherited, applies to elements with <code>display: list-item</code>. The image in these figures is an orange 10 by 10 square.</p>
+</header>
+
+<section>
+  <h2>An image replaces the marker</h2>
+  <p><q>This property sets the image that will be used as the list item marker. When the image is available, it will
+  replace the marker set with the 'list-style-type' marker.</q> The specification's example: <code>ul {
+  list-style-image: url("http://png.com/ellipse.png") }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="img square"><li>image<li>image</ul></div>
+    <figcaption>Set on the list, inherited by its items: an orange square marker on each, not the
+    <code>square</code> type's dark one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="img"><li>image<li class=none>none</ul></div>
+    <figcaption>The second item sets <code>none</code>: its marker is the type's disc.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image that is not available</h2>
+  <p><q>This property specifies appearance of the list item marker if 'list-style-image' has the value 'none' or if the
+  image pointed to by the URI cannot be displayed.</q> (of <code>list-style-type</code>) <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="missing square"><li>missing<li>missing</ul></div>
+    <figcaption>The image does not exist, so the <code>square</code> type shows: two dark squares.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="missing"><li>missing</ul></div>
+    <figcaption>The same with the initial type: a disc.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

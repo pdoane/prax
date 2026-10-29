@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Decorations are ink overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 150px; height: 40px; overflow: auto; padding: 0 6px; background: #f4f5f7; border: 1px solid #b5bcc7; font: 20px/40px "PR Arimo"; }
+  .v { overflow: visible; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 5.2 Overflow of Text Decorations</div>
+  <h1>Decorations are ink overflow</h1>
+  <p class=pr-lede><q>Text decorations that leak outside a box are considered ink overflow: they do not extend the
+  scrollable overflow region.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#overflow">CSS Text Decoration 4 §5.2</a></span>
+  Each box is 40px tall and holds one line of text exactly.</p>
+</header>
+
+<section>
+  <h2>No scrolling for a decoration</h2>
+  <figure>
+    <div class=s><span style="text-decoration: underline #c0392b 4px; text-underline-offset: 30px">far below</span></div>
+    <figcaption><code>overflow: auto</code>, an underline offset 30px: clipped at the bottom, and no scrollbar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=s><span style="text-decoration: underline wavy #c0392b 12px; text-underline-offset: 14px">thick wave</span></div>
+    <figcaption>A 12px wavy underline running out of the box: clipped, no scrollbar.
+    <span class=pr-flag>Chrome</span> Paints the wave's troughs below the box, outside its clip.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painted outside a box that does not clip</h2>
+  <figure>
+    <div class="s v"><span style="text-decoration: underline #c0392b 4px; text-underline-offset: 30px">far below</span></div>
+    <figcaption><code>overflow: visible</code>: the underline is drawn below the box, outside its border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter: the punctuation with the letter</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .fl::first-letter { background: #d68a3c; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2.1 First Letters and Associated Punctuation</div>
+  <h1>::first-letter: the punctuation with the letter</h1>
+  <p class=pr-lede><q>Preceding and following punctuation must also be included as part of the first-letter text in
+  the ::first-letter pseudo-element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-pattern">CSS Pseudo-Elements 4 §2.2.1</a></span>
+  In each stage the first-letter text is white on orange; every character, spaces too, is 10px wide.</p>
+</header>
+
+<section>
+  <h2>Before the letter</h2>
+  <p><q>All punctuation</q> <q>that precedes the first letter, as well as any intervening typographic space</q>,
+  <q>characters belonging to the Zs Unicode general category other than U+3000 IDEOGRAPHIC SPACE.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">“‘Hi</p></div>
+    <figcaption>Two opening quotes and the H: 0 to 30.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">« Hi</p></div>
+    <figcaption>«, a space and the H: 0 to 30. <span class=pr-flag>Chrome</span> No first letter.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">-- Hi</p></div>
+    <figcaption>Hyphens are punctuation too: --, the space and H, 0 to 40. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> The first hyphen alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After the letter</h2>
+  <p><q>Any punctuation other than opening punctuation and dashes</q> <q>that follows the first letter, as well as any
+  intervening typographic space</q>, <q>other than U+3000 IDEOGRAPHIC SPACE or a word separator.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">H!?) a</p></div>
+    <figcaption>!?) follow: H!?), 0 to 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">H-(ab</p></div>
+    <figcaption>A dash, then an opening parenthesis: neither, the H alone.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">H !</p></div>
+    <figcaption>A space, a word separator, then !: the H alone. <span class=pr-flag>Safari</span> H, the space and !,
+    0 to 30.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">H&#x2009;! a</p></div>
+    <figcaption>A thin space, U+2009, no word separator, then !: H, the space and !, 0 to 30. <span
+    class=pr-flag>Chrome</span> The H alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

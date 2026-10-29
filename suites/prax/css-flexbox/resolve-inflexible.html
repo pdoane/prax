@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: inflexible items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, inflexible items</div>
+  <h1>Resolving flexible lengths: inflexible items</h1>
+  <p class=pr-lede><q>Size inflexible items. Freeze, setting its target main size to its hypothetical main size…
+  any item that has a flex factor of zero; if using the flex grow factor: any item that has a flex base size greater
+  than its hypothetical main size; if using the flex shrink factor: any item that has a flex base size smaller than
+  its hypothetical main size</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>A factor of zero: the factor in use</h2>
+  <p>Each stage is 200px. Which factor is zero matters only if it is the one the line uses.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 1 40px">A</div><div class="pr-b pr-fit" style="flex: 1 1 40px">B</div></div>
+    <figcaption>Growing: A's grow factor is 0, so A is frozen at 40px and B takes the 120px free, 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 1 150px">A</div><div class="pr-b pr-fit" style="flex: 1 1 150px">B</div></div>
+    <figcaption>Shrinking: A's grow factor of 0 does not matter, and both lose 50px: 100px each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 0 150px">A</div><div class="pr-b pr-fit" style="flex: 1 1 150px">B</div></div>
+    <figcaption>Shrinking with A's shrink factor 0: A is frozen at 150px, and B loses the 100px, 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Already clamped</h2>
+  <p>An item whose min or max size moved its hypothetical main size away from its flex base size, against the
+  direction of flexing, is frozen at once.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 100px; max-width: 60px">A</div><div class="pr-b pr-fit" style="flex: 1 1 40px">B</div></div>
+    <figcaption>A of basis 100px and <code>max-width: 60px</code>: the sum 60 + 40 is less than 200px, so growing,
+    and A is frozen at 60px. The free space is 200 − 60 − 40 = 100px, all B's: 140px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 40px; min-width: 100px">A</div><div class="pr-b pr-fit" style="flex: 1 1 160px">B</div></div>
+    <figcaption>A of basis 40px and <code>min-width: 100px</code>: 100 + 160 is over 200px, so shrinking, and A is
+    frozen at 100px. B loses 60px: 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

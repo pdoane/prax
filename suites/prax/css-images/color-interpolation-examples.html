@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gradients in different color spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .bar { height: 10px; margin: 0 10px; }
+  .bar + .bar { margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.1.1 Effects of color space on interpolation: examples</div>
+  <h1>Gradients in different color spaces</h1>
+  <p class=pr-lede><q>The effect of colorspace on interpolation can be significant.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#color-interpolation">CSS Images 4 §3.1.1</a></span>
+  The section's examples: each bar is <code>to right</code>, 140px wide and 10px tall, with the stops and space named.</p>
+</header>
+
+<section>
+  <h2>Rectangular spaces</h2>
+  <p><q>The middle gradient uses gamma-encoded sRGB, which was the only choice in CSS Images 3</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(in lab to right, #F01, #081)"></div><div class=bar style="background: linear-gradient(in srgb to right, #F01, #081)"></div><div class=bar style="background: linear-gradient(in Oklab to right, #F01, #081)"></div></div>
+    <figcaption><code>#F01</code> to <code>#081</code> in Lab, sRGB, Oklab: the sRGB middle is a dark olive, Lab
+    and Oklab nearly alike and lighter.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(in lab to right, white, #01E)"></div><div class=bar style="background: linear-gradient(in srgb to right, white, #01E)"></div><div class=bar style="background: linear-gradient(in Oklab to right, white, #01E)"></div></div>
+    <figcaption><code>white</code> to <code>#01E</code>: Lab turns purple on the way, sRGB darker and a little
+    purple, Oklab stays blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(in lab to right, #44C, #795)"></div><div class=bar style="background: linear-gradient(in srgb to right, #44C, #795)"></div><div class=bar style="background: linear-gradient(in Oklab to right, #44C, #795)"></div></div>
+    <figcaption><code>#44C</code> to <code>#795</code>: again purple in Lab near the blue, darker in sRGB.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Polar spaces</h2>
+  <p><q>Interpolating in a polar colorspaces is inherently chroma-preserving</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(in lch to right, #A37, #595)"></div><div class=bar style="background: linear-gradient(in lab to right, #A37, #595)"></div><div class=bar style="background: linear-gradient(in srgb to right, #A37, #595)"></div><div class=bar style="background: linear-gradient(in Oklab to right, #A37, #595)"></div><div class=bar style="background: linear-gradient(in oklch to right, #A37, #595)"></div></div>
+    <figcaption><code>#A37</code> to <code>#595</code> in LCH, Lab, sRGB, Oklab, OKLCh: the three rectangular spaces
+    pass through grey; LCH and OKLCh stay saturated, through orange and olive.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

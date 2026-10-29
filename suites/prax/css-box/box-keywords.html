@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box-edge keywords on CSS boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .clip { margin: 10px; padding: 10px; border: 10px dashed #e6b54a; background: #c3d08b; }
+  .clip div { height: 20px; background: #8cb6c0; }
+  .out { margin: 20px; height: 20px; background: #4f81bd; outline: 6px solid #8e44ad; outline-offset: 6px; }
+  .mover { width: 60px; height: 20px; padding: 0 20px; background: #8e44ad; transform: translateX(50%); }
+  .row { height: 24px; padding: 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2.3 Box-edge Keywords</div>
+  <h1>Box-edge keywords on CSS boxes</h1>
+  <p class=pr-lede><q>The following &lt;box&gt; CSS keywords are defined for use in properties (such as 'transform-box'
+  and 'background-clip') that need to refer to various box edges</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#keywords">CSS Box Model 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>content-box, padding-box, border-box, margin-box</h2>
+  <p>A 10px margin, dashed border and padding; <code>background-clip</code> says where the green background
+  stops. Then a blue box with a 20px margin and a purple outline 6px outside its border, clipped with
+  <code>clip-path</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=clip style="background-clip: content-box"><div></div></div></div>
+    <figcaption><code>content-box</code>: green only behind the content.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=clip style="background-clip: padding-box"><div></div></div></div>
+    <figcaption><code>padding-box</code>: green to the border's inner side.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=clip style="background-clip: border-box"><div></div></div></div>
+    <figcaption><code>border-box</code>: green between the dashes too.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=out style="clip-path: margin-box"></div><div class=out style="clip-path: border-box"></div></div>
+    <figcaption>Above, <code>margin-box</code>: the outline shows. Below, <code>border-box</code>: it is cut
+    off.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's keywords on a CSS box</h2>
+  <p><code>fill-box</code>: <q>(In a CSS box context, treated as content-box.)</q> <code>stroke-box</code> and
+  <code>view-box</code>: treated as <code>border-box</code>. Each purple box has a 60px content box and 20px of padding
+  each side, so its border box is 100px; <code>translateX(50%)</code> moves it half its reference box's width.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class=row><div class=mover style="transform-box: content-box"></div></div>
+      <div class=row><div class=mover style="transform-box: fill-box"></div></div>
+    </div>
+    <figcaption><code>content-box</code>, then <code>fill-box</code>: each moved 30px, to start at 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=row><div class=mover style="transform-box: border-box"></div></div>
+      <div class=row><div class=mover style="transform-box: stroke-box"></div></div>
+      <div class=row><div class=mover style="transform-box: view-box"></div></div>
+    </div>
+    <figcaption><code>border-box</code>, <code>stroke-box</code>, <code>view-box</code>: each moved 50px, to start at
+    50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

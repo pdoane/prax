@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-size-adjust</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pair { padding: 0 6px; font-size: 40px; line-height: 60px; white-space: nowrap; }
+  .pair span { border-top: 1px solid #c0392b; }
+  .em { display: inline-block; width: 1em; height: 10px; background: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.6 Relative sizing: the 'font-size-adjust' property</div>
+  <h1>font-size-adjust</h1>
+  <p class=pr-lede>The <q>aspect value</q> is <q>the x-height of a font divided by the font size.</q> 'font-size-adjust'
+  scales each font so that its x-height is the aspect value times 'font-size': <code>c = (a / a') s</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-size-adjust-prop">CSS Fonts 4 §2.6</a></span></p>
+</header>
+
+<section>
+  <h2>Equal x-heights across fonts</h2>
+  <p>PR Tinos's aspect value is 0.459 and PR Arimo's 0.528. Each stage sets "x" in both at 40px.</p>
+  <figure>
+    <div class="pr-stage pair pr-wide"><span style="font-family: 'PR Tinos'">xyz</span> <span style="font-family: 'PR Arimo'">xyz</span></div>
+    <figcaption><code>none</code>: PR Arimo's x is taller, about 21px against 18px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pair pr-wide" style="font-size-adjust: 0.5"><span style="font-family: 'PR Tinos'">xyz</span> <span style="font-family: 'PR Arimo'">xyz</span></div>
+    <figcaption><code>0.5</code>: both x's 20px tall; PR Tinos drawn at about 43.6px, PR Arimo at about
+    37.9px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The used size, not the computed one</h2>
+  <p><q>The value of 'font-size-adjust' affects the used value of 'font-size' but does not affect the computed
+  value.</q> It changes <code>ex</code> but not <code>em</code>.</p>
+  <figure>
+    <div class="pr-stage pair" style="font-family: 'PR Tinos'; font-size-adjust: 0.6"><span>xyz</span> <i class=em></i></div>
+    <figcaption><code>font-size-adjust: 0.6</code> at 40px: the x 24px tall, drawn larger, but the blue bar,
+    <code>1em</code> wide, still 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-emphasis-skip</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .a { padding: 0 6px; font: 22px/48px "PR Noto Sans JP"; text-emphasis: dot #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.5 Emphasis Mark Skip: the text-emphasis-skip property</div>
+  <h1>text-emphasis-skip</h1>
+  <p class=pr-lede><q>This property describes for which characters marks are drawn.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-skip">CSS Text Decoration 4 §3.5</a></span>
+  Each stage is 日本 語、「#&amp;」ab with red dots; the initial value is
+  <code>spaces punctuation</code>.</p>
+</header>
+
+<section>
+  <h2>spaces, punctuation, symbols, narrow</h2>
+  <p><code>spaces</code>: <q>Skip word separators or other characters belonging to the Unicode separator category
+  (Z*).</q> <code>punctuation</code>: <q>Skip punctuation.</q> <code>symbols</code>: <q>Skip symbols.</q>, S* and
+  the list of # % &amp; @ and the like. <code>narrow</code>: <q>Skip characters where the East_Asian_Width property
+  [UAX11] of the Unicode database [UAX44] is not F (Fullwidth) or W (Wide).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage a" lang=ja style="text-emphasis-skip: spaces">日本 語、「#&amp;」ab</div>
+    <figcaption><code>spaces</code>: a dot over every character but the space, punctuation included. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no <code>text-emphasis-skip</code>: none over 、「」.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage a" lang=ja style="text-emphasis-skip: punctuation">日本 語、「#&amp;」ab</div>
+    <figcaption><code>punctuation</code>: a dot over the space too, not over 、「」. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None over the space.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage a" lang=ja style="text-emphasis-skip: spaces punctuation symbols">日本 語、「#&amp;」ab</div>
+    <figcaption>And <code>symbols</code>: no dots over # and &amp;. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> mark them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage a" lang=ja style="text-emphasis-skip: spaces punctuation narrow">日本 語、「#&amp;」ab</div>
+    <figcaption>And <code>narrow</code>: no dots over the narrow #, &amp;, a and b. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> mark them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

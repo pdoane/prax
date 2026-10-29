@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters: reset and increment values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .list > div::before { content: counter(n) ". "; font-weight: 600; color: #2c5a8f; }
+  .r0 { counter-reset: n; }
+  .r10 { counter-reset: n 10; }
+  .r-3 { counter-reset: n -3; }
+  .i1 > div { counter-increment: n; }
+  .i5 > div { counter-increment: n 5; }
+  .i-1 > div { counter-increment: n -1; }
+  .i0 > div { counter-increment: n 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4 Automatic counters and numbering</div>
+  <h1>Counters: reset and increment values</h1>
+  <p class=pr-lede><code>counter-reset</code> and <code>counter-increment</code> take <code>[ &lt;identifier&gt;
+  &lt;integer&gt;? ]+ | none</code>. Initial <code>none</code>, not inherited, apply to all elements. In each figure
+  the stage resets <code>n</code>, three divs increment it, and each shows <code>counter(n) ". "</code> in blue.</p>
+</header>
+
+<section>
+  <h2>counter-increment</h2>
+  <p><q>The integer indicates by how much the counter is incremented for every occurrence of the element. The default
+  increment is 1. Zero and negative integers are allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text list r0 i1"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-increment: n</code>: 1, 2, 3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text list r0 i5"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-increment: n 5</code>: 5, 10, 15.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text list r0 i-1"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-increment: n -1</code>: -1, -2, -3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text list r0 i0"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-increment: n 0</code>: 0, 0, 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>counter-reset</h2>
+  <p><q>The integer gives the value that the counter is set to on each occurrence of the element. The default is
+  0.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text list r10 i1"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-reset: n 10</code>: 11, 12, 13.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text list r-3 i1"><div>one</div><div>two</div><div>three</div></div>
+    <figcaption><code>counter-reset: n -3</code>: -2, -1, 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

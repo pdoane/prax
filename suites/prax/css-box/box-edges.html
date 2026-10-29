@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Boxes and edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-box { border-color: #e6b54a; }
+  .abs { position: absolute; top: 0; left: 0; width: 20px; height: 20px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2.1 Boxes and Edges</div>
+  <h1>Boxes and edges</h1>
+  <p class=pr-lede><q>The perimeter of each of the four areas (content, padding, border, and margin) is called an edge,
+  and each edge can be broken down into a top, right, bottom, and left side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#box-edges">CSS Box Model 4 §2.1</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin<span class="pr-swatch pr-border"></span>border<span
+class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>A zero width puts two edges together</h2>
+  <p><q>If the padding has zero width on a given side, the padding edge coincides with the content edge on that
+  side.</q> The same holds for the border edge where the border is zero, and the margin edge where the margin is.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 10px; border-width: 10px; padding: 10px 10px 10px 0"><div class=pr-content-area></div></div></div></div>
+    <figcaption>No left padding: the content meets the border at the left; padding on the other three
+    sides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-box style="margin: 10px 0 10px 10px; border-width: 10px 0 10px 10px; padding: 10px"><div class=pr-content-area></div></div></div></div>
+    <figcaption>No right border and no right margin: the padding reaches the stage's right side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The four boxes</h2>
+  <p>The sides of each edge make a box: the <q>content box</q>, <q>padding box</q>, <q>border box</q> and <q>margin
+  box</q>. Other properties lay out against them: a percentage width against the containing block's content box, an
+  absolutely positioned box against its padding box.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="border-width: 10px; padding: 10px"><div class=pr-content-area style="width: 50%"></div></div></div>
+    <figcaption>A child with <code>width: 50%</code>: half of the 160px content box, 80px, starting at the content edge,
+    20px in.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="position: relative; border-width: 10px; padding: 10px"><div class=pr-content-area></div><div class=abs></div></div></div>
+    <figcaption>A purple box at <code>top: 0; left: 0</code>: at the padding edge's corner, 10px in, over the
+    padding.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

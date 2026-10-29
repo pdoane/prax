@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Faces and families</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1.4 Relationship between faces and families</div>
+  <h1>Faces and families</h1>
+  <p class=pr-lede><q>A font family name only specifies a name given to a set of font faces; it does not specify an
+  individual face.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-families">CSS Fonts 4 §2.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>The other properties choose the face</h2>
+  <p>PR Tinos is a family of three faces: regular, bold and italic. 'font-weight' and 'font-style' choose among
+  them.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">Handgloves</div>
+    <figcaption>The regular face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-weight: bold">Handgloves</div>
+    <figcaption><code>font-weight: bold</code>: the bold face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-style: italic">Handgloves</div>
+    <figcaption><code>font-style: italic</code>: the italic face, with its own letterforms: a single-storey
+    a.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A face's name is not a family</h2>
+  <p>A family is matched by its name only, so the name of one of its faces matches nothing.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos Bold', 'PR Arimo'">Handgloves</div>
+    <figcaption><code>'PR Tinos Bold', 'PR Arimo'</code>: no family has that name, so PR Arimo, a sans-serif, at
+    the normal weight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dynamic-range-limit-mix()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+  @keyframes sweep { from { dynamic-range-limit: standard; } 50% { dynamic-range-limit: no-limit; }
+                     to { dynamic-range-limit: standard; } }
+  .sweep { animation: sweep 4s linear infinite; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 3.2 Mixing Dynamic Range Limits: the dynamic-range-limit-mix() function</div>
+  <h1>dynamic-range-limit-mix()</h1>
+  <p class=pr-lede><q>This function takes one or more dynamic-range-limit values, converts them internally to a value in stops above HDR Reference White, and alters the display to the result of mixing them by the specified amount.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#dynamic-range-limit-mix">CSS Color HDR 1
+  §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Between standard and no-limit</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=sw style="width: 160px; height: 10px; background: white"></div><img class=steps alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png" style="dynamic-range-limit: dynamic-range-limit-mix(standard 50%, no-limit 50%)"></div>
+    <figcaption>Half <code>standard</code> and half <code>no-limit</code>: on an HDR display the last steps are brighter
+    than the bar by about half as many stops as under <code>no-limit</code>. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> do not parse the function.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Animated</h2>
+  <q>Animation type: by dynamic-range-limit-mix()</q>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class=sw style="width: 160px; height: 10px; background: white"></div><img class="steps sweep" alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png"></div>
+    <figcaption>The image's limit runs from <code>standard</code> to <code>no-limit</code> and back every four
+    seconds. The still is at <code>standard</code>, with no step brighter than the bar. On an HDR display the bright
+    steps rise and fall smoothly. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not
+    interpolate the limit.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

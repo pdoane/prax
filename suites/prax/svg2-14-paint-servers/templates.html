@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Templates: attributes and stops</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="down" x2="0" y2="1"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="bare" href="#down" />
+  <linearGradient id="across" href="#down" x2="1" y2="0" />
+  <linearGradient id="own" href="#down"><stop offset="0.5" stop-color="#6aa36a" /><stop offset="0.5" stop-color="#8e44ad" /></linearGradient>
+  <linearGradient id="quarter" href="#down" x2="0" y2="0.5" spreadMethod="repeat" />
+  <linearGradient id="chain" href="#quarter" />
+  <linearGradient id="titled" href="#down"><title>Only a title</title></linearGradient>
+  <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="6" fill="#4f81bd" /></pattern>
+  <pattern id="dots-offset" href="#dots" x="10" y="10" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.1.1 Using paint servers as templates</div>
+  <h1>Templates: attributes and stops</h1>
+  <p class=pr-lede><q>Attributes defined for the template element are used instead of the initial value if
+  corresponding attributes are not specified on the current element. Furthermore, if the current element does not
+  have any child content other than descriptive elements, than the child content of the template element is cloned
+  to replace it.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#PaintServerTemplates">SVG 2 §14.1.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10. The template, <code>#down</code>, runs top to
+  bottom, blue on its upper half and orange on its lower.</p>
+</header>
+
+<section>
+  <h2>Attributes and children from the template</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#bare)" /></svg></div>
+    <figcaption><code>href="#down"</code> and nothing else: its direction and its stops, blue above y 30, orange
+    below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#across)" /></svg></div>
+    <figcaption>Its own <code>x2="1" y2="0"</code>: across, blue to x 80, orange after, with the template's
+    stops.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#own)" /></svg></div>
+    <figcaption>Its own green and purple stops: the template's direction, green above y 30, purple below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Indirectly, past descriptive elements, and for patterns</h2>
+  <p><q>Templating can be indirect to an arbitrary level</q>. <q>The exclusion of descriptive content is new in SVG 2
+  for ‘pattern’, consistent with the behavior of gradients</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#chain)" /></svg></div>
+    <figcaption>A gradient with only <code>href</code> to one with <code>y2="0.5" spreadMethod="repeat"</code> and no
+    stops, whose template is <code>#down</code>: four bands, blue, orange, blue, orange, each 10 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#titled)" /></svg></div>
+    <figcaption>A <code>title</code> and no stops: the template's, blue above y 30, orange below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#dots-offset)" /></svg></div>
+    <figcaption>A <code>pattern</code> with <code>x="10" y="10"</code>, whose template tiles 20 by 20 with a blue
+    dot at 10, 10: dots about 20, 20 and every 20 from there.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

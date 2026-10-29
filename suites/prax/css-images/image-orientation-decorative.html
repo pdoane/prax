@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-orientation: decorative images, and angles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; margin: 10px; }
+  .box { width: 60px; height: 60px; margin: 10px; background-repeat: no-repeat; background-size: 30px auto; }
+  .six { background-image: url("../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg"); }
+  .border { box-sizing: border-box; border: 20px solid; border-image: url("../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg") 50%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 5.1 Orienting an Image on the Page: the image-orientation property</div>
+  <h1>image-orientation: decorative images, and angles</h1>
+  <p class=pr-lede>The property applies <q>as well as to decorative images applied via CSS rules (such as
+  background-image and other &lt;image&gt; properties).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#the-image-orientation">CSS Images 3 §5.1</a></span>
+  The image is encoded 100 by 50, green and yellow over blue and red; its EXIF 6 says a quarter turn right.</p>
+</header>
+
+<section>
+  <h2>Backgrounds and border images</h2>
+  <p>Each dashed box is 60 by 60. <q>Border images (see border-image) are sliced after rotation.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost six"></div></div>
+    <figcaption>A background 30px wide: 30 by 60 at the top left, blue and green over red and yellow.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost six" style="image-orientation: none"></div></div>
+    <figcaption><code>none</code>: as encoded, 30 by 15, green and yellow over blue and red.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box border"></div></div>
+    <figcaption>A 20px border image sliced at 50%: corners blue, green, yellow, red, clockwise.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An angle, and flip</h2>
+  <p>Deprecated and optional: an angle turns <q>to the right</q>, then flip <q>flipped horizontally.</q> <q>This
+  value only applies to content images; decorative images continue to behave as from-image.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-1-ul.jpg" style="image-orientation: 90deg; width: 30px" alt=""></div>
+    <figcaption>EXIF 1, <code>90deg</code>: 30 by 60, blue and green over red and yellow. Chrome, Safari and
+    Firefox: as encoded, 30 by 15.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-1-ul.jpg" style="image-orientation: 0deg flip; width: 60px" alt=""></div>
+    <figcaption>EXIF 1, <code>flip</code>: yellow and green over red and blue. Chrome, Safari and Firefox: as
+    encoded.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost six" style="image-orientation: 180deg"></div></div>
+    <figcaption>A background, EXIF 6, <code>180deg</code>: as from-image, 30 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

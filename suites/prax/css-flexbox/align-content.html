@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-content: packing flex lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; height: 60px; }
+  .pr-stage > div { width: 80px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.4 Packing Flex Lines: the align-content property</div>
+  <h1>align-content: packing flex lines</h1>
+  <p class=pr-lede><q>The align-content property aligns a flex container's lines within the flex container when there
+  is extra space in the cross-axis, similar to how justify-content aligns individual items within the main-axis.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-content-property">CSS Flexible Box Layout 2 §8.4</a></span>
+  Each stage wraps four items 80px wide into two lines, 20px tall each, in 60px: 20px is left over. A and B are the
+  first line, C and D the second.</p>
+</header>
+
+<section>
+  <h2>Packed, distributed, stretched</h2>
+  <figure>
+    <div class=pr-stage style="align-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>flex-start</code>: lines at 0 and 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: flex-end"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>flex-end</code>: lines at 20 and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>center</code>: 10px above and below; lines at 10 and 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: space-between"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>space-between</code>: lines at 0 and 40px, the 20px between them.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: space-around"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>space-around</code>: 10px between the lines and 5px at either end: lines at 5 and
+    35px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: stretch"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="height: 20px">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>stretch</code>, the initial value: <q>the free-space is split equally between all of the
+    lines</q>, each 30px tall; A, B and D stretch to 30px, C is <code>height: 20px</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: space-between; flex-wrap: wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>wrap-reverse</code>, <code>space-between</code>: the first line, A and B, at the bottom, 40px;
+    C and D at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Basic shapes: stroked, filled and clipping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.1 Introduction and definitions</div>
+  <h1>Basic shapes: stroked, filled and clipping</h1>
+  <p class=pr-lede><q>The basic shapes may be stroked, filled and used as clip paths. All of the properties available
+  for ‘path’ elements also apply to the basic shapes.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#Introduction">SVG 2 §10.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>Stroked, filled and used as clip paths</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="none" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption>A circle of radius 20, stroked orange 10 wide: a ring from radius 15 to 25.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="#6aa36a" /></svg></div>
+    <figcaption>The same circle filled green and not stroked: a disc of radius 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><clipPath id="disc"><circle cx="80" cy="30" r="20" /></clipPath><rect width="160" height="60" fill="#4f81bd" clip-path="url(#disc)" /></svg></div>
+    <figcaption>The circle in a <code>clipPath</code>, clipping a blue rectangle the size of the stage: a blue disc
+    of radius 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A path's properties</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="none" stroke="#2c5a8f" stroke-width="4" stroke-dasharray="20 10" /></svg></div>
+    <figcaption><code>stroke-dasharray="20 10"</code> on a rect 120 by 40: dashes 20 long, 10 apart, from 20, 10
+    rightwards.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="20,50 80,10 140,50" fill="none" stroke="#2c5a8f" stroke-width="10" stroke-linejoin="round" /></svg></div>
+    <figcaption><code>stroke-linejoin="round"</code> on a polygon: every corner of the triangle rounded, 5 out from
+    its point.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><line x1="30" y1="30" x2="130" y2="30" stroke="#2c5a8f" stroke-width="20" stroke-linecap="round" /></svg></div>
+    <figcaption><code>stroke-linecap="round"</code> on a line from x 30 to 130: round ends, out to x 20 and
+    140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

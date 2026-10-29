@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feImage</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <circle id=dot cx=60 cy=40 r=15 fill="#8e44ad"/>
+  <filter id=default><feImage href="../shared/resources/flag-40x20.png"/></filter>
+  <filter id=fitted primitiveUnits="objectBoundingBox"><feImage href="../shared/resources/flag-40x20.png" x=0 y=0 width=1 height=1 preserveAspectRatio="none"/></filter>
+  <filter id=missing-over><feImage href="no-such-image.png"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode/></feMerge></filter>
+  <filter id=element><feImage href="#dot"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.15 Filter primitive feImage</div>
+  <h1>feImage</h1>
+  <p class=pr-lede><q>This filter primitive refers to a graphic external to this filter element, which is loaded or
+  rendered into an RGBA raster and becomes the result of the filter primitive.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feImageElement">Filter Effects 1 §9.15</a></span>
+  Each stage is an SVG 200 by 64 with a light blue rectangle 120 by 40 at (40, 20), outlined dashed; its filter
+  region is 144 by 48 at (28, 16). The image is the flag, a PNG 40 by 20.</p>
+</header>
+
+<section>
+  <h2>An image resource</h2>
+  <p>Rendered <q>according to the behavior of the image element</q>: <q>The initial value for preserveAspectRatio is
+  xMidYMid meet.</q></p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=64><rect x=40 y=20 width=120 height=40 fill="#b9cde6" filter="url(#default)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>As large as fits the filter region: 96 by 48, centered, from x 52 to 148 and y 16 to 64. No light
+    blue.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=64><rect x=40 y=20 width=120 height=40 fill="#b9cde6" filter="url(#fitted)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>A subregion of the rectangle's bounding box and <code>preserveAspectRatio="none"</code>: the flag
+    stretched to 120 by 40 over it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An element, or nothing</h2>
+  <p><q>otherwise, the referenced resource is rendered according to the behavior of the use element.</q> <q>A href
+  reference that is an empty image (zero width or zero height), that fails to download, is non-existent, or that
+  cannot be displayed (e.g. because it is not in a supported image format) fills the filter primitive subregion with
+  transparent black.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg width=200 height=64><rect x=40 y=20 width=120 height=40 fill="#b9cde6" filter="url(#element)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>href="#dot"</code>, a purple circle of radius 15 at (60, 40), alone. The text allows two
+    results: drawn where it is, or moved by the subregion's corner to (88, 56) and cut off below, as a use element's
+    x and y move what it references. <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg width=200 height=64><rect x=40 y=20 width=120 height=40 fill="#b9cde6" filter="url(#missing-over)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>An image that does not exist, merged over <code>SourceGraphic</code>: transparent, so only the light
+    blue rectangle. <span class=pr-flag>Safari</span> A broken-image icon over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

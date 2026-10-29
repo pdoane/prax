@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interactive validation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad select, .pad button { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+  .handled { outline: 2px solid #c0392b; }
+  iframe.pr-result { height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.21.2 Constraint validation</div>
+  <h1>Interactive validation</h1>
+  <p class=pr-lede>Submitting a form validates it: <q>Report the problems with the constraints of at least one of the elements given in unhandled invalid
+  controls to the user.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constraint-validation">HTML §4.10.21.2</a></span></p>
+</header>
+
+<section>
+  <h2>Reported, and not submitted</h2>
+  <p>An <code>invalid</code> event at each invalid control, in tree order; <q>User agents may focus one of those
+  elements</q>. Both fields are <code>required</code>, the select's first option a placeholder. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constraint-validation">§4.10.21.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=checked-result>
+        <textarea id=note name=note cols=8 rows=1 required></textarea>
+        <select id=size name=size required><option value="">Size<option>S<option>L</select>
+        <button>Submit</button>
+      </form>
+      <ol class=pr-log data-log="invalid submit" data-fields="target" data-lines=2></ol>
+      <iframe class=pr-result name=checked-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Submit: <code>invalid</code> at <code>note</code>, then <code>size</code>; the browser points at the
+    textarea, and the frame stays grey. Fill it and Submit: the select is reported. Pick S and Submit:
+    <code>submit</code>, and both are sent.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Handled by the page</h2>
+  <p><q>If notCanceled is true, then add field to unhandled invalid controls.</q> The page's script cancels the
+  <code>invalid</code> event at the first field and outlines it in red instead. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constraint-validation">§4.10.21.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=handled-result>
+        <textarea id=first name=first cols=8 rows=1 required></textarea>
+        <textarea id=second name=second cols=8 rows=1 required></textarea>
+        <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=handled-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Submit: the first textarea turns red, and the browser reports the second. Fill the second and
+    Submit: the first is red, nothing is reported, and still nothing is submitted.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Handles the first field's invalid event: cancels it, so the browser does not report it, and outlines the field.
+  const first = document.getElementById("first");
+  first.addEventListener("invalid", event => {
+      event.preventDefault();
+      first.classList.add("handled");
+  });
+  first.addEventListener("input", () => first.classList.remove("handled"));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Checkbox</title>
+<link rel=stylesheet href=support/gallery.css>
+</head>
+<body>
+<header>
+  <h1>Checkbox</h1>
+  <p>Every state against each appearance. Click a box or its label, or focus one and press Space.</p>
+</header>
+
+<section>
+  <h2>States</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th></tr>
+  <tr><th scope=row>unchecked</th><td><input type=checkbox></td><td class=none><input type=checkbox></td><td class=base><input type=checkbox></td><td class=styled><input type=checkbox></td></tr>
+  <tr><th scope=row>checked</th><td><input type=checkbox checked></td><td class=none><input type=checkbox checked></td><td class=base><input type=checkbox checked></td><td class=styled><input type=checkbox checked></td></tr>
+  <tr><th scope=row>indeterminate</th><td><input type=checkbox class=mixed></td><td class=none><input type=checkbox class=mixed></td><td class=base><input type=checkbox class=mixed></td><td class=styled><input type=checkbox class=mixed></td></tr>
+  <tr><th scope=row>disabled</th><td><input type=checkbox disabled></td><td class=none><input type=checkbox disabled></td><td class=base><input type=checkbox disabled></td><td class=styled><input type=checkbox disabled></td></tr>
+  <tr><th scope=row>disabled, checked</th><td><input type=checkbox disabled checked></td><td class=none><input type=checkbox disabled checked></td><td class=base><input type=checkbox disabled checked></td><td class=styled><input type=checkbox disabled checked></td></tr>
+  <tr><th scope=row>with a label</th><td><label class=inline><input type=checkbox checked> Agree</label></td><td class=none><label class=inline><input type=checkbox checked> Agree</label></td><td class=base><label class=inline><input type=checkbox checked> Agree</label></td><td class=styled><label class=inline><input type=checkbox checked> Agree</label></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><input type=checkbox checked> <input type=checkbox class=mixed> <input type=checkbox></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><input type=checkbox checked> <input type=checkbox class=mixed> <input type=checkbox></div></div>
+  <div class="panel accent"><span class=cap>accent-color</span><div class=strip><input type=checkbox checked> <input type=checkbox class=mixed> <input type=checkbox></div></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><div class=strip><input type=checkbox checked> <input type=checkbox class=mixed> <input type=checkbox></div></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><div class=strip><label class=inline><input type=checkbox checked> نعم</label></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><label class=inline><input type=checkbox checked> 縦書き</label></div>
+</div>
+</section>
+
+<script>
+for (const box of document.querySelectorAll('.mixed'))
+  box.indeterminate = true;
+</script>
+</body>
+</html>

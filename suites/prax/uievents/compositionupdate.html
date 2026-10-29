@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>compositionupdate</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.7.2 compositionupdate</div>
+  <h1>compositionupdate</h1>
+  <p class=pr-lede><q>A user agent SHOULD dispatch this event during a composition session when a text composition
+  system updates its active text passage with a new character, which is reflected in the string in data.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionupdate">UI Events §3.6.7.2</a></span></p>
+</header>
+<section>
+  <h2>Before the control changes</h2>
+  <p><q>In text composition systems which keep the ongoing composition in sync with the input control, the
+  compositionupdate event MUST be dispatched before the control is updated.</q> The page's script records the field's
+  value as each event reaches it, as <code>value</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionupdate">§3.6.7.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="compositionupdate input" data-fields="data value" data-on="#field" data-lines=3></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click the field and type <code>ka</code>: each
+    compositionupdate has the new text as <code>data</code> and the old as <code>value</code>, such as
+    <code>data="か" value="k"</code>; the input after it has <code>value="か"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A canceled session</h2>
+  <p><q>If the composition session is canceled, this event will be fired immediately before the compositionend event,
+  and the data attribute will be set to the empty string.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionupdate">§3.6.7.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=canceled></div>
+      <ol class=pr-log data-log="compositionupdate compositionend" data-fields="data" data-on="#canceled" data-lines=3></ol>
+    </div>
+    <figcaption>With the input method on, type <code>ka</code> in the field, then press Escape to cancel it: the log
+    ends with compositionupdate and compositionend, each with no <code>data</code>, the empty string, and the field is
+    empty.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the field's value as each event reaches it, before the log reads it.
+  const field = document.getElementById("field");
+  for (const type of ["compositionupdate", "input"])
+      field.addEventListener(type, event => { event.value = field.value; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

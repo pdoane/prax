@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table's background and border areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 10px; padding: 10px; border: 6px solid #2c5a8f; background: #f6d7b4; }
+  td { padding: 0; width: 40px; height: 20px; background: #b9cde6; }
+  caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.3.1 Drawing table backgrounds and borders</div>
+  <h1>The table's background and border areas</h1>
+  <p class=pr-lede><q>Unlike other boxes types, table and inline-table boxes do not paint their background and borders
+  around their entire client rect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#drawing-table-backgrounds-and-borders">CSS Table 3 §5.3.1</a></span>
+  Each table has <code>border-spacing: 10px</code>, <code>padding: 10px</code>, a 6px blue border, an orange
+  background and a green caption; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>The three boxes</h2>
+  <p><q>relative to the content-box of a table-root are painted relative to the rectangular area occupied by the table
+  grid and its border spacings</q>; the padding box adds <q>the table-root padding</q>, and the border box <q>the
+  table-root padding and border-width</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><caption>caption</caption><tr><td></td><td></td></tr></table></div>
+    <figcaption>The border and the orange are around the grid only; the caption above is outside them.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="background-clip: content-box"><caption>caption</caption><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>background-clip: content-box</code>: orange only in the spacing around and between the cells,
+    110 by 40; the 10px padding is clear.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="outline: 2px dashed #c0392b; outline-offset: 2px"><caption>caption</caption><tr><td></td><td></td></tr></table></div>
+    <figcaption>An outline, drawn outside the border box: around the grid, not the caption.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw it
+    round the caption too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

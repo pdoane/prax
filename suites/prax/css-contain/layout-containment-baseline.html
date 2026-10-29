@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout containment: no baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 70px; }
+  .k { contain: layout; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .ib { display: inline-block; width: 50px; height: 40px; }
+  .row { display: flex; align-items: baseline; }
+  .grid { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: start; }
+  .o { padding-top: 30px; background: #f6d7b4; }
+  .cell { vertical-align: baseline; height: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.3 Layout Containment, baselines</div>
+  <h1>Layout containment: no baseline</h1>
+  <p class=pr-lede><q>For the purpose of the 'vertical-align' property, or any other property whose effects need to
+  relate the position of the layout containment box's baseline to something other than its descendants, the
+  containment box is treated as having no baseline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-layout">CSS Containment 2 §3.3</a></span>
+  The dashed red line is the outer baseline; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Inline-blocks</h2>
+  <p>An inline-block with no baseline sits with its bottom margin edge on its line's baseline.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>out <span class="b ib">in</span> out</div>
+    <figcaption>No containment: the inline-block's line gives the baseline; "in" is level with "out", and the box
+    hangs 20px below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>out <span class="b ib k">in</span> out</div>
+    <figcaption><code>contain: layout</code>: no baseline, so the box's bottom is on the dashed line and "in" sits
+    20px above "out".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>out <span class="b k" style="display: inline-flex; height: 40px">flex</span> out</div>
+    <figcaption>An inline-flex box with <code>contain: layout</code>: the same, its bottom on the line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex and grid items, and table cells</h2>
+  <p>A flex or grid item with no baseline has one synthesized from its border box: its bottom edge. The orange item
+  has 30px of padding above "out".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=row><span class=o>out</span><span class="b k" style="height: 30px">in</span></div></div>
+    <figcaption>Flex, <code>align-items: baseline</code>: the blue item's bottom edge is level with "out"'s
+    baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=grid><span class=o>out</span><span class="b k" style="height: 30px">in</span></div></div>
+    <figcaption>Grid, <code>align-items: baseline</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class=pr-table-row><div class="pr-table-cell cell" style="padding-top: 20px">out</div><div class="pr-table-cell cell b k" style="line-height: 40px">in</div></div></div></div>
+    <figcaption>Table cells, <code>vertical-align: baseline</code>: the blue cell, its line 40px tall, has no
+    baseline, so its content box's bottom lines up with "out"'s baseline, and "in" sits higher than "out".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

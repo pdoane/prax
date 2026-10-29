@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested 3D transforms: flattened, or preserved</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 300px; height: 120px; }
+  .o { position: absolute; left: 40px; top: 20px; width: 80px; height: 80px; transform: rotateY(50deg); }
+  .c { width: 80px; height: 80px; transform-origin: top left; transform: rotateX(40deg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.3 Transformed element hierarchies</div>
+  <h1>Nested 3D transforms: flattened, or preserved</h1>
+  <p class=pr-lede><q>By default, transformed elements do not create a 3D rendering context and create a flattened
+  representation of their content. However, since it is useful to construct hierarchies of transformed objects that
+  share a common 3-dimensional space, this flattening behavior may be overridden by specifying a value of preserve-3d
+  for the transform-style property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#transformed-element-hierarchies">CSS Transforms 2 §4.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>The child in its parent's plane, or tilting out of it</h2>
+  <p>Each stage has <code>perspective: 300px</code>. A blue 80px square at (40, 20) has <code>rotateY(50deg)</code>; its
+  green child, as large, has <code>rotateX(40deg)</code> about its top edge.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-a pr-fit o"><div class="pr-c pr-fit c"></div></div></div>
+    <figcaption>Flat: <q>the lime element only appears shorter; it does not "pop out" of the blue element.</q> The green
+    child is drawn in the blue plane, its bottom edge 61px down it, and the blue square's edges are its
+    own.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-a pr-fit o" style="transform-style: preserve-3d"><div class="pr-c pr-fit c"></div></div></div>
+    <figcaption><code>preserve-3d</code> on the blue square: <q>the lime element renders as tilting out from its
+    parent</q>: its bottom edge swings toward the viewer, longer than its top, and past the blue square's right
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-a pr-fit o" style="transform-style: preserve-3d"><div class="pr-c pr-fit" style="width: 80px; height: 40px; transform: rotate(20deg)"></div></div></div>
+    <figcaption>A child with a 2D transform, <code>rotate(20deg)</code>, in the <code>preserve-3d</code> square: turned
+    within the square's plane.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Justifying cursive scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; text-align-last: justify; }
+  .ar { padding: 0 6px; font: 26px/44px "PR Noto Sans Arabic"; }
+  .mn { padding: 6px 0; font: 24px/40px "PR Noto Sans Mongolian"; writing-mode: vertical-lr; height: 160px; width: auto; }
+  .dv { padding: 0 6px; font: 24px/44px "PR Noto Sans Devanagari"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5.4 Cursive Scripts</div>
+  <h1>Justifying cursive scripts</h1>
+  <p class=pr-lede><q>Justification must not introduce gaps between the joined typographic letter units of cursive
+  scripts such as Arabic. If it is able, the UA may translate space distributed to justification opportunities within
+  a run of such typographic letter units into some form of cursive elongation for that run. It otherwise must assume
+  that no justification opportunity exists between any pair of typographic letter units in cursive script (regardless
+  of whether they join).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#justify-cursive">CSS Text 4 §7.5.4</a></span>
+  Each stage is <code>text-justify: inter-character</code>, its one line justified.</p>
+</header>
+
+<section>
+  <h2>Arabic and Mongolian: no gaps</h2>
+  <figure>
+    <div class="pr-stage ar j" dir=rtl lang=ar style="text-justify: inter-character">مرحبا بكم</div>
+    <figcaption>"مرحبا بكم": the letters stay joined, the space between the words taking the extra room, or the
+    words elongated; no gaps inside a word.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage mn j" lang=mn style="text-justify: inter-character">ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ</div>
+    <figcaption>Mongolian, vertical: the same, the words whole.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Devanagari is not cursive</h2>
+  <p><q>Indic scripts with baseline connectors (such as Devanagari and Gujarati) are not considered cursive scripts,
+  and do admit such gaps between typographic character units.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage dv j" lang=hi style="text-justify: inter-character">नमस्ते</div>
+    <figcaption>"नमस्ते": gaps between its units, न, म, स्ते, the headline broken between them. <span class=pr-flag>Safari</span>, which ignores
+    <code>text-justify</code>, leaves the word at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

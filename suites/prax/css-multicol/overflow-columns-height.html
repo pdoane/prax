@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow columns and the height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .brk > div { break-after: column; }
+  figure { margin-right: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 8.2 Pagination and Overflow Outside Multicol Containers, height</div>
+  <h1>Overflow columns and the height</h1>
+  <p class=pr-lede><q>Overflow columns can affect the height of the multicol container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#pagination-and-overflow-outside-multicol">CSS Multi-column Layout 1 §8.2</a></span>
+  Each stage has three columns of 60px; each block has <code>break-after: column</code>.</p>
+</header>
+
+<section>
+  <h2>Overflow columns affect the height</h2>
+  <p>The last block holds four words.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure brk"><div>one</div><div>two</div><div>six</div><div>red big fat sun</div></div>
+    <figcaption>The fourth column, past the stage, is 80px tall, and so is the stage: <q>The multicol container is
+    made tall enough to accommodate this column.</q> <span class=pr-flag>Safari</span> The stage 20px tall,
+    the last block's words in four columns of one line. <span class=pr-flag>Firefox</span> No forced breaks: three
+    columns of 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

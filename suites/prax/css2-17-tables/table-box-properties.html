@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table wrapper box: the table box's properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border: 3px solid #2c5a8f; }
+  .t .pr-table-cell { width: 50px; }
+  .cap { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.4 Tables in the visual formatting model</div>
+  <h1>The table wrapper box: the table box's properties</h1>
+  <p class=pr-lede>What a table element's other properties apply to. Each table has a 3px blue border and two 50px
+  cells (106px wide), and an orange caption 20px tall.</p>
+</header>
+
+<section>
+  <h2>Everything else non-inherited: the table box</h2>
+  <p><q>All other values of non-inheritable properties are used on the table box and not the table wrapper box.
+  (Where the table element's values are not used on the table and table wrapper boxes, the initial values are used
+  instead.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="background: #6aa36a; border-color: #1f2430; padding: 4px"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption>The table's green background, black border and 4px padding are around the cells only, not the
+    caption, which has no border and is as wide as the table box.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#global-style-overrides">CSS Table 3 §3.6.1</a></div>
+  <h2>Opacity, transforms and overflow: the wrapper</h2>
+  <p><q>The computed values of properties position, float, margin-*, top, right, bottom, and left on the table are used
+  on the table-wrapper box and not the table grid box; the same holds true for the properties whose use could force
+  the used value of transform-style to flat (see list) and their shorthands/longhands relatives: this list currently
+  includes overflow, opacity, filter, clip, clip-path, isolation, mask-*, mix-blend-mode, transform-* and
+  perspective.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#global-style-overrides">CSS Table 3 §3.6.1</a></span> These now move the caption with the table.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="opacity: 0.4"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>opacity: 0.4</code> on the table: the wrapper is faint, caption and table alike.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-table t" style="margin: 10px 0 0 30px; transform: rotate(-6deg)"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>transform: rotate(-6deg)</code> on the table: caption and table turn together, as one
+    box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

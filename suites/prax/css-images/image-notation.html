@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image(): a URL, and its orientation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .tall { width: 100px; height: 100px; margin: 10px; background-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 2.1 Image Fallbacks and Annotations: the image() notation</div>
+  <h1>image(): a URL, and its orientation</h1>
+  <p class=pr-lede><q>The image() function allows an author to: use media fragments to clip out a portion of an
+  image; use a solid color as an image; fallback to a solid-color image, when the image at the specified url can't be
+  downloaded or decoded; automatically respect the image orientation specified in the image's metadata</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#image-notation">CSS Images 5 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A string is a URL</h2>
+  <p><q>A &lt;string&gt; used in image() represents a &lt;url&gt;.</q> Each dashed box is 100 by 40, with its
+  background drawn once at the top left. The image is a flag 40 by 20, four colors in quarters.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('../shared/resources/flag-40x20.png')"></div></div>
+    <figcaption><code>image("…png")</code>: the flag, 40 by 20. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image(url(../shared/resources/flag-40x20.png))"></div></div>
+    <figcaption><code>image(url(…png))</code>: the same. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Oriented whatever image-orientation says</h2>
+  <p><q>If the image has an orientation specified in its metadata, such as EXIF, the UA must rotate or flip the image
+  to correctly orient it as the metadata specifies.</q> The JPEG is stored 100 by 50, with an EXIF orientation that
+  turns it a quarter turn clockwise. The box is 100 by 100, with <code>image-orientation: none</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="tall pr-ghost" style="image-orientation: none; background-image: image('../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg')"></div></div>
+    <figcaption>Upright, 50 wide and 100 tall: blue and green above, red and yellow below. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

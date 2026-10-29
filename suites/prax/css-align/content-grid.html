@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Content distribution in grid containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 40px 40px 40px; height: 20px; }
+  .r { display: grid; grid-template: 20px 20px / 1fr; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.1.4 Grid Containers</div>
+  <h1>Content distribution in grid containers</h1>
+  <p class=pr-lede>The subjects are <q>The grid tracks in the appropriate axis, with any spacing inserted between
+  tracks added to the relevant gutters, and treating collapsed gutters as a single opportunity for space
+  insertion.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-grid">CSS Box Alignment 3 §5.1.4</a></span>
+  Grid layout's own rules are in <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-align">CSS Grid Layout 2 §11.5</a></span>.</p>
+</header>
+
+<section>
+  <h2>Tracks and gutters</h2>
+  <p>Three 40px columns.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="column-gap: 10px; justify-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>column-gap: 10px</code>, <code>space-between</code>: 30px more in each gutter, 40px in all; B
+    at 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fit, 40px); column-gap: 10px; justify-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>repeat(auto-fit, 40px)</code>: four tracks, two empty and collapsed, their gutters one: A at
+    0, B at 160px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>normal, and the block axis</h2>
+  <p><q>normal behaves as stretch.</q> <code>align-content</code> aligns <q>the grid rows</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: auto auto"><div class="pr-a pr-fit" style="min-width: 20px">A</div><div class="pr-b pr-fit" style="min-width: 60px">B</div></div></div>
+    <figcaption><code>auto</code> columns of 20 and 60px, <code>normal</code>: each 60px wider, B from 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=r style="align-content: center"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>Two 20px rows in 80px, <code>align-content: center</code>: from 20 to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

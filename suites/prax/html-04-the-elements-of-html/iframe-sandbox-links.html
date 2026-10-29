@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Links out of a sandbox</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .pic iframe { width: 140px; height: 40px; }
+  .pic iframe + iframe { margin-top: 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.5 The iframe element</div>
+  <h1>Links out of a sandbox</h1>
+  <p class=pr-lede>When the sandbox attribute is set, <q>links are prevented from targeting other navigables.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-iframe-element">HTML §4.8.5</a></span> Each frame's document is in its <code>srcdoc</code>.</p>
+</header>
+
+<section>
+  <h2>Links to other navigables</h2>
+  <p>A sandboxed document may navigate only itself and what it contains, unless <q>allow-top-navigation</q> or
+  <q>allow-popups</q> say otherwise. Each upper frame has a link whose <code>target</code> names the frame below it.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe srcdoc="<body style='margin: 0; font: 12px/20px sans-serif; padding: 0 6px'><a href='support/landed.html' target='below-open'>Open below</a>"></iframe><iframe name=below-open></iframe></div>
+    <figcaption>No sandbox: click the link, and the lower frame shows landed.html.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe sandbox srcdoc="<body style='margin: 0; font: 12px/20px sans-serif; padding: 0 6px'><a href='support/landed.html' target='below-sandboxed'>Open below</a>"></iframe><iframe name=below-sandboxed></iframe></div>
+    <figcaption><code>sandbox</code>: click the link, and nothing opens, below or in a new window.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

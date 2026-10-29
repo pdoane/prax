@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>keyCode for keydown and keyup</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.3.1 How to determine keyCode for keydown and keyup events</div>
+  <h1>keyCode for keydown and keyup</h1>
+  <p class=pr-lede><q>The keyCode for keydown or keyup events is calculated as follows</q>. The section is
+  informative. <span class=pr-cite><a href="https://w3c.github.io/uievents/#determine-keydown-keyup-keyCode">UI Events §7.3.1</a></span></p>
+</header>
+<section>
+  <h2>Letters and digits</h2>
+  <p><q>If input key when pressed without modifiers would insert a numerical character (0-9), return the ASCII code of
+  that numerical character.</q> <q>If input key when pressed without modifiers would insert a lower case character in
+  the a-z alphabetical range, return the ASCII code of the upper case equivalent.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#determine-keydown-keyup-keyCode">§7.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key keyCode" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press A: <code>keyCode=65</code>, the code of <code>A</code>, on keydown and keyup.
+    Press 1, then Shift+1: <code>keyCode=49</code> both times, though the second's <code>key</code> is
+    <code>"!"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Keys an input method takes</h2>
+  <p><q>If an Input Method Editor is processing key input and the event is keydown, return 229.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#determine-keydown-keyup-keyCode">§7.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=ime></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key keyCode isComposing" data-on="#ime" data-lines=4></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click the field and type <code>ka</code>: the
+    keydowns the input method takes have <code>keyCode=229</code>; the keyups have the letters' own codes, 75 and
+    65.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

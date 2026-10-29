@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: the viewport</h1>
+  <p class=pr-lede>Each frame is a document whose body, dashed, is 30px tall at 10, 10 and holds a 60px tall blue box. The
+  guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>From body, unless the root has a value</h2>
+  <p>User agents <q>must instead apply the 'overflow' property from the first such child element to the viewport, if
+  the value on the root element is 'visible'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381; overflow: hidden } div { width: 100px; height: 60px; background: #4f81bd }</style><div></div>"></iframe></div>
+    <figcaption><code>body { overflow: hidden }</code>: the value goes to the viewport, and body's is
+    <code>visible</code>: the blue box is whole, past body's bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { overflow: hidden; background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381; overflow: hidden } div { width: 100px; height: 60px; background: #d68a3c }</style><div></div>"></iframe></div>
+    <figcaption>And <code>html { overflow: hidden }</code>: the root's value goes to the viewport, body keeps its own,
+    and the box is cut at body's bottom, 30px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The viewport clips and scrolls</h2>
+  <p><q>UAs must apply the 'overflow' property set on the root element to the viewport.</q> <q>The element from which
+  the value is propagated must have a used value for 'overflow' of 'visible'.</q> <q>The 'visible' value when used for
+  the viewport must be interpreted as 'auto'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { overflow: hidden; height: 30px; background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #6aa36a }</style><div></div>"></iframe></div>
+    <figcaption><code>html { overflow: hidden; height: 30px }</code>: the viewport clips, at the frame's edges, not the
+    30px root: the box is whole.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 200px; background: #4f81bd }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption>Both <code>visible</code>, and a box 200px tall: the viewport scrolls, here 60px down by script, and
+    the box fills the frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

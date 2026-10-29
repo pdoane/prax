@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-intrinsic-sizing: compressing a box's min-content contribution</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 60px; }
+  figure.f figcaption { max-width: 152px; }
+  .k { background: #b9cde6; outline: 1px solid #2c5a8f; }
+  .bar { display: block; width: 100px; height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.5 Zeroing Min-Content Size Contributions: the min-intrinsic-sizing property</div>
+  <h1>min-intrinsic-sizing: compressing a box's min-content contribution</h1>
+  <p class=pr-lede><q>This property defines whether the min-content contribution of a non-replaced box is “compressed”
+  under certain circumstances.</q> <q>The “compressed” min-content contributions is calculated by pretending the box
+  were empty, except when factoring in sizing constraints imposed by explicit min-content, max-content, and fit-content
+  values of the sizing properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#intrinsic-contribution-override">CSS Box Sizing 4 §5.5</a></span>
+  Each blue box holds an orange bar 100px wide, in a dashed <code>width: min-content</code> parent whose width reads
+  back below.</p>
+</header>
+
+<section>
+  <h2>zero-if-scroll</h2>
+  <p><q>The box’s min-content contribution is “compressed” if it is a scroll container in that axis.</q></p>
+  <figure class=f>
+    <div class="pr-stage s"><div id=z1 class=pr-parent style="width: min-content"><div class=k style="overflow: auto"><span class=bar></span></div></div></div>
+    <figcaption><code>legacy</code>, a scroll container: 100px. Reads <code class=pr-computed data-of=z1 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=z2 class=pr-parent style="width: min-content"><div class=k style="overflow: auto; min-intrinsic-sizing: zero-if-scroll"><span class=bar></span></div></div></div>
+    <figcaption><code>zero-if-scroll</code>, a scroll container: compressed, 0, the bar scrolling in it. Reads <code class=pr-computed data-of=z2 data-dom=offsetWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 100px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=z3 class=pr-parent style="width: min-content"><div class=k style="min-intrinsic-sizing: zero-if-scroll"><span class=bar></span></div></div></div>
+    <figcaption><code>zero-if-scroll</code>, not a scroll container: 100px. Reads <code class=pr-computed data-of=z3 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>zero-if-extrinsic</h2>
+  <p><q>The box’s min-content contribution is “compressed” if has an extrinsic preferred or maximum size.</q> <q>This is
+  the default behavior of most replaced elements.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=z4 class=pr-parent style="width: min-content"><div class=k style="width: 50%; min-intrinsic-sizing: zero-if-extrinsic"><span class=bar></span></div></div></div>
+    <figcaption><code>width: 50%</code>: compressed, 0. Reads <code class=pr-computed data-of=z4 data-dom=offsetWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 100px, as
+    <code>legacy</code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=z5 class=pr-parent style="width: min-content"><div class=k style="width: 50%"><span class=bar></span></div></div></div>
+    <figcaption><code>legacy</code>, <code>width: 50%</code>: as auto, 100px. Reads <code class=pr-computed data-of=z5 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=z6 class=pr-parent style="width: min-content"><div class=k style="width: 50%; min-width: min-content; min-intrinsic-sizing: zero-if-extrinsic"><span class=bar></span></div></div></div>
+    <figcaption>With <code>min-width: min-content</code>, an explicit keyword: 100px. Reads <code class=pr-computed data-of=z6 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

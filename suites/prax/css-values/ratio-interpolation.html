@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ratios interpolate by their logarithms</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 140px; }
+  .box { background: #4f81bd; animation: 2s linear -1s infinite alternate; }
+  @keyframes wide { from { aspect-ratio: 5 / 1; } to { aspect-ratio: 3 / 2; } }
+  @keyframes tall { from { aspect-ratio: 1 / 5; } to { aspect-ratio: 2 / 3; } }
+  @keyframes scaled { from { aspect-ratio: 5 / 1; } to { aspect-ratio: 300 / 200; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.7.1 Combination of &lt;ratio&gt;</div>
+  <h1>Ratios interpolate by their logarithms</h1>
+  <p class=pr-lede><q>The interpolation of a &lt;ratio&gt; is defined by converting each &lt;ratio&gt; to a number by
+  dividing the first value by the second (so a ratio of 3 / 2 would become 1.5), taking the logarithm of that result
+  (so the 1.5 would become approximately 0.176), then interpolating those values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combine-ratio">CSS Values and Units 4 §5.7.1</a></span>
+  Each box runs a linear animation of <code>aspect-ratio</code>, running to and fro, which a still shows halfway; the red dashed line in the first marks where a plain
+  average of the ratios would put its bottom.</p>
+</header>
+
+<section>
+  <h2>Halfway</h2>
+  <p><q>halfway through a linear interpolation from 5 / 1 to 3 / 2, the result is approximately the ratio 2.73 / 1</q></p>
+  <figure>
+    <div class="pr-stage pr-motion" style="position: relative"><div class=box style="width: 200px; animation-name: wide"></div><div style="position: absolute; left: 0; right: 0; top: 61.5px; border-top: 1px dashed #c0392b"></div></div>
+    <figcaption>200px wide at 2.73 / 1: 73px tall, below the dashed 62px an average, 3.25, would give.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=box style="width: 200px; animation-name: scaled"></div></div>
+    <figcaption>From 5 / 1 to <code>300 / 200</code>: the same 73px, <q>scale-independent</q>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tall as well as wide</h2>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=box style="width: 50px; animation-name: tall"></div></div>
+    <figcaption>From 1 / 5 to 2 / 3, halfway is about 1 / 2.73: 50px wide and 137px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>focus</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.4.2 focus</div>
+  <h1>focus</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when an event target receives focus. The focus MUST be
+  given to the element before the dispatch of this event type.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-focus">UI Events §3.3.4.2</a></span></p>
+</header>
+<section>
+  <h2>The focus is already there</h2>
+  <p>The page's script records which element has the focus, <code>document.activeElement</code>, as each event
+  reaches the stage, as <code>focused</code>. When focus arrives, the element receiving the focus already has it.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-focus">§3.3.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus focusin" data-fields="target focused" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>: focus and focusin at <code>two</code>, each with
+    <code>focused=two</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the element that has the focus as each focus event reaches the stage, before the log reads it.
+  const stage = document.querySelector(".pr-stage");
+  for (const type of ["focus", "focusin"])
+      stage.addEventListener(type, event => { event.focused = document.activeElement; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The initial viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .full { width: 100%; }
+  .tall { height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.3 The initial viewport</div>
+  <h1>The initial viewport</h1>
+  <p class=pr-lede><q>The initial viewport's width, must be the value of the width presentation attribute on the
+  outermost svg element, unless</q> CSS positioning properties <q>are sufficient to establish the width of the
+  viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#ViewportSpace">SVG 2 §8.3</a></span>
+  Each stage is 160 wide and holds an <code>svg</code>, the outermost, with a purple rect as large as it.</p>
+</header>
+
+<section>
+  <h2>From the attributes</h2>
+  <p><q>If the width or height presentation attributes on the outermost svg element are in user units (i.e., no unit
+  identifier has been provided), then the value is assumed to be equivalent to the same number of "px" units</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="120" height="40"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption><code>width="120" height="40"</code>: 120 by 40 px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="1in" height="0.25in"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption><code>width="1in" height="0.25in"</code>: 96 by 24.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From CSS</h2>
+  <p><q>Under these conditions, the viewport's width must be established via the positioning properties.</q>
+  <q>Similarly, if there are positioning properties specified on the referencing element or on the outermost svg
+  element that are sufficient to establish the height of the viewport, then these positioning properties must
+  establish the viewport's height</q>. Each has <code>width="40" height="20"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class=full width="40" height="20"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption><code>width: 100%</code>: 160 wide, 20 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class=tall width="40" height="20"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption><code>height: 50px</code>: 40 wide, 50 tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

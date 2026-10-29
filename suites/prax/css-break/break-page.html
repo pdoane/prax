@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>page</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.2 Page Break Values</div>
+  <h1>page</h1>
+  <p class=pr-lede><q>These values only have an effect in paginated contexts; if the flow is not paginated, they have
+  no effect.</q> <code>page</code>: <q>Always force a page break before/after the principal box.</q>
+  <code>avoid-page</code>: <q>Avoid a page break before/after the principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></span>
+  B has the value.</p>
+</header>
+
+<section>
+  <h2>page</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="break-before: page">B</div><div class=pr-c>C</div></div>
+    <figcaption>On screen, in three columns: no effect. A, B and C in the first column.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: page'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Printed: A on the first page, B and C on the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto }</style><body class=pr-measure><div class=m><div class=pr-a>A</div><div class=pr-b style='break-before: page'>B</div><div class=pr-c>C</div></div>"></iframe>
+    <figcaption>Printed, in two columns: past the second column to the next page. A on the first page, B and C in
+    the first column of the second. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> No break: one page; Safari prints no columns. <span class=pr-flag>Firefox</span> A column
+    break: B and C in the second column of the first page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

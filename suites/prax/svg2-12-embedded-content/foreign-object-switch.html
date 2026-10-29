@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>foreignObject in a switch</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.4 The ‘foreignObject’ element</div>
+  <h1>foreignObject in a switch</h1>
+  <p class=pr-lede><q>A ‘foreignObject’ may be used in conjunction with the ‘switch’ element and the
+  ‘requiredExtensions’ attribute to provide proper checking for user agent support and provide an alternate rendering
+  in case user agent support is not available.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ForeignObjectElement">SVG 2 §12.4</a></span>
+  Each stage is an SVG 160 by 60 with a <code>switch</code>: a <code>foreignObject</code> at 20, 10, 120 by 40,
+  holding the HTML box A, a line 20 tall, then an orange <code>rect</code> the same size and place.</p>
+</header>
+
+<section>
+  <h2>The first child that passes</h2>
+  <p>The <code>rect</code> is drawn only when the <code>foreignObject</code> fails its test, which passes <q>If all
+  of the given extensions are supported</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#ConditionalProcessingRequiredExtensionsAttribute">§5.6.4</a></span>.</p>  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><foreignObject x="20" y="10" width="120" height="40"><div class=pr-a>A</div></foreignObject><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></switch></svg></div>
+    <figcaption>No <code>requiredExtensions</code>, which passes: A, from 20 to 140 across and 10 to 30 down; no
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><foreignObject x="20" y="10" width="120" height="40" requiredExtensions="http://example.com/SVGExtensions/EmbeddedXHTML"><div class=pr-a>A</div></foreignObject><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></switch></svg></div>
+    <figcaption>The specification's example extension,
+    <code>http://example.com/SVGExtensions/EmbeddedXHTML</code>, which no user agent has: the orange rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><foreignObject x="20" y="10" width="120" height="40" requiredExtensions=""><div class=pr-a>A</div></foreignObject><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></switch></svg></div>
+    <figcaption><code>requiredExtensions=""</code>, which <q>evaluates to "false"</q>: the orange rect.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>HTML's namespace as an extension</h2>
+  <p><q>This specification does not define how ‘requiredExtensions’ values should be mapped to support for different
+  XML languages</q>; the working group since resolved to <q>Limit namespaces for requiredExtensions to HTML and
+  MathML</q> (<a href="https://github.com/w3c/svgwg/issues/138">svgwg#138</a>), so those two are supported.</p>  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><foreignObject x="20" y="10" width="120" height="40" requiredExtensions="http://www.w3.org/1999/xhtml"><div class=pr-a>A</div></foreignObject><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></switch></svg></div>
+    <figcaption>HTML's namespace, <code>http://www.w3.org/1999/xhtml</code>: A, and no orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><foreignObject x="20" y="10" width="120" height="40" requiredExtensions="http://www.w3.org/1998/Math/MathML"><div class=pr-a>A</div></foreignObject><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></switch></svg></div>
+    <figcaption>MathML's namespace, <code>http://www.w3.org/1998/Math/MathML</code>: A, and no orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

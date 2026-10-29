@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The keywords in height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; height: 110px; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2 Sizing Values, in the block axis</div>
+  <h1>The keywords in height</h1>
+  <p class=pr-lede>min-content: <q>Use the min-content size in the relevant axis; for a box’s block size, unless
+  otherwise specified, this is equivalent to its automatic size.</q> The same for max-content. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">CSS Box Sizing 3 §3.2</a></span>
+  The min-content block size of a block container <q>is equivalent to the max-content block size</q>, <q>Usually the
+  block size of the content after layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#auto-box-sizes">§2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A block's height: its content's</h2>
+  <p>Each orange block holds "abc def ehg ijk lmn opq" in PR Cousine, two 20px lines in the 150px stage.</p>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="height: min-content">abc def ehg ijk lmn opq</div></div>
+    <figcaption><code>height: min-content</code>: 40px, as auto.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="height: max-content">abc def ehg ijk lmn opq</div></div>
+    <figcaption><code>height: max-content</code>: 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="height: fit-content; width: 70px">abc def ehg ijk lmn opq</div></div>
+    <figcaption><code>height: fit-content; width: 70px</code>: four lines, 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A replaced element's height</h2>
+  <p>Each image has a 2:1 ratio and no natural size, and <code>width: 100px</code>.</p>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" style="width: 100px; height: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>height: min-content</code>: its automatic height, 50px from the ratio.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" style="width: 100px; height: max-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>height: max-content</code>: 50px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" style="width: 100px; height: fit-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>height: fit-content</code>: 50px. <span class=pr-flag>Safari</span> draws a speck about 1px
+    square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

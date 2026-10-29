@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-image-repeat: stretch, repeat, round, space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 96px; height: 20px; margin: 2px; border: 20px solid #2c5a8f; background: #f4f5f7; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>") 10; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.5 Image Tiling: the border-image-repeat property</div>
+  <h1>border-image-repeat: stretch, repeat, round, space</h1>
+  <p class=pr-lede><q>This property specifies how the images for the sides and the middle part of the border image are
+  scaled and tiled. The first keyword applies to the horizontal scaling and tiling of the top, middle and bottom parts,
+  the second to the vertical scaling and tiling of the left, middle and right parts</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-repeat">CSS Borders and Box Decorations 4 §4.5</a></span>
+  Each box has a 20px border, so each side's tile, a blue dot, is 20 by 20, and the top and bottom run 96px between the
+  orange corners.</p>
+</header>
+
+<section>
+  <h2>Along the top and bottom</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: stretch"></div></div>
+    <figcaption><code>stretch</code>: one dot stretched to 96 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: repeat stretch"></div></div>
+    <figcaption><code>repeat</code>: tiles centered, so the end ones each lose 2px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: round stretch"></div></div>
+    <figcaption><code>round</code>: 96 / 20 is 4.8, so five dots, each 19.2 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>space, and the second keyword</h2>
+  <p><q>space: The image is tiled (repeated) to fill its corresponding region. If it does not fill the region with a
+  whole number of tiles, the extra space is distributed around the tiles.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: space stretch"></div></div>
+    <figcaption><code>space</code>: four whole dots, 3.2px apart and from the corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-repeat: stretch round; height: 56px"></div></div>
+    <figcaption><code>stretch round</code>, 56 tall: three dots down each side, 18.7 tall. <span class=pr-flag>Safari</span> Two, 28 tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

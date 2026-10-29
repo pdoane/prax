@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="blue.css" type="text/css"?>
+<!-- A document whose xml-stylesheet processing instruction loads blue.css: its rect is blue if it applies. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+  <rect x="20" y="10" width="120" height="40" fill="#d68a3c" />
+</svg>

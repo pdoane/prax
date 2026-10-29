@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dynamic row and column effects</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 4px; box-sizing: border-box; border: 1px solid #2c5a8f; }
+  .span { background: #d68a3c; color: white; font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.5 Dynamic row and column effects</div>
+  <h1>Dynamic row and column effects</h1>
+  <p class=pr-lede><q>The 'visibility' property takes the value 'collapse' for row, row group, column, and column group
+  elements.</q> Cells are 40 by 20; the orange cell spans two rows or columns.</p>
+</header>
+
+<section>
+  <h2>Rows and row groups</h2>
+  <p><q>This value causes the entire row or column to be removed from the display, and the space normally taken up by
+  the row or column to be made available for other content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-effects">CSS 2 §17.5.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tr style="visibility: collapse"><td>3<td>4<tr><td>5<td>6</table><div class=pr-b>after</div></div>
+    <figcaption>The middle row collapses: rows 1 and 3 touch, the table is 40px tall, and "after" moves up into the
+    space.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tbody style="visibility: collapse"><tr><td>3<td>4<tr><td>5<td>6</tbody></table><div class=pr-b>after</div></div>
+    <figcaption>A row group of two rows collapses: only the 20px first row is left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Spanning cells are clipped; nothing else changes</h2>
+  <p><q>Contents of spanned rows and columns that intersect the collapsed column or row are clipped. The suppression of
+  the row or column, however, does not otherwise affect the layout of the table.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-effects">CSS 2
+  §17.5.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><col><col style="visibility: collapse"><col><tr><td colspan=2 class=span>1 and 2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption>Column 2 collapses: the orange cell spanning columns 1 and 2 is cut to 40px, its text clipped; the
+    table is 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td><div style="width: 100px; height: 18px; background: #4f81bd"></div><td>2<tr style="visibility: collapse"><td>3<td>4</table></div>
+    <figcaption>The first column is 102px wide for a 100px blue block in row 1. Collapsing row 2 does not change the
+    column widths.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

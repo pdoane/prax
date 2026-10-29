@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Exclusive accordions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 6px 10px; box-sizing: border-box; font-size: 13px; line-height: 20px; }
+  .stage details > :not(summary) { margin: 0; color: #2c5a8f; }
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.1 The details element</div>
+  <h1>Exclusive accordions</h1>
+  <p class=pr-lede><q>The name content attribute gives the name of the group of related details elements that the
+  element is a member of. Opening one member of this group causes other members of the group to close.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element">HTML §4.11.1</a></span></p>
+</header>
+<section>
+  <h2>Opening one closes the open one</h2>
+  <p>When <code>open</code> is added, the user agent must <q>ensure details exclusivity by closing other elements if
+  needed</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element">§4.11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="act stage">
+        <details name=frame id=material open><summary>Material</summary><div>Solid oak wood.</div></details>
+        <details name=frame id=size><summary>Size</summary><div>40cm by 30cm.</div></details>
+        <details name=frame id=color><summary>Color</summary><div>Natural, or black.</div></details>
+      </div>
+      <ol class=pr-log data-log="toggle" data-fields="target newState" data-lines=2></ol>
+    </div>
+    <figcaption>Three named <code>frame</code>, "Material" open. Click "Size": it opens and "Material" closes,
+    logged in that order. Click "Size" again: it closes, and none is open.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A member that arrives open, while another is open, closes</h2>
+  <p>On insertion, the user agent must <q>ensure details exclusivity by closing the given element if needed</q>,
+  even <q>when an attribute or element is inserted via the parser</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element">§4.11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details name=parsed open><summary>First</summary><div>Shown.</div></details>
+      <details name=parsed open><summary>Second</summary><div>Hidden.</div></details>
+    </div>
+    <figcaption>Both have <code>open</code> in the markup: "First" is open, "Second" is closed.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details name=split open><summary>Outside</summary><div>Shown.</div></details>
+      <div><template shadowrootmode=open><details name=split open><summary>Inside</summary><div style="color: #2c5a8f">Shown.</div></details></template></div>
+    </div>
+    <figcaption>The second is in a shadow tree. A group's members are <q>in the same tree</q>, so both stay
+    open.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details name="" open><summary>One</summary><div>Shown.</div></details>
+      <details name="" open><summary>Two</summary><div>Shown.</div></details>
+    </div>
+    <figcaption><code>name=""</code> forms no group: both stay open.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

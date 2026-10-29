@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Examples of simple alpha compositing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 70px; }
+  .group { position: absolute; left: 10px; top: 10px; width: 80px; height: 50px; isolation: isolate; }
+  .b, .s { position: absolute; width: 50px; height: 30px; }
+  .b { left: 0; top: 0; }
+  .s { left: 30px; top: 20px; }
+  .sw { position: absolute; left: 110px; top: 30px; width: 20px; height: 10px; outline: 1px solid var(--pr-line); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 5.1.1 Examples of simple alpha compositing</div>
+  <h1>Examples of simple alpha compositing</h1>
+  <p class=pr-lede>The section's four examples, in isolated groups so the empty background is transparent: a shape 50
+  by 30 at (10, 10), then one at (40, 30), overlapping from x 40 to 60 and y 30 to 40. The outlined swatch at x 110 is
+  the color the example computes for the overlap. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#simplealphacompositingexamples">Compositing and Blending 2 §5.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Opaque, then translucent</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div></div><div class=sw style="background: #ff0000"></div></div>
+    <figcaption><q>1 shape that is filled with a solid color (α = 1)</q> over an empty background: <code>co =
+    RGB(1,0,0)</code>, red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s style="background: #0000ff"></div></div><div class=sw style="background: #0000ff"></div></div>
+    <figcaption><q>There is no transparency, but the 2 shapes intersect</q>: <code>Co = RGB(0, 0, 1)</code>,
+    blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s style="background: rgb(0 0 255 / 0.5)"></div></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>Blue at <code>αs = 0.5</code> over opaque red: <code>Co = RGB(0.5, 0, 0.5)</code>, purple.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(255 0 0 / 0.5)"></div><div class=s style="background: rgb(0 0 255 / 0.5)"></div></div><div class=sw style="background: rgb(33.33% 0% 66.67% / 0.75)"></div></div>
+    <figcaption><q>both the shape and the backdrop are transparent</q>: <code>αo = 0.75</code>, <code>Co = RGB(0.33,
+    0, 0.66)</code>, over the stage at 0.75.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alpha in a color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .chk { padding: 10px 0; background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 4.2 Representing Transparency in Colors: the &lt;alpha-value&gt; syntax</div>
+  <h1>Alpha in a color</h1>
+  <p class=pr-lede>Every color has <q>an alpha component, indicating how transparent it is, and thus how much of the
+  backdrop one can see through the color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#color-type">CSS Color 4 §4</a></span> Each stage here is a checkerboard
+  of white and gray 10px squares, the backdrop.</p>
+</header>
+
+<section>
+  <h2>From opaque to transparent</h2>
+  <p><code>&lt;alpha-value&gt; = &lt;number&gt; | &lt;percentage&gt;</code>; <q>Unless otherwise specified, an
+  &lt;alpha-value&gt; component of a color defaults to 100% when omitted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#alpha-syntax">CSS Color 4 §4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide chk"><div class=sw style="background: rgb(44 90 143)"></div><div class=sw style="background: rgb(44 90 143 / 1)"></div><div class=sw style="background: rgb(44 90 143 / 0.75)"></div><div class=sw style="background: rgb(44 90 143 / 50%)"></div><div class=sw style="background: rgb(44 90 143 / 0.25)"></div><div class=sw style="background: rgb(44 90 143 / 0)"></div></div>
+    <figcaption>Alpha omitted, then <code>1</code>, <code>0.75</code>, <code>50%</code>, <code>0.25</code> and
+    <code>0</code>: two solid blue squares, then the checkerboard more and more plainly through the blue, and last
+    no square at all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: rgb(44 90 143 / 0.5)"></div><div class=sw style="background: rgb(44 90 143 / 50%)"></div></div>
+    <figcaption><code>0.5</code> and <code>50%</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clamped to [0,1]</h2>
+  <p><q>Values outside the range [0,1] are not invalid, but are clamped to that range at parsed-value time.</q></p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: rgb(44 90 143 / 1.5)"></div><div class=sw style="background: rgb(44 90 143 / 1)"></div><div class=sw style="background: rgb(44 90 143 / -0.5)"></div></div>
+    <figcaption>Alpha <code>1.5</code> beside <code>1</code>: two solid blue squares. Alpha <code>-0.5</code>:
+    nothing, as <code>0</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

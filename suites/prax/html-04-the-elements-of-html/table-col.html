@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The col element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td { border: 1px solid #2c5a8f; font-size: 12px; line-height: 18px; }
+  .orange { background: #f6d7b4; }
+  .blue { background: #b9cde6; }
+  .flush { border-spacing: 0; }
+  .flush td { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.4 The col element</div>
+  <h1>The col element</h1>
+  <p class=pr-lede><q>If a col element has a parent and that is a colgroup element that itself has a parent that is a
+  table element, then the col element represents one or more columns in the column group represented by that
+  colgroup.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-col-element">HTML §4.9.4</a></span>
+  The cells have no background, so a column's shows through them.</p>
+</header>
+<section>
+  <h2>A col for each span of columns</h2>
+  <p><q>The element may have a span content attribute specified</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-col-element">§4.9.4</a></span>
+  <q>For the purposes of the CSS table model, the col element is expected to be treated as if it was present as many
+  times as its span attribute specifies.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><colgroup><col class=blue><col span=2 class=orange></colgroup><tr><td>A<td>B<td>C<td>D<tr><td>E<td>F<td>G<td>H</table>
+    </div>
+    <figcaption>A <code>col</code>, then one with <code>span=2</code>: the first column blue, the next two orange, the
+    last on the stage's grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t flush"><colgroup><col span=2 style="width: 60px"></colgroup><tr><td>A<td>B<td>C</table>
+    </div>
+    <figcaption><code>span=2</code> and <code>width: 60px</code>: the width goes to each of the two columns, so A and B
+    are each 60px wide and C starts 120px from the table's left edge.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

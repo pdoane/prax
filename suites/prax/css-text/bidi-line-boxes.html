@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The direction of each line box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { padding: 0 6px; font: 16px/24px "PR Noto Sans", "PR Noto Sans Arabic", "PR Noto Sans Hebrew"; }
+  .t { background: #f9cc9d; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 9.3 Bidirectionality and Line Boxes</div>
+  <h1>The direction of each line box</h1>
+  <p class=pr-lede><q>The start and end sides of a line box are determined by the inline base direction of the line
+  box.</q> <q>if its containing block has 'unicode-bidi: plaintext': If the bidi paragraph to which the line box
+  belongs ... has strong directionality, the line box’s inline base direction is that direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#bidi-linebox">CSS Text 4 §9.3</a></span></p>
+</header>
+
+<section>
+  <h2>Each paragraph its own direction</h2>
+  <p>The specification's example: a <code>pre</code>, <code>text-align: start</code>, of lines in French and Persian
+  alternately. <q>every other line is right-aligned</q>.</p>
+  <figure>
+    <div class="pr-stage s" style="white-space: pre; text-align: start; unicode-bidi: plaintext">français
+فارسی
+français
+فارسی</div>
+    <figcaption>The French lines at the left, the Persian at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" style="white-space: pre; text-indent: 30px each-line; unicode-bidi: plaintext">français
+فارسی</div>
+    <figcaption><code>text-indent: 30px each-line</code>: the French line indented from the left, the Persian from
+    the right, each from its own start.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Empty or neutral lines take the line before</h2>
+  <p><q>If the line box is empty ... or otherwise has no strong directionality (contains only weak or neutral
+  characters), its inline base direction is taken from the preceding line box (if any), or, if this is the first line
+  box in the containing block, from the 'direction' property of the containing block.</q> The stages are
+  <code>direction: rtl</code>, <code>unicode-bidi: plaintext</code>, <code>pre</code>, and <code>text-align:
+  start</code>.</p>
+  <figure>
+    <div class="pr-stage s" dir=rtl style="white-space: pre; unicode-bidi: plaintext; text-align: start"><span class=t>123</span>
+<span class=t>Hello!</span>
+<span class=t>456</span></div>
+    <figcaption>"123", neutral, first: the block's <code>rtl</code>, at the right. "Hello!": left. "456" after it:
+    left too.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage s" dir=rtl style="unicode-bidi: plaintext; text-align: start"><span class=t>“<span style="unicode-bidi: plaintext">שלום!</span>”, they said.</span></div>
+    <figcaption>The specification's example, <code>rtl</code>, the Hebrew in a <code>plaintext</code> span, which
+    isolates it: the first strong character is the "t" of "they", so the line is left-to-right, at the left. <span class=pr-flag>Safari</span> Right-to-left, at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

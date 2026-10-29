@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which characters get emphasis marks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/48px "PR Noto Sans JP"; text-emphasis: dot #c0392b; }
+  .a { padding: 0 6px; font: 24px/48px "PR Arimo", "PR Noto Sans JP"; text-emphasis: dot #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.1 Emphasis Mark Style: the text-emphasis-style property, characters</div>
+  <h1>Which characters get emphasis marks</h1>
+  <p class=pr-lede><q>The marks are drawn once for each typographic character unit. However, emphasis marks are not
+  drawn for:</q> separators (Z*), most punctuation (P*), and control codes and unassigned characters (Cc, Cf, Cn). <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-style-property">CSS Text Decoration 4 §3.1</a></span>
+  Every stage has <code>text-emphasis: dot</code>, red.</p>
+</header>
+
+<section>
+  <h2>One mark per character unit; none for spaces</h2>
+  <p><q>Word separators or other characters that belong to the Unicode separator classes (Z*). (But note that emphasis
+  marks are drawn for a space that combines with any combining characters.)</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage a" style="width: 100px">e&#x301; か&#x3099;</div>
+    <figcaption>"é" written as e and a combining accent, and が as か and a combining dakuten: one dot each, none over
+    the space.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage a" style="width: 140px">a&#x3000;b&#x2003;c</div>
+    <figcaption>An ideographic space and an em space between a, b and c: no dots there.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <iframe class=pr-view style="width: 100px; height: 50px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><body style='margin: 0; background: #e7eaef; font: 24px/48px &quot;PR Arimo&quot;; text-emphasis: dot #c0392b; padding: 0 6px'>a &#x301;b"></iframe>
+    <figcaption>A space carrying an accent, in a document of its own: a dot over a, the accented space and b.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No marks on punctuation, but on these symbols</h2>
+  <p><q>Punctuation--specifically, any characters that belong to the Unicode P* general category and do not NFKD
+  normalize [UAX15] to any of the following symbols:</q> # % ‰ ‱ ٪ ؉ ؊ &amp; ⁊ @ &#xA7; ¶ ⁋ ⁓ 〽.</p>
+  <figure>
+    <div class="pr-stage j" lang=ja>「日本」、語。</div>
+    <figcaption>Dots over 日, 本 and 語 only, none over 「」、。</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage a">a,b!c? #%&amp;@&#xA7;¶</div>
+    <figcaption>Dots over a, b and c, not over , ! ?; and over each of # % &amp; @ &#xA7; ¶.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

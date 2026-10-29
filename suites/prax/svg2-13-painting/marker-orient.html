@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>marker: orient</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="fixed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker>
+  <marker id="number" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="45"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker>
+  <marker id="angle" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="-90deg"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker>
+  <marker id="reverse" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.1 The ‘marker’ element</div>
+  <h1>marker: orient</h1>
+  <p class=pr-lede><q>The ‘orient’ attribute indicates how the marker is rotated when it is placed at its position on
+  the shape.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#MarkerElement">SVG 2 §13.7.1</a></span>
+  Each stage is an SVG 160 by 60 with a path from 20, 50 up to 80, 10 and down to 140, 50. The markers are orange
+  arrows 16 across, which point along their positive x-axis.</p>
+</header>
+
+<section>
+  <h2>An angle</h2>
+  <p><q>The marker is oriented such that the specified angle is that measured between the shape's positive x-axis and
+  the marker's positive x-axis. A &lt;number&gt; value specifies an angle in degrees.</q> The initial value is 0.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#fixed)" marker-end="url(#fixed)" /></svg></div>
+    <figcaption>No <code>orient</code>, 0: both arrows point right, whichever way the path goes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#number)" marker-end="url(#number)" /></svg></div>
+    <figcaption><code>orient="45"</code>: both point down and to the right, at 45°.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#angle)" marker-end="url(#angle)" /></svg></div>
+    <figcaption><code>orient="-90deg"</code>: both point straight up.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto-start-reverse</h2>
+  <p><q>If placed by 'marker-start', the marker is oriented 180° different from the orientation that would be used if
+  'auto' where specified. For all other markers, 'auto-start-reverse' means the same as 'auto'.</q> With
+  <code>auto</code> the arrows point along the path <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">§13.7.4</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#reverse)" marker-end="url(#reverse)" /></svg></div>
+    <figcaption>At the start, back down the first line, out of the path; at the end, down the last line: both
+    point outwards.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-mid="url(#reverse)" /></svg></div>
+    <figcaption>On <code>marker-mid</code>, as <code>auto</code>: at 80, 10, half way between up the first line and
+    down the second, pointing right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

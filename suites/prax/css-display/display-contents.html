@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: contents</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .wrap { margin: 4px; padding: 4px; background: #f6d7b4; border: 2px solid #d68a3c; }
+  .gen::before { content: "before "; color: #c0392b; }
+  .gen::after { content: " after"; color: #c0392b; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.5 Box Generation, contents</div>
+  <h1>display: contents</h1>
+  <p class=pr-lede><q>The element itself does not generate any boxes, but its children and pseudo-elements still
+  generate boxes and text sequences as normal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#box-generation">CSS Display 4 §2.5</a></span></p>
+</header>
+
+<section>
+  <h2>Replaced in the tree by its contents</h2>
+  <p><q>For the purposes of box generation and layout, the element must be treated as if it had been replaced in the
+  element tree by its contents (including both its source-document children and its pseudo-elements</q>. Each stage
+  is a flex container whose one child, bordered in orange, holds A and B.</p>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><div class=wrap><div class=pr-a>A</div><div class=pr-b>B</div></div></div></div>
+    <figcaption>As a block: one flex item, the orange box, A above B in it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><div class=wrap style="display: contents"><div class=pr-a>A</div><div class=pr-b>B</div></div></div></div>
+    <figcaption><code>display: contents</code>: no orange box, no margin, padding or border; A and B are flex items
+    side by side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><div class="wrap gen" style="display: contents"><div class=pr-a>A</div></div></div></div>
+    <figcaption>With <code>::before</code> and <code>::after</code>: three flex items, red "before", A, red
+    "after".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=wrap style="display: contents; color: #c0392b; font-weight: bold">text<span> and a span</span></div></div>
+    <figcaption>Inheritance follows the element tree still: the element's <code>color</code> and <code>font-weight</code> still reach its text and its span: red
+    and bold, with no box round them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced elements</h2>
+  <p><q>This value computes to display: none on replaced elements and other elements whose rendering is not entirely
+  controlled by CSS</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox">§B</a></span></p>
+  <figure>
+    <div class=pr-stage>before <img id=c1 alt="" width=40 height=20 style="display: contents" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"> after</div>
+    <figcaption>An image with <code>display: contents</code>: not drawn, nor its children, as for
+    <code>display: none</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

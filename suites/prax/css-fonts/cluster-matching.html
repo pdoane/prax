@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cluster matching</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 30px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.3 Cluster matching</div>
+  <h1>Cluster matching</h1>
+  <p class=pr-lede><q>When text contains characters such as combining marks, ideally the base character should be
+  rendered using the same font as the mark, this assures proper placement of the mark.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#cluster-matching">CSS Fonts 4 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>A base and its marks in one font</h2>
+  <p><q>If all characters in the sequence b + c1 + c2 … are completely supported by the font, select this font for the
+  sequence.</q> PR Architects Daughter has no combining marks.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Architects Daughter', 'PR Tinos'">e&#x301; x&#x301;</div>
+    <figcaption>e and a combining acute: the handwriting face has é, a canonical equivalent, so its é. x and an
+    acute: no equivalent, so the whole cluster in PR Tinos.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">x&#x301;&#x323;</div>
+    <figcaption>x with an acute above and a dot below: base and marks from one font, the marks centered on the
+    x.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Variation selectors</h2>
+  <p><q>For sequences containing variation selectors, which indicate the precise glyph to be used for a given
+  character, user agents always attempt installed font fallback to find the appropriate glyph before using the
+  default glyph of the base character.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">&#x263A; &#x263A;&#xFE0F; &#x2764;&#xFE0F;</div>
+    <figcaption>☺ alone, as text; ☺ and ❤ with U+FE0F, emoji presentation: in a color emoji font.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">&#x1F600; &#x1F600;&#xFE0E;</div>
+    <figcaption>😀 in color; with U+FE0E, text presentation: a monochrome glyph where a font has one, else
+    color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

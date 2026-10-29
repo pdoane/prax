@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where sequential navigation starts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .text { height: 20px; margin: 0 0 10px; padding: 0 6px; font-size: 12px; line-height: 20px; background: var(--pr-plain) }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.5 Sequential focus navigation</div>
+  <h1>Where sequential navigation starts</h1>
+  <p class=pr-lede><q>There can also be a sequential focus navigation starting point.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">HTML §6.6.5</a></span></p>
+</header>
+<section>
+  <h2>From a fragment's target</h2>
+  <p><q>User agents are required to set the sequential focus navigation starting point to the target element when
+  navigating to a fragment.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">§6.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <a class=pr-target id=link href="#middle">go to #middle</a>
+        <button class=pr-target id=one>one</button>
+        <div class=text id=middle>#middle, a line of text</div>
+        <button class=pr-target id=two>two</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click the link, then press Tab: the focus goes to <code>two</code>, after the target, not to
+    <code>one</code>, after the link. Press Shift+Tab instead: <code>one</code>, before the target.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>From an area outside the order</h2>
+  <p>From a starting point that <q>is not in its Document's sequential focus navigation order</q>, the next is <q>the
+  suitable sequentially focusable area, that appears nearest after starting point</q> in tree order. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">§6.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=p2 tabindex=2>p2, tabindex=2</div>
+        <div class=pr-target id=minus tabindex=-1>minus, tabindex=-1</div>
+        <div class=pr-target id=p1 tabindex=1>p1, tabindex=1</div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>minus</code>, focusable but not in the order, and press Tab: <code>p1</code>, next in tree
+    order. Tab again: <code>p2</code>, next in the order.</figcaption>
+  </figure>
+</section>
+<script>
+  // Leaves the fragment after each navigation to it, so that the link navigates again.
+  document.getElementById("link").addEventListener("click", () => setTimeout(() => history.replaceState(null, "", location.pathname), 0));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

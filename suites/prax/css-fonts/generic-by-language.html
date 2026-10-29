@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generics by language</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-sample { font-size: 30px; }
+  .pr-stage { width: 120px; }
+  figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 2</div>
+  <h1>Generics by language</h1>
+  <p class=pr-lede><q>If the family name is a generic family keyword, the user agent looks up the appropriate font family
+  name to be used. User agents may choose the generic font family to use based on the language of the containing
+  element or the Unicode range of the character.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>The same Han characters in five languages</h2>
+  <p>Each stage is <code>sans-serif</code> with its <code>lang</code>. The regional forms differ in small strokes: the
+  inner corner of 骨 opens left in Simplified Chinese and right in the others; 直 and 写 differ in Japanese.</p>
+  <figure><div class="pr-stage pr-sample" lang=zh-Hans style="font-family: sans-serif">骨直写</div><figcaption><code>zh-Hans</code>: mainland forms.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=zh-Hant style="font-family: sans-serif">骨直写</div><figcaption><code>zh-Hant</code>: Taiwan forms.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=zh-HK style="font-family: sans-serif">骨直写</div><figcaption><code>zh-HK</code>: Hong Kong forms.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=ja style="font-family: sans-serif">骨直写</div><figcaption><code>ja</code>: Japanese forms.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=ko style="font-family: sans-serif">骨直写</div><figcaption><code>ko</code>: Korean forms.</figcaption></figure>
+</section>
+
+<section>
+  <h2>serif and sans-serif follow the language too</h2>
+  <figure><div class="pr-stage pr-sample" lang=ja style="font-family: serif">骨直写</div><figcaption><code>ja</code>, <code>serif</code>: Mincho.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=zh-Hans style="font-family: serif">骨直写</div><figcaption><code>zh-Hans</code>, <code>serif</code>: Song.</figcaption></figure>
+  <figure><div class="pr-stage pr-sample" lang=ko style="font-family: serif">骨直写</div><figcaption><code>ko</code>, <code>serif</code>: Batang.</figcaption></figure>
+</section>
+
+</body>
+</html>

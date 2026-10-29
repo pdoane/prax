@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-underline-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 30px/50px "PR Arimo"; }
+  .t span, .g { text-decoration: underline #c0392b 2px; text-decoration-skip-ink: none; }
+  .g { padding: 0 6px; font-size: 50px; line-height: 70px; }
+  figure.n .pr-stage { width: 150px; }
+  figure.n figcaption { max-width: 150px; }
+  figure.n { margin-right: 10px; }
+  figure.n .pr-baseline { width: 150px; margin-right: -150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.7 Text Underline Position: the text-underline-position property</div>
+  <h1>text-underline-position</h1>
+  <p class=pr-lede>It <q>sets the position of an underline with respect to the text</q>. <q>It affects all decorations
+  originating from this element, even if descendant boxes specify a different position. It does not affect
+  underlines specified by ancestor elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-underline-position-property">CSS Text Decoration 4 §2.7</a></span>
+  Each underline is red and 2px thick, and red dashes mark the baseline.</p>
+</header>
+
+<section>
+  <h2>auto, under, from-font</h2>
+  <p><code>auto</code>: <q>it must be placed at or under the alphabetic baseline.</q> <code>under</code>: <q>The
+  underline is positioned under the element's text content.</q> <code>from-font</code>: <q>If the first available
+  font has metrics indicating a preferred underline offset, use that offset</q>.</p>
+  <figure class=n>
+    <div class="pr-stage t"><span class=pr-baseline></span><span>gyp</span></div>
+    <figcaption><code>auto</code>: at or below the baseline; it may cross the descenders.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t"><span class=pr-baseline></span><span style="text-underline-position: under">gyp</span></div>
+    <figcaption><code>under</code>: below the text, clear of the descenders of "gyp".</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g" style="font-family: 'PR Underline Test Far'; text-underline-position: from-font"><span class=pr-baseline></span>Gag</div>
+    <figcaption>"Gag" in PR Underline Test Far, <code>from-font</code>: 300/2048 em, 7px, below the baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The decorating box's position, not a descendant's</h2>
+  <figure>
+    <div class="pr-stage t" style="padding-bottom: 10px"><span style="text-underline-position: under">gyp <b style="text-underline-position: auto">gyp</b> gyp</span></div>
+    <figcaption>The bold child sets <code>auto</code>: the outer span's <code>under</code> line runs clear of all
+    descenders.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="padding-bottom: 10px; text-underline-position: under"><span style="text-decoration-color: #2c5a8f">gyp <b style="text-underline-position: auto; text-decoration: underline #c0392b 2px">gyp</b></span></div>
+    <figcaption>The child's own red underline is at <code>auto</code>, higher, above the blue <code>under</code>
+    line of its parent.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

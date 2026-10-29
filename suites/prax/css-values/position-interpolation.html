@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positions interpolate from the top left</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { height: 100px; background: linear-gradient(#4f81bd, #4f81bd) no-repeat; background-size: 40px 40px; animation: 1s linear -0.5s infinite alternate; }
+  @keyframes edges { from { background-position: right 0px bottom 0px; } to { background-position: left 20px top 0px; } }
+  @keyframes offsets { from { background-position: right 40px top 20px; } to { background-position: left 40px top 20px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 8.3.3 Combination of &lt;position&gt;</div>
+  <h1>Positions interpolate from the top left</h1>
+  <p class=pr-lede><q>Interpolation of &lt;position&gt; is defined as the independent interpolation of each component
+  (x, y) normalized as an offset from the top left corner as a &lt;length-percentage&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combine-positions">CSS Values and Units 4 §8.3.3</a></span>
+  Each stage animates <code>background-position</code> of a 40px square, linearly, to and fro; a still shows it halfway.</p>
+</header>
+
+<section>
+  <h2>Halfway</h2>
+  <figure>
+    <div class="pr-stage img pr-motion" style="animation-name: edges"></div>
+    <figcaption>From <code>right 0px bottom 0px</code>, 100% 100%, to <code>left 20px top 0px</code>: halfway is
+    <code>calc(50% + 10px) 50%</code>, 90px across and 30px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img pr-motion" style="animation-name: offsets"></div>
+    <figcaption>From <code>right 40px</code>, <code>calc(100% - 40px)</code>, to <code>left 40px</code>: halfway is
+    50%, centered across, not 40px from either edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3 Margin properties</div>
+  <h1>Margins: auto</h1>
+  <p class=pr-lede><code>margin-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>margin</code> take <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. The orange tint is each box's margin area.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <p><q>See the section on calculating widths and heights for behavior of 'auto'.</q> For a block in normal flow,
+  horizontal auto margins take up the room the width leaves, and vertical auto margins are 0. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2
+  §10.3.3</a>, <a href="https://drafts.csswg.org/css2/#normal-block">§10.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="width: 86px; margin-left: auto; margin-right: auto">box</div></div></div>
+    <figcaption><code>width: 100px; margin: 0 auto</code>: 50px on each side, centered.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="width: 86px; margin-left: auto">box</div></div></div>
+    <figcaption><code>margin-left: auto</code> takes all 100px that remain: the box is at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="width: 86px; margin-left: 20px; margin-right: auto">box</div></div></div>
+    <figcaption><code>margin-left: 20px; margin-right: auto</code>: the right margin takes the other 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-left: auto; margin-right: auto">box</div></div></div>
+    <figcaption>With <code>width: auto</code>, auto margins are 0 and the box fills the line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-top: auto; margin-bottom: auto">box</div></div></div>
+    <figcaption><code>margin-top: auto; margin-bottom: auto</code> are 0 in normal flow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

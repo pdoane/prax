@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter and generated content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .fl::first-letter { background: #d68a3c; color: white; }
+  .note::before { content: "Note: "; }
+  .arrow::before { content: "→ "; }
+  .empty::before { content: ""; }
+  .float::before { content: "x"; float: right; color: #8e44ad; }
+  .after::after { content: "After"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2.2 Finding the First-Letter Text</div>
+  <h1>::first-letter and generated content</h1>
+  <p class=pr-lede><q>if an element has in-flow ::before or ::after content, the first-letter text is selected from
+  the content of the element including that generated content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-application">CSS Pseudo-Elements 4 §2.2.2</a></span>
+  In each stage the first-letter text is white on orange; every character is 10px wide.</p>
+</header>
+
+<section>
+  <h2>In-flow ::before and ::after</h2>
+  <figure>
+    <div class=pr-stage><p class="fl note pr-measure">See below</p></div>
+    <figcaption><q>After the rule p::before {content: "Note: "}, the selector p::first-letter matches the "N" of
+    "Note".</q></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="fl arrow pr-measure">Go</p></div>
+    <figcaption><code>::before</code> is an arrow, a symbol: the → is the first letter, not the G.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="fl after pr-measure"></p></div>
+    <figcaption>The element is empty and <code>::after</code> is "After": its A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Generated content with no letter, or out of flow</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="fl empty pr-measure">Hand</p></div>
+    <figcaption><code>::before</code> generates an empty string: the H. <span class=pr-flag>Safari</span> No first
+    letter.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="fl float pr-measure">Hand</p></div>
+    <figcaption>A floated <code>::before</code>, a purple x at the right, is out of flow: the H.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

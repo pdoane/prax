@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A source listing with line numbers and colours, and the same file as a diff. Leans on: a monospace grid of a fixed gutter and a scrolling source column, preserved white space, coloured spans for syntax, a highlighted line that bleeds past the padding, and added and removed diff rows. -->
+<title>Code listing</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.file { background:#1b2430; border:1px solid #2c3949; border-radius:8px; overflow:hidden; margin-bottom:12px; font-family:monospace }
+.bar { display:flex; align-items:center; gap:8px; padding:6px 10px; background:#22303f; color:#c7d2de; font-family:sans-serif; font-size:10px; border-bottom:1px solid #2c3949 }
+.bar .path { font-family:monospace; font-size:11px; color:#e6edf5 }
+.bar .path b { color:#7fb3e0; font-weight:normal }
+.bar .sp { flex:1 }
+.bar .chip { border:1px solid #3a4a5e; border-radius:99px; padding:1px 8px; color:#93a2b3 }
+.code { display:flex; font-size:11px; line-height:1.55 }
+.nums { flex:none; text-align:right; color:#5a6b80; background:#18212c; padding:8px 8px; border-right:1px solid #2c3949; user-select:none }
+.src { flex:1; padding:8px 10px; color:#dbe4ee; overflow-x:auto; white-space:pre }
+.k { color:#79b8ff } .s { color:#a5d6a7 } .c { color:#7b8b9e; font-style:italic } .f { color:#f0c674 } .t { color:#d3a0f0 } .n { color:#f0a878 }
+.hl { display:block; background:#26364a; box-shadow:inset 3px 0 0 #e08a2e; margin:0 -10px; padding:0 10px }
+.diff .code { font-size:11px }
+.diff .src span.row { display:block; margin:0 -10px; padding:0 10px }
+.diff .add { background:#16321f; color:#b7e3c0 }
+.diff .del { background:#3a1e1e; color:#e8b7b7 }
+.diff .hunk { color:#7fb3e0; background:#1f2a38; display:block; margin:0 -10px; padding:0 10px }
+.shot-note { font-size:10px; color:#8a93a0; margin:-6px 0 12px 2px; white-space:normal }
+</style>
+</head>
+<body>
+<div class="file">
+  <div class="bar">
+    <span class="path">src/watch/<b>folder.ts</b></span>
+    <span class="sp"></span>
+    <span class="chip">TypeScript</span>
+    <span class="chip">1.9 KB</span>
+    <span class="chip">modified</span>
+  </div>
+  <div class="code">
+    <div class="nums">18<br />19<br />20<br />21<br />22<br />23<br />24<br />25<br />26<br />27<br />28<br />29<br />30<br />31<br />32</div>
+    <div class="src"><span class="c">// Poll the folder and hand each new file to the handler.</span>
+<span class="k">export function</span> <span class="f">watchFolder</span>(
+  path: <span class="t">string</span>,
+  options: <span class="t">WatchOptions</span>,
+  handler: <span class="t">FileHandler</span>,
+): <span class="t">Watcher</span> {
+  <span class="k">const</span> seen = <span class="k">new</span> <span class="t">Set</span>&lt;<span class="t">string</span>&gt;();
+<span class="hl">  <span class="k">const</span> every = <span class="f">Math</span>.<span class="f">max</span>(options.interval ?? <span class="n">5000</span>, <span class="n">500</span>);</span>
+  <span class="k">const</span> timer = <span class="f">setInterval</span>(<span class="k">async</span> () =&gt; {
+    <span class="k">for</span> (<span class="k">const</span> file <span class="k">of</span> <span class="k">await</span> <span class="f">readDir</span>(path)) {
+      <span class="k">if</span> (seen.<span class="f">has</span>(file.path)) <span class="k">continue</span>;
+      <span class="k">if</span> (!<span class="f">match</span>(file.name, options.match ?? <span class="s">"*"</span>)) <span class="k">continue</span>;
+      seen.<span class="f">add</span>(file.path);
+      <span class="k">await</span> <span class="f">handler</span>(file);</div>
+  </div>
+</div>
+<div class="shot-note">Line 25 is the line the review is about. The clamp to 500 ms was the fix.</div>
+
+<div class="file diff">
+  <div class="bar">
+    <span class="path">src/watch/<b>folder.ts</b></span>
+    <span class="sp"></span>
+    <span class="chip">+4 &#8722;2</span>
+    <span class="chip">commit 8f2a11c</span>
+  </div>
+  <div class="code">
+    <div class="nums">&#160;<br />23<br />24<br />25<br />26<br />27<br />&#160;<br />30<br />31<br />32<br />33</div>
+    <div class="src"><span class="row hunk">@@ -23,6 +23,8 @@ export function watchFolder(</span><span class="row">  <span class="k">const</span> seen = <span class="k">new</span> <span class="t">Set</span>&lt;<span class="t">string</span>&gt;();</span><span class="row del">-  <span class="k">const</span> every = options.interval ?? <span class="n">5000</span>;</span><span class="row add">+  <span class="k">const</span> every = <span class="f">Math</span>.<span class="f">max</span>(options.interval ?? <span class="n">5000</span>, <span class="n">500</span>);</span><span class="row add">+  <span class="k">if</span> (every !== options.interval) <span class="f">warn</span>(<span class="s">"interval raised to 500ms"</span>);</span><span class="row">  <span class="k">const</span> timer = <span class="f">setInterval</span>(<span class="k">async</span> () =&gt; {</span><span class="row hunk">@@ -31,4 +33,5 @@ export function watchFolder(</span><span class="row del">-      seen.<span class="f">add</span>(file.path);</span><span class="row add">+      <span class="k">if</span> (!options.signal?.aborted) seen.<span class="f">add</span>(file.path);</span><span class="row">      <span class="k">await</span> <span class="f">handler</span>(file);</span><span class="row">    }</span></div>
+  </div>
+</div>
+<div class="shot-note">Two hunks. Removed lines carry a minus and a red band, added lines a plus and a green band.</div>
+</body>
+</html>

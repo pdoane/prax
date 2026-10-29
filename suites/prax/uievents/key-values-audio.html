@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Audio key values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 3.12 Audio Keys</div>
+  <h1>Audio key values</h1>
+  <p class=pr-lede><q>"AudioVolumeDown"</q>, <q>"AudioVolumeUp"</q> and <q>"AudioVolumeMute"</q>, and the other audio keys, are for keyboards that have them. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-audio">UI Events KeyboardEvent key Values §3.12</a></span></p>
+</header>
+<section>
+  <h2>Volume</h2>
+  <p>A volume key that reaches the page has its name. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-audio">§3.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press a keyboard's volume keys: <code>key="AudioVolumeUp"</code>, <code>"AudioVolumeDown"</code>, <code>"AudioVolumeMute"</code>, where the system passes the key to the page as well as changing the volume.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

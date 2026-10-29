@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-padding</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .k { background: #1f2430; color: white; }
+  .g { background: #3f7a3f; color: white; font-style: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.3 Line Start/End Padding: the line-padding property</div>
+  <h1>line-padding</h1>
+  <p class=pr-lede><q>The extra spacing is applied only by the innermost inline box at the start/end of the line box,
+  and is inserted between that inline box’s content edge and the adjacent inline-level content (text or atomic
+  inline). This extra space is not a justification opportunity.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-padding-property">CSS Text 4 §8.3</a></span>
+  No browser has the property. Letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><code>p { line-padding: 0.5em; text-align: center }</code>, <code>&lt;span&gt;Here is &lt;em&gt;some
+  text&lt;/em&gt;&lt;/span&gt;</code>, the span black, the <code>em</code> green. The stage is 110px wide, so the line
+  breaks between "some" and "text".</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="width: 110px; line-padding: 10px; text-align: center"><span class=k>Here is <em class=g>some text</em></span></div>
+    <figcaption><q>on the first line, black on the left and green on the right, and on the second line, green on
+    both sides</q>: 10px of each. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No padding: the backgrounds end at the text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not stretched by justification</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="line-padding: 10px; text-align: justify"><span class=k>one two six seventeens</span></div>
+    <figcaption>Justified: 10px of black before "one" and after "six", and the rest of the line between the words.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    padding.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

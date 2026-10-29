@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The target of a pointer event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg .hot:hover { fill-opacity: 0.6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.4 Pointer events</div>
+  <h1>The target of a pointer event</h1>
+  <p class=pr-lede><q>The target element is the topmost graphics element whose relevant graphical content is under the
+  pointer at the time of the event.</q> <q>When an element is not displayed (i.e., when the display property on that
+  element or one of its ancestors has a value of none), that element cannot be the target of pointer events.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#PointerEvents">SVG 2 §15.4</a></span>
+  Each shape fades under the pointer; the log lists the clicks that reach the stage, with their target.</p>
+</header>
+
+<section>
+  <h2>Topmost, and displayed</h2>
+  <p>Left: a blue square <code>#back</code>, and over its right half an orange one <code>#front</code>. Right: a green
+  square <code>#under</code>, and over it a purple one <code>#hidden</code> with <code>display="none"</code>, outlined
+  dashed.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><rect id=back class=hot x="30" y="10" width="60" height="40" fill="#4f81bd" /><rect id=front class=hot x="60" y="10" width="60" height="40" fill="#d68a3c" /><rect id=under class=hot x="180" y="10" width="80" height="40" fill="#6aa36a" /><rect id=hidden x="180" y="10" width="80" height="40" fill="#8e44ad" display="none" /><rect class=pr-ghost x="180" y="10" width="80" height="40" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click the blue square's left half: <code>target=back</code>; where they overlap:
+    <code>target=front</code>, the topmost. Click the green square: <code>target=under</code>, never
+    <code>hidden</code>. Click the empty stage: the <code>svg</code>, or nothing in it.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

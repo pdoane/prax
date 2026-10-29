@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Feature precedence examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .body { font-variant-numeric: proportional-nums; }
+  .prices td { font-variant-numeric: tabular-nums; }
+  .col { padding: 0 6px; font: 22px/30px 'PR Literata'; }
+  table { border-collapse: collapse; }
+  td { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 7.3 Feature precedence examples</div>
+  <h1>Feature precedence examples</h1>
+  <p class=pr-lede><q>With the styles below, numbers are rendered proportionally when used within a paragraph but are
+  shown in tabular form within tables of prices</q>: <code>body { font-variant-numeric: proportional-nums }</code>,
+  <code>table.prices td { font-variant-numeric: tabular-nums }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#feature-precedence-examples">CSS Fonts 4 §7.3</a></span></p>
+</header>
+
+<section class=body>
+  <h2>Proportional in text, tabular in tables</h2>
+  <figure>
+    <div class="pr-stage col">1111<br>8888</div>
+    <figcaption>A paragraph: proportional, the 1s narrower.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage col"><table class=prices><tr><td>1111</td></tr><tr><td>8888</td></tr></table></div>
+    <figcaption>A table of prices: tabular, the rows the same width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

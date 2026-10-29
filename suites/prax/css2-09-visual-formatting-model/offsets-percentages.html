@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box offsets: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.2 Box offsets: 'top', 'right', 'bottom', 'left'</div>
+  <h1>Box offsets: percentages</h1>
+  <p class=pr-lede><code>top</code>, <code>right</code>, <code>bottom</code> and <code>left</code> take <code>&lt;length&gt;
+  | &lt;percentage&gt; | auto</code>. Each stage is 200 by 100 and the containing block of the absolutely positioned
+  box in it, 60 by 20.</p>
+</header>
+
+<section>
+  <h2>&lt;percentage&gt;</h2>
+  <p><q>The offset is a percentage of the containing block's width (for 'left' or 'right') or height (for 'top' and
+  'bottom'). Negative values are allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#position-props">CSS 2 §9.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="top: 50%; left: 50%">box</div></div>
+    <figcaption><code>top: 50%; left: 50%</code>: 50px down, of the height, and 100px in, of the width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="bottom: 10%; right: 10%">box</div></div>
+    <figcaption><code>bottom: 10%; right: 10%</code>: 10px up and 20px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="top: -10%; left: -10%">box</div></div>
+    <figcaption><code>top: -10%; left: -10%</code>: 10px up and 20px left, past the corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

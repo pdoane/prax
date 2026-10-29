@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Refresh</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { width: 180px; height: 20px; }
+  .act { padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.5.3 Pragma directives</div>
+  <h1>Refresh</h1>
+  <p class=pr-lede><q>This pragma acts as a timed redirect.</q> The user agent performs one or more of: navigating
+  when the refresh comes due, giving the user an interface to navigate, or nothing.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#pragma-directives">HTML §4.2.5.3</a></span></p>
+</header>
+<section>
+  <h2>After two seconds, a new document</h2>
+  <p><q>After the refresh has come due (as defined below), if the user has not canceled the redirect and, if meta is
+  given, document's active sandboxing flag set does not have the sandboxed automatic features browsing context flag
+  set, then navigate document's node navigable to urlRecord</q>. Each frame holds <code>&lt;meta http-equiv=refresh
+  content="2; url=support/target.html?refreshed"&gt;</code> and the word "waiting". The button loads both frames
+  again.</p>
+  <figure>
+    <div class=pr-stage><div class=act><iframe class=pr-view srcdoc="<meta http-equiv=refresh content='2; url=support/target.html?refreshed'><style>body { margin: 0 6px; font: 12px/20px sans-serif }</style>waiting"></iframe></div></div>
+    <figcaption>"waiting", then, two seconds after the frame loads, "target.html?refreshed" on green. A user agent that
+    offers the redirect in its own interface, or does nothing, may leave "waiting".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=act><iframe class=pr-view sandbox=allow-same-origin srcdoc="<meta http-equiv=refresh content='2; url=support/target.html?refreshed'><style>body { margin: 0 6px; font: 12px/20px sans-serif }</style>waiting"></iframe></div></div>
+    <figcaption>A frame with <code>sandbox</code>, which sets the sandboxed automatic features flag: "waiting",
+    always.</figcaption>
+  </figure>
+  <div class=act style="padding-top: 0"><button id=again>Load the frames again</button></div>
+</section>
+<script>
+  document.getElementById("again").addEventListener("click", () => {
+    for (const frame of document.querySelectorAll("iframe"))
+      frame.srcdoc = frame.srcdoc;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating image() colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes legacy {
+    from { background-image: image(#4f81bd); }
+    to { background-image: image(#d68a3c); }
+  }
+  @keyframes modern {
+    from { background-image: image(color(srgb 0.31 0.506 0.741)); }
+    to { background-image: image(color(srgb 0.839 0.541 0.235)); }
+  }
+  @keyframes alpha {
+    from { background-image: image(rgb(79 129 189 / 0)); }
+    to { background-image: image(rgb(79 129 189)); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.2 Interpolating image()</div>
+  <h1>Interpolating image() colors</h1>
+  <p class=pr-lede><q>If two image() functions are to be interpolated, and they both have a single &lt;color&gt;
+  argument, their interpolated value is an image() function with an interpolated &lt;color&gt;, using the standard
+  rules for &lt;color&gt; interpolation.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-image-function">CSS Images 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>Halfway, in the colors' own space</h2>
+  <p>Each dashed box is 100 by 40, its <code>background-image</code> animated to and fro between two
+  <code>image()</code> colors, blue and orange; a still shows it at 50%. CSS Color 4 interpolates <q>in Oklab</q>
+  by default, but <q>user agents must handle interpolation between legacy sRGB color formats</q> <q>in gamma-encoded
+  sRGB space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation-space">CSS Color 4 §13.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: legacy"></div></div>
+    <figcaption>Hex colors, halfway in sRGB: <code>#93867d</code>, a greyish brown, filling the box. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Orange: they switch at 50%. <span
+    class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: modern"></div></div>
+    <figcaption>The same colors as <code>color(srgb …)</code>, halfway in Oklab: <code>#988a89</code>, a little
+    lighter and pinker. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Orange.
+    <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: alpha"></div></div>
+    <figcaption>Transparent blue to blue: blue at half opacity, the guides showing through. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Opaque blue: they switch at 50%. <span
+    class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous table objects: child wrappers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .orange { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2.1 Anonymous table objects</div>
+  <h1>Anonymous table objects: child wrappers</h1>
+  <p class=pr-lede>The second stage: <q>Generate missing child wrappers</q>. The tinted, dashed box is the table; it has
+  <code>border-spacing: 10px</code>. Blue cells are elements; text outside them is in anonymous cells.</p>
+</header>
+
+<section>
+  <h2>In a table and in a row group</h2>
+  <p><q>If a child C of a 'table' or 'inline-table' box is not a proper table child, then generate an anonymous
+  'table-row' box around C and all consecutive siblings of C that are not proper table children.</q> <q>If a child C
+  of a row group box is not a 'table-row' box, then generate an anonymous 'table-row' box around C and all consecutive
+  siblings of C that are not 'table-row' boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent">some <b>bold</b> text<div class=pr-table-row><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></div></div></div>
+    <figcaption>Text, a <code>b</code> and more text in a table: one anonymous row with one cell, "some bold text",
+    above the row of A and B, 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row-group><div class=pr-table-row><div class="pr-table-cell blue">A</div></div>loose <div class="pr-table-cell blue orange">C</div></div></div></div>
+    <figcaption>In a row group, after A's row: "loose" and the orange cell C share one anonymous row, below
+    A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a row</h2>
+  <p><q>If a child C of a 'table-row' box is not a 'table-cell', then generate an anonymous 'table-cell' box around C
+  and all consecutive siblings of C that are not 'table-cell' boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row><div class="pr-table-cell blue">A</div>one <span>two</span><div>three</div><div class="pr-table-cell blue">B</div></div></div></div>
+    <figcaption>Between cells A and B, "one", a <code>span</code> and a block are one anonymous cell: "one two" on a
+    line, "three" below; A and B are as tall as the row.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row>x<div class="pr-table-cell blue">A</div>y<div class="pr-table-cell blue">B</div>z</div></div></div>
+    <figcaption>Text that is not consecutive makes a cell each time: x, A, y, B and z are five cells 10px
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

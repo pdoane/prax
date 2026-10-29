@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mouseout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; height: 40px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.9 mouseout</div>
+  <h1>mouseout</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device is moved off of the boundaries of an
+  element or when the element is moved to be no longer underneath the primary pointing device.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseout">Pointer Events §11.4.9</a></span></p>
+</header>
+<section>
+  <h2>To where it goes</h2>
+  <p><q>the element whose bounds the mouse pointer is entering (in the case of a mouseout or mouseleave or focusout
+  event)</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" id=stage>
+      <div class=row><div class=pr-target id=left>left</div><div class=pr-target id=right>right</div></div>
+      <ol class=pr-log data-log="mouseout mouseleave" data-fields="target relatedTarget" data-lines=4></ol>
+    </div>
+    <figcaption>Move onto <code>left</code>, across to <code>right</code>, which touches it, and off to the stage:
+    <code>mouseout</code> and <code>mouseleave</code> at <code>left</code> to <code>right</code>, then at
+    <code>right</code> to <code>stage</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

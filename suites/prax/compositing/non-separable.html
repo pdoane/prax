@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Non-separable blend modes: all channels together</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .over > div > div { height: 20px; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  pre.pr-source { margin-right: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.2 Non-separable blend modes</div>
+  <h1>Non-separable blend modes: all channels together</h1>
+  <p class=pr-lede><q>Nonseparable blend modes consider all color components in combination as opposed to the separable ones that look at each component individually.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blendingnonseparable">Compositing and Blending 2 §10.2</a></span></p>
+</header>
+
+<section>
+  <h2>Lum and ClipColor</h2>
+  <p>The rows are as on the other pages, top to bottom: backdrop, source, <code>mix-blend-mode</code>, <code>background-blend-mode</code>, the formula's color and its hex.</p>
+  <p><code>Lum(C) = 0.3 x Cred + 0.59 x Cgreen + 0.11 x Cblue</code></p>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div></div><div><div style="background: #ff0000"></div><div style="background: #00ff00"></div><div style="background: #0000ff"></div><div style="background: #ffffff"></div><div style="background: #000000"></div></div><div class=over><div style="background: #808080"><div style="background: #ff0000; mix-blend-mode: luminosity"></div></div><div style="background: #808080"><div style="background: #00ff00; mix-blend-mode: luminosity"></div></div><div style="background: #808080"><div style="background: #0000ff; mix-blend-mode: luminosity"></div></div><div style="background: #808080"><div style="background: #ffffff; mix-blend-mode: luminosity"></div></div><div style="background: #808080"><div style="background: #000000; mix-blend-mode: luminosity"></div></div></div><div><div style="background: linear-gradient(#ff0000, #ff0000) #808080; background-blend-mode: luminosity"></div><div style="background: linear-gradient(#00ff00, #00ff00) #808080; background-blend-mode: luminosity"></div><div style="background: linear-gradient(#0000ff, #0000ff) #808080; background-blend-mode: luminosity"></div><div style="background: linear-gradient(#ffffff, #ffffff) #808080; background-blend-mode: luminosity"></div><div style="background: linear-gradient(#000000, #000000) #808080; background-blend-mode: luminosity"></div></div><div><div style="background: #4c4c4c"></div><div style="background: #969696"></div><div style="background: #1c1c1c"></div><div style="background: #ffffff"></div><div style="background: #000000"></div></div><div class=hex><div>4c4c4c</div><div>969696</div><div>1c1c1c</div><div>ffffff</div><div>000000</div></div></div>
+    <figcaption><code>luminosity</code> of red, green, blue, white and black over grey 50%: greys of 0.3, 0.59 and 0.11, <code>#4c4c4c</code>, <code>#969696</code> and <code>#1c1c1c</code>, then white and black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #404040"></div><div style="background: #808080"></div><div style="background: #c0c0c0"></div><div style="background: #ffffff"></div></div><div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div></div><div class=over><div style="background: #000000"><div style="background: #ff0000; mix-blend-mode: color"></div></div><div style="background: #404040"><div style="background: #ff0000; mix-blend-mode: color"></div></div><div style="background: #808080"><div style="background: #ff0000; mix-blend-mode: color"></div></div><div style="background: #c0c0c0"><div style="background: #ff0000; mix-blend-mode: color"></div></div><div style="background: #ffffff"><div style="background: #ff0000; mix-blend-mode: color"></div></div></div><div><div style="background: linear-gradient(#ff0000, #ff0000) #000000; background-blend-mode: color"></div><div style="background: linear-gradient(#ff0000, #ff0000) #404040; background-blend-mode: color"></div><div style="background: linear-gradient(#ff0000, #ff0000) #808080; background-blend-mode: color"></div><div style="background: linear-gradient(#ff0000, #ff0000) #c0c0c0; background-blend-mode: color"></div><div style="background: linear-gradient(#ff0000, #ff0000) #ffffff; background-blend-mode: color"></div></div><div><div style="background: #000000"></div><div style="background: #d50000"></div><div style="background: #ff4a4a"></div><div style="background: #ffa5a5"></div><div style="background: #ffffff"></div></div><div class=hex><div>000000</div><div>d50000</div><div>ff4a4a</div><div>ffa5a5</div><div>ffffff</div></div></div>
+    <figcaption><code>color</code>, pure red over greys: red at each luminosity, clipped into range, <code>#d50000</code>, <code>#ff4a4a</code>, <code>#ffa5a5</code>, toward black and white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

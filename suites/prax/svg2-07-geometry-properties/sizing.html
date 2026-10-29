@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>width and height: the elements they size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .sized { width: 120px; height: 40px; }
+  foreignObject div { height: 100%; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.8 Sizing properties: the effect of the ‘width’ and ‘height’ properties</div>
+  <h1>width and height: the elements they size</h1>
+  <p class=pr-lede><q>The CSS width and height properties are used for sizing some SVG elements. Specifically, they
+  are used to size ‘rect’, ‘image’, ‘foreignObject’, and the outermost ‘svg’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#Sizing">SVG 2 §7.8</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>rect, image and foreignObject</h2>
+  <p><q>All of these elements have ‘width’ and ‘height’ presentation attributes.</q> A style sheet's <code>width:
+  120px; height: 40px</code> over <code>width="40" height="20"</code>; each element is at 20, 10, and a dashed
+  outline marks 120 by 40.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=sized x="20" y="10" width="40" height="20" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A blue <code>rect</code>: 120 by 40, filling the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=sized href="../shared/resources/flag-40x20.png" x="20" y="10" width="40" height="20" preserveAspectRatio="none" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>An <code>image</code>, the flag stretched: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=sized x="20" y="10" width="40" height="20"><div></div></foreignObject><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>foreignObject</code> filled by a green <code>div</code>: 120 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The outermost svg, and a nested one</h2>
+  <p><q>Other SVG elements, such as nested ‘svg’ elements, the ‘use’ element, and the ‘symbol’ element, also have
+  ‘width’ and ‘height’ attributes, but do not accept them as CSS properties.</q> A purple rect fills each
+  <code>svg</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class=sized width="40" height="20" style="margin: 10px 20px"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption>The outermost <code>svg</code> of the figure, <code>width="40" height="20"</code>, at 20, 10: 120 by
+    40, from CSS.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg class=sized x="20" y="10" width="40" height="20"><rect width="100%" height="100%" fill="#8e44ad" /></svg><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A nested <code>svg</code>, <code>width="40" height="20"</code>: the attributes size it, 40 by 20
+    in the outline's corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Benchmark</title>
+<!--
+  A benchmark's script in a browser, as tools/bench/measure.js describes. `./dev.sh bench browser` serves the
+  checkout with this page, cross-origin isolated so that the browser's clock is as fine as it offers, and answers
+  /config with what the page loads, and /cpu with the milliseconds the browser's processes have run on cores. The page
+  posts the rows to /results, or the error that stopped it, and shows them. With --serve, any browser can open it by
+  hand.
+-->
+<style>body { font: 13px ui-monospace, monospace; margin: 2rem }</style>
+<pre id="out">running...</pre>
+<script>
+function show(text) {
+    document.getElementById("out").textContent = text;
+}
+
+// The error that stops the page, posted in place of the rows so that the runner need not wait out its timeout.
+function fail(error) {
+    show(String(error?.stack ?? error));
+    fetch("/results", {method: "POST", body: JSON.stringify({error: String(error)})});
+}
+addEventListener("error", event => fail(event.error ?? event.message));
+addEventListener("unhandledrejection", event => fail(event.reason));
+
+async function text(url) {
+    const response = await fetch(url);
+    if (!response.ok)
+        throw new Error(url + ": " + response.status);
+    return response.text();
+}
+
+(async function () {
+    // {name, script, measure, inputs: {key: url}, fonts: [{family, style, url}], compare, only}
+    const config = await (await fetch("/config")).json();
+    document.title = config.name;
+    for (const font of config.fonts) {
+        const face = new FontFace(font.family, "url(" + font.url + ")", {style: font.style});
+        document.fonts.add(await face.load());
+    }
+    globalThis.__INPUT__ = {};
+    for (const [key, url] of Object.entries(config.inputs))
+        globalThis.__INPUT__[key] = await text(url);
+    globalThis.__TIMED__ = true;
+    // The time the browser's processes have run on cores, where the runner launched the browser and can count it. A
+    // measure reads it on each side of its batches, waiting for the answer as the batches cannot.
+    if ((await fetch("/cpu")).ok) {
+        globalThis.__CPU__ = function () {
+            const request = new XMLHttpRequest();
+            request.open("GET", "/cpu", false);
+            request.send();
+            return Number(request.responseText);
+        };
+    }
+    // One case run a fixed number of times, where the runner names one.
+    if (config.only)
+        globalThis.__ONLY__ = config.only;
+    globalThis.__REPORT__ = function (rows) {
+        show(rows.map(row => row.name.padEnd(48) + (row[config.compare] * 1e3).toFixed(1).padStart(12) + " us")
+                 .join("\n"));
+        fetch("/results", {method: "POST", body: JSON.stringify({
+            rows, clock: clockResolution(), isolated: globalThis.crossOriginIsolated === true,
+            agent: navigator.userAgent})});
+    };
+    (0, eval)(await text(config.measure));
+    const script = await text(config.script);
+    // A pause, so that the work of loading the page is behind the measures.
+    await new Promise(resolve => setTimeout(resolve, 500));
+    (0, eval)(script);
+})();
+</script>

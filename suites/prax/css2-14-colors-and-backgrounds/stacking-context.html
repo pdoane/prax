@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background of a stacking context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .owner { position: relative; width: 120px; height: 60px; margin: 20px 0 0 20px; background: #d68a3c; }
+  .under { position: absolute; z-index: -1; left: 60px; top: 30px; width: 100px; height: 40px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The background of a stacking context</h1>
+  <p class=pr-lede>Where an element's background is painted, relative to its descendants, depends on whether the element
+  forms a stacking context. The painting order is in <a href="https://drafts.csswg.org/css2/#z-index">§9.9.1</a> and Appendix E.</p>
+</header>
+
+<section>
+  <h2>At the bottom of its stacking context</h2>
+  <p><q>Backgrounds of elements that form a stacking context (see the 'z-index' property) are painted at the bottom of
+  the element's stacking context, below anything in that stacking context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <p>In each figure, an orange box 120 by 60, 20px in from the stage, holds a blue box with <code>position: absolute;
+  z-index: -1</code> at 60px across and 30px down, which reaches past the orange box's corner. The stage forms a
+  stacking context of its own.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class=owner style="z-index: auto"><div class=under></div></div></div>
+    <figcaption>The orange box with <code>z-index: auto</code> forms no stacking context: the blue box is in the stage's,
+    and the orange covers its top left, 60 by 30. Only its L-shaped rest shows.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class=owner style="z-index: 0"><div class=under></div></div></div>
+    <figcaption>With <code>z-index: 0</code> the orange box forms a stacking context, and its background is at the
+    bottom of it: the whole blue box shows, over the orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

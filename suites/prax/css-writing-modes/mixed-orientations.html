@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mixed orientation by Vertical_Orientation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 110px; padding: 0 6px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1.2 Mixed Vertical Orientations</div>
+  <h1>Mixed orientation by Vertical_Orientation</h1>
+  <p class=pr-lede><q>When text-orientation is mixed, the UA must determine the orientation of each typographic
+  character unit by its Vertical_Orientation property: typesetting it upright if its orientation property is U, Tu, or
+  Tr; or typesetting it sideways (90° clockwise from horizontal) if its orientation property is R.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-orientations">CSS Writing Modes 4 §5.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Each class in a mixed line</h2>
+  <p>Each stage is <code>vertical-rl</code>, <code>mixed</code>. <q>Typographic character units which are classified as
+  Tr or Tu in [UAX50] are expected to have alternate glyphs or positioning for typesetting upright in vertical
+  text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-font-features">§5.1.1</a></span></p>
+  <figure class=s>
+    <div class=pr-stage>漢字ㄅ©①</div>
+    <figcaption>U: 漢, 字, Bopomofo ㄅ, © and ① upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>文。文、文</div>
+    <figcaption>Tu: 。 and 、 at the top right of their squares.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>「ー」（〜）</div>
+    <figcaption>Tr: brackets, parentheses, ー and 〜 in vertical forms.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>abc→123</div>
+    <figcaption>R: letters, arrow and digits turned clockwise as one run.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scripts that rotate the other way</h2>
+  <p><q>Note that UAX50 does not handle scripts that rotate -90° in vertical contexts, so they will not be typeset
+  correctly with mixed orientation. Use sideways-lr for such scripts.</q> Ogham is written bottom to top.</p>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Noto Sans Ogham'">᚛ᚑᚌᚐᚋ᚜</div>
+    <figcaption><code>mixed</code>: turned clockwise, read downward: wrong.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Noto Sans Ogham'; writing-mode: sideways-lr">᚛ᚑᚌᚐᚋ᚜</div>
+    <figcaption><code>sideways-lr</code>: read upward from the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The float property: as high as possible</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.1 Positioning the float: the 'float' property</div>
+  <h1>The float property: as high as possible</h1>
+  <p class=pr-lede>The precise rules that govern floats, numbered as the specification numbers them. Every named box is
+  20px tall unless it says otherwise; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Rules 8 and 9: higher before further</h2>
+  <p><q>8. A floating box must be placed as high as possible.</q> <q>9. A left-floating box must be put as far to the
+  left as possible, a right-floating box as far to the right as possible. A higher position is preferred over one that
+  is further to the left/right.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-position">CSS 2 §9.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div class="pr-a pr-fit" style="float: left; width: 100px; height: 80px">A: 100</div><div class="pr-b pr-fit" style="float: right; width: 60px; height: 30px">B: 60</div><div class="pr-c pr-fit" style="float: left; width: 80px">C: 80</div></div>
+    <figcaption>A left float C, 80px wide, does not fit in the 40px between A and B at the top. It goes beside A,
+    below B, at 30px, higher than it could be at the far left below A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A float between collapsing margins</h2>
+  <p><q>When the float occurs between two collapsing margins, the float is positioned as if it had an otherwise empty
+  anonymous block parent taking part in the flow.</q> That parent's position follows from <a href="https://drafts.csswg.org/css2/#collapsing-margins">§8.3.1</a>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-position">CSS 2 §9.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class="pr-c pr-fit" style="float: left; width: 40px">F</div><div class=pr-b style="margin: 20px 0 0 50px">B: mt 20</div></div>
+    <figcaption>A's 30 and B's 20 collapse to 30, and the float F, between them, is 30px below A, level with
+    B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

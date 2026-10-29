@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretch-fit sizing: heights</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 13px/20px "PR Arimo"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; height: 112px; }
+  .low { height: 62px; }
+  .p { height: 100px; background: rgba(79, 129, 189, 0.16); }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 4.2 Stretch-fit Sizing, heights</div>
+  <h1>Stretch-fit sizing: heights</h1>
+  <p class=pr-lede>For in-flow block-level boxes, <q>if the ancestor element percentages resolve against does not have a
+  block-start border or padding and is not an independent formatting context, treat the element's block-start margin
+  as zero for the purpose of calculating this size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#stretch-fit-sizing">CSS Box Sizing 3 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The spec's two parents</h2>
+  <p>Each blue parent is <code>height: 100px</code>, and holds an orange child of <code>height: stretch; margin:
+  10px</code>.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=p style="border: 1px solid #2c5a8f"><div class=box style="height: stretch; margin: 10px">bordered</div></div></div>
+    <figcaption>The parent has a border: the child's outer height is the 100px, its height 80px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 20px, its
+    line.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=p><div class=box style="height: stretch; margin: 10px">no border</div></div></div>
+    <figcaption>No border or padding: margins as zero, so 100px; its top margin collapses with the parent's, both
+    10px down. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 20px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=p style="display: flow-root"><div class=box style="height: stretch; margin: 10px">flow-root</div></div></div>
+    <figcaption>The parent a <code>flow-root</code>, an independent formatting context: 80px. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where the size is indefinite</h2>
+  <p><q>Otherwise: In a preferred size property, behaves as auto. In a min size property, behaves as 0. In a max size
+  property, behaves as none.</q> Each blue parent here is of auto height.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t low"><div class=pr-parent><div class=box style="height: stretch">stretch</div></div></div>
+    <figcaption><code>height: stretch</code>: as auto, its 20px line.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t low"><div class=pr-parent><div class=box style="height: 10px; min-height: stretch">min</div></div></div>
+    <figcaption><code>height: 10px; min-height: stretch</code>: as 0, so 10px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t low"><div class=pr-parent><div class=box style="height: 60px; max-height: stretch">max</div></div></div>
+    <figcaption><code>height: 60px; max-height: stretch</code>: as none, so 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

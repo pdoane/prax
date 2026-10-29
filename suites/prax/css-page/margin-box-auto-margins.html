@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto margins of page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.2.1 Margins</div>
+  <h1>Auto margins of page-margin boxes</h1>
+  <p class=pr-lede><q>If the 'margin-left' or 'margin-right' property of any of the three boxes computes to 'auto', the used value is zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#variable-auto-margins">CSS Paged Media 3 §5.3.2.1</a></span> Each page has 30px margins above and below, none at the sides. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>auto is zero across the side</h2>
+  <p>The boxes are 60px wide, so <code>auto</code> margins could center them; they do not.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 0; @top-left { content: 'A'; width: 60px; margin-left: auto; background: #4f81bd } @top-right { content: 'C'; width: 60px; margin: 0 auto; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>A, with <code>margin-left: auto</code>, at the left edge; C, with <code>margin: 0 auto</code>, at the right edge. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 0; @top-left { content: 'A'; width: 60px; margin-left: 20px; background: #4f81bd } @top-right { content: 'C'; width: 60px; margin-right: 20px; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>With margins of 20px instead, A is 20px from the left edge and C 20px from the right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

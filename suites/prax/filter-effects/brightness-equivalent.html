@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>brightness() as feComponentTransfer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="brightness-equivalent-0" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncR type="linear" slope="0.5" intercept="0"/><feFuncG type="linear" slope="0.5" intercept="0"/><feFuncB type="linear" slope="0.5" intercept="0"/></feComponentTransfer>
+  </filter>
+  <filter id="brightness-equivalent-1" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncR type="linear" slope="1.5" intercept="0"/><feFuncG type="linear" slope="1.5" intercept="0"/><feFuncB type="linear" slope="1.5" intercept="0"/></feComponentTransfer>
+  </filter>
+  <filter id="brightness-equivalent-2" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncR type="linear" slope="0" intercept="0"/><feFuncG type="linear" slope="0" intercept="0"/><feFuncB type="linear" slope="0" intercept="0"/></feComponentTransfer>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.7 brightness</div>
+  <h1>brightness() as feComponentTransfer</h1>
+  <p class=pr-lede>The function is a linear transfer of slope <code>[amount]</code> on each color channel.  <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#brightnessEquivalent">Filter Effects 1 §13.1.7</a></span></p>
+</header>
+
+<section>
+  <h2>Darker, brighter, black</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function; beside it the same box with <code>filter: url()</code> to the equivalent, which sets <code>color-interpolation-filters: sRGB</code>, as <q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: brightness(50%)"></div><div class=src style="filter: url(#brightness-equivalent-0)"></div><div class=sw style="background: #6b451e"></div></div></div>
+    <figcaption><code>brightness(50%)</code> and its equivalent alike; orange becomes <code>#6b451e</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: brightness(1.5)"></div><div class=src style="filter: url(#brightness-equivalent-1)"></div><div class=sw style="background: #ffcf5a"></div></div></div>
+    <figcaption><code>brightness(1.5)</code> and its equivalent alike; orange becomes <code>#ffcf5a</code>, the swatch at the
+    right. Over 1 is allowed; red clamps at 1.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: brightness(0)"></div><div class=src style="filter: url(#brightness-equivalent-2)"></div><div class=sw style="background: #000000"></div></div></div>
+    <figcaption><code>brightness(0)</code> and its equivalent alike; orange becomes <code>#000000</code>, the swatch at the
+    right. Black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

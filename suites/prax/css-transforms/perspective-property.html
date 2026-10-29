@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The perspective property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 10px; width: 80px; height: 60px; }
+  .far { transform: translateZ(-100px); }
+  .tiny { transform: translateZ(-9px); }
+  .x { width: 100px; height: 40px; margin: 10px 0 0 10px; }
+  .k { position: relative; z-index: -1; width: 40px; height: 20px; margin: 10px 0 0 30px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 8 The perspective Property</div>
+  <h1>The perspective property</h1>
+  <p class=pr-lede><q>Distance to the center of projection.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#perspective-property">CSS Transforms 2 §8</a></span>
+  Each blue box, 80 by 60, is on the dashed outline.</p>
+</header>
+
+<section>
+  <h2>The distance</h2>
+  <p><q>none: No perspective transform is applied.</q> Each box has <code>translateZ(-100px)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p far"></div></div>
+    <figcaption><code>100px</code>: 100/200, half, 40 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 300px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p far"></div></div>
+    <figcaption><code>300px</code>: 300/400, three quarters, 60 by 45.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: none"><div class="pr-ghost g"></div><div class="pr-a pr-fit p far"></div></div>
+    <figcaption><code>none</code>: the full 80 by 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Less than 1px is 1px</h2>
+  <p><q>values less than 1px must be treated as 1px for rendering purposes.</q> Each box has
+  <code>translateZ(-9px)</code>: at 1px, 1/10, 8 by 6.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 1px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p tiny"></div></div>
+    <figcaption><code>1px</code>: 8 by 6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 0"><div class="pr-ghost g"></div><div class="pr-a pr-fit p tiny"></div></div>
+    <figcaption><code>0</code>: as <code>1px</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stacking context and a containing block</h2>
+  <p><q>any value other than none establishes a stacking context</q> and a <a href="../css-position/containing-block-properties.html">containing
+  block</a>. A blue box holds a purple child with <code>z-index: -1</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking" style="height: 60px"><div class="pr-a pr-fit x"><div class=k></div></div></div>
+    <figcaption><code>none</code>: the child is behind the box, hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking" style="height: 60px"><div class="pr-a pr-fit x" style="perspective: 1000px"><div class=k></div></div></div>
+    <figcaption><code>1000px</code>: over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

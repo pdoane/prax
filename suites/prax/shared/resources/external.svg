@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40" height="20">
+  <!-- A green box, and over its right half an external image, which secure static mode does not load, and a script,
+       which it does not run. Loaded as an image, the right half stays green. -->
+  <rect id="box" width="40" height="20" fill="#6aa36a"/>
+  <image x="20" width="20" height="20" preserveAspectRatio="none" href="flag-40x20.png" xlink:href="flag-40x20.png"/>
+  <script>document.getElementById("box").setAttribute("fill", "#c0392b");</script>
+</svg>

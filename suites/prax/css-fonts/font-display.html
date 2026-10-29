@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-display</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Display Auto"; src: url(../../../third_party/fonts/Literata.ttf); font-display: auto; }
+  @font-face { font-family: "Display Block"; src: url(../../../third_party/fonts/Literata.ttf); font-display: block; }
+  @font-face { font-family: "Display Swap"; src: url(../../../third_party/fonts/Literata.ttf); font-display: swap; }
+  @font-face { font-family: "Display Fallback"; src: url(../../../third_party/fonts/Literata.ttf); font-display: fallback; }
+  @font-face { font-family: "Display Optional"; src: url(../../../third_party/fonts/Literata.ttf); font-display: optional; }
+  .pr-sample { font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.9 Controlling font display per font-face: the 'font-display' descriptor</div>
+  <h1>font-display</h1>
+  <p class=pr-lede><q>The 'font-display' descriptor for @font-face determines how a font face is displayed, based on
+  whether and when it is downloaded and ready to use.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-display-desc">CSS Fonts 4 §4.9</a></span></p>
+</header>
+
+<section>
+  <h2>The policies, once the face has loaded</h2>
+  <p>Each face is Literata, which loads from this page's origin; each stage names its family, then
+  <code>monospace</code>. While a face loads, <code>block</code> draws invisible text for about 3s and then the
+  fallback; <code>swap</code> draws the fallback at once; <code>fallback</code> blocks for about 100ms and swaps for
+  about 3s; <code>optional</code> blocks for about 100ms and never swaps.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Display Auto', monospace">Handgloves</div>
+    <figcaption><code>auto</code>, <q>user-agent-defined</q>: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Display Block', monospace">Handgloves</div>
+    <figcaption><code>block</code>: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Display Swap', monospace">Handgloves</div>
+    <figcaption><code>swap</code>: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Display Fallback', monospace">Handgloves</div>
+    <figcaption><code>fallback</code>: Literata, where it loaded within its swap period.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Display Optional', monospace">Handgloves</div>
+    <figcaption><code>optional</code>: Literata if it was ready almost at once, else monospace for the page's
+    life.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

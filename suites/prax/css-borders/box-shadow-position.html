@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.5 Spreading shadows: the box-shadow-position property</div>
+  <h1>box-shadow-position</h1>
+  <p class=pr-lede><q>outset: Causes the drop shadow to be an outer box-shadow.</q> <q>inset: Causes the drop shadow to be an inner box-shadow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-position">CSS Borders and Box Decorations 4 §6.5</a></span> Each box is 104 by 44, its shadow orange, offset 10px.</p>
+</header>
+
+<section>
+  <h2>outset and inset</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; box-shadow-color: #d68a3c; box-shadow-position: outset"></div></div>
+    <figcaption><code>outset</code>: outside, right and below. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; box-shadow-color: #d68a3c; box-shadow-position: inset"></div></div>
+    <figcaption><code>inset</code>: inside, along the top and left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; box-shadow-color: #d68a3c, #8e44ad; box-shadow-position: inset, outset"></div></div>
+    <figcaption>Two: an orange one inside, a purple one outside. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The line gap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: "PR Arimo Gap"; src: url(../../../third_party/fonts/Arimo.ttf); line-gap-override: 50%; }
+  @font-face { font-family: "PR Arimo No Gap"; src: url(../../../third_party/fonts/Arimo.ttf); line-gap-override: 0%; }
+  .pr-stage { font-size: 20px; }
+  .gap { font-family: "PR Arimo Gap"; }
+  .nogap { font-family: "PR Arimo No Gap"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 3.2.2 Line Gap Metrics</div>
+  <h1>The line gap</h1>
+  <p class=pr-lede><q>Font formats can allow for a font-recommended “line gap” or “external leading” metric. This
+  metric is referred to as the line gap metric, and may be incorporated into the line box logical height calculations
+  when line-height is normal</q>. <q>UAs must floor the line gap metric at zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#font-line-gap">CSS Inline Layout 3 §3.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Between the lines at normal</h2>
+  <p>Each stage is two lines of 20px PR Arimo, whose ascent and descent come to 22.3px, each line's text in an orange
+  span, the content area. The font is loaded twice with <code>line-gap-override</code> from CSS Fonts 4: once with a
+  line gap of 50%, 10px, and once with none.</p>
+  <figure>
+    <div class="pr-stage nogap" style="line-height: normal"><span class=pr-hl>no line gap</span><br><span class=pr-hl>on two lines</span></div>
+    <figcaption>No gap, <code>normal</code>: the content areas touch, and the lines are about 22px apart.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage gap" style="line-height: normal"><span class=pr-hl>a gap of 10px</span><br><span class=pr-hl>on two lines</span></div>
+    <figcaption>A 10px gap, <code>normal</code>: half above and half below each line, so the content areas are 10px
+    apart. <span class=pr-flag>Safari</span> Ignores <code>line-gap-override</code>: they touch.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage gap" style="line-height: 22px"><span class=pr-hl>a gap of 10px</span><br><span class=pr-hl>on two lines</span></div>
+    <figcaption>A 10px gap, <code>line-height: 22px</code>: the gap is not used, and the lines are 22px
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

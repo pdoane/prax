@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: the color of the 3D values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: the color of the 3D values</h1>
+  <p class=pr-lede><code>border-*-style</code> and <code>border-style</code> take <code>none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset</code>.</p>
+</header>
+
+<section>
+  <h2>The color of the 3D styles</h2>
+  <p><q>The color of borders drawn for values of 'groove', 'ridge', 'inset', and 'outset' depends on the element's
+  border color properties, but UAs may choose their own algorithm to calculate the actual colors used.</q> The same
+  styles with an orange border color. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-color: #d68a3c; border-style: groove"></div></div>
+    <figcaption><code>groove</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-color: #d68a3c; border-style: ridge"></div></div>
+    <figcaption><code>ridge</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-color: #d68a3c; border-style: inset"></div></div>
+    <figcaption><code>inset</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-color: #d68a3c; border-style: outset"></div></div>
+    <figcaption><code>outset</code></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

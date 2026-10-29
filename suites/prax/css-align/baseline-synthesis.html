@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generated and synthesized baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 4px; height: 70px; }
+  .pr-narrow .pr-baseline { width: 100px; margin-right: -100px; }
+  .g > div { background: #f9cc9d; line-height: 1; padding: 0 3px; }
+  .big { font-size: 32px; }
+  .empty { width: 30px; height: 20px; border: 4px solid #d68a3c; margin-bottom: 10px; }
+  .v { writing-mode: vertical-rl; font-size: 13px; padding: 3px 0 !important; }
+  .diag { font: 60px/1 "PR Baseline Diagnostic"; }
+  .line { font-size: 13px; line-height: 20px; padding-top: 30px; height: 40px; }
+  .ib { display: inline-block; width: 30px; height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.1 Determining the Baselines of a Box, synthesis</div>
+  <h1>Generated and synthesized baselines</h1>
+  <p class=pr-lede><q>To generate baselines for a box from a single baseline, use the baseline table from the font
+  settings and first available font of that box</q>. <q>If a box that participates in baseline alignment has no
+  baseline set, then its alignment baseline is synthesized</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>The font's baseline, or its origin</h2>
+  <p>A grid row, <code>align-self: baseline</code>: "X" of PR Baseline Diagnostic, its BASE alphabetic baseline
+  0.05em above the glyph origin, and "Ag" of PR Arimo, which has no BASE table.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="height: auto"><div class=diag style="align-self: baseline">X</div><div class=big style="align-self: baseline">Ag</div></div></div>
+    <figcaption>"Ag" on the line labeled alphabetic, 3px above the bottom of "X". <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> On the glyph origin, at the bottom of "X".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="height: auto"><div class=diag style="align-self: baseline; font-family: 'PR Baseline Diagnostic Zero'">X</div><div class=big style="align-self: baseline">Ag</div></div></div>
+    <figcaption>PR Baseline Diagnostic Zero, alphabetic at the origin: "Ag" on that line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Synthesized from edges</h2>
+  <p><q>synthesize the alphabetic baseline from the line-under line</q>. <q>inline-level boxes synthesize from their
+  margin edges</q>, <q>grid and flex items synthesize from their border edges</q>. The empty box has a 4px border and a
+  10px bottom margin.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class=big style="align-self: baseline">Ag</div><div class="empty pr-fit" style="align-self: baseline; background: none"></div></div></div>
+    <figcaption>A grid item: its bottom border edge on the baseline.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow line"><span class=pr-baseline></span>Ag <span class=ib style="margin-bottom: 10px"></span> Ag</div>
+    <figcaption>An empty inline-block: its margin edge on the line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class=big style="align-self: baseline">Ag</div><div class=v style="align-self: baseline">vertical</div></div></div>
+    <figcaption>A <code>vertical-rl</code> item: by the grid's writing mode, its bottom on the baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

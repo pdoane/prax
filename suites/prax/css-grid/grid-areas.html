@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { display: grid; grid-template-areas: ". a" "b a" ". a"; grid-template-columns: 60px 1fr; grid-template-rows: 20px 1fr 20px; height: 100px; }
+  .t > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 3.3 Grid Areas</div>
+  <h1>Grid areas</h1>
+  <p class=pr-lede><q>A grid area is the logical space used to lay out one or more grid items. A grid area consists of
+  one or more adjacent grid cells. It is bound by four grid lines, one on each side of the grid area, and participates
+  in the sizing of the grid tracks it intersects.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-area-concept">CSS Grid Layout 2 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Named, and aligned within</h2>
+  <p>The specification's example, scaled: <code>". a" "b a" ". a"</code>, columns <code>60px 1fr</code>, rows
+  <code>20px 1fr 20px</code>, 100px tall. Item 1 is in "a", items 2 and 3 in "b": <q>By default, grid items are
+  stretched to fit their grid area and these items would layer one over the other.</q></p>
+  <figure>
+    <div class="pr-stage t"><div class=pr-a style="grid-area: a">1</div><div class=pr-b style="grid-area: b">2</div><div class="pr-c pr-light" style="grid-area: b; opacity: 0.6">3</div></div>
+    <figcaption>"a" is the second column, the whole height; "b" the first column of the middle row, 60 by 60px from
+    20px down. 2 and 3 both fill it, 3 over 2.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class=pr-a style="grid-area: a">1</div><div class=pr-b style="grid-area: b; align-self: start">2</div><div class=pr-c style="grid-area: b; justify-self: end; align-self: end">3</div></div>
+    <figcaption>2 <code>align-self: start</code>: at the top of "b", from 20 to 40px, across its 60px. 3
+    <code>justify-self: end; align-self: end</code>: in its bottom-right corner, ending at 60 and 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Items affect each other through the tracks</h2>
+  <p><q>Grid items placed into the same grid area do not directly affect each other's layout. Indirectly, however, a grid item occupying a grid track with an
+  intrinsic sizing function can affect the size of that track</q>. One <code>auto</code> column and one
+  <code>1fr</code> column; B and C sit in the second.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="display: grid; grid-template-columns: auto 1fr"><div style="background: #b9cde6">ab</div><div class=pr-b>B</div><div></div><div class=pr-c>C</div></div>
+    <figcaption>"ab" makes the first column 20px, so B and C start at 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="display: grid; grid-template-columns: auto 1fr"><div style="background: #b9cde6">abcdef</div><div class=pr-b>B</div><div></div><div class=pr-c>C</div></div>
+    <figcaption>"abcdef" makes it 60px, and B and C, which it never touches, move to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

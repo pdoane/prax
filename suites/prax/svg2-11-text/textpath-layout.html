@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Glyphs on a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="corner" d="M 20 60 L 80 20 L 140 60" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.3 Text on a path layout rules</div>
+  <h1>Glyphs on a path</h1>
+  <p class=pr-lede><q>Conceptually, for text on a path the target path is stretched out into either a horizontal or
+  vertical straight line segment.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextpathLayoutRules">SVG 2 §11.8.3</a></span>
+  Paths are dashed in red.</p>
+</header>
+
+<section>
+  <h2>Each glyph turned at its midpoint</h2>
+  <p><q>Position the glyph such that the glyph-midline passes through the midpoint-on-the-path and is perpendicular to
+  the line through the startpoint-on-the-path and the endpoint-on-the-path.</q> "LLLLLL" in 30px PR Noto Sans Mono,
+  18 a letter, on a path up from 20, 60 to a corner at 80, 20, 72 along, and down to 140, 60.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#corner" class=pr-baseline /><text class=big><textPath href="#corner">LLLLLL</textPath></text></svg></div>
+    <figcaption>Four L's on the rising side, each its foot along it; the fifth, from 72 to 90 along, its midpoint
+    past the corner, turned down with the falling side; the sixth on that side too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

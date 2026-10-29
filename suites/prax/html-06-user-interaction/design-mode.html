@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>designMode</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.2 Making entire documents editable</div>
+  <h1>designMode</h1>
+  <p class=pr-lede><code>document.designMode</code> <q>Returns "on" if the document is editable, and "off" if it isn't.</q>
+  <q>Can be set, to change the document's current state. This focuses the document and resets the selection in that
+  document.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#making-entire-documents-editable:-the-designmode-idl-attribute">HTML §6.8.2</a></span></p>
+</header>
+<section>
+  <h2>The whole document, editable</h2>
+  <p>An editing host is <q>a child HTML element of a Document whose design mode enabled is true.</q> The checkbox
+  sets the frame's <code>designMode</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#editing-apis">§6.8.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <label class=pr-target><input type=checkbox id=toggle> designMode "on" in the frame</label>
+        <iframe id=frame style="display: block; width: 100%; height: 60px; margin: 0 0 10px; border: 0; background: white"
+                srcdoc="<body style='margin: 0; padding: 0 6px; font: 12px/20px sans-serif'><h1 style='margin: 0; font-size: 14px'>A heading</h1><p style='margin: 0'>a paragraph and <a href='#'>a link</a></p></body>"></iframe>
+      </div>
+    </div>
+    <figcaption>Click the frame's text and type: nothing changes. Check the checkbox: the frame's document takes the
+    focus, and its heading, paragraph and link can all be edited by clicking and typing. Uncheck it: no longer.</figcaption>
+  </figure>
+</section>
+<script>
+  // Sets the frame's designMode from the checkbox.
+  document.getElementById("toggle").addEventListener("change", event => {
+      document.getElementById("frame").contentDocument.designMode = event.target.checked ? "on" : "off";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: border-radius ignored</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.5.1 Interaction with border-radius and corner-shape</div>
+  <h1>border-shape: border-radius ignored</h1>
+  <p class=pr-lede><q>When an element's computed value of 'border-shape' is not none, its 'border-radius' is ignored, as if it was set to 0. 'corner-shape' is implicitly ignored, as it can only work in tandem with 'border-radius'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-radius-interaction">CSS Borders and Box Decorations 4 §7.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The shape wins</h2>
+  <p>Each box is 112 by 72 with a 6px blue border and <code>border-radius: 30px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-radius: 30px; border-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%)"></div></div>
+    <figcaption>A diamond; no rounded corners anywhere, the background clipped by the shape. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rounded rectangle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-radius: 30px; corner-shape: scoop; border-shape: inset(0)"></div></div>
+    <figcaption>With <code>scoop</code> too: a plain rectangle. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A scooped rectangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

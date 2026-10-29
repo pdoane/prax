@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow: offsets, blur, spread, inset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 30px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.6 Drop Shadows Shorthand: the box-shadow property</div>
+  <h1>box-shadow: offsets, blur, spread, inset</h1>
+  <p class=pr-lede><q>Each shadow is given as a &lt;spread-shadow&gt;, outlining the 'box-shadow-offset' defined by two
+  &lt;length&gt; values, and optional values for the 'box-shadow-blur', 'box-shadow-spread', 'box-shadow-color', and
+  'box-shadow-position'. Omitted lengths are 0; omitted colors default to transparent when the specified offset is
+  none and to currentcolor otherwise.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow">CSS Borders and Box Decorations 4 §6.6</a></span>
+  Each box is 84 by 34 with a 2px blue border.</p>
+</header>
+
+<section>
+  <h2>Offsets, blur and spread</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 10px -10px #d68a3c"></div></div>
+    <figcaption><code>10px -10px</code>: an orange copy 10px right and 10px up.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 0 0 10px #d68a3c"></div></div>
+    <figcaption><code>0 0 10px</code>: a blurred edge all round.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 0 0 0 10px #d68a3c"></div></div>
+    <figcaption><code>0 0 0 10px</code>: a sharp band 10px wide all round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Color, inset, and a list</h2>
+  <p><q>inset: Causes the drop shadow to be an inner box-shadow. That means, one that shadows the canvas onto
+  the box, as if the box were cut out of the canvas and shifted behind it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-position">§6.5</a></span>
+  A list is <q>ordered front to back</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 10px 10px; color: #8e44ad"></div></div>
+    <figcaption>No color, <code>color: #8e44ad</code>: a purple shadow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: inset 10px 10px #d68a3c"></div></div>
+    <figcaption><code>inset 10px 10px</code>: orange inside the box along its top and left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 5px 5px #4f81bd, 10px 10px #d68a3c, -5px -5px 0 5px #6aa36a"></div></div>
+    <figcaption>Blue 5px, over orange 10px, over a green one spread up and left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Calculating widths and margins</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3 Calculating widths and margins</div>
+  <h1>Calculating widths and margins</h1>
+  <p class=pr-lede>Every box below is a blue <code>div</code> with <code>width: auto</code> and the text "box". The kind of
+  box it generates decides what <code>auto</code> becomes.</p>
+</header>
+
+<section>
+  <h2>The kind of box decides</h2>
+  <p><q>The values of an element's 'width', 'margin-left', 'margin-right', 'left' and 'right' properties as used for
+  layout depend on the type of box generated and on each other.</q> <q>In principle, the values used are the same as
+  the computed values, with 'auto' replaced by some suitable value, and percentages calculated based on the containing
+  block, but there are exceptions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#Computing_widths_and_margins">CSS 2 §10.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>box</div></div>
+    <figcaption>In normal flow, a block fills its containing block: 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="float: left">box</div></div>
+    <figcaption>Floated, it shrinks to fit its text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <div class=pr-a style="display: inline-block">box</div> b</div>
+    <figcaption>As an inline-block, it shrinks to fit too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 20px"><div class=pr-a style="position: absolute; top: 0; right: 0">box</div></div>
+    <figcaption>Absolutely positioned with <code>right: 0</code>, it shrinks to fit, at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A tentative width</h2>
+  <p><q>The used value of 'width' calculated below is a tentative value, and may have to be calculated multiple times,
+  depending on 'min-width' and 'max-width'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#Computing_widths_and_margins">CSS 2 §10.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="max-width: 86px">box</div></div>
+    <figcaption>A block with <code>max-width: 86px</code>: its tentative width, 186px, is too wide, so it is
+    calculated again as 86px. With its border and padding it is 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

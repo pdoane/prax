@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Setting pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; touch-action: none; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 76px; margin: 0 8px 0 0; }
+  .row .pr-target:hover { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 8.2 Setting pointer capture</div>
+  <h1>Setting pointer capture</h1>
+  <p class=pr-lede><q>Pointer capture is set on an element of type Element by calling the
+  element.setPointerCapture(pointerId) method.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#setting-pointer-capture">Pointer Events §8.2</a></span></p>
+</header>
+<section>
+  <h2>As if over the capturing element</h2>
+  <p><q>For subsequent events of the pointer, the capturing target will substitute the normal hit testing result as if
+  the pointer is always over the capturing target, and they MUST always be targeted at this element until capture is
+  released.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#extensions-to-the-element-interface">§4</a></span>
+  A <code>pointerdown</code> listener on A captures the pointer; a box turns orange while it is hovered.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>A, press</div><div class=pr-target id=b>B</div><div class=pr-target id=c>C</div></div>
+      <ol class=pr-log data-log="pointerover pointerup" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Press A and drag across B and C: no <code>pointerover</code> reaches them, and the
+    <code>pointerup</code> is at A. Neither Pointer Events nor HTML says whether <code>:hover</code> follows the
+    capture, so which box is orange is each browser's own.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only while a button is down</h2>
+  <p><q>If the pointer is not in the active buttons state or the element's node document is not the active document of
+  the pointer, then terminate these steps.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#setting-pointer-capture">§8.2</a></span>
+  A <code>pointerover</code> listener on D asks for capture.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=d>D, hover</div><div class=pr-target id=e>E</div></div>
+      <ol class=pr-log data-log="gotpointercapture pointerover" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Move the mouse onto D with no button down, then onto E: no <code>gotpointercapture</code>, and
+    <code>pointerover</code> at E, which turns orange; the request failed silently.</figcaption>
+  </figure>
+</section>
+<script>
+  // A captures the pointer when pressed; D asks for it on pointerover, with no button down.
+  const a = document.getElementById("a"), d = document.getElementById("d");
+  a.addEventListener("pointerdown", event => a.setPointerCapture(event.pointerId));
+  d.addEventListener("pointerover", event => d.setPointerCapture(event.pointerId));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

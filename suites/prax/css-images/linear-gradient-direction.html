@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient(): the direction of the gradient line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 40px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.1.1 linear-gradient() syntax</div>
+  <h1>linear-gradient(): the direction of the gradient line</h1>
+  <p class=pr-lede><q>The first argument to the function specifies the gradient line, which gives the gradient a
+  direction and determines how color-stops are positioned. It may be omitted; if so, it defaults to to bottom.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#linear-gradient-syntax">CSS Images 3 §3.1.1</a></span>
+  Each box is 80 by 40, blue for the first 25% of its gradient line and orange after, so the blue band is at the
+  start of the line: 10px of a vertical line, 20px of a horizontal one.</p>
+</header>
+
+<section>
+  <h2>An angle</h2>
+  <p><q>For the purpose of this argument, 0deg points upward, and positive angles represent clockwise rotation, so
+  90deg point toward the right.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(#4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption>Omitted: toward the bottom, blue 10px at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(0deg, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>0deg</code>: upward, blue 10px at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(90deg, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>90deg</code>: toward the right, blue 20px at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(-90deg, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>-90deg</code>: counterclockwise, toward the left, blue 20px at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Keywords for the sides</h2>
+  <p><q>If the argument is to top, to right, to bottom, or to left, the angle of the gradient line is 0deg, 90deg,
+  180deg, or 270deg, respectively.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(to top, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>to top</code>: blue 10px at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(to right, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>to right</code>: blue 20px at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(to bottom, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>to bottom</code>: blue 10px at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background: linear-gradient(to left, #4f81bd 25%, #d68a3c 25%)"></div></div>
+    <figcaption><code>to left</code>: blue 20px at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hue interpolation: increasing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.5.3 increasing</div>
+  <h1>Hue interpolation: increasing</h1>
+  <p class=pr-lede><q>Hue angles are interpolated so that, as they progress from the first color to the second, the angle is always <em>increasing</em>.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-increasing">CSS Color 4
+  §13.5.3</a></span> Bars are <code>linear-gradient(in oklch increasing hue to right, A, B)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+</header>
+
+<section>
+  <h2>Brown to turquoise</h2>
+  <p>From a deep brown, <code>oklch(0.5 0.1 30)</code>, to a turquoise, <code>oklch(0.7 0.1 190)</code>: <q>the midpoint [...] would be at a hue angle of (30 + 190) * 0.5 = 110 degrees, giving a khaki</q>.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch increasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 190))"></div></div>
+    <figcaption>Brown, khaki, green, turquoise.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch increasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 190))"></div><div class=sw style="background: oklch(0.6 0.1 110)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.6 0.1 110)</code>: one khaki.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Past 180 apart, still increasing</h2>
+  <p>To <code>oklch(0.7 0.1 230)</code> instead: <q>the midpoint of the interpolation will be (30 + 230) * 0.5 = 130 degrees, continuing in the same increasing direction</q>, though the shorter arc now runs the other way.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch increasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 230))"></div></div>
+    <figcaption>Brown, olive, green, teal, sky blue: no violet.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch increasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 230))"></div><div class=sw style="background: oklch(0.6 0.1 130)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.6 0.1 130)</code>: one green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

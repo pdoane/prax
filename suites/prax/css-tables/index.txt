@@ -1,0 +1,162 @@
+00-supports-1.html
+00-supports-2.html
+# css-tables-3/#intro 1 Introduction: no page; it is not normative, and says what tables are for
+# css-tables-3/#values 1.1 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+# css-tables-3/#content-model 2 Content Model: no page; it introduces 2.1 and 2.2
+css-tables-3/#table-structure 2.1 Table Structure
+    table-structure.html
+css-tables-3/#terminology 2.1.1 Terminology
+    wrapper-and-grid.html
+    slots.html
+css-tables-3/#fixup 2.2 Fixup
+    fixup.html
+css-tables-3/#fixup-algorithm 2.2.1 Fixup Algorithm
+    fixup-irrelevant.html
+    fixup-child-wrappers.html
+    fixup-child-cells.html
+    fixup-parents.html
+    fixup-misparented.html
+    fixup-wrapper.html
+css-tables-3/#fixup-boxes 2.2.2 Characteristics of fixup boxes
+    fixup-boxes.html
+css-tables-3/#fixup-examples 2.2.3 Examples
+    fixup-examples.html
+# css-tables-3/#layout 3 Layout: no page; it introduces 3.1 to 3.11
+css-tables-3/#layout-principles 3.1 Core layout principles
+    layout-principles.html
+css-tables-3/#table-layout-algorithm 3.2 Table layout algorithm
+    empty-table.html
+# css-tables-3/#dimensioning-the-row-column-grid 3.3 Dimensioning the row/column grid: no page; it introduces 3.3.1 and 3.3.2
+css-tables-3/#dimensioning-the-row-column-grid--step1 3.3.1 HTML Algorithm
+    html-algorithm.html
+css-tables-3/#dimensioning-the-row-column-grid--step2 3.3.2 Track merging
+    track-merging.html
+css-tables-3/#missing-cells-fixup 3.4 Missing cells fixup
+    missing-cells.html
+# css-tables-3/#layout-modes 3.5 Table layout modes: no page; it introduces 3.5.1 to 3.5.3
+css-tables-3/#table-layout-property 3.5.1 The Table-Layout property
+    table-layout.html
+    fixed-mode.html
+css-tables-3/#border-collapse-property 3.5.2 The Border-Collapse property
+    border-collapse.html
+css-tables-3/#border-spacing-property 3.5.2.1 The Border-Spacing property
+    border-spacing.html
+css-tables-3/#caption-side-property 3.5.3 The Caption-Side property
+    caption-side.html
+# css-tables-3/#style-overrides 3.6 Style overrides: no page; it introduces 3.6.1 and 3.6.2
+css-tables-3/#global-style-overrides 3.6.1 Overrides applying in all modes
+    wrapper-overrides.html
+    internal-overrides.html
+css-tables-3/#collapsed-style-overrides 3.6.2 Overrides applying in collapsed-borders mode
+    collapsed-overrides.html
+# css-tables-3/#border-collapsing 3.7 Border-collapsing: no page; its note introduces 3.7.1, which shows the algorithm
+# css-tables-3/#conflict-resolution-for-collapsed-borders 3.7.1 Conflict Resolution for Collapsed Borders: no page; it introduces the algorithm of 3.7.1.1
+css-tables-3/#border-conflict-resolution-algorithm 3.7.1.1 Conflict Resolution Algorithm for Collapsed Borders
+    conflict-resolution.html
+    conflict-table-border.html
+css-tables-3/#border-style-harmonization-algorithm 3.7.1.2 Harmonization Algorithm for Collapsed Borders
+    harmonization.html
+    harmonization-rows.html
+css-tables-3/#border-specificity 3.7.1.3 Specificity of a border style
+    border-specificity.html
+# css-tables-3/#content-measure 3.8 Computing table measures: no page; it introduces 3.8.1 to 3.8.3
+css-tables-3/#computing-undistributable-space 3.8.1 Computing Undistributable Space
+    undistributable-space.html
+css-tables-3/#computing-cell-measures 3.8.2 Computing Cell Measures
+    cell-measures.html
+    cell-offsets.html
+    percentage-contributions.html
+css-tables-3/#computing-column-measures 3.8.3 Computing Column Measures
+    column-measures.html
+    column-measures-spanning.html
+    column-percentages.html
+    column-measures-fixed.html
+# css-tables-3/#width-distribution 3.9 Available Width Distribution: no page; it introduces 3.9.1 to 3.9.3
+css-tables-3/#computing-the-table-width 3.9.1 Computing the table width
+    table-width.html
+    table-width-captions.html
+# css-tables-3/#width-distribution-principles 3.9.2 Core distribution principles: no page; it introduces 3.9.2.1 and 3.9.2.2
+css-tables-3/#width-distribution-principles-rN 3.9.2.1 Rules
+    distribution-rules.html
+# css-tables-3/#width-distribution-principles-rR 3.9.2.2 Available sizings: no page; it lists the sizings that 3.9.3 defines and shows
+css-tables-3/#width-distribution-algorithm 3.9.3 Distribution algorithm
+    sizing-guesses.html
+css-tables-3/#width-distribution-in-fixed-mode 3.9.3.1 Changes to width distribution in fixed mode
+    fixed-distribution.html
+css-tables-3/#distributing-width-to-columns 3.9.3.2 Distributing excess width to columns
+    excess-width.html
+    excess-width-percent.html
+    excess-width-fixed.html
+# css-tables-3/#height-distribution 3.10 Available Height Distribution: no page; it introduces 3.10.1 to 3.10.6
+css-tables-3/#computing-the-table-height 3.10.1 Computing the table height
+    table-height.html
+css-tables-3/#row-layout 3.10.2 Row layout (first pass)
+    row-layout.html
+    cell-baselines.html
+    cell-vertical-align.html
+    row-baselines.html
+    rowspan-heights.html
+css-tables-3/#row-relayout 3.10.3 Row layout (second pass)
+    row-percent-heights.html
+# css-tables-3/#height-distribution-principles 3.10.4 Core distribution principles: no page; it is an editor's to-do and a note of investigations, and 3.10.5 gives the algorithm
+css-tables-3/#height-distribution-algorithm 3.10.5 Distribution algorithm
+    height-distribution.html
+    height-distribution-extra.html
+css-tables-3/#table-cell-content-relayout 3.10.6 Table-cell content layout (second pass)
+    cell-percent-heights.html
+css-tables-3/#bounding-box-assignment 3.11 Positioning of cells, captions and other internal table boxes
+    bounding-boxes.html
+    caption-position.html
+    visible-tracks.html
+    visible-tracks-spanning.html
+# css-tables-3/#abspos 4 Absolute Positioning: no page; it introduces 4.1 to 4.3
+css-tables-3/#abspos-boxes-in-table-root 4.1 With a table-root as containing block
+    abspos-table.html
+css-tables-3/#abspos-boxes-in-table-internal 4.2 With a table-internal as containing block
+    abspos-internal.html
+    positioned-internal.html
+css-tables-3/#static-position 4.3 With a table-internal box as non-containing block parent
+    abspos-static.html
+# css-tables-3/#rendering 5 Rendering: no page; it introduces 5.1 to 5.4
+css-tables-3/#paint-order 5.1 Paint order of cells
+    paint-order.html
+css-tables-3/#empty-cell-rendering 5.2 Empty cell rendering (separated-borders mode)
+    empty-cells.html
+    empty-cells-collapsed.html
+# css-tables-3/#drawing-backgrounds-and-borders 5.3 Drawing backgrounds and borders: no page; it introduces 5.3.1 to 5.3.4
+css-tables-3/#drawing-table-backgrounds-and-borders 5.3.1 Drawing table backgrounds and borders
+    table-painting-areas.html
+css-tables-3/#drawing-collapsed-borders-1 5.3.1.1 Changes in collapsed-borders mode
+    collapsed-table-border.html
+    collapsed-border-image.html
+css-tables-3/#drawing-cell-backgrounds 5.3.2 Drawing cell backgrounds
+    cell-backgrounds.html
+    cell-background-areas.html
+# css-tables-3/#drawing-cell-borders 5.3.3 Drawing cell borders: no page; in separated-borders mode cells' borders are drawn as any box's, which CSS 2's pages show, and 5.3.3.1 shows collapsed-borders mode
+css-tables-3/#drawing-collapsed-borders-2 5.3.3.1 Changes in collapsed-borders mode
+    collapsed-cell-borders.html
+css-tables-3/#border-style-overrides 5.3.4 Border styles (collapsed-borders mode)
+    collapsed-border-styles.html
+# css-tables-3/#visibility-collapse-rendering 5.4 Rendering for visibility: collapse: no page; it introduces 5.4.1 and 5.4.2, and 3.11 shows the layout
+css-tables-3/#visibility-collapse-cell-rendering 5.4.1 Rendering a visibility: collapse table cell
+    visibility-collapse-cell.html
+css-tables-3/#visibility-collapse-track-rendering 5.4.2 Rendering a visibility: collapse table-track or table-track-group
+    visibility-collapse-track.html
+# css-tables-3/#fragmentation 6 Fragmentation: no page; it introduces 6.1 and 6.2
+css-tables-3/#breaking-rules 6.1 Breaking across fragmentainers
+    fragmentation.html
+    fragmentation-rows.html
+css-tables-3/#repeated-headers 6.2 Repeating headers across pages
+    repeated-headers.html
+    repeated-headers-columns.html
+# css-tables-3/#security 7 Security Considerations: no page; nothing to see
+# css-tables-3/#privacy 8 Privacy Considerations: no page; nothing to see
+# css-tables-3/#bug-list 9 List of bugs being tracked: no page; it is not normative, and the pages of the sections it names show the cases
+# css-tables-3/#appendices 10 Appendices: no page; it introduces 10.1
+css-tables-3/#mapping 10.1 Mapping between CSS & HTML attributes
+    html-mapping.html
+    html-mapping-borders.html
+    html-mapping-frame.html
+    html-mapping-cells.html
+# css-tables-3/#TODO 11 (link here for missing sections): no page; it is empty
+# css-tables-3/#changes 12 Changes: no page; it lists changes, the latest of which, fixed mode for any width but auto and max-content, 3.5.1 shows

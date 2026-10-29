@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Style containment: quotes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { quotes: "«" "»" "‹" "›"; padding: 0 4px; box-sizing: border-box; }
+  .o::before { content: open-quote; }
+  .c::before { content: close-quote; }
+  .no::before { content: no-open-quote; }
+  .nc::before { content: no-close-quote; }
+  .o::before, .c::before { color: #c0392b; }
+  .k { contain: style; background: #b9cde6; }
+  .ln { contain: style; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.4 Style Containment, quotes</div>
+  <h1>Style containment: quotes</h1>
+  <p class=pr-lede><q>The effects of the 'content' property's open-quote, close-quote, no-open-quote and no-close-quote
+  must be scoped to the element's sub-tree.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-style">CSS Containment 2 §3.4</a></span>
+  Each stage has <code>quotes: "«" "»" "‹" "›"</code>; the quote marks are red, and the blue span has <code>contain:
+  style</code>. Each line is contained too, so that its quotes do not reach the next.</p>
+</header>
+
+<section>
+  <h2>The depth inside starts from outside</h2>
+  <p><q>This implies that the depth of quote nesting in the subtree is unchanged and starts at the value that its
+  context normally implies</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=ln><span class=o></span>a <span class=k><span class=o></span>b</span></div></div>
+    <figcaption>An open quote, then one in the box: it opens at depth 2, so "« a ‹b".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Changes inside do not leave</h2>
+  <p><q>but that changes to the depth of quote nesting by these values inside the subtree do not affect the depth of
+  quote nesting outside the subtree.</q> Each pair: without containment, then with it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=ln><span class=o></span>a <span><span class=o></span>b</span> c<span class=c></span></div><div class=ln><span class=o></span>a <span class=k><span class=o></span>b</span> c<span class=c></span></div></div>
+    <figcaption>Opened inside, left open: without containment the last mark closes it, "›"; with it, the depth
+    outside is still 1: "»". <span class=pr-flag>Safari</span> does not scope them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=ln><span class=o></span>a <span>b<span class=c></span></span> <span class=o></span>c</div><div class=ln><span class=o></span>a <span class=k>b<span class=c></span></span> <span class=o></span>c</div></div>
+    <figcaption>Closed inside: without containment the next opens at the top again, "«"; with it, the depth
+    outside is still 1: "‹". <span class=pr-flag>Safari</span> does not scope them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=ln><span class=no></span><span class=o></span>a</div><div class=ln><span class=k><span class=no></span></span><span class=o></span>a</div></div>
+    <figcaption><code>no-open-quote</code> deepens unseen: without containment the next is
+    "‹"; inside the box, it leaves the depth outside at 0, "«". <span class=pr-flag>Safari</span> does not scope them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=ln><span class=o></span><span class=nc></span><span class=o></span>a</div><div class=ln><span class=o></span><span class=k><span class=nc></span></span><span class=o></span>a</div></div>
+    <figcaption><code>no-close-quote</code> after an open quote: without containment the next is "«" again; inside
+    the box it leaves the depth at 1, "‹". <span class=pr-flag>Safari</span> does not scope them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

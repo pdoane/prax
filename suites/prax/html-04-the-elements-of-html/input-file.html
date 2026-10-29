@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>File upload controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { max-width: 100%; font-size: 12px; }
+  .styled::file-selector-button { background: #f9cc9d; border: 2px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.17 File Upload state (type=file)</div>
+  <h1>File upload controls</h1>
+  <p class=pr-lede><q>The input element represents a list of selected files, each file consisting of a filename, a file
+  type, and a file body (the contents of the file).</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#file-upload-state-(type=file)">HTML §4.10.5.1.17</a></span></p>
+</header>
+
+<section>
+  <h2>A button, and the names of the files</h2>
+  <p>It renders as <q>an 'inline-block' box containing a span of text giving the filename(s) of the selected files, if
+  any, followed by a button</q> that matches <code>::file-selector-button</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-a-file-upload-control">§15.5.11</a></span>
+  The engines' developers have agreed that the text should not fix the order, since every browser puts the button
+  first (<a href="https://github.com/whatwg/html/issues/4276">html#4276</a>).</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input type=file></div>
+        <div><input type=file class=styled></div>
+      </div>
+    </div>
+    <figcaption>The text that names the files (none yet) and the button, in either order: Chrome, Safari and Firefox
+    put the button first. The second's button is <code>::file-selector-button</code>, styled orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Choosing files</h2>
+  <p><q>The input activation behavior for such an element element is to show the picker</q>; the user's choice fires
+  <code>input</code> and <code>change</code>, and a dismissed prompt fires <code>cancel</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#file-upload-state-(type=file)">§4.10.5.1.17</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input type=file id=one></div>
+        <div><input type=file id=off disabled></div>
+      </div>
+      <ol class=pr-log data-log="input change cancel" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the first and cancel its picker: <code>cancel</code>. Click again and choose a file:
+    <code>input</code>, <code>change</code>, and its name is shown. The second is
+    disabled: no picker opens.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

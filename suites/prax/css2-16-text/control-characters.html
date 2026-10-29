@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Control characters</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.3 Control and combining characters' details</div>
+  <h1>Control characters</h1>
+  <p class=pr-lede>Characters that are neither white space nor letters, and how they are drawn.</p>
+</header>
+
+<section>
+  <h2>Control characters</h2>
+  <p><q>Control characters other than U+0009 (tab), U+000A (line feed), U+0020 (space), and U+202x (bidi formatting
+  characters) are treated as characters to render in the same way as any normal character.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#ctrlchars">CSS 2
+  §16.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span class=pr-hl>a&#x7;b</span></div></div>
+    <figcaption>"a", U+0007 (bell), "b": the bell is a character on the line, drawn as the font draws it, not dropped
+    and not white space. <span class="pr-flag pr-since">Since CSS 2</span> it must be drawn visibly.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-sample style="white-space: pre"><span class=pr-hl>a&#x202A;b&#x202C;c</span></div></div>
+    <figcaption>"a", U+202A, "b", U+202C, "c": bidi formatting characters are not rendered, "abc".</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#white-space-processing">CSS Text 3 §4</a></div>
+  <h2>Control characters are visible</h2>
+  <p><q>Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns
+  (U+000D) and sequences that form a segment break—must be rendered as a visible glyph which the UA must synthesize if
+  the glyphs found in the font are not visible</q>. <q>As required by Unicode, unsupported Default_ignorable characters
+  must be ignored for text rendering.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#white-space-processing">CSS Text 3 §4</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-sample><span class=pr-hl>a&#x7;b&#x1;c</span></div></div>
+    <figcaption>"a", U+0007, "b", U+0001, "c": a visible mark between each pair, such as a box with the code point
+    or a picture from the Control Pictures block. <span class=pr-flag>Chrome</span> draws blank space.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-sample><span class=pr-hl>a&#x200B;b&#x2060;c</span></div></div>
+    <figcaption>"a", U+200B, "b", U+2060, "c": zero width space and word joiner are not control characters and draw
+    nothing, "abc".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

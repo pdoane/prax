@@ -1,0 +1,38 @@
+diff --git a/quickjs.c b/quickjs.c
+index cb87b50..dd5a5f5 100644
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -958,13 +958,6 @@ typedef struct JSCallSiteData {
+     int col_num;
+ } JSCallSiteData;
+ 
+-enum {
+-    __JS_ATOM_NULL = JS_ATOM_NULL,
+-#define DEF(name, str) JS_ATOM_ ## name,
+-#include "quickjs-atom.h"
+-#undef DEF
+-    JS_ATOM_END,
+-};
+ #define JS_ATOM_LAST_KEYWORD JS_ATOM_super
+ #define JS_ATOM_LAST_STRICT_KEYWORD JS_ATOM_yield
+ 
+diff --git a/quickjs.h b/quickjs.h
+index 087b557..48e3ad7 100644
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -510,6 +510,15 @@ JS_EXTERN void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *r
+ /* atom support */
+ #define JS_ATOM_NULL 0
+ 
++/* The atoms every runtime is made with, which are never freed: freeing one does nothing. */
++enum {
++    __JS_ATOM_NULL = JS_ATOM_NULL,
++#define DEF(name, str) JS_ATOM_ ## name,
++#include "quickjs-atom.h"
++#undef DEF
++    JS_ATOM_END,
++};
++
+ JS_EXTERN JSAtom JS_NewAtomLen(JSContext *ctx, const char *str, size_t len);
+ JS_EXTERN JSAtom JS_NewAtom(JSContext *ctx, const char *str);
+ JS_EXTERN JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n);

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.2 Tracking: the letter-spacing property</div>
+  <h1>letter-spacing: percentages</h1>
+  <p class=pr-lede><q>Percentages inherit intact, and are resolved against the used 'font-size' of the current element
+  (and thus represent a size relative to the size of the text to which they apply), unlike em units which are resolved
+  against the computed 'font-size' of the element from which they inherit, as an absolute length.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#letter-spacing-property">CSS Text 4 §8.2</a></span>
+  CSS 2's <a href="../css2-16-text/letter-spacing.html">page</a> has lengths. Letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>Inherited as a percentage, not a length</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 60%"><span class=t>abcd</span></div>
+    <figcaption><code>60%</code> of the 16.67px font: 10px between letters, so "abcd" is 70px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 60%"><span class=u style="font-size: calc(100px / 3)">abcd</span></div>
+    <figcaption>A child of twice the font size: 60% of its own, 20px letters 20px apart, 140px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: 0.6em"><span class=u style="font-size: calc(100px / 3)">abcd</span></div>
+    <figcaption><code>0.6em</code> instead: the parent's 10px is inherited, so 20px letters 10px apart,
+    110px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative</h2>
+  <p><q>Values may be negative, but there may be implementation-dependent limits.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="letter-spacing: -30%"><span class=t>abcd</span></div>
+    <figcaption><code>-30%</code>: 5px less between letters: "abcd" 25px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

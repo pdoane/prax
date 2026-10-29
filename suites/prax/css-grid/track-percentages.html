@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track percentages against an indefinite size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+  .h20 { height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, percentages of an indefinite size</div>
+  <h1>Track percentages against an indefinite size</h1>
+  <p class=pr-lede><q>If the size of the grid container depends on the size of its tracks, then the
+  &lt;percentage&gt; must be treated as auto, for the purpose of calculating the intrinsic sizes of the grid container
+  and then resolve against that resulting grid container size for the purpose of laying out the grid and its
+  items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Columns of a shrink-to-fit grid</h2>
+  <p>Each dashed grid is sized from its content; the first two have <code>grid-template-columns: 50% 50%</code>, holding
+  "abcd" and "ef". As <code>auto</code>, the columns are 40 and 20px, and the grid 60px wide; then 50% of 60px is
+  30px each.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: inline-grid; grid-template-columns: 50% 50%"><div class=t1>abcd</div><div class=t2>ef</div></div></div>
+    <figcaption><code>inline-grid</code>: 60px wide; "abcd" in the first 30px, spilling over "ef", which starts at
+    30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="float: left; display: grid; grid-template-columns: 50% 50%"><div class=t1>abcd</div><div class=t2>ef</div></div></div>
+    <figcaption>A float: the same, 60px wide, columns of 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: inline-grid; grid-template-columns: 25% 80px"><div class=t1>ab</div><div class=t2>c</div></div></div>
+    <figcaption><code>25% 80px</code>, "ab" and "c": 20 + 80, so 100px wide; then the first column is 25px, "c" at
+    25px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows of a grid of auto height</h2>
+  <p>Each dashed grid has <code>height: auto</code>, so its height depends on its rows, and holds two items 20px
+  tall. As <code>auto</code>, the rows are 20px each and the grid 40px tall.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: grid; grid-template-rows: 25% 25%"><div class="t1 h20">a</div><div class="t2 h20">b</div></div></div>
+    <figcaption><code>25% 25%</code>: the grid is 40px tall, then the rows 10px each: "b" starts at 10px, over the
+    lower half of "a".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: grid; grid-template-rows: 50% 20px"><div class="t1 h20">a</div><div class="t2 h20">b</div></div></div>
+    <figcaption><code>50% 20px</code>: 40px tall, then the first row 20px: "b" at 20px, as if <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

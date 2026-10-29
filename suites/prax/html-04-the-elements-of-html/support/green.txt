@@ -1,0 +1,1 @@
+.styled { background: #6aa36a; border-color: #3f7a3f; color: white; }

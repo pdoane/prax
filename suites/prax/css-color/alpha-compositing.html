@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Simple alpha compositing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .sw > div { height: 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.13 Simple Alpha Compositing</div>
+  <h1>Simple alpha compositing</h1>
+  <p class=pr-lede><q>When drawing, implementations must handle alpha according to the rules in Section 5.1 Simple
+  alpha compositing of [Compositing].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#alpha">CSS
+  Color 4 §10.13</a></span> There, a color of alpha αs over a backdrop of alpha αb gives
+  <code>co = cs × αs + cb × αb × (1 − αs)</code>.</p>
+</header>
+
+<section>
+  <h2>A color over an opaque backdrop</h2>
+  <p>Each first swatch is a box of the backdrop holding a box of the color; each second is the result in
+  <code>rgb()</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"><div style="background: rgb(255 0 0 / 0.5)"></div></div><div class=sw style="background: rgb(100% 50% 50%)"></div></div>
+    <figcaption><code>rgb(255 0 0 / 0.5)</code> over white: <code>rgb(100% 50% 50%)</code>, pink, twice.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: blue"><div style="background: rgb(255 0 0 / 0.5)"></div></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>The same red over blue: <code>rgb(50% 0% 50%)</code>, purple, twice.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"><div style="background: rgb(0 0 255 / 0.25)"></div></div><div class=sw style="background: rgb(75% 75% 100%)"></div></div>
+    <figcaption><code>rgb(0 0 255 / 0.25)</code> over white: <code>rgb(75% 75% 100%)</code>, pale blue,
+    twice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layers</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"><div style="background: rgb(0 0 255 / 0.5)"><div style="height: 100%; background: rgb(255 0 0 / 0.5)"></div></div></div><div class=sw style="background: rgb(75% 25% 50%)"></div></div>
+    <figcaption>Red at 0.5 over blue at 0.5 over white: <code>rgb(75% 25% 50%)</code>, a raspberry, twice.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"><div style="background: rgb(255 0 0 / 0.5)"><div style="height: 100%; background: rgb(0 0 255 / 0.5)"></div></div></div><div class=sw style="background: rgb(50% 25% 75%)"></div></div>
+    <figcaption>The other order, blue over red: <code>rgb(50% 25% 75%)</code>, a violet, twice.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed table layout: the table's width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { table-layout: fixed; border-spacing: 0; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { height: 20px; padding: 0 4px; box-sizing: border-box; border: 1px solid #2c5a8f; white-space: nowrap; }
+  .set { background: #d68a3c; color: white; font-weight: 600; }
+  .blk { height: 18px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.1 Fixed table layout</div>
+  <h1>Fixed table layout: the table's width</h1>
+  <p class=pr-lede>Every table here is <code>table-layout: fixed</code>. Orange marks a first-row cell or column with a
+  width set; cells have a 1px border.</p>
+</header>
+
+<section>
+  <h2>The width of the table</h2>
+  <p><q>The width of the table is then the greater of the value of the 'width' property for the table element and the
+  sum of the column widths (plus cell spacing or borders). If the table is wider than the columns, the extra space
+  should be distributed over the columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-table-layout">CSS 2 §17.5.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="width: 100px"><tr><td class=set style="width: 80px">80<td class=set style="width: 80px">80</table></div>
+    <figcaption><code>width: 100px</code>, but two 80px columns: the table is 160px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><tr><td class=set style="width: 40px">40<td class=set style="width: 60px">60</table></div>
+    <figcaption><code>width: 200px</code> and columns of 40 and 60: the table is 200px, and its 100px of extra space
+    goes to the columns, which are 80 and 120.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the first row counts</h2>
+  <p><q>Cells in subsequent rows do not affect column widths. Any cell that has content that overflows uses the
+  'overflow' property to determine whether to clip the overflow content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-table-layout">CSS 2
+  §17.5.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="width: 140px"><tr><td>1<td>2<tr><td style="overflow: hidden"><div class=blk style="width: 120px"></div><td><div class=blk style="width: 120px"></div></table></div>
+    <figcaption>The second row has two 120px blue blocks; the 140px table keeps columns of 70px. The first is clipped
+    by its <code>overflow: hidden</code> cell; the second overflows out of the table.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Raised initials</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .r::first-letter { initial-letter: 3 1; color: #2c5a8f; }
+  .big::first-letter { font-size: 57px; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.1.3 Raised Initial Letters</div>
+  <h1>Raised initials</h1>
+  <p class=pr-lede><q>A raised initial (often called a “raised cap” or “stick-up cap”) “sinks” to the first text
+  baseline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#raise-initial">CSS Inline Layout 3 §7.1.3</a></span>
+  Each paragraph is 13px PR Literata on 20px lines, its first letter in blue.</p>
+</header>
+
+<section>
+  <h2>Better than a larger font</h2>
+  <p><q>A proper raised initial has several advantages over simply increasing the font size of a first letter. The line
+  spacing in the rest of the paragraph will not be altered</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p r">Raised: the letter is three lines tall and stands on the first baseline; the lines below keep their spacing.</p></div>
+    <figcaption><code>initial-letter: 3 1</code>: the R's foot on the first baseline, the R three lines tall above it,
+    and every line 20px apart. <span class=pr-flag>Safari</span> Supports only <code>-webkit-initial-letter</code>: a
+    plain R. <span class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="p big">Raised by font size: the first line grows tall for the letter, and only the first line.</p></div>
+    <figcaption><code>font-size: 57px</code> instead, for comparison: the first line grows, so the first two
+    lines are farther apart than the rest.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

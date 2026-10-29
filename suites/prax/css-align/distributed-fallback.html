@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributed alignment's fallbacks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.3 Distributed Alignment, fallbacks</div>
+  <h1>Distributed alignment's fallbacks</h1>
+  <p class=pr-lede><q>When space cannot be distributed in this way, these values behave as their fallback
+  alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-values">CSS Box Alignment 3 §4.3</a></span>
+  Each stage is a grid of one column, 40px wide unless a caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>One subject</h2>
+  <p>For <code>space-between</code> <q>The default fallback alignment for this value is safe flex-start.</q> For
+  <code>space-around</code> and <code>space-evenly</code> it <q>is safe center.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-between"><div class=pr-a>A</div></div></div>
+    <figcaption><code>space-between</code>: A at the left, as <code>start</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-around"><div class=pr-a>A</div></div></div>
+    <figcaption><code>space-around</code>: A centered, 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-evenly"><div class=pr-a>A</div></div></div>
+    <figcaption><code>space-evenly</code>: A centered, 80 to 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No auto-sized subject, and no room</h2>
+  <p>For <code>stretch</code> <q>The default fallback alignment for this value is flex-start.</q> A <q>safe</q>
+  fallback, when the subject overflows, <q>is instead aligned as if the alignment mode were flex-start.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: stretch"><div class=pr-a>A</div></div></div>
+    <figcaption><code>stretch</code> on a 40px column: it stays 40px, at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 260px; justify-content: space-around"><div class=pr-a>A</div></div></div>
+    <figcaption>A 260px column, <code>space-around</code>: safe, so at the left, 60px past the right edge, not 30px
+    past each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

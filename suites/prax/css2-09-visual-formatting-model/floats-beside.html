@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats: boxes beside them</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 60px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5 Floats</div>
+  <h1>Floats: boxes beside them</h1>
+  <p class=pr-lede>A box that may not overlap a float sits in the space beside it. Each float is 60 by 60, in a stage
+  200px wide.</p>
+</header>
+
+<section>
+  <h2>A block-level replaced element</h2>
+  <p><q>The border box of a table, a block-level replaced element, or an element in the normal flow that establishes a
+  new block formatting context (such as an element with 'overflow' other than 'visible') must not overlap the margin
+  box of any floats in the same block formatting context as the element itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2
+  §9.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit f">float</div><img alt="" style="display: block; width: 100px; height: 40px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40' preserveAspectRatio='none' viewBox='0 0 60 40'><rect width='60' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An image with <code>display: block</code>, 100px wide: it is beside the float, at 60px, not under
+    it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto margins beside a float</h2>
+  <p>CSS 2 does not say how auto margins resolve for a box beside a float. The browsers share between them what the
+  box leaves of the space beside the float. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2
+  §9.5</a>, <a href="https://drafts.csswg.org/css2/#blockwidth">§10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit f">float</div><div class=pr-b style="overflow: hidden; width: 88px; margin: 0 auto">auto</div></div>
+    <figcaption>A box 100px wide with <code>overflow: hidden; margin: 0 auto</code>: the 140px beside the float
+    leaves 40px, 20px on each side, so it is at 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-b style="overflow: hidden; width: 88px; margin: 0 auto">auto</div></div>
+    <figcaption>The same box with no float: centered in the stage, at 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

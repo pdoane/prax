@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5 Floats</div>
+  <h1>Floats</h1>
+  <p class=pr-lede><q>A float is a box that is shifted to the left or right on the current line. The most interesting
+  characteristic of a float ... is that content may flow along its side.</q> Each float is 60 by 40.</p>
+</header>
+
+<section>
+  <h2>To the edge, and content along its side</h2>
+  <p><q>A floated box is shifted to the left or right until its outer edge touches the containing block edge or the
+  outer edge of another float.</q> <q>Content flows down the right side of a left-floated box and down the left side
+  of a right-floated box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2 §9.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit f" style="float: left">left</div>Text flows down the right side of the float and then under it.</div>
+    <figcaption><code>float: left</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit f" style="float: right">right</div>Text flows down the left side of the float and then under it.</div>
+    <figcaption><code>float: right</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit f" style="float: left">one</div><div class="pr-b pr-fit f" style="float: left">two</div>Text beside both floats.</div>
+    <figcaption>Two left floats: the second touches the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl"><div class="pr-a pr-fit f" style="float: left">left</div>Text that runs from right to left.</div>
+    <figcaption><code>float: left</code> in a block with <code>direction: rtl</code>: still at the left edge, and the
+    text flows down its right side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The top of the current line</h2>
+  <p><q>If there is a line box, the outer top of the floated box is aligned with the top of the current line box.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2 §9.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">The first line of the text; then the float <span class="pr-a pr-fit f" style="float: left">float</span> and more text after it.</div>
+    <figcaption>The float comes in the second line, so its top is the top of the second line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

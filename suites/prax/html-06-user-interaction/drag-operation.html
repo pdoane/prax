@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The current drag operation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .card { margin: 0 0 10px; padding: 0 6px; background: #f6d7b4; font-size: 12px; line-height: 20px }
+  .zones { display: flex; gap: 8px; margin: 0 0 10px }
+  .zone { flex: 1; height: 40px; padding: 0 4px; outline: 1px dashed var(--pr-line); background: var(--pr-plain);
+          font-size: 11px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.5 Processing model</div>
+  <h1>The current drag operation</h1>
+  <p class=pr-lede>If the dragover event is canceled, the user agent will <q>set the current drag operation based on the values of
+  the effectAllowed and dropEffect attributes</q>, then <q>Update the drag feedback (e.g. the mouse cursor) to match
+  the current drag operation</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">HTML §6.11.5</a></span></p>
+</header>
+<section>
+  <h2>Copy, link, move, or none</h2>
+  <p>Each zone cancels dragenter and dragover and sets the <code>dropEffect</code> it names; the card's dragstart sets
+  <code>effectAllowed</code> from the menu. A drop effect the allowed effects do not include gives <q>"none"</q>:
+  <q>No operation allowed, dropping here will cancel the drag-and-drop operation.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">§6.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0">
+        <label class=card>effectAllowed:
+          <select id=allowed><option>all<option>copy<option>link<option>move<option>uninitialized</select></label>
+        <div class=card id=card draggable=true>drag this card onto a zone</div>
+        <div class=zones>
+          <div class=zone id=copy data-effect=copy>copy</div>
+          <div class=zone id=link data-effect=link>link</div>
+          <div class=zone id=move data-effect=move>move</div>
+          <div class=zone id=none data-effect=none>none</div>
+          <div class=zone id=ignore>does not cancel</div>
+        </div>
+      </div>
+      <ol class="pr-log drag-log" data-log="drop dragend" data-fields="target dataTransfer.dropEffect" data-lines=2></ol>
+    </div>
+    <figcaption>With <code>all</code>, drag the card over each zone: the cursor shows a copy (often a plus), a link (an
+    arrow), a move (a plain arrow), and no-drop over <code>none</code> and the last zone. Drop on <code>copy</code>:
+    drop and dragend with <code>dropEffect=copy</code>. Choose <code>move</code> and drop on <code>copy</code>: no
+    drop, and dragend with <code>dropEffect=none</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The card allows the effect chosen in the menu; each zone but the last accepts the drag with its drop effect.
+  document.getElementById("card").addEventListener("dragstart", event => {
+      event.dataTransfer.setData("text/plain", "a card");
+      event.dataTransfer.effectAllowed = document.getElementById("allowed").value;
+  });
+  for (const zone of document.querySelectorAll(".zone[data-effect]")) {
+      for (const type of ["dragenter", "dragover"]) {
+          zone.addEventListener(type, event => {
+              event.dataTransfer.dropEffect = zone.dataset.effect;
+              event.preventDefault();
+          });
+      }
+      zone.addEventListener("drop", event => event.preventDefault());
+  }
+</script>
+<script src=support/drag-log.js></script>
+</body>
+</html>

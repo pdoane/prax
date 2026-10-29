@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Serializing a canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas, img { display: block; outline: 1px dashed #c0392b; }
+  .pair { display: flex; gap: 20px; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.5 Serializing bitmaps to a file</div>
+  <h1>Serializing a canvas</h1>
+  <p class=pr-lede><q>When a user agent is to create a serialization of the bitmap as a file, given a type and an optional
+  quality, it must create an image file in the format given by type.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#serialising-bitmaps-to-a-file">HTML §4.12.5.5</a></span>
+  Each canvas, at the left, is 60 by 40, transparent with a blue square of 20 at (20, 10); at the right is an img showing
+  the file made from it. Edges are dashed red.</p>
+</header>
+<section>
+  <h2>PNG, and types without alpha</h2>
+  <p><q>For image types that do not support an alpha component, the serialized image must be the bitmap image composited
+  onto an opaque black background using the source-over compositing operator.</q> <q>If the user agent does not
+  support the requested type, then it must create the file using the PNG format.</q></p>
+  <figure>
+    <div class=pr-stage><div class=pair><canvas width=60 height=40 data-type="image/png"></canvas><img alt=""></div></div>
+    <figcaption><code>toDataURL()</code>, PNG: the img the same, its transparent part showing the guides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><canvas width=60 height=40 data-type="image/jpeg"></canvas><img alt=""></div></div>
+    <figcaption><code>"image/jpeg"</code>: the blue square on black, where the canvas was transparent.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><canvas width=60 height=40 data-type="image/x-none"></canvas><img alt=""></div></div>
+    <figcaption>A type no browser makes, <code>"image/x-none"</code>: PNG instead, so transparent again.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><canvas width=60 height=40 data-type="image/jpeg" data-blob></canvas><img alt=""></div></div>
+    <figcaption><code>toBlob(…, "image/jpeg")</code>, shown through an object URL: on black, as before.</figcaption>
+  </figure>
+</section>
+<script>
+  for (const canvas of document.querySelectorAll("canvas[data-type]")) {
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#4f81bd";
+    context.fillRect(20, 10, 20, 20);
+    const img = canvas.nextElementSibling;
+    if ("blob" in canvas.dataset)
+      canvas.toBlob(blob => img.src = URL.createObjectURL(blob), canvas.dataset.type);
+    else
+      img.src = canvas.toDataURL(canvas.dataset.type);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: what it clips</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 100px; height: 40px; margin: 10px 40px; overflow: hidden; }
+  .out { width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: what it clips</h1>
+  <p class=pr-lede>A box's overflow clips the positioned descendants whose containing block it is or is inside of. Each
+  dashed box has <code>overflow: hidden</code>, each stage is <code>position: relative</code>, and each blue box is
+  80px wide.</p>
+</header>
+
+<section>
+  <h2>Not boxes positioned past it</h2>
+  <p><q>It affects the clipping of all of the element's content except any descendant elements (and their respective
+  content and descendants) whose containing block is the viewport or an ancestor of the element.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-frame box1" style="position: relative"><div class="pr-a pr-fit out" style="position: absolute; top: 30px; left: 60px">abs</div></div></div>
+    <figcaption>The 100 by 40 dashed box is <code>position: relative</code>, so it is the child's containing block: the
+    child, at 60, 30 in it, is cut to its top left 40 by 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-frame box1"><div class="pr-a pr-fit out" style="position: absolute; top: 40px; left: 100px">abs</div></div></div>
+    <figcaption>The dashed box is not positioned; the child's containing block is the stage, and the child is whole, at
+    100, 40 in the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Through the ancestors in between</h2>
+  <p>Absolutely positioned boxes <q>are not clipped by the overflow of any ancestor between themselves and their
+  containing block</q>. The viewport is the containing block of a fixed box. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-frame" style="position: relative; overflow: hidden; width: 140px; height: 60px; margin: 10px 20px"><div class="pr-frame" style="overflow: hidden; width: 60px; height: 30px; margin: 10px"><div class="pr-a pr-fit" style="position: absolute; top: 20px; left: 40px; width: 120px">abs</div></div></div></div>
+    <figcaption>The outer dashed box, 140 wide, is the containing block; the inner one is in between. The 120px child at
+    40, 20 crosses the inner box's edge whole and is cut at the outer box's: 100px of it is seen.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-frame box1"><div class=pr-parent style="height: 20px"></div><div class="pr-a pr-fit out" style="position: fixed; margin-left: 60px">fixed</div></div></div>
+    <figcaption>A <code>fixed</code> child at its static position, 20px down in the 100px dashed box, moved 60px right
+    by its margin: whole, past the right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

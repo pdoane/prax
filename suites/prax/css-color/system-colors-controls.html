@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System colors of controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0 0; font: 15px/20px "PR Arimo"; }
+  .chip { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; box-sizing: border-box; }
+  .pr-stage button, .pr-stage input { font: 15px "PR Arimo"; margin: 0 0 10px 10px; vertical-align: top; height: 40px; box-sizing: border-box; }
+  .pr-stage input { width: 80px; }
+  .pr-stage mark { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.2 System Colors, controls</div>
+  <h1>System colors of controls</h1>
+  <p class=pr-lede><q>For systems that do not have a particular system UI concept, the specified value should be
+  mapped to the most closely related system color value that exists.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#css-system-colors">CSS Color 4 §6.2</a></span> Their values are the
+  browser's.</p>
+</header>
+
+<section>
+  <h2>The colors of the controls they name</h2>
+  <p><code>ButtonFace</code>: <q>The face background color for push buttons.</q> <code>Field</code>: <q>Background of
+  input fields.</q> <code>Mark</code>: <q>Background of text that has been specially marked (such as by the HTML
+  &lt;mark&gt; element).</q> Each pair is the browser's own control, then a box in the system colors.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide" style="background: Canvas"><button>Button</button><span class=chip style="background: ButtonFace; color: ButtonText; border: 2px solid ButtonBorder">Button</span><input value=Field><span class=chip style="background: Field; color: FieldText; border: 2px solid ButtonBorder">Field</span></div>
+    <figcaption>A <code>button</code> and an <code>input</code>, each beside its system colors: the same background and
+    text. The controls' borders and corners are the browser's. <span class=pr-flag>Safari</span> Its
+    <code>ButtonFace</code> is a mid gray, darker than its button's pale gray face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="background: Canvas"><mark>Mark</mark><span class=chip style="background: Mark; color: MarkText">Mark</span></div>
+    <figcaption>A <code>mark</code> beside <code>Mark</code> and <code>MarkText</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

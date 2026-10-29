@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>infinity, -infinity and NaN</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+  .pr-a { min-height: 20px; }
+  .clip { overflow: hidden; }
+  .z { position: absolute; width: 100px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.7.2 Degenerate Numeric Constants</div>
+  <h1>infinity, -infinity and NaN</h1>
+  <p class=pr-lede><q>These constants are defined mostly to make serialization of infinite/NaN values simpler and more
+  obvious, but can be used to indicate a "largest possible value", since an infinite value gets clamped to the allowed
+  range.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-error-constants">CSS Values and Units 4 §10.7.2</a></span>
+  <q>to get an infinite length, for example, requires an expression like calc(infinity * 1px).</q></p>
+</header>
+
+<section>
+  <h2>Lengths</h2>
+  <figure>
+    <div class="pr-stage clip"><div class="pr-a pr-fit" style="width: calc(infinity * 1px)">A</div></div>
+    <figcaption><code>width: calc(infinity * 1px)</code>: the largest width, past the stage's edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 300px; max-width: calc(infinity * 1px)">A</div></div>
+    <figcaption><code>width: 300px; max-width: calc(infinity * 1px)</code>: no limit, 300px, out of the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(-infinity * 1px)"></div></div>
+    <figcaption><code>width: calc(-infinity * 1px)</code>: clamped to 0, no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(NaN * 1px + 100px)"></div></div>
+    <figcaption><code>calc(NaN * 1px + 100px)</code>: NaN, censored to 0, no bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An integer</h2>
+  <p>Blue A is <code>z-index: calc(infinity)</code>; orange B, after it, is <code>z-index: 2147483647</code>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="height: 80px"><div class="pr-a pr-fit z" style="z-index: calc(infinity); left: 20px; top: 5px">A</div><div class="pr-b pr-fit z" style="z-index: 2147483647; left: 80px; top: 25px">B</div></div>
+    <figcaption>A is clamped to the largest integer supported, B's, and B, later, paints over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

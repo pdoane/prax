@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The symbols and additive-symbols descriptors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style mixed { system: cyclic; symbols: "*" dagger "‡"; suffix: " "; }
+  @counter-style escapes { system: cyclic; symbols: \2020  \2021; suffix: " "; }
+  @counter-style joined { system: cyclic; symbols: \2020 \2021; suffix: " "; }
+  @counter-style pictures { system: cyclic; symbols: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%23d68a3c'/></svg>"); suffix: " "; }
+  @counter-style tally { system: additive; additive-symbols: 5 "卌", 1 "|"; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans JP"; }
+  .pr-stage ol { padding-left: 60px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .big { font-size: 20px; line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.8 Marker characters: the symbols and additive-symbols descriptors</div>
+  <h1>The symbols and additive-symbols descriptors</h1>
+  <p class=pr-lede><q>Counter symbols may be strings, images, or identifiers, and the three types can be mixed in a single
+  descriptor. Counter representations are constructed by concatenating counter symbols together. Identifiers are
+  rendered as strings containing the same characters. Images are rendered as inline replaced elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-symbols">CSS Counter Styles 3 §3.8</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Strings and identifiers; hex escapes</h2>
+  <p><q>Hex escapes, used in several of the counter styles defined in this specification, "eat" the following space</q>,
+  <q>so two spaces must be put after a hex escape to separate it from the following one</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: mixed"><li>1<li>2<li>3</ol></div>
+    <figcaption><code>"*" dagger "‡"</code>: *, dagger, ‡.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: escapes"><li>1<li>2<li>3</ol></div>
+    <figcaption><code>\2020&nbsp;&nbsp;\2021</code>, two spaces: †, ‡, †.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: joined"><li>1<li>2</ol></div>
+    <figcaption><code>\2020 \2021</code>, one space: one symbol, †‡, †‡.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Images, 1em square by default; additive tuples</h2>
+  <p><q>The default object size of an image counter symbol is a 1em by 1em square.</q> <q>Note: The &lt;image&gt;
+  syntax in &lt;symbol&gt; is currently at-risk.</q> Additive tuples pair a weight with a symbol.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text big"><ol style="list-style-type: pictures"><li>one</ol></div>
+    <figcaption>An SVG with a 2:1 ratio and no size, at 20px: 20 by 10, orange. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No image symbols: "1.".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: tally"><li value=3>3<li value=7>7<li value=11>11</ol></div>
+    <figcaption><code>5 "卌", 1 "|"</code>: |||, 卌||, 卌卌|.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>max-lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px 0; background: #f4f5f7; continue: collapse; block-ellipsis: ellipsis; }
+  .stage { height: 110px; }
+  .in { background: #b9cde6; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.2 Forcing a Break After a Set Number of Lines: the max-lines property</div>
+  <h1>max-lines</h1>
+  <p class=pr-lede><code>max-lines: auto || &lt;integer [1,∞]&gt;</code>. <q>Given an integer N, if the box is a
+  line-clamp container, it has an line-based clamp point, set to the first possible clamp point after its Nth
+  descendant in-flow line box.</q> <q>Only line boxes in the same block formatting context are counted: the contents
+  of descendants that establish independent formatting contexts are skipped over while counting line boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#max-lines">CSS Overflow 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Counting lines</h2>
+  <p>Each dashed box is 100px wide, <code>continue: collapse; block-ellipsis: ellipsis</code>, and holds lines of
+  <code>.pr-measure</code> text; blue blocks are its children.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 3">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>3</code>: "line three…" last, 60px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 2">line one<div class=in>block one<br>block two</div></div></div>
+    <figcaption><code>2</code>: the blue block's first line is the second: "block one…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 2">line one<div class=in style="display: flow-root">root one<br>root two</div>line three<br>line four</div></div>
+    <figcaption><code>2</code>: the blue <code>flow-root</code>'s lines are skipped: "line three…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 5">line one<br>line two</div></div>
+    <figcaption><code>5</code>: fewer lines, so no clamp point and no ellipsis.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

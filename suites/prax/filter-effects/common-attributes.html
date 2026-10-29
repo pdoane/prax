@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The common primitive attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="area" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="40" y="10" width="80" height="20"/>
+  </filter>
+  <filter id="zero" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" width="0"/>
+  </filter>
+  <filter id="earlier" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="0" width="40" result="a"/>
+    <feFlood flood-color="#4f81bd" x="60" width="40" result="b"/>
+    <feFlood flood-color="#6aa36a" x="120" width="40"/>
+    <feComposite in="a" in2="b"/>
+  </filter>
+  <filter id="same-name" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="0" width="40" result="a"/>
+    <feFlood flood-color="#4f81bd" x="60" width="40" result="a"/>
+    <feOffset in="a" x="0" width="160"/>
+  </filter>
+  <filter id="forward" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="0" width="40"/>
+    <feOffset in="later" dx="60" x="0" width="160" result="moved"/>
+    <feFlood flood-color="#4f81bd" x="120" width="40" result="later"/>
+    <feComposite in="moved" in2="later"/>
+  </filter>
+  <filter id="alpha" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset in="SourceAlpha" dx="60"/>
+  </filter>
+  <filter id="fill" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset in="FillPaint"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.2 Common filter primitive attributes</div>
+  <h1>The common primitive attributes</h1>
+  <p class=pr-lede><q>The following filter primitive attributes are available for all filter primitives</q>: x, y,
+  width, height, result and in. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#CommonAttributes">Filter Effects 1 §9.2</a></span>
+  Each canvas is 160 by 40, and is its filter's region.</p>
+</header>
+
+<section>
+  <h2>x, y, width and height</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#area)"/></svg></div>
+    <figcaption>An orange flood at <code>x</code> 40, <code>y</code> 10, 80 by 20: x 40 to 120, y 10 to
+    30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#zero)"/></svg></div>
+    <figcaption><code>width</code> 0: <q>A negative or zero value disables the effect of the given filter
+    primitive</q>, so nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>result and in</h2>
+  <p>In these, an orange flood is at x 0 to 40, a blue one at 60 to 100 or 120 to 160. <q>Forward references to
+  results are not allowed, and will be treated as if no result was specified.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#earlier)"/></svg></div>
+    <figcaption>Orange over blue, named, past a green flood at 120: orange and blue, no green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#same-name)"/></svg></div>
+    <figcaption>Both floods named <code>a</code>: <q>the closest preceding</q>, so only blue, x 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#forward)"/></svg></div>
+    <figcaption>An offset of 60 naming a later result: it moves the orange before it, to x 60,
+    beside blue at 120.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The standard inputs</h2>
+  <p>SourceAlpha: <q>only the alpha channel is used</q>, on black. FillPaint is the fill and <q>has conceptually
+  infinite extent</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#alpha)"/></svg></div>
+    <figcaption><code>SourceAlpha</code> of an orange rectangle at x 0 to 40, moved 60: black at
+    x 60 to 100.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#fill)"/></svg></div>
+    <figcaption><code>FillPaint</code> of the same: orange across the whole canvas. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Only the rectangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

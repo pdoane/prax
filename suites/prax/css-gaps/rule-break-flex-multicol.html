@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rule-break in flex and multicol</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; }
+  .f { display: flex; flex-wrap: wrap; gap: 10px; }
+  .f > div { padding: 0; box-sizing: border-box; }
+  .mcw { column-width: 60px; column-height: 20px; column-wrap: wrap; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.2 Break behaviors at intersections, flex and multicol</div>
+  <h1>rule-break in flex and multicol</h1>
+  <p class=pr-lede>For <code>normal</code>, <q>Behavior depends on the type of container.</q> In flex containers it
+  <q>Behaves the same as 'none'.</q> In multicol, <q>On 'column-rule-break', behaves the same as 'intersection'. On
+  'row-rule-break', behaves the same as 'none'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#break">CSS Gaps 1 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Flex</h2>
+  <p>Two lines whose gaps do not line up. <q>each flex line has its own distinct gaps between items</q>, so a column
+  rule never crosses a line. Column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f rules"><div class=pr-a style="width: 60px">A</div><div class=pr-b style="width: 80px">B</div><div class=pr-c style="width: 30px">C</div><div class=pr-d style="width: 90px">D</div><div class=pr-a style="width: 50px">E</div></div></div>
+    <figcaption><code>normal</code>: the black rule runs from edge to edge, past all three column gaps. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f rules" style="row-rule-break: intersection"><div class=pr-a style="width: 60px">A</div><div class=pr-b style="width: 80px">B</div><div class=pr-c style="width: 30px">C</div><div class=pr-d style="width: 90px">D</div><div class=pr-a style="width: 50px">E</div></div></div>
+    <figcaption><code>row-rule-break: intersection</code>: the black rule stops at each column gap that meets it,
+    from above or below, in four pieces. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multicol</h2>
+  <p>Rows of three columns from <code>column-height: 20px; column-wrap: wrap</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="mcw rules"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>normal</code>: the red rules stop at the row gap, as with <code>intersection</code>; the black
+    rule runs edge to edge, as with <code>none</code>. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> One row of columns, red rules only.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="mcw rules" style="rule-break: intersection"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-break: intersection</code>: the black rule stops too, on each side of each column gap.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One row of columns, red rules
+    only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

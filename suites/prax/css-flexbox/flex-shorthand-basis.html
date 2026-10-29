@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex: a basis of 0, of 0% and of auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { padding: 0; border: 0; color: white; }
+  .i1 { background: #4f81bd; }
+  .i2 { background: #d68a3c; }
+  .i3 { background: #6aa36a; }
+  .col { flex-direction: column; width: 40px; }
+  .col > div { min-height: 0; }
+  figure.n { margin-right: 10px; }
+  figure.n figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.1 The flex Shorthand, the flex basis</div>
+  <h1>flex: a basis of 0, of 0% and of auto</h1>
+  <p class=pr-lede>The flex basis is <q>the initial main size of the flex item, before free space is distributed
+  according to the flex factors.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-property">CSS Flexible Box Layout 2 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>“Absolute” and “relative” flex</h2>
+  <p>The spec's figure: <q>the difference between "absolute" flex (starting from a basis of zero) and "relative" flex
+  (starting from a basis of the item's content size). The three items have flex factors of 1, 1, and 2,
+  respectively</q>. Their words are 20px, 40px and 20px wide.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=i1 style="flex: 1">ab</div><div class=i2 style="flex: 1">abcd</div><div class=i3 style="flex: 2">ab</div></div>
+    <figcaption><code>flex: 1</code>, <code>1</code>, <code>2</code>, a basis of <code>0%</code>, 0 of the 200px: the whole 200px is shared 1:1:2,
+    so 50px, 50px and 100px, whatever the words.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=i1 style="flex: 1 auto">ab</div><div class=i2 style="flex: 1 auto">abcd</div><div class=i3 style="flex: 2 auto">ab</div></div>
+    <figcaption><code>flex: 1 auto</code>, <code>1 auto</code>, <code>2 auto</code>: from 20, 40 and 20px, the 120px
+    left is shared 1:1:2, so 50px, 70px and 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>0% where the container's main size is indefinite</h2>
+  <p>A percentage flex basis resolves against the container's inner main size, and <q>if that containing block's
+  size is indefinite, the used value for flex-basis is content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-basis-property">§7.2.3</a></span>
+  Each stage is a column flex container of auto height, so its height is indefinite; its items have
+  <code>min-height: 0</code>, one line and three lines of text. By the letter, the container is as tall as the sum of their contributions, 20 + 60 = 80px, by the Web-compatible algorithm <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-compat">§9.10.1.2</a></span>.</p>
+  <figure class="n pr-erratum">
+    <div class="pr-stage pr-measure col"><div class=i1 style="flex: 1 1 0px">ab</div><div class=i2 style="flex: 1 1 0px">ab ab ab</div></div>
+    <figcaption><code>flex: 1 1 0px</code>: an 80px stage, shared 40px each. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    size the stage to the bases: 0, and the items 0.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-measure col"><div class=i1 style="flex: 1 1 0%">ab</div><div class=i2 style="flex: 1 1 0%">ab ab ab</div></div>
+    <figcaption><code>flex: 1 1 0%</code>: content, so 20px and 60px, with nothing left to share.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-measure col"><div class=i1 style="flex: 1">ab</div><div class=i2 style="flex: 1">ab ab ab</div></div>
+    <figcaption><code>flex: 1</code> is <code>1 1 0%</code>: content, so 20px and 60px, as the figure
+    before.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

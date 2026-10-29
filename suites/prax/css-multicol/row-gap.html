@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>row-gap between rows of columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-height: 40px; column-fill: auto; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 5.2 Gutters Between Rows: the row-gap property</div>
+  <h1>row-gap between rows of columns</h1>
+  <p class=pr-lede><q>In a multi-column formatting context the used value of normal for the row-gap property is 1em. If
+  there is a rule between rows, it will appear in the middle of the gap.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#rg">CSS Multi-column Layout 2 §5.2</a></span>
+  Each stage has <code>columns: 3; column-height: 40px</code> and eight words: two rows.</p>
+</header>
+
+<section>
+  <h2>The gap between rows</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="row-gap: 30px">one two six ten red big fat sun</div>
+    <figcaption><code>row-gap: 30px</code>: the second row from 70px; the stage 110px tall. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rows.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">one two six ten red big fat sun</div>
+    <figcaption><code>normal</code>: 1em, 16.67px; the second row from 56.67px. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rows.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A rule in the middle of the gap</h2>
+  <p>Rules between rows are the gap decorations of <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-decorations">CSS Gaps 1 §3</a></span>,
+  whose pages show them in full.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="row-gap: 30px; row-rule: 2px solid #2c5a8f">one two six ten red big fat sun</div>
+    <figcaption><code>row-rule: 2px solid</code>: a blue rule at 55px, in the middle of the 30px gap; Chrome draws
+    it under the first column, the one with content in both rows, as CSS Gaps 1's segments decide. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rows, and no rule.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

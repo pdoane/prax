@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mix-blend-mode inside a stacking context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { height: 80px; }
+  .body { position: absolute; left: 10px; top: 10px; width: 180px; height: 60px; background: #00ff00; }
+  .div { width: 90px; height: 40px; margin: 10px; background: #ff0000; }
+  .div img { display: block; width: 80px; height: 40px; margin-left: 50px; mix-blend-mode: difference; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.1 The mix-blend-mode property</div>
+  <h1>mix-blend-mode inside a stacking context</h1>
+  <p class=pr-lede>The section's third example: <q>the opacity on the &lt;div&gt; element is causing the creation of a
+  stacking context. This causes the creation of a new group so the image doesn't blend with the color of the
+  body.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#mix-blend-mode">Compositing and Blending 2 §3.4.1</a></span>
+  In each stage a lime “body” holds a red <code>div</code> 90 by 40 and, in it, the flag 80 by 40 from x 70 with
+  <code>mix-blend-mode: difference</code>, half over the red and half past it.</p>
+</header>
+
+<section>
+  <h2>With and without the group</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=body><div class=div style="opacity: 0.99"><img src="../shared/resources/flag-40x20.png" alt=""></div></div></div>
+    <figcaption><code>opacity: 0.99</code> on the <code>div</code>: over the red, the flag's difference with red, blue
+    <code>#b081bd</code> above green <code>#95a36a</code>; past the red, the flag as it is, blending with the group's
+    transparent start, not the lime.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=body><div class=div><img src="../shared/resources/flag-40x20.png" alt=""></div></div></div>
+    <figcaption>No <code>opacity</code>: over the red the same; past it, the flag's difference with lime, orange
+    <code>#d6753c</code> above purple <code>#8ebbad</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

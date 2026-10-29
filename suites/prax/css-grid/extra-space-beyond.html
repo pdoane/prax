@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributing extra space: beyond the limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .s { grid-column: span 2; background: #b9cde6; }
+  .c { background: #f6d7b4; }
+  .m1 { height: 10px; background: #d68a3c; }
+  .m2 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5.1 Distributing Extra Space Across Spanned Tracks, beyond limits</div>
+  <h1>Distributing extra space: beyond the limits</h1>
+  <p class=pr-lede><q>Distribute space beyond limits: If extra space remains at this point, unfreeze and continue to
+  distribute space to the item-incurred increase of…</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#extra-space">CSS Grid Layout 2 §12.5.1</a></span>
+  Blue spans two columns; bars under it show them.</p>
+</header>
+
+<section>
+  <h2>Into base sizes</h2>
+  <p>For minimum and min-content contributions, <q>any affected track that happens to also have an intrinsic max track
+  sizing function; if there are no such tracks, then all affected tracks.</q> Blue is "abcdef", 60px; each grid is
+  10px wide (dashed), so its columns are their base sizes.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: minmax(min-content, 10px) minmax(min-content, max-content); width: 10px"><div class=s>abcdef</div><div class=m1></div><div class=c>ab</div></div></div>
+    <figcaption>"ab" makes the second column's growth limit 20px. At 10 and 20px, the other 30px go only to the
+    second, with its intrinsic maximum: 10 and 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: minmax(min-content, 10px) minmax(min-content, 20px); width: 10px"><div class=s>abcdef</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption>Both maximums fixed: at 10 and 20px, the other 30px go to both equally: 25 and 35px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Into growth limits, and fit-content()</h2>
+  <p>For growth limits, <q>any affected track that has an intrinsic max track sizing function.</q> A <code>fit-content()</code> track is <q>treated as max-content until the track
+  reaches the limit specified as the fit-content() argument</q>. Blue is "abc def gh", 30px min-content, 100px max-content; in 150px, the columns grow to their
+  growth limits <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grow-tracks">§12.6</a></span>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(20px) auto"><div class=s>abc def gh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>fit-content(20px) auto</code>: 15px each for the 30px; of the 70px more, the first takes 5px,
+    to its argument: 20 and 80px. <span class=pr-flag>Safari</span> 20 and 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto"><div class=s>abc def gh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>auto auto</code>, for comparison: 50px each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

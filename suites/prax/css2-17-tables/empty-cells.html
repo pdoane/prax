@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Empty cells: the empty-cells property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #f2e394; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 4px; box-sizing: border-box; background: #4f81bd; border: 2px solid #1f2430; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1.1 Borders and Backgrounds around empty cells: the 'empty-cells' property</div>
+  <h1>Empty cells: the empty-cells property</h1>
+  <p class=pr-lede><code>empty-cells</code> takes <code>show | hide</code>. Initial <code>show</code>, inherited, and it
+  applies to <code>table-cell</code> elements. Tables are yellow with <code>border-spacing: 10px</code>; cells are blue
+  with a 2px black border.</p>
+</header>
+
+<section>
+  <h2>show and hide</h2>
+  <p><q>In the separated borders model, this property controls the rendering of borders and backgrounds around cells
+  that have no visible content.</q> <code>show</code>: <q>borders and backgrounds are drawn around/behind empty cells
+  (like normal cells).</q> <code>hide</code>: <q>no borders or backgrounds are drawn around/behind empty cells</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#empty-cells">CSS 2 §17.6.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td><td>3</table></div>
+    <figcaption>No declaration, the initial <code>show</code>: the empty middle cell has its border and
+    background.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="empty-cells: hide"><tr><td>1<td><td>3</table></div>
+    <figcaption><code>hide</code> on the table, inherited by its cells: the middle cell is yellow, no border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

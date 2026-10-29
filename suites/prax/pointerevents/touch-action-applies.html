@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where touch-action applies</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; line-height: 20px; }
+  .scroller .content { height: 300px; padding: 10px; }
+  .inline { touch-action: none; background: #b9cde6; padding: 4px 0; }
+  .block { display: block; touch-action: none; background: #b9cde6; margin-top: 10px; }
+  iframe { display: block; width: 258px; height: 80px; margin: 10px 20px; border: 1px solid var(--pr-stage-border);
+           touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.1 The touch-action CSS property</div>
+  <h1>Where touch-action applies</h1>
+  <p class=pr-lede>Applies to: <q>all elements except: non-replaced inline elements, table rows, row groups, table columns,
+  and column groups</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-touch-action-css-property">Pointer Events §7.1</a></span></p>
+</header>
+<section>
+  <h2>Not on an inline span</h2>
+  <p><q>For elements not supported by default, such as &lt;span&gt; which is a non-replaced inline element, authors
+  can set the display CSS property to a value, such as block, that supports width and height.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller><div class=content>
+        A <span class=inline>span, touch-action: none</span> in a line.
+        <span class=block>the same span, display: block</span>
+      </div></div>
+    </div>
+    <figcaption>Needs a touch screen. Both blue spans have <code>touch-action: none</code>. Drag up on the inline
+    one: the box scrolls, as if it had none. Drag up on the block one: it does not.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not into a frame</h2>
+  <p><q>touch-action does not apply/cascade through to embedded browsing contexts. For instance, even applying
+  touch-action to an &lt;iframe&gt; won't have any effect on the behavior of direct manipulation interactions for
+  panning and zooming within the &lt;iframe&gt; itself.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-touch-action-css-property">§7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <iframe srcdoc="<body style='margin: 0; font: 12px sans-serif; background: #f6d7b4'><p style='height: 300px; margin: 0; padding: 6px'>A frame whose iframe element has touch-action: none. Drag up here.</p></body>"></iframe>
+    </div>
+    <figcaption>Needs a touch screen. The <code>iframe</code> element has <code>touch-action: none</code>; its
+    document does not. Drag up inside it: the frame's document scrolls.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

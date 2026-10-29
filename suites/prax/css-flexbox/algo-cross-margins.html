@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 13: resolve cross-axis auto margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; height: 60px; }
+  .pr-stage > div { width: 40px; }
+  figure.o { margin: 0 10px 12px 44px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.6 Cross-Axis Alignment, step 13</div>
+  <h1>Step 13: resolve cross-axis auto margins</h1>
+  <p class=pr-lede><q>If its outer cross size (treating those auto margins as zero) is less than the cross size of its
+  flex line, distribute the difference in those sizes equally to the auto margins.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-alignment">CSS Flexible Box Layout 2 §9.6</a></span></p>
+</header>
+
+<section>
+  <h2>The difference, shared</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="margin-top: auto">A</div><div class="pr-b pr-fit" style="margin: auto 0">B</div><div class="pr-c pr-fit" style="margin: 10px 0 auto">C</div></div>
+    <figcaption>A stage 60px tall, items 20px. A, <code>margin-top: auto</code>: A at 40px. B, both: 20px each, B at 20px. C, <code>margin: 10px 0
+    auto</code>: C at 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-direction: column; align-items: flex-end; height: auto"><div class="pr-a pr-fit" style="margin-right: auto">A</div><div class="pr-b pr-fit" style="margin: 0 auto">B</div></div>
+    <figcaption><code>column</code>, <code>align-items: flex-end</code>: the margins win. A's
+    <code>margin-right: auto</code> leaves it at 0; B's two margins center it, 80 to 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Too big for the line</h2>
+  <p><q>Otherwise, if the block-start or inline-start margin (whichever is in the cross axis) is auto, set it to zero.
+  Set the opposite margin so that the outer cross size of the item equals the cross size of its flex line.</q></p>
+  <figure>
+    <div class=pr-stage style="height: 20px; margin-bottom: 30px"><div class="pr-a pr-fit" style="margin: auto 0; height: 40px">A</div><div class="pr-b pr-fit" style="align-self: center; height: 40px">B</div></div>
+    <figcaption>A stage 20px tall. A, 40px tall, <code>margin: auto 0</code>: top margin zero, A from 0 to 40px.
+    B, <code>align-self: center</code>, for contrast: −10 to 30px.</figcaption>
+  </figure>
+  <figure class=o>
+    <div class="pr-stage pr-narrow" style="flex-direction: column; height: auto; direction: rtl"><div class="pr-a pr-fit" style="margin: 0 auto; width: 140px">A</div></div>
+    <figcaption><code>column</code>, <code>rtl</code>: inline-start is the right. A, 140px wide: from −40 to
+    100px.</figcaption>
+  </figure>
+  <figure class=o>
+    <div class=pr-stage style="writing-mode: vertical-rl; width: 20px; height: 60px"><div class="pr-a pr-fit" style="margin: 0 auto; width: 40px; height: 40px">A</div></div>
+    <figcaption><code>vertical-rl</code>, a stage 20px wide; A, 40px wide, <code>margin: 0 auto</code>: block-start is
+    the right, so A is from −20 to 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

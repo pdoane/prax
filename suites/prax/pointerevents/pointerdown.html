@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerdown</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.3 pointerdown</div>
+  <h1>pointerdown</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointerdown when a pointer enters the active
+  buttons state.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerdown">Pointer Events §3.3.3</a></span></p>
+</header>
+<section>
+  <h2>Entering the active buttons state</h2>
+  <p><q>For mouse, this is when the device transitions from no buttons depressed to at least one button depressed. For
+  touch, this is when physical contact is made with the digitizer. For pen, this is when the pen either makes physical
+  contact with the digitizer without any button depressed, or transitions from no buttons depressed to at least one
+  button depressed while hovering.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerdown">§3.3.3</a></span>
+  The page cancels the context menu over the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press here with what you have.</div>
+      <ol class=pr-log data-log="pointerdown pointerup" data-fields="pointerType button buttons" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Press any mouse button: <code>pointerdown</code>. Touch the box: <code>pointerdown</code>, with
+    <code>buttons=1</code>. Hover a pen above it without touching and press its barrel button:
+    <code>pointerdown</code> with <code>button=2 buttons=2</code>; then touch the tip down: no second one.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Canceling it</h2>
+  <p><q>Authors can prevent the firing of certain compatibility mouse events by canceling the pointerdown event (if the
+  isPrimary property is true).</q> <q>Note, however, that this does not prevent the mouseover, mouseenter, mouseout,
+  or mouseleave events from firing.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerdown">§3.3.3</a></span>
+  A listener cancels <code>pointerdown</code> on the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=canceled>Move in, click, move out.</div>
+      <ol class=pr-log data-log="pointerdown mouseover mousedown mouseup click mouseout" data-on="#canceled" data-lines=4></ol>
+    </div>
+    <figcaption>Move the mouse into the box, click and move out: <code>mouseover</code>, <code>pointerdown</code>,
+    <code>click</code>, <code>mouseout</code>; no <code>mousedown</code> or <code>mouseup</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu from opening over the first box, and cancels pointerdown on the second.
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+  document.getElementById("canceled").addEventListener("pointerdown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

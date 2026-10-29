@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: padding and borders</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: padding and borders</h1>
+  <p class=pr-lede>Margins adjoin only if no line boxes, no clearance, no padding and no border separate them, and both boxes are in flow in one block formatting context. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Padding and borders</h2>
+  <p>Even 1px of padding or border between a parent and its first child keeps their margins apart. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption>Nothing between: one 40px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; padding-top: 1px"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>padding-top: 1px</code>: 20 + 1 + 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; border-top: 1px solid #6b7381"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>border-top: 1px</code>: 20 + 1 + 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin-bottom: 20px; padding-bottom: 1px"><div class=pr-b style="margin-bottom: 40px">child: mb 40</div></div><div class=pr-a>anchor</div></div>
+    <figcaption>At the bottom, <code>padding-bottom: 1px</code>: 40 + 1 + 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<!--
+  A Lottie animation played by Skottie, Skia's Lottie player, from CanvasKit, Skia's WebAssembly
+  build, drawing into a canvas with Skia's CPU rasterizer. It is the reference of the skottie
+  suite: skottie.html?src=<the animation's URL>. Skottie reads no system fonts, so the page hands
+  it the fonts that the suite's settings list (suites/skottie/render.txt), which the engine sets
+  the suite's text in, and Skottie matches the animation's fonts among them as it matches any.
+  window.prSetFrame, prSetTime, prPlay and prStats behave as in player.html.
+
+  A page loaded from a file can fetch nothing from a file. So CanvasKit's WebAssembly, the
+  animation, its images and its fonts are read with XMLHttpRequest, which a file may use for the
+  files beside it.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #fff; overflow: hidden; }
+  #player { width: 100vw; height: 100vh; display: block; }
+</style>
+<script src="../../third_party/canvaskit/canvaskit.js"></script>
+</head>
+<body>
+<canvas id="player"></canvas>
+<script>
+  function read(url, type) {
+    return new Promise(function (resolve, reject) {
+      var request = new XMLHttpRequest();
+      request.open('GET', new URL(url, location.href).href);
+      request.responseType = type;
+      request.onload = function () { resolve(request.response); };
+      request.onerror = function () { reject(new Error('cannot read ' + url)); };
+      request.send();
+    });
+  }
+
+  var src = new URL(new URLSearchParams(location.search).get('src'), location.href);
+  // The font files that the suite's settings list, each relative to the repository's root.
+  function fonts() {
+    return read('../../suites/skottie/render.txt', 'text').then(function (settings) {
+      return settings.split('\n').map(function (line) {
+        var words = line.split('#')[0].trim().split(/\s+/);
+        return words[0] === 'font' ? '../../' + words.slice(1).join(' ') : null;
+      }).filter(Boolean);
+    });
+  }
+  // The animation's images that are files beside it, by the name that Skottie asks for, and the
+  // suite's fonts, which CanvasKit gives Skottie's font manager. An image whose data is in the
+  // animation is Skottie's to read.
+  function assets(json, fontFiles) {
+    var names = [];
+    var urls = [];
+    (json.assets || []).forEach(function (asset) {
+      if (asset.p && !asset.e && !String(asset.p).startsWith('data:')) {
+        names.push(asset.p);
+        urls.push(new URL((asset.u || '') + asset.p, src).href);
+      }
+    });
+    fontFiles.forEach(function (file) {
+      names.push(file);
+      urls.push(new URL(file, location.href).href);
+    });
+    return Promise.all(urls.map(function (url) {
+      return read(url, 'arraybuffer').catch(function () { return null; });
+    })).then(function (data) {
+      var map = {};
+      names.forEach(function (name, i) {
+        if (data[i])
+          map[name] = data[i];
+      });
+      return map;
+    });
+  }
+
+  var canvas = document.getElementById('player');
+  var surface = null;
+  // The frames that the page waits for before a capture: more after the canvas takes a new size, whose first
+  // drawing reaches the screen later.
+  var settling = 2;
+  var ready = Promise.all([
+    read('../../third_party/canvaskit/canvaskit.wasm', 'arraybuffer'),
+    read(src.href, 'text'),
+    fonts(),
+  ]).then(function (loaded) {
+    return CanvasKitInit({ wasmBinary: loaded[0] }).then(function (kit) {
+      var json = JSON.parse(loaded[1]);
+      return assets(json, loaded[2]).then(function (map) {
+        var animation = kit.MakeManagedAnimation(loaded[1], map);
+        if (!animation)
+          throw new Error('Skottie cannot read ' + src.href);
+        return { kit: kit, animation: animation };
+      });
+    });
+  });
+
+  // Draws the frame, counted from the in point, fitted to the canvas as xMidYMid meet, which
+  // Skottie's render does for a destination of the canvas's size.
+  function draw(player, frame) {
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    if (!surface || canvas.width !== width || canvas.height !== height) {
+      if (surface)
+        surface.delete();
+      canvas.width = width;
+      canvas.height = height;
+      surface = player.kit.MakeSWCanvasSurface(canvas);
+      settling = 10;
+    }
+    var target = surface.getCanvas();
+    target.clear(player.kit.WHITE);
+    player.animation.seekFrame(frame);
+    player.animation.render(target, player.kit.LTRBRect(0, 0, width, height));
+    surface.flush();
+  }
+  function length(player) {
+    return player.animation.duration() * player.animation.fps();
+  }
+  function frameAt(player, seconds) {
+    var frames = length(player);
+    return frames > 0 ? (seconds * player.animation.fps()) % frames : 0;
+  }
+  // The viewer's clock, which the page follows while it plays, as player.html does.
+  var clock = null;
+  var drawn = 0;
+  var current = 0;
+  function follow(player) {
+    if (clock === null)
+      return;
+    current = frameAt(player, clock.seconds + (performance.now() - clock.at) / 1000);
+    draw(player, current);
+    drawn += 1;
+    requestAnimationFrame(function () { follow(player); });
+  }
+  // Resolves once the page has presented what was drawn, which a capture then shows whole.
+  function presented() {
+    var frames = settling;
+    settling = 2;
+    return new Promise(function (resolve) {
+      function wait() {
+        if (--frames <= 0)
+          resolve();
+        else
+          requestAnimationFrame(wait);
+      }
+      requestAnimationFrame(wait);
+    });
+  }
+  window.prSetFrame = function (frame) {
+    clock = null;
+    return ready.then(function (player) {
+      current = frame;
+      draw(player, frame);
+      return presented().then(function () { return frame; });
+    });
+  };
+  window.prSetTime = function (seconds) {
+    return ready.then(function (player) {
+      return window.prSetFrame(frameAt(player, seconds));
+    });
+  };
+  // Plays from `seconds`, starting now, drawing the viewer's time at each of the page's frames.
+  window.prPlay = function (seconds) {
+    var told = { seconds: seconds, at: performance.now() };
+    return ready.then(function (player) {
+      var following = clock !== null;
+      clock = told;
+      if (!following)
+        requestAnimationFrame(function () { follow(player); });
+    });
+  };
+  // The frames drawn per second since the last call, and the frame shown now.
+  var since = performance.now();
+  window.prStats = function () {
+    var now = performance.now();
+    var fps = now > since ? drawn * 1000 / (now - since) : 0;
+    drawn = 0;
+    since = now;
+    return { fps: fps, frame: current };
+  };
+</script>
+</body>
+</html>

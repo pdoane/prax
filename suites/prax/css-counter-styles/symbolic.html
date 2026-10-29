@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The symbolic system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style footnote { system: symbolic; symbols: '*' ⁑ † ‡; suffix: " "; }
+  @counter-style upper-alpha-legal { system: symbolic; symbols: A B C D E F G H I J K L M N O P Q R S T U V W X Y Z; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.3 Repeating Symbols: the symbolic system</div>
+  <h1>The symbolic system</h1>
+  <p class=pr-lede><q>The symbolic counter system cycles repeatedly through its provided symbols, doubling, tripling, etc.
+  the symbols on each successive pass through the list.</q> <q>This system is defined only over strictly positive
+  counter values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#symbolic-system">CSS Counter Styles 3 §3.1.3</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Doubled on the second pass</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: footnote"><li>One<li>Two<li>Three<li>Four<li>Five<li>Six</ol></div>
+    <figcaption>The example's <code>footnote</code>: *, ⁑, †, ‡, then ** and ⁑⁑.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: upper-alpha-legal" start=25><li>25<li>26<li>27<li>28<li value=53>53</ol></div>
+    <figcaption><code>upper-alpha-legal</code>: Y, Z, AA, BB, and at 53, AAA, where <code>upper-alpha</code> has BA.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero and below fall back</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: footnote" start=-1><li>-1<li>0<li>1</ol></div>
+    <figcaption>From -1: "-1", "0" in <code>decimal</code>, then "*".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

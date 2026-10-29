@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: justify</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: justify</h1>
+  <p class=pr-lede>Every stage here has <code>text-align: justify</code>. <q>The actual justification algorithm used
+  depends on the user-agent and the language/script of the text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+</header>
+
+<section>
+  <h2>Else aligned as for the initial value</h2>
+  <p>A line that cannot be made flush, such as the last line of a block or a line ended by a forced break, is
+  <q>aligned as for the initial value</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify">one two three<br>four five six seven eight nine ten eleven twelve</div>
+    <figcaption>"one two three" ends at a forced break, so it is not stretched and sits at the left. The full line
+    after it reaches both edges, and the last line sits at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify; direction: rtl">one two three<br>four five six seven eight nine ten eleven twelve</div>
+    <figcaption>The same with <code>direction: rtl</code>: the lines that are not stretched sit at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

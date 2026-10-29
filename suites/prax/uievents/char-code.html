@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>charCode</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.2.1 Interface KeyboardEvent (supplemental)</div>
+  <h1>charCode</h1>
+  <p class=pr-lede><q>charCode holds a character value, for keypress events which generate character input. The value
+  is the Unicode reference number (code point) of that character</q>. The section is informative.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-interface-KeyboardEvent">UI Events §7.2.1</a></span></p>
+</header>
+<section>
+  <h2>Only on keypress</h2>
+  <p><q>For keydown or keyup events, the value of charCode is 0.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-interface-KeyboardEvent">§7.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keypress keyup" data-fields="key charCode" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Click the box and press A: keydown <code>charCode=0</code>, keypress <code>charCode=97</code>, the code
+    point of <code>a</code>, keyup <code>charCode=0</code>. Hold Shift and press A: keypress
+    <code>charCode=65</code>. On a French layout, press the 2 key, which types <code>é</code>: keypress
+    <code>charCode=233</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

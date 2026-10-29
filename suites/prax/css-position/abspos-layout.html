@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The absolute positioning layout model</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ab { position: absolute; background: rgba(214, 138, 60, 0.7); outline: 1px solid #9c5f22; outline-offset: -1px; }
+  .imcb { position: absolute; outline: 1px dashed #6b7381; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 80px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4 Absolute Positioning Layout Model</div>
+  <h1>The absolute positioning layout model</h1>
+  <p class=pr-lede>Absolute positioning <q>lays it out in its containing block (after the final size of the containing
+  block has been determined)</q>: the inset-modified containing block, then the size, then auto margins, then
+  alignment. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-layout">CSS Positioned Layout 3 §4</a></span>
+  Each stage is relative, 160 by 80, the containing block; where there is a dashed rectangle, it is an empty box with
+  the orange box's insets, which fills the inset-modified containing block.</p>
+</header>
+
+<section>
+  <h2>Percentages of the containing block, not of the room</h2>
+  <p><q>Next, its width and height are resolved against this definite available space, as its preferred size capped by
+  its maximum size (if any), floored by its minimum size.</q> <q>Percentages, however, are resolved against the
+  absolute-position containing block size.</q> The orange box has <code>inset: 10px 40px</code>, room 80 by 60.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 40px"></div><div class=ab style="inset: 10px 40px; width: 50%; height: 50%"></div></div>
+    <figcaption><code>width: 50%; height: 50%</code>: half of 160 by 80, so 80 by 40, not half the
+    room.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 40px"></div><div class=ab style="inset: 10px 40px; max-width: 25%; max-height: 25%"></div></div>
+    <figcaption>Sizes <code>auto</code>, <code>max-width: 25%; max-height: 25%</code>: it would fill the room, but
+    is capped at 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 40px"></div><div class=ab style="inset: 10px 40px; width: 20px; min-width: 75%"></div></div>
+    <figcaption><code>width: 20px; min-width: 75%</code>: floored at 120, wider than the room; it starts at its
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After the containing block's final size</h2>
+  <p>The dashed box is relative, with a height of <code>auto</code>; it holds an orange box with <code>bottom: 0</code>,
+  and then three lines of text, which give it its height.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame pr-measure" style="position: relative"><div class=ab style="bottom: 0; right: 0; width: 40px; height: 20px"></div>one<br>two<br>three</div></div>
+    <figcaption>The box is at the bottom of the dashed box, 60px tall with its text, though the box comes before the
+    text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

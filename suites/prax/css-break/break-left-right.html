@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>left and right</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.2 Page Break Values</div>
+  <h1>left and right</h1>
+  <p class=pr-lede><code>left</code>: <q>Force one or two page breaks before/after the principal box so that the next page is formatted as a left page.</q> <code>right</code>: <q>Force one or two page breaks before/after the principal box so that the next page is formatted as a right page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></span>
+  B has the value. A left-to-right document starts on a right page, a right-to-left one on a left page. <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#progression">CSS Paged Media 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Left to right, then right to left (<code>dir=rtl</code> on the root)</h2>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: right'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Left to right, <code>right</code>: the second page would be a left page, so it is left blank; A on the first page, B and C on the third. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No blank page: B and C on the second.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: left'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Left to right, <code>left</code>: one break. A on the first page, B and C on the second, a left page.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><html dir=rtl><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: right'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Right to left, <code>right</code>: the second page is a right page: A on the first, B and C on the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html dir=rtl><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: left'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Right to left, <code>left</code>: the second page is left blank; B and C on the third, a left page. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No blank page: B and C on the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

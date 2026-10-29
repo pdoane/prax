@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-repeat: tiling the mask</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; mask-image: url(support/disc.svg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.3 Tiling Mask Images: the mask-repeat property</div>
+  <h1>mask-repeat: tiling the mask</h1>
+  <p class=pr-lede><q>Specifies how mask layer images are tiled after they have been sized and positioned.</q> <q>See
+  background-repeat property for the definitions of the property values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-repeat">CSS Masking 1 §7.3</a></span>
+  Each box is 100 by 70 at 10, 10; its mask is a 20px black disc. css-backgrounds'
+  <a href="../css-backgrounds/background-repeat-space.html">space</a> and
+  <a href="../css-backgrounds/background-repeat-round.html">round</a> pages show each value's tiling.</p>
+</header>
+
+<section>
+  <h2>Tiles over the border box, and nothing between them</h2>
+  <p>The space between tiles <q>is treated as a transparent black mask.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#MaskValues">§7.10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj></div></div>
+    <figcaption>The initial <code>repeat</code>: discs from the border's corner at 10, 10, five across and three and
+    a half down, cut at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-repeat: space"></div></div>
+    <figcaption><code>space</code>: whole discs only, five across with none between, three down 5px
+    apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-repeat: no-repeat"></div></div>
+    <figcaption><code>no-repeat</code>: one disc at 10, 10, the rest of the box gone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

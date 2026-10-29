@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanning items, by increasing span</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; width: 10px; }
+  .p { background: #b9cde6; }
+  .q { background: #f6d7b4; }
+  .m1 { height: 10px; background: #4f81bd; }
+  .m2 { height: 10px; background: #d68a3c; }
+  .m3 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 3, by span</div>
+  <h1>Spanning items, by increasing span</h1>
+  <p class=pr-lede><q>Repeat incrementally for items with greater spans until all items have been considered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Each grid is 10px wide (dashed), with <code>auto</code> columns, so each column is its base size. An empty column
+  has an infinite growth limit; an empty item, as the bars below, would make it 0.</p>
+</header>
+
+<section>
+  <h2>Span 1, then span 2</h2>
+  <p>The single-span items come first <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">§12.5</a></span>, step 2.
+  Blue "abcdef", 60px, is alone in the first column; orange "abcdefgh", 80px, spans both.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto"><div class=p>abcdef</div><div class=q style="grid-column: span 2">abcdefgh</div></div></div>
+    <figcaption>60px for blue, then the 20px orange lacks to the second column: 60 and 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Span 2, then span 3</h2>
+  <p>Three columns. Blue "abcdefghi", 90px, spans all three; orange "abcdefgh", 80px, spans the last two, and is
+  placed after blue. Bars show the last two columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto auto"><div class=p style="grid-column: 1 / span 3">abcdefghi</div><div class=q style="grid-column: 2 / span 2">abcdefgh</div><div class=m2 style="grid-column: 2"></div><div class=m3></div></div></div>
+    <figcaption>Orange first: 40px each to the second and third columns. Then blue lacks 10px, and those two are at
+    their growth limits: 10, 40 and 40px, blue 90px. Taking blue first would give 30, 40 and 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

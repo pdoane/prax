@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The inset properties: lengths and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 40px; height: 20px; }
+  .scroller { overflow: hidden; }
+  .pr-stage.pad { width: 160px; height: 60px; padding: 20px; }
+  .content { height: 300px; }
+  .st { position: sticky; width: 60px; height: 20px; margin-left: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.1 Box Insets: the top, right, bottom, left, inset-block-start, inset-inline-start, inset-block-end, and inset-inline-end properties</div>
+  <h1>The inset properties: lengths and percentages</h1>
+  <p class=pr-lede><q>These inset properties represent an inward “inset” on the corresponding side of the box</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#insets">CSS Positioned Layout 3 §3.1</a></span>
+  Each orange box is 40 by 20. CSS 2's pages show lengths and percentages of a containing block without
+  padding.</p>
+</header>
+
+<section>
+  <h2>Percentages</h2>
+  <p><code>&lt;percentage&gt;</code>: <q>The inset is a percentage relative to the containing block’s size in the
+  corresponding axis (e.g. width for left or right, height for top and bottom).</q></p>
+  <figure>
+    <div class="pr-stage pr-cb pad"><div class="pr-b pr-fit abs" style="top: 50%; left: 50%"></div></div>
+    <figcaption>The stage has 20px of padding; its padding box, 200 by 100, is the containing block. <code>top:
+    50%; left: 50%</code>: the box's corner at its center, 100, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pad"><div class="pr-b pr-fit abs" style="bottom: -25%; right: 25%"></div></div>
+    <figcaption><code>bottom: -25%; right: 25%</code>: 25px past the bottom of the padding box, and 50px in from its
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sticky percentages: the scrollport</h2>
+  <p><q>For sticky positioned boxes, the inset is instead relative to the relevant scrollport’s size.</q> The stage
+  scrolls, is scrolled 100px, and holds a block 300px tall, the box's containing block.</p>
+  <figure>
+    <div class="pr-stage pr-cb scroller" id=sc style="height: 80px"><div class=content><div class="pr-b st" style="top: 50%"></div></div></div>
+    <figcaption><code>position: sticky; top: 50%</code>: half the scrollport's 80px, not of the 300px block: the box
+    40px down the stage.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("sc").scrollTop = 100;</script>
+</body>
+</html>

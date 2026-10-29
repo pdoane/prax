@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(display-p3 …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.4 The Predefined Display P3 Color Space: the display-p3 keyword</div>
+  <h1>color(display-p3 …)</h1>
+  <p class=pr-lede><q>It uses the same primary chromaticities as [DCI-P3], but with a D65 whitepoint, and the same transfer curve
+  as sRGB.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-display-p3">CSS Color 4
+  §10.4</a></span></p>
+</header>
+
+<section>
+  <h2>Inside the sRGB gamut</h2>
+  <p>Each pair is the Display P3 color, then the <code>rgb()</code> it converts to.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(display-p3 0.6 0.4 0.2)"></div><div class=sw style="background: rgb(63.5% 38.9% 15%)"></div></div>
+    <figcaption><code>color(display-p3 0.6 0.4 0.2)</code> beside <code>rgb(63.5% 38.9% 15%)</code>: one brown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(display-p3 1 1 1)"></div><div class=sw style="background: white"></div><div class=sw style="background: color(display-p3 0 0 0)"></div><div class=sw style="background: black"></div></div>
+    <figcaption>White and black are the same in both spaces.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the sRGB gamut</h2>
+  <p>The stills are taken on an sRGB display, where this color is out of gamut: <q>for display,
+  they are css gamut mapped using a relative colorimetric intent</q> (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>), at constant OkLCh lightness and hue, its
+  chroma reduced.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(display-p3 0 1 0)"></div><div class=sw style="background: rgb(0% 98.6% 16%)"></div></div>
+    <figcaption><code>color(display-p3 0 1 0)</code>, P3's green, mapped, beside <code>rgb(0% 98.6% 16%)</code>: one vivid
+    green. The browsers clip it to <code>rgb(0% 100% 0%)</code>, which is within a just noticeable difference of the
+    mapped color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Corner shaping: the inner curves</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 20px; margin: 10px; padding: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3 Corners, their shape</div>
+  <h1>Corner shaping: the inner curves</h1>
+  <p class=pr-lede><q>The padding edge (inner border) radius is the outer border radius minus the corresponding border
+  thickness. In the case where this results in a negative value, the inner radius is zero.</q> <q>Likewise the content
+  edge radius is the padding edge radius minus the corresponding padding, or if that is negative, zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corners">CSS Borders and Box Decorations 4 §3</a></span>
+  Each box has a 10px blue border and 10px of padding; its orange background shows the area its clip names.</p>
+</header>
+
+<section>
+  <h2>Each edge 10px less round</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 30px; background-clip: padding-box"></div></div>
+    <figcaption><code>30px</code>, <code>padding-box</code>: the padding edge's corners have a 20px radius.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 30px; background-clip: content-box; border-color: rgba(44, 90, 143, 0.3)"></div></div>
+    <figcaption><code>content-box</code>, the border faint: the content box's corners have a 10px radius.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 8px; background-clip: padding-box"></div></div>
+    <figcaption><code>8px</code>, less than the border: the padding edge is square.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Thicknesses interpolated round the curve</h2>
+  <p><q>when two adjoining borders are of different thicknesses the corner will show a smooth transition between the
+  thicker and thinner borders.</q> <q>All border styles (solid, dotted, inset, etc.) follow the curve of the
+  border.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 25px; border-width: 4px 20px; padding: 0; height: 40px"></div></div>
+    <figcaption>4px top and bottom, 20px sides, radius 25px: the border thickens smoothly round each corner.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 30px; border-style: dotted"></div></div>
+    <figcaption><code>dotted</code>: the dots run round the curves. <span class=pr-flag>Safari</span> Square dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 30px; border-style: double"></div></div>
+    <figcaption><code>double</code>: both lines follow the curves.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

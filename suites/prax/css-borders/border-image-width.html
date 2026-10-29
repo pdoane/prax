@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-image-width: the regions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f4f5f7; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>") 10 fill; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.3 Drawing Areas: the border-image-width property</div>
+  <h1>border-image-width: the regions</h1>
+  <p class=pr-lede><q>The four values of 'border-image-width' specify offsets that are used to divide the border image
+  area into nine regions. The offsets represent inward distances from the top, right, bottom, and left sides of the
+  area, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-width">CSS Borders and Box Decorations 4 §4.3</a></span>
+  Each box is 120 by 60 with a 10px border, and the image of orange corners, blue dots and a green center, sliced at
+  10 with <code>fill</code>.</p>
+</header>
+
+<section>
+  <h2>Numbers, lengths, percentages, auto</h2>
+  <p><q>Numbers represent multiples of the corresponding computed border-width.</q> <q>If auto is specified then the used
+  'border-image-width' is the natural width or height (whichever is applicable) of the corresponding image slice</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-width: 2"></div></div>
+    <figcaption><code>2</code>: twice the border, 20px: corners 20 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-width: 5px 20px"></div></div>
+    <figcaption><code>5px 20px</code>: corners 20 wide and 5 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-width: 25%; border-width: 4px"></div></div>
+    <figcaption><code>25%</code>, a 4px border, a box 108 by 48: corners 27 by 12.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto, and widths that overlap</h2>
+  <p><q>If two opposite 'border-image-width' offsets are large enough that they overlap, then the used values of all
+  'border-image-width' offsets are proportionally reduced until they no longer overlap.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-width: auto; border-width: 4px"></div></div>
+    <figcaption><code>auto</code> with a 4px border: each slice's own size, 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-width: 40px"></div></div>
+    <figcaption><code>40px</code>: 40 + 40 &gt; 60, so f = 60 / 80 = 0.75: corners 30 by 30, no room left between the
+    top and bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

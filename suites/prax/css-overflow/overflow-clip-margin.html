@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-clip-margin</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .b { width: 60px; height: 30px; margin: 30px 50px; padding: 10px; border: 5px solid #8a93a1; background: #f4f5f7; background-clip: content-box; overflow: clip; }
+  .fill { height: 110px; margin: -40px -40px 0; background: repeating-linear-gradient(45deg, #4f81bd 0 6px, #d68a3c 6px 12px); opacity: 0.85; }
+  .stage { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.2 Expanding Clipping Bounds: the overflow-clip-margin property</div>
+  <h1>overflow-clip-margin</h1>
+  <p class=pr-lede><code>overflow-clip-margin: &lt;visual-box&gt; || &lt;length&gt;</code>, initial <code>0px</code>.
+  <q>This property defines the overflow clip edge of the box, i.e. precisely where the box's content is allowed to
+  paint before being clipped by effects (such as overflow: clip, above) that are defined to clip to the box's
+  overflow clip edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-clip-margin">CSS Overflow 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A box edge, and an offset from it</h2>
+  <p>The box is <q>the specified box edge to use as the overflow clip edge origin</q>, <code>padding-box</code> if
+  omitted; the length <q>dictates how much the overflow clip edge is expanded from the specified box edge.</q> Each box
+  is <code>overflow: clip</code>, its content 60 by 30 in 10px of padding and a 5px grey border, and holds stripes
+  that reach 40px past its content on the top, left and right, and further below.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px"><div class=fill></div></div></div>
+    <figcaption><code>0px</code>: cut at the padding edge, inside the border.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; overflow-clip-margin: 15px"><div class=fill></div></div></div>
+    <figcaption><code>15px</code>: 15px past the padding edge, 10px past the border. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; overflow-clip-margin: content-box"><div class=fill></div></div></div>
+    <figcaption><code>content-box</code>: at the content edge; the padding is left bare. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; overflow-clip-margin: border-box"><div class=fill></div></div></div>
+    <figcaption><code>border-box</code>: at the border's outer edge, over the border. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

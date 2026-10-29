@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting shapes and text</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="square" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#6aa36a" /></marker>
+  <marker id="numbered" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="30" markerHeight="30" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#6aa36a" fill-opacity="0.8" stroke="#2c5a8f" stroke-width="1" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.7.1 Painting shapes and text</div>
+  <h1>Painting shapes and text</h1>
+  <p class=pr-lede><q>The order in which fill, stroke and markers are painted is determined by the ‘paint-order’
+  property. The default is that fill is painted first, then the stroke, and then the marker symbols. The marker symbols
+  are rendered in order along the outline of the shape, from the start of the shape to the end of the shape.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#PaintingShapesAndText">SVG 2 §3.7.1</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Fill, stroke, markers, in order</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" fill="none" stroke="#d68a3c" stroke-width="12" marker-start="url(#square)" marker-end="url(#square)" /><circle cx="80" cy="30" r="20" fill="#4f81bd" stroke="#d68a3c" stroke-width="8" /></svg></div>
+    <figcaption>A line stroked orange with green square markers at its ends, over the stroke; a circle, its orange
+    stroke over its blue fill.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 50 30 H 80 H 110" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#numbered)" marker-mid="url(#numbered)" marker-end="url(#numbered)" /></svg></div>
+    <figcaption>Three overlapping markers 30 wide, at 50, 80 and 110: each over the one before, start to end, so the
+    rightmost whole.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Independent fill and stroke</h2>
+  <p><q>The fill and stroke operations are entirely independent; for instance, each fill or stroke operation has its own
+  opacity setting.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="15" width="100" height="30" fill="#4f81bd" fill-opacity="0.3" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption>A faint fill, <code>fill-opacity="0.3"</code>, and a solid orange stroke.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

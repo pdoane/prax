@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>block-ellipsis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px; background: #f4f5f7; continue: collapse; max-lines: 2; }
+  .stage { height: 70px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 4.2 Indicating Block-Axis Overflow: the block-ellipsis property</div>
+  <h1>block-ellipsis</h1>
+  <p class=pr-lede><code>block-ellipsis: no-ellipsis | ellipsis | &lt;string&gt;</code>, inherited. <q>This property
+  allows inserting content into the last line box before a clamp point or a (forced or unforced) region break to
+  indicate the continuity of truncated / interrupted content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#block-ellipsis">CSS Overflow 4 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>At the end of the last line before the clamp</h2>
+  <p>Each dashed box is 100px wide, <code>continue: collapse; max-lines: 2</code>, and holds three lines of
+  <code>.pr-measure</code> text, "line one", "aaaa bbbb", "line three"; the clamp point follows the second.
+  <q>the block overflow ellipsis string is placed at the end of the line box reducing the space available to the
+  other contents of the line.</q> The user agent makes room <q>by displacing content from the end of the line as if
+  wrapping</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#block-ellipsis">CSS Overflow 4 §4.2</a></span></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="margin: 10px 0; block-ellipsis: ellipsis">line one<br>aaaa bbbb<br>line three</div></div>
+    <figcaption><code>ellipsis</code>: "aaaa bbbb…", 40px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style='margin: 10px 0; block-ellipsis: " more"'>line one<br>aaaa bbbb<br>line three</div></div>
+    <figcaption><code>" more"</code>: "bbbb" displaced: "aaaa more". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="margin: 10px 0; block-ellipsis: no-ellipsis">line one<br>aaaa bbbb<br>line three</div></div>
+    <figcaption><code>no-ellipsis</code>: two lines, no mark. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style='margin: 10px 0; block-ellipsis: ""'>line one<br>aaaa bbbb<br>line three</div></div>
+    <figcaption><code>""</code>: as <code>no-ellipsis</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

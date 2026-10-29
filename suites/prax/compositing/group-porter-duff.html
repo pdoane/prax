@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Porter Duff operators in a group</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+<style>
+  .one { mask-image: linear-gradient(rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.6)); mask-position: 60px 30px; mask-composite: intersect; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.2 Group compositing behavior with Porter Duff modes</div>
+  <h1>Porter Duff operators in a group</h1>
+  <p class=pr-lede><q>When compositing the elements within an isolated group, the elements are composited over a
+  transparent black initial backdrop.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#groupcompositing">Compositing and Blending 2 §9.2</a></span>
+  A canvas starts transparent black, as such a group does. The rectangles are the operator pages' blue and orange.</p>
+</header>
+
+<section>
+  <h2>An operator that needs a backdrop, at the bottom</h2>
+  <p><q>If the bottom element in the group uses a Porter Duff compositing operator which is dependent on the backdrop,
+  such as destination, source-in, destination-in, destination-out, or source-atop, then the result of the composite
+  will be empty.</q></p>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-steps="source-in source"></canvas></div>
+    <figcaption>The orange rectangle alone, <code>source-in</code>, on the empty canvas: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-steps="source-atop source"></canvas></div>
+    <figcaption>The same with <code>source-atop</code>: nothing.</figcaption>
+  </figure>
+  <p><q>Subsequent elements within the group are composited with the result of the first composite.</q></p>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-steps="source-in source, source-over destination"></canvas></div>
+    <figcaption>Orange <code>source-in</code> first, then blue source over: the blue rectangle alone, no orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pd-stage pd-white"><div class="pd-mask one"></div></div>
+    <figcaption>One mask layer, <code>intersect</code>: <a href="https://drafts.csswg.org/css-masking-1/#the-mask-composite">CSS Masking 1 §7.8</a>
+    ignores the operator, so green at 0.6 where the orange is.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

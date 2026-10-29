@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>padding-block and padding-inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.4 Flow-Relative Padding, shorthands</div>
+  <h1>padding-block and padding-inline</h1>
+  <p class=pr-lede><q>These two shorthand properties set the 'padding-block-start' &amp; 'padding-block-end' and 'padding-inline-start' &amp; 'padding-inline-end', respectively. The first value represents the start edge style, and the second value represents the end edge style. If only one value is given, it applies to both the start and end edges.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#padding-properties">CSS Logical Properties and Values 1 §4.4</a></span> A's label shows where its content box starts; A is only as long as its label and padding.</p>
+</header>
+
+<section>
+  <h2>Two values</h2>
+  <p>Each A has <code>padding-block: 0 20px; padding-inline: 10px 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="padding: 0; padding-block: 0 20px; padding-inline: 10px 40px; inline-size: fit-content">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: A 40px tall; its label 10px from the left, 40px after it.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="padding: 0; padding-block: 0 20px; padding-inline: 10px 40px; inline-size: fit-content">A</div></div>
+    <figcaption><code>rtl</code>: its label 10px from the right, 40px after it at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="padding: 0; padding-block: 0 20px; padding-inline: 10px 40px; inline-size: fit-content">A</div></div>
+    <figcaption><code>vertical-rl</code>: A 40px wide; its label at the right, 10px from the top, 40px below it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One value</h2>
+  <p>Each A has <code>padding-block: 10px; padding-inline: 30px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="padding: 0; padding-block: 10px; padding-inline: 30px; inline-size: fit-content">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: A 40px tall; 30px either side of its label.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="padding: 0; padding-block: 10px; padding-inline: 30px; inline-size: fit-content">A</div></div>
+    <figcaption><code>rtl</code>: the same.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="padding: 0; padding-block: 10px; padding-inline: 30px; inline-size: fit-content">A</div></div>
+    <figcaption><code>vertical-rl</code>: A 40px wide; 30px above and below its label.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-skip-ink</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { padding: 0 6px; font: 30px/44px "PR Arimo"; }
+  .j { padding: 0 6px; font: 30px/44px "PR Noto Sans JP"; }
+  .u { text-decoration: underline #c0392b 3px; }
+  .o { text-decoration: underline line-through #c0392b 3px; }
+  figure.s { margin-right: 10px; }
+  figure.s .pr-stage { width: 170px; }
+  figure.s figcaption { max-width: 170px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10.4 Skipping Glyphs: the text-decoration-skip-ink property</div>
+  <h1>text-decoration-skip-ink</h1>
+  <p class=pr-lede><q>When enabled, decoration lines skip over where glyphs are drawn: interrupt the decoration line to
+  let the shape of the text show through where the text decoration would otherwise cross over a glyph. The UA must
+  also skip a small distance to either side of the glyph outline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-skip-ink-property">CSS Text Decoration 4 §2.10.4</a></span>
+ </p>
+</header>
+
+<section>
+  <h2>none, all, auto</h2>
+  <p><code>none</code>: <q>UA must draw continuous underlines and overlines</q>. <code>all</code>: <q>UAs must interrupt
+  underlines and overlines where the line would cross glyph ink</q>. <code>auto</code>: <q>UAs may interrupt</q>, and
+  <q>should consider the script of the text</q>.</p>
+  <figure class=s>
+    <div class="pr-stage g"><span class=u style="text-decoration-skip-ink: none">gypsy</span></div>
+    <figcaption><code>none</code>: one unbroken line through the descenders.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage g"><span class=u style="text-decoration-skip-ink: all">gypsy</span></div>
+    <figcaption><code>all</code>: broken around each descender, with a little room each side.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage g"><span class=u style="text-decoration-skip-ink: auto">gypsy</span></div>
+    <figcaption><code>auto</code>: broken or not, as the browser chooses.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage j"><span class=u style="text-decoration-skip-ink: auto">漢字です</span></div>
+    <figcaption><code>auto</code> on Japanese: a browser <q>should refrain from doing so in CJK contexts</q>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not line-throughs; the originating element's value</h2>
+  <p><q>This property only applies to overlines and underlines; line-throughs are always continuous.</q> <q>It affects
+  all decorations originating from this element even if descendant boxes specify a different style.</q></p>
+  <figure class=s>
+    <div class="pr-stage g"><span class=o style="text-decoration-skip-ink: all">gypsy</span></div>
+    <figcaption><code>all</code>: the underline breaks around the descenders; the line-through runs on through the
+    letters.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage g"><span class=u style="text-decoration-skip-ink: none">gy <b style="text-decoration-skip-ink: all">gy</b> gy</span></div>
+    <figcaption><code>none</code>, the bold child <code>all</code>: the span's line is unbroken under every "gy", the
+    descenders drawn over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

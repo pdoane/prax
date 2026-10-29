@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:indeterminate</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows label { display: block; margin: 0 0 6px; }
+  .rows label span { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows :indeterminate + span { background: #8fd18f; }
+  .rows progress { display: block; width: 170px; margin: 4px 0 10px; outline: 3px solid #b5bcc7; outline-offset: 2px; }
+  .rows progress:indeterminate { outline-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:indeterminate</h1>
+  <p class=pr-lede><q>The :indeterminate pseudo-class must match any element falling into one of the following
+  categories</q>: a checkbox whose indeterminateness is true, a radio button <q>whose radio button group contains no
+  input elements whose checkedness state is true</q>, and <q>progress elements with no value content attribute</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Three kinds of indeterminate</h2>
+  <p>A label's text is green while its control matches <code>:indeterminate</code>, and a progress bar is outlined
+  green. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <label><input type=checkbox id=mixed><span>indeterminate checkbox</span></label>
+        <label><input type=checkbox><span>plain checkbox</span></label>
+      </div>
+    </div>
+    <figcaption>The page's script sets the first box's <code>indeterminate</code>: it is green, drawn with a dash.
+    Click it: it becomes checked, and grey. The second is grey throughout.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <label><input type=radio name=wood><span>oak</span></label>
+        <label><input type=radio name=wood><span>walnut</span></label>
+        <label><input type=radio name=metal checked><span>steel</span></label>
+        <label><input type=radio name=metal><span>brass</span></label>
+      </div>
+    </div>
+    <figcaption>No wood is checked, so "oak" and "walnut" are green; the metals, a group with "steel" checked, are
+    grey. Click "oak": both woods turn grey.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <progress max=10></progress>
+        <progress max=10 value=4></progress>
+      </div>
+    </div>
+    <figcaption>The first progress bar, with no <code>value</code>, is outlined green; the second, at 4 of 10,
+    grey.</figcaption>
+  </figure>
+</section>
+<script>
+  // Indeterminateness has no content attribute; the page sets it.
+  document.getElementById("mixed").indeterminate = true;
+</script>
+</body>
+</html>

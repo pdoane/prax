@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-break: auto-phrase and manual</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 120px; font: 20px/30px "PR Noto Sans JP"; }
+  .th { width: 120px; font: 20px/36px "PR Noto Sans Thai"; }
+  .t { background: #f9cc9d; }
+  figure.pr-narrow figcaption { max-width: 160px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1 Breaking Rules for Letters: the word-break property</div>
+  <h1>word-break: auto-phrase and manual</h1>
+  <p class=pr-lede><code>auto-phrase</code>: <q>this value directs the user agent to perform language-specific
+  content analysis to prioritize keeping natural phrases (of multiple words) together. If the content language of the
+  element is unknown, or if the user agent does not know how to detect phrase boundaries for that particular
+  language, this value must behave as 'normal'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-break-property">CSS Text 4 §6.1</a></span>
+  Each stage is 120px wide.</p>
+</header>
+
+<section>
+  <h2>auto-phrase</h2>
+  <p>The specification's title, 窓ぎわのトットちゃん, 20px a character, six to a line.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja><span class=t>窓ぎわのトットちゃん</span></div>
+    <figcaption><code>normal</code>: "窓ぎわのトッ", then "トちゃん", the name broken.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage ja" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわのトットちゃん</span></div>
+    <figcaption><code>auto-phrase</code>, <code>lang=ja</code>: phrases kept whole, "窓ぎわの", then
+    "トットちゃん", in a UA that detects Japanese phrases, as Chrome does; Safari and Firefox draw
+    <code>normal</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang="" style="word-break: auto-phrase"><span class=t>窓ぎわのトットちゃん</span></div>
+    <figcaption>Untagged: the language is unknown, so as <code>normal</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>manual</h2>
+  <p><code>manual</code>: <q>Behaves the same as 'normal', except that Lexical Word Breaking must not be
+  performed.</q> The stages are Thai, ภาษาไทยง่ายมาก, "Thai is very easy", with a
+  <code>&lt;wbr&gt;</code> after ภาษาไทย.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage th" lang=th><span class=t>ภาษาไทยง่ายมาก</span></div>
+    <figcaption><code>normal</code>: a dictionary finds the words; the line breaks between two.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage th" lang=th style="word-break: manual"><span class=t>ภาษาไทยง่ายมาก</span></div>
+    <figcaption><code>manual</code>, no <code>wbr</code>: no break at all, one line past the edge. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As
+    <code>normal</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage th" lang=th style="word-break: manual"><span class=t>ภาษาไทย<wbr>ง่ายมาก</span></div>
+    <figcaption><code>manual</code> with the <code>wbr</code>: the break is there, and only there: "ภาษาไทย",
+    then "ง่ายมาก". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Break by the dictionary, after ง่าย.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

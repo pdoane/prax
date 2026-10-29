@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-basis: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { flex-grow: 0; flex-shrink: 0; min-width: 0; min-height: 0; padding: 0; border: 0; color: white; background: #4f81bd; }
+  .col { flex-direction: column; align-items: flex-start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.2.3 The flex-basis property, percentages</div>
+  <h1>flex-basis: percentages</h1>
+  <p class=pr-lede>Percentages are <q>relative to the flex container's inner main size</q>. <q>For example,
+  percentage values of flex-basis are resolved against the flex item's containing block (i.e. its flex container);
+  and if that containing block's size is indefinite, the used value for flex-basis is content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-basis-property">CSS Flexible Box Layout 2 §7.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Of the inner main size</h2>
+  <p>Each item neither grows nor shrinks, and holds the word "abcd", 40px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: 30%">abcd</div></div>
+    <figcaption><code>30%</code> of the stage's 200px: 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="width: 160px; padding: 0 20px"><div class=w style="flex-basis: 50%">abcd</div></div>
+    <figcaption>The stage with 20px of padding each side, 160px inside: <code>50%</code> is 80px, from 20 to 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A column: of the height, where it is definite</h2>
+  <p>Each stage is a column flex container. A percentage resolves against its height.</p>
+  <figure>
+    <div class="pr-stage pr-measure col" style="height: 100px"><div class=w style="flex-basis: 50%">abcd</div></div>
+    <figcaption><code>height: 100px</code>: <code>50%</code> is 50px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure col"><div class=w style="flex-basis: 50%">abcd</div></div>
+    <figcaption><code>height: auto</code>, indefinite: content, one line, 20px tall; the stage 20px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure col" style="height: 100px"><div class=w style="flex-basis: 50%; height: 30px">abcd</div><div class=w style="flex-basis: 50%; background: #d68a3c">efgh</div></div>
+    <figcaption>Two items of <code>50%</code>, the first with <code>height: 30px</code>: 50px each; the height is not used.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

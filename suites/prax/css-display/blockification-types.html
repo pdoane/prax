@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blockification of layout-internal types</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .flex { display: flex; gap: 4px; }
+  .flex > * { padding: 0 4px; background: #f6d7b4; border: 1px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.7 Automatic Box Type Transformations, layout-internal types</div>
+  <h1>Blockification of layout-internal types</h1>
+  <p class=pr-lede>Blockification sets the outer display type to <code>block</code>, and changes some inner display
+  types with it. The stage is a flex container, so each child is blockified. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#transformations">CSS Display 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>Layout-internal types become flow</h2>
+  <p><q>If a layout-internal box is blockified, its inner display type converts to flow so that it becomes a block
+  container.</q></p>
+  <figure>
+    <div class=pr-stage><div class=flex style="height: 40px"><span style="display: table-cell; vertical-align: middle">a</span><span style="display: table-row">b</span><span style="display: ruby-text">c</span></div></div>
+    <figcaption><code>table-cell</code>, <code>table-row</code>, <code>ruby-text</code>: three flex items side by
+    side, each 40px tall with its letter at the top; the cell's <code>vertical-align: middle</code>
+    does not center "a", as it would in a cell.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

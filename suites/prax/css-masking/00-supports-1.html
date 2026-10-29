@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Masking 1 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · Support</div>
+  <h1>CSS Masking 1 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Clipping</h2>
+  <code class=pr-decl>clip-path: circle(40%) border-box</code>
+  <code class=pr-decl>clip-path: url(#c)</code>
+  <code class=pr-decl>clip-path: stroke-box</code>
+  <code class=pr-decl>clip-rule: evenodd</code>
+  <code class=pr-decl>clip: rect(0, 40px, 20px, 0)</code>
+</section>
+
+<section>
+  <h2>Masks</h2>
+  <code class=pr-decl>mask-image: linear-gradient(black, transparent)</code>
+  <code class=pr-decl>mask-mode: luminance</code>
+  <code class=pr-decl>mask-repeat: space round</code>
+  <code class=pr-decl>mask-position: right 10px top</code>
+  <code class=pr-decl>mask-clip: no-clip</code>
+  <code class=pr-decl>mask-origin: fill-box</code>
+  <code class=pr-decl>mask-size: contain</code>
+  <code class=pr-decl>mask-composite: exclude</code>
+  <code class=pr-decl>mask: url(a.svg) center / 20px no-repeat</code>
+  <code class=pr-decl>mask-type: alpha</code>
+</section>
+
+<section>
+  <h2>Mask borders</h2>
+  <code class=pr-decl>mask-border-source: url(a.png)</code>
+  <code class=pr-decl>mask-border-mode: luminance</code>
+  <code class=pr-decl>mask-border-slice: 10 fill</code>
+  <code class=pr-decl>mask-border-width: 20px</code>
+  <code class=pr-decl>mask-border-outset: 10px</code>
+  <code class=pr-decl>mask-border-repeat: round</code>
+  <code class=pr-decl>mask-border: url(a.png) 10 / 20px round</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

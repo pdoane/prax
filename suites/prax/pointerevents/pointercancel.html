@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointercancel</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.7 pointercancel</div>
+  <h1>pointercancel</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointercancel when it detects a scenario to suppress
+  a pointer event stream.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointercancel">Pointer Events §3.3.7</a></span></p>
+</header>
+<section>
+  <h2>Where the pointer last was</h2>
+  <p><q>The values of the following properties of the pointercancel event MUST match the values of the last dispatched
+  pointer event with the same pointerId: width, height, pressure, tangentialPressure, tiltX, tiltY, twist, altitudeAngle,
+  azimuthAngle, pointerType, isPrimary, and the coordinates inherited from Mouse Events.</q>
+  <q>the event's cancelable attribute MUST be false.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointercancel">§3.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=box><p>Drag a finger up here.</p></div>
+      <ol class=pr-log data-log="pointerdown pointermove pointercancel" data-fields="pointerType clientX clientY cancelable" data-on="#box" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen. Drag a finger up the box, which scrolls: the last line is the
+    <code>pointercancel</code>, not cancelable, at the same <code>clientX</code> and <code>clientY</code> as the event
+    before it.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

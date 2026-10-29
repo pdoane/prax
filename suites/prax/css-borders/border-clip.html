@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-clip: visible and invisible parts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 5.2 The border-clip properties</div>
+  <h1>border-clip: visible and invisible parts</h1>
+  <p class=pr-lede><q>These properties split their respective borders into parts along the border edge. The first part is visible, the second is invisible, the third part is visible, etc.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-clip">CSS Borders and Box Decorations 4 §5.2</a></span> The section is <q>Not Ready For Implementation</q>. Each box is 100 by 40 inside a 10px border, so its top is 120 long.</p>
+</header>
+
+<section>
+  <h2>Lengths and fr</h2>
+  <p><q>If the listed parts are shorter than the border, any remaining border is split proportionally between the specified flexible lengths. If there are no flexible lengths, the behavior is as if 1fr had been specified at the end of the list.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-clip: 20px 1fr 20px"></div></div>
+    <figcaption><code>20px 1fr 20px</code>: 20px of border at each end of every side, the middle hidden. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-top-clip: 0 20px 1fr 20px"></div></div>
+    <figcaption><code>border-top-clip: 0 20px 1fr 20px</code>: the top hidden at its ends, shown in the middle 80px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-top-clip: 40px"></div></div>
+    <figcaption><code>border-top-clip: 40px</code>: only the top's first 40px, as if <code>40px 1fr</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative</h2>
+  <p><q>For horizontal borders, parts are listed from left to right. For vertical borders, parts are listed from top to bottom.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="direction: rtl; border-inline-start-clip: 20px"></div></div>
+    <figcaption><code>rtl</code>, <code>border-inline-start-clip: 20px</code>: the right side, its top 20px only. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

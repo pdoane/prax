@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>oklab() and oklch()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 9.4 Specifying Oklab and OkLCh: the oklab() and oklch() functional notations</div>
+  <h1>oklab() and oklch()</h1>
+  <p class=pr-lede><q>CSS allows colors to be directly expressed in Oklab and OkLCh.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#specifying-oklab-oklch">CSS Color 4 §9.4</a></span> Each pair is the
+  specification's example, then the <code>rgb()</code> it converts to.</p>
+</header>
+
+<section>
+  <h2>oklab() and oklch()</h2>
+  <p><q>for L: 0% = 0.0, 100% = 1.0</q>; <q>for a and b: -100% = -0.4, 100% = 0.4</q>; <q>for C: 0% = 0.0 100% =
+  0.4</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklab(40.101% 0.1147 0.0453)"></div><div class=sw style="background: rgb(49.06% 13.87% 15.9%)"></div><div class=sw style="background: oklab(0.65125 -0.0320 0.1274)"></div><div class=sw style="background: rgb(61.65% 57.51% 9.28%)"></div></div>
+    <figcaption><code>oklab(40.101% 0.1147 0.0453)</code>: dark red. <code>oklab(0.65125 -0.0320 0.1274)</code>:
+    olive yellow, as <code>rgb(61.65% 57.51% 9.28%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(59.686% 0.15619 49.7694)"></div><div class=sw style="background: rgb(77.61% 36.34% 2.45%)"></div><div class=sw style="background: oklch(72.322% 0.12403 247.996)"></div><div class=sw style="background: rgb(38.29% 67.27% 93.85%)"></div></div>
+    <figcaption><code>oklch(59.686% 0.15619 49.7694)</code>: orange. <code>oklch(72.322% 0.12403 247.996)</code>: sky
+    blue. Each as its <code>rgb()</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lightness 0 and 1</h2>
+  <p><q>If the lightness of an OkLCh color is 0% or 0, or 100% or 1.0, the color will be displayed as black, or white,
+  respectively due to gamut mapping to the display.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(1 0.2 30)"></div><div class=sw style="background: oklab(1 0.1 0.1)"></div><div class=sw style="background: white; outline: 1px solid #b5bcc7"></div></div>
+    <figcaption><code>oklch(1 0.2 30)</code> and <code>oklab(1 0.1 0.1)</code>: white, as the outlined white box.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips
+    to a peach.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0 0.2 30)"></div><div class=sw style="background: black"></div></div>
+    <figcaption><code>oklch(0 0.2 30)</code>: black, beside <code>black</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

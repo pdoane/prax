@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>grid-template-columns and grid-template-rows</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2 Explicit Track Sizing: the grid-template-rows and grid-template-columns properties</div>
+  <h1>grid-template-columns and grid-template-rows</h1>
+  <p class=pr-lede><q>These properties specify, as a space-separated track list, the line names and track sizing
+  functions of the grid. The grid-template-columns property specifies the track list for the grid's columns, while
+  grid-template-rows specifies the track list for the grid's rows.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizing">CSS Grid Layout 2 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>none, and a track list</h2>
+  <p><code>none</code> <q>Indicates that no explicit grid tracks are created by this property</q>; a track list
+  sizes each track: <q>a length, a percentage of the grid container’s size, a measurement of the contents occupying
+  the column or row, or a fraction of the free space in the grid.</q> Each grid holds A, B and C.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: none"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>none</code>: one implicit column, the stage's width; A, B and C in rows, one under the
+    other.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 25% 1fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>40px 25% 1fr</code>: A 40px, B 50px from 40px, and C the rest, 110px from 90px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows, and columns in the inline axis</h2>
+  <p>Columns are tracks along the inline axis, rows along the block axis <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-concepts">§3</a></span>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: 20px 40px; grid-template-columns: 60px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>grid-template-rows: 20px 40px</code>: A 20px tall, B 40px tall under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 100px"><div class=g style="grid-template-columns: 40px 60px; grid-template-rows: 30px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption>In <code>vertical-rl</code>, <code>grid-template-columns: 40px 60px</code> runs down: A 40px tall at
+    the top, B 60px tall under it, both 30px wide at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

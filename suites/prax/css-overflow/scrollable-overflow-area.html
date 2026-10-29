@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scrollable overflow area: what it unites</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; position: relative; }
+  .stage { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.3 Calculating the Scrollable Overflow Area</div>
+  <h1>The scrollable overflow area: what it unites</h1>
+  <p class=pr-lede><q>The scrollable overflow area of a box is the union of: Its own padding box. All line boxes it
+  directly contains. The border boxes of all boxes for which it is the containing block and whose border boxes are
+  positioned not wholly within its unreachable scrollable overflow region (if any), accounting for transforms</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Line boxes, border boxes, positioned boxes</h2>
+  <p>Each dashed box is 120 by 40, <code>overflow: auto</code> and <code>position: relative</code>, with no padding.
+  Captions read <code>scrollWidth</code> by <code>scrollHeight</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=a1 class="pr-frame sc" style="white-space: nowrap; line-height: 0">x<span class="pr-c pr-fit" style="display: inline-block; vertical-align: top; width: 170px; height: 20px">C</span></div></div>
+    <figcaption>A line box holding "x" and an inline-block C 170px wide: <code class=pr-computed data-of=a1 data-dom=scrollWidth></code> by <code class=pr-computed data-of=a1 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=a2 class="pr-frame sc"><div class="pr-b pr-fit" style="position: absolute; left: 150px; top: 30px; width: 50px; height: 20px">B</div></div></div>
+    <figcaption>An absolutely positioned B at 150, 30, 50 by 20: <code class=pr-computed data-of=a2
+    data-dom=scrollWidth></code> by <code class=pr-computed data-of=a2 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=a3 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 100px; transform: translateX(80px)">A</div></div></div>
+    <figcaption>A, 100px wide, moved 80px right by a transform: <code class=pr-computed data-of=a3
+    data-dom=scrollWidth></code> by <code class=pr-computed data-of=a3 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=a4 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 100px; transform: rotate(90deg); transform-origin: 0 0; margin-left: 20px">A</div></div></div>
+    <figcaption>A, 100 by 20, turned a quarter about its top left corner: it runs 100px down. <code class=pr-computed
+    data-of=a4 data-dom=scrollWidth></code> by <code class=pr-computed data-of=a4
+    data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A zero-area box, and what it holds</h2>
+  <p><q>Border boxes with zero area do not affect the scrollable overflow area.</q> But the area also unites <q>The
+  scrollable overflow rectangles of all of the above boxes (including zero-area boxes)</q>.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=z1 class="pr-frame sc"><div style="position: absolute; left: 200px; top: 0; width: 0; height: 0"></div></div></div>
+    <figcaption>An empty box at 200, 0, 0 by 0: <code class=pr-computed data-of=z1 data-dom=scrollWidth></code> by
+    <code class=pr-computed data-of=z1 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=z2 class="pr-frame sc"><div style="position: absolute; left: 100px; top: 0; width: 0; height: 0"><div class="pr-b pr-fit" style="width: 60px; height: 20px">B</div></div></div></div>
+    <figcaption>The same box at 100, 0, holding a 60px B: B counts, <code class=pr-computed data-of=z2
+    data-dom=scrollWidth></code> by <code class=pr-computed data-of=z2 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

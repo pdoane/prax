@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-blend-mode: one value per layer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { height: 40px; margin: 10px; background-repeat: no-repeat; background-color: #00ff00;
+         background-image: linear-gradient(#ff0000, #ff0000), linear-gradient(#0000ff, #0000ff), linear-gradient(#ffff00, #ffff00);
+         background-size: 40px 40px, 80px 40px, 120px 40px; background-position: 60px 0, 20px 0, 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.3 The background-blend-mode property</div>
+  <h1>background-blend-mode: one value per layer</h1>
+  <p class=pr-lede><q>The background-blend-mode list must be applied in the same order as background-image. This means
+  that the first element in the list will apply to the layer that is on top. If a property doesn't have enough
+  comma-separated values to match the number of layers, the UA must calculate its used value by repeating the list of
+  values until there are enough.</q> <q>If the background shorthand is used, the background-blend-mode property for
+  that element must be reset to its initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#background-blend-mode">Compositing and Blending 2 §3.4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Layers, top first, and the shorthand</h2>
+  <p>Each box, 180 wide, has a lime <code>background-color</code> under three layers, top first: red 40 wide at x 70,
+  blue 80 wide at x 30, yellow 120 wide at x 10.</p>
+  <figure>
+    <div class=pr-stage><div class=box style="background-blend-mode: normal"></div></div>
+    <figcaption><code>normal</code>: yellow, blue from x 30, red from x 70 to 110, yellow to x 130, lime.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="background-blend-mode: screen, normal"></div></div>
+    <figcaption><code>screen, normal</code>, repeated as <code>screen, normal, screen</code>: red screened onto
+    blue, magenta, x 70 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="background-blend-mode: normal, multiply"></div></div>
+    <figcaption><code>normal, multiply</code>, so <code>normal, multiply, normal</code>: blue times yellow, black,
+    from x 30; red over it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=box style="background-blend-mode: multiply; background: linear-gradient(#ff0000, #ff0000) 60px 0 / 40px 40px no-repeat #0000ff"></div></div>
+    <figcaption><code>multiply</code>, then <code>background</code>: red on blue, normal. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> keep <code>multiply</code>, black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

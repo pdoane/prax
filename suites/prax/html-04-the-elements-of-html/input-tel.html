@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Telephone fields</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.3 Telephone state (type=tel)</div>
+  <h1>Telephone fields</h1>
+  <p class=pr-lede><q>The input element represents a control for editing a telephone number given in the element's
+  value.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#telephone-state-(type=tel)">HTML §4.10.5.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Free-form, and never a type mismatch</h2>
+  <p><q>Unlike the URL and Email types, the Telephone type does not enforce a particular syntax.</q> <q>Systems that
+  need to enforce a particular format are encouraged to use the pattern attribute</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#telephone-state-(type=tel)">§4.10.5.1.3</a></span>
+  Each field is outlined green while it is valid and red while it is not (<code>:valid</code>,
+  <code>:invalid</code>).</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=tel value="+1 (555) 0100" size=16></div>
+        <div><input type=tel value="call me maybe" size=16></div>
+      </div>
+    </div>
+    <figcaption>Both green: a number with punctuation, and words. Type anything into either, on one line: it stays
+    green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=tel value="555-0100" pattern="[0-9]{3}-[0-9]{4}" size=16></div>
+        <div><input type=tel value="5550100" pattern="[0-9]{3}-[0-9]{4}" size=16></div>
+      </div>
+    </div>
+    <figcaption>With <code>pattern="[0-9]{3}-[0-9]{4}"</code>: "555-0100" is green, "5550100" red. Type a hyphen in
+    the red one: green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

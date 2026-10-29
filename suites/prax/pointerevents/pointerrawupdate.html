@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerrawupdate</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 60px; margin: 10px 20px; touch-action: none; }
+  .counts { margin: 0 20px 10px; font: 12px/20px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.5 pointerrawupdate</div>
+  <h1>pointerrawupdate</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointerrawupdate, and only do so within a secure
+  context, when a pointer changes any properties that don't fire pointerdown or pointerup events.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerrawupdate">Pointer Events §3.3.5</a></span></p>
+</header>
+<section>
+  <h2>Before each pointermove, and as often</h2>
+  <p><q>In terms of ordering of pointerrawupdate and pointermove, if the user agent received an update from the platform
+  that causes both pointerrawupdate and pointermove events, then the user agent MUST dispatch the pointerrawupdate event
+  before the corresponding pointermove.</q> <q>The attributes of pointerrawupdate are mostly the same as pointermove,
+  with the exception of cancelable which MUST be false for pointerrawupdate.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerrawupdate">§3.3.5</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Move over here, fast.</div>
+      <div class=counts>pointerrawupdate <span id=raw>0</span> · pointermove <span id=moves>0</span></div>
+      <ol class=pr-log data-log="pointerrawupdate pointermove" data-fields="cancelable" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>The counts are the events that reached the box. Move over it: a <code>pointerrawupdate</code>, not
+    cancelable, before each <code>pointermove</code>, which is; move fast and the rawupdates may outnumber the
+    moves, never the reverse. <span class=pr-flag>Safari</span> fires no <code>pointerrawupdate</code>: its count
+    stays 0.</figcaption>
+  </figure>
+</section>
+<script>
+  // Counts the pointerrawupdate and pointermove events over the box.
+  const counter = id => { const element = document.getElementById(id); return () => element.textContent = +element.textContent + 1; };
+  const pad = document.getElementById("pad");
+  pad.addEventListener("pointerrawupdate", counter("raw"));
+  pad.addEventListener("pointermove", counter("moves"));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

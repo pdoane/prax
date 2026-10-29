@@ -1,0 +1,15 @@
+diff --git a/backends/imgui_impl_metal.mm b/backends/imgui_impl_metal.mm
+--- a/backends/imgui_impl_metal.mm
++++ b/backends/imgui_impl_metal.mm
+@@ -357,11 +357,7 @@
+                                                                                                     height:(NSUInteger)tex->Height
+                                                                                                  mipmapped:NO];
+         textureDescriptor.usage = MTLTextureUsageShaderRead;
+-    #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+-        textureDescriptor.storageMode = MTLStorageModeManaged;
+-    #else
+         textureDescriptor.storageMode = MTLStorageModeShared;
+-    #endif
+         id <MTLTexture> texture = [bd->SharedMetalContext.device newTextureWithDescriptor:textureDescriptor];
+         [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)tex->Width, (NSUInteger)tex->Height) mipmapLevel:0 withBytes:tex->Pixels bytesPerRow:(NSUInteger)tex->Width * 4];
+         MetalTexture* backend_tex = [[MetalTexture alloc] initWithTexture:texture];

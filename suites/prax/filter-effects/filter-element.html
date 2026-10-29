@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The filter element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 40px; margin: 0 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute; color: #6aa36a">
+  <filter id="flood" x="0" y="0" width="1" height="1"><feFlood flood-color="currentColor" /></filter>
+  <filter id="user"><feOffset dx="20" dy="0" /></filter>
+  <filter id="bbox" primitiveUnits="objectBoundingBox" x="0" y="0" width="2" height="1"><feOffset dx="0.5" dy="0" /></filter>
+  <g style="display: none"><filter id="hidden" x="0" y="0" width="1" height="1"><feFlood flood-color="#d68a3c" /></filter></g>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 7 SVG Filter Sources: the filter element</div>
+  <h1>The filter element</h1>
+  <p class=pr-lede><q>filter elements are never rendered directly; their only usage is as something that can be
+  referenced using the filter property.</q> <q>filter elements are available for referencing even when the display
+  property on the filter element or any of its ancestors is set to none.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterElement">Filter Effects 1 §7</a></span>
+  Each box is 60 by 40 and blue. The filters are in an <code>svg</code> of no size at the top of the page, whose
+  <code>color</code> is green.</p>
+</header>
+
+<section>
+  <h2>Properties come from the filter's ancestors</h2>
+  <p><q>Properties inherit into the filter element from its ancestors; properties do not inherit from the element
+  referencing the filter element.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="color: #8e44ad; filter: url(#flood)"></div></div>
+    <figcaption>A flood of <code>currentColor</code>, on a box whose color is purple: green, the
+    <code>svg</code>'s color.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="filter: url(#hidden)"></div></div>
+    <figcaption>A filter inside a group with <code>display: none</code>: still used, an orange flood. <span
+    class=pr-flag>Firefox</span> No box, as for a missing filter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>primitiveUnits</h2>
+  <p><q>If primitiveUnits is equal to objectBoundingBox, then any length values within the filter definitions represent
+  fractions or percentages of the bounding box on the referencing element</q>. <q>The initial value for
+  primitiveUnits is userSpaceOnUse.</q> Each filter is an <code>feOffset</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#user)"></div></div>
+    <figcaption><code>dx="20"</code>, in user units: the box 20px right, at x 30, cut at the default region's
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#bbox)"></div></div>
+    <figcaption><code>dx="0.5"</code> in <code>objectBoundingBox</code>: half the box's 60px, so at x 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

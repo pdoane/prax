@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Details restyled</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+details { margin-bottom: 4px; }
+details p { margin: 0; }
+.custom summary { list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.custom summary::after { content: "+"; color: GrayText; }
+.custom details[open] summary::after { content: "\2212"; }
+.marker summary::marker { color: #c0477a; content: "\25B6\FE0E  "; }
+.marker details[open] summary::marker { content: "\25BC\FE0E  "; }
+.content details::details-content { background: color-mix(in srgb, CanvasText 8%, Canvas);
+  border-inline-start: 3px solid #3d82c4; padding: 2px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Details restyled</h1>
+  <p>What sites do to a disclosure: replace its marker, restyle the marker, or style the part that holds its content.</p>
+</header>
+
+<section>
+  <h2>Restyled</h2>
+<div class=panels>
+  <div class="panel custom"><span class=cap>no marker, a sign after</span>
+    <details><summary>Closed</summary><p>Content.</p></details>
+    <details open><summary>Open</summary><p>Content.</p></details></div>
+  <div class="panel marker"><span class=cap>::marker restyled</span>
+    <details><summary>Closed</summary><p>Content.</p></details>
+    <details open><summary>Open</summary><p>Content.</p></details></div>
+  <div class="panel content"><span class=cap>::details-content restyled</span>
+    <details open><summary>Open</summary><p>Its content's part is shaded.</p></details></div>
+</div>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel dark"><span class=cap>dark</span><details open><summary>Open</summary>Content.</details></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><details open><summary>Open</summary>Content.</details></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><details open><summary>مفتوح</summary>المحتوى.</details>
+    <details><summary>مغلق</summary>المحتوى.</details></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><details open><summary>開いた</summary>内容。</details>
+    <details><summary>閉じた</summary>内容。</details></div>
+</div>
+</section>
+</body>
+</html>

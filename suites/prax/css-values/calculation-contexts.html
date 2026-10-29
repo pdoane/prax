@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentages in a function resolve as the property's do</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .img { height: 100px; background: linear-gradient(#4f81bd, #4f81bd) no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.9.1 Calculation Contexts</div>
+  <h1>Percentages in a function resolve as the property's do</h1>
+  <p class=pr-lede><q>Math functions always inherit the calculation context from wherever they're used. That is, in
+  top: calc(25% + 50px), the &lt;percentage&gt; is resolved as normal for 'top', as if top: 25% were specified (and then
+  has 50px added to its value).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-context">CSS Values and Units 4 §10.9.1</a></span>
+  Each stage is 200 by 100.</p>
+</header>
+
+<section>
+  <h2>One context per property</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="position: absolute; width: 40px; top: calc(25% - 10px)">A</div></div>
+    <figcaption><code>top: calc(25% - 10px)</code>: 25% of the 100px height, less 10px: 15px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="position: absolute; width: 40px; left: calc(25% - 10px)">A</div></div>
+    <figcaption><code>left: calc(25% - 10px)</code>: 25% of the 200px width, less 10px: 40px across.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font: 20px 'PR Arimo'"><div style="background: #f9cc9d; line-height: calc(100% + 10px)">A line</div></div>
+    <figcaption><code>line-height: calc(100% + 10px)</code>: the font size and 10px, a 30px line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two contexts in one property</h2>
+  <p><q>in 'background-size' one value resolves &lt;percentage&gt;s against the width of the background positioning area
+  while the other resolves them against the height.</q></p>
+  <figure>
+    <div class="pr-stage img" style="background-size: calc(50% + 10px) calc(50% + 10px)"></div>
+    <figcaption><code>background-size: calc(50% + 10px) calc(50% + 10px)</code>: 110px wide and 60px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>break-inside in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+  .pr-parent { padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 5.1 Controlling Fragmentation: break-inside</div>
+  <h1>break-inside in columns</h1>
+  <p class=pr-lede><code>avoid-column</code>: <q>Avoid a column break within the box.</q> <code>avoid</code>:
+  <q>Avoid breaks within the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-within">CSS Fragmentation 4 §3.2</a></span>
+  The properties are <q>defined in [CSS3-BREAK]</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#break-before-break-after-break-inside">CSS Multi-column Layout 1 §5.1</a></span>
+  Each stage has three columns of 60px, 60px tall. Two Bs come first; then the tinted box, which holds A and A, 40px.</p>
+</header>
+
+<section>
+  <h2>Kept whole</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-parent><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption><code>auto</code>: the box breaks, its first A under the Bs in the first column, its second at the
+    top of the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-parent style="break-inside: avoid-column"><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption><code>avoid-column</code>: the whole box in the second column; 20px left empty under the
+    Bs.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-parent style="break-inside: avoid"><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption><code>avoid</code>: the same, the box whole in the second column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-parent style="break-inside: avoid-page"><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption><code>avoid-page</code> does not avoid a column break: the box breaks, as with
+    <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Avoided only where it can be</h2>
+  <p>An avoided break is still taken when there is no other: the tinted box holds four As, 80px, taller than a
+  column.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=pr-parent style="break-inside: avoid-column"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption>The box breaks however it is placed. Chrome and Firefox start it in the second column, three As
+    there and one in the third; Safari starts it under B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

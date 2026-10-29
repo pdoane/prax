@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-align-all</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+  .x { display: inline-block; width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.3 Default Text Alignment: the text-align-all property</div>
+  <h1>text-align-all</h1>
+  <p class=pr-lede><q>This longhand of the 'text-align' shorthand property specifies the inline alignment of all lines
+  of inline content in the block container, except for last lines overridden by a non-'auto' value of
+  'text-align-last'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-align-all-property">CSS Text 4 §7.3</a></span>
+  No browser has the longhand. Each stage holds a 150px box and a 30px one, on two lines.</p>
+</header>
+
+<section>
+  <h2>Every line, unless text-align-last says otherwise</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-align-all: center"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>text-align-all: center</code>: both lines centered. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Both at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-align-all: right; text-align-last: left"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>text-align-all: right</code> and <code>text-align-last: left</code>: the first line at the
+    right, the last at the left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Both at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-align-all: justify"><span class="pr-a w">a</span> <span class="pr-b w">b</span> <span class="pr-c x">c</span></div>
+    <figcaption><code>text-align-all: justify</code>, a and b on the first line: a at the left, b at the right; the
+    last line, <code>auto</code>, at the start. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> a and b together at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Zero-length segments: markers and caps</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#d68a3c" fill-opacity="0.5" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.5.3 Zero-length path segments</div>
+  <h1>Zero-length segments: markers and caps</h1>
+  <p class=pr-lede><q>Path segments with zero length are not invalid, and will affect rendering in the following
+  cases</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#ZeroLengthSegments">SVG 2 §9.5.3</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>A marker on every vertex</h2>
+  <p><q>If markers are specified, then a marker is drawn on every applicable vertex, even if the given vertex is the
+  end point of a zero-length path segment and even if "moveto" commands follow each other.</q> Each path has
+  <code>marker-start</code>, <code>marker-mid</code> and <code>marker-end</code>: an orange dot 12 across at half
+  opacity, so that two on one vertex are darker than one.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 L 80 30 L 80 30 L 140 30" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#dot)" marker-mid="url(#dot)" marker-end="url(#dot)" /></svg></div>
+    <figcaption><code>M 20 30 L 80 30 L 80 30 L 140 30</code>: two markers at 80, 30, darker than those at the
+    ends.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 M 80 30 M 140 30" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#dot)" marker-mid="url(#dot)" marker-end="url(#dot)" /></svg></div>
+    <figcaption><code>M 20 30 M 80 30 M 140 30</code>, three movetos: a dot at each, all equally light.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 80 30 Z" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#dot)" marker-mid="url(#dot)" marker-end="url(#dot)" /></svg></div>
+    <figcaption><code>M 80 30 Z</code>: a start and an end marker, one on the other at 80, 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Caps on zero-length subpaths</h2>
+  <p><q>linecaps must be painted for zero-length subpaths when 'stroke-linecap' has a value of round or square.</q>
+  The strokes are blue, 20 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 L 40 30" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="round" /><path d="M 80 30 Z" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="square" /><path d="M 120 30 L 120 30" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="butt" /></svg></div>
+    <figcaption><code>round</code> at 40, 30: a circle 20 across. <code>square</code> at 80, 30: a square 20
+    by 20. <code>butt</code> at 120, 30: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 Z M 80 30 Z M 120 30 Z" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="round" /></svg></div>
+    <figcaption><code>M 40 30 Z M 80 30 Z M 120 30 Z</code>, <code>round</code>: three subpaths, three
+    circles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 M 80 30 M 120 30" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="round" /></svg></div>
+    <figcaption><code>M 40 30 M 80 30 M 120 30</code>, <code>round</code>: movetos alone have no segment, so
+    nothing <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeProperties">§13.5</a></span>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

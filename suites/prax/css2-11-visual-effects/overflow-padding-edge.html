@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: the padding edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; height: 40px; margin: 10px 40px; }
+  .wide-child { width: 150px; }
+  .half { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: the padding edge</h1>
+  <p class=pr-lede>Where a box clips, and what of it its children take. Each dashed box is 120 by 40, unless its caption
+  says otherwise.</p>
+</header>
+
+<section>
+  <h2>Clipped at the padding edge, and not inherited</h2>
+  <p><q>Whenever overflow occurs, the 'overflow' property specifies whether a box is clipped to its padding edge.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div style="overflow: hidden; padding: 6px; border: 4px solid #8a93a1; width: 100px; height: 20px; margin: 10px 30px; background: #f4f5f7"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div></div></div>
+    <figcaption><code>padding: 6px</code> and a 4px grey border: A and B are drawn over the light padding but never
+    over the border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: hidden"><div class=pr-parent style="height: 20px"><div class="pr-a pr-fit half" style="position: relative; top: 30px">A</div></div></div></div>
+    <figcaption>The tinted child of a <code>hidden</code> box does not inherit <code>hidden</code>: its content A, moved 30px down, lies below the child and is not clipped
+    there, only at the parent's bottom edge: 10px of A shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

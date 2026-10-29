@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>transform-box on CSS boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .b { position: absolute; left: 10px; top: 20px; width: 40px; height: 20px; padding: 10px 30px 10px 10px; background: #4f81bd; }
+  .b::before { content: ""; display: block; height: 20px; background: #b9cde6; }
+  .g { position: absolute; left: 10px; top: 20px; width: 80px; height: 40px; }
+  .t { position: absolute; left: 10px; top: 10px; }
+  .tc { width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 5 Transform reference box: the transform-box property</div>
+  <h1>transform-box on CSS boxes</h1>
+  <p class=pr-lede><q>All transformations defined by the transform and transform-origin property are relative to the
+  position and dimensions of the reference box of the element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-box">CSS Transforms 1 §5</a></span>
+  Each blue box is 80 by 40 at (10, 20): a light 40 by 20 content box, padded 10px but 30px on the right.
+  <a href="transform-box-svg.html">SVG elements</a> follow.</p>
+</header>
+
+<section>
+  <h2>content-box and border-box</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=b style="transform-box: content-box; transform: translateX(100%)"></div></div>
+    <figcaption><code>content-box</code>, <code>translateX(100%)</code>: 40px, to 50 to 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=b style="transform-box: border-box; transform: translateX(100%)"></div></div>
+    <figcaption><code>border-box</code>: 80px, to 90 to 170, past the stage's edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=b style="transform-box: content-box; transform-origin: 0 0; transform: scale(0.5)"></div></div>
+    <figcaption><code>content-box</code>, origin <code>0 0</code>, <code>scale(0.5)</code>: about (20, 30), to 15 to
+    55 across.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's keywords, and tables</h2>
+  <p><q>For elements with associated CSS layout box, the used value for fill-box is content-box and for stroke-box and
+  view-box is border-box.</q> <q>The reference box of a table is the border box of its table wrapper box, not its table
+  box.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=b style="transform-box: fill-box; transform: translateX(100%)"></div></div>
+    <figcaption><code>fill-box</code>: as <code>content-box</code>, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class=b style="transform-box: stroke-box; transform: translateX(50%)"></div></div>
+    <figcaption><code>stroke-box</code>, <code>translateX(50%)</code>: as <code>border-box</code>, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost" style="position: absolute; left: 10px; top: 10px; width: 60px; height: 60px"></div><div class="pr-table t" style="transform: translateY(50%)"><div class="pr-table-caption pr-b pr-fit" style="height: 20px">cap</div><div class="pr-table-row"><div class="pr-table-cell tc">cell</div></div></div></div>
+    <figcaption>A 20px caption over a 40px cell, <code>translateY(50%)</code>: half the wrapper's 60px, 30px
+    down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

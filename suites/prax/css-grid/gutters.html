@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gutters: grid lines with thickness</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .cb { position: relative; display: grid; grid-template-columns: 40px 40px; grid-template-rows: 20px; column-gap: 20px;
+        justify-content: center; height: 60px; }
+  .abs { position: absolute; top: 20px; bottom: 0; left: 0; right: 0; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.1 Gutters: the row-gap, column-gap, and gap properties</div>
+  <h1>Gutters: grid lines with thickness</h1>
+  <p class=pr-lede><q>The effect of these properties is as though the affected grid lines acquired thickness: the grid
+  track between two grid lines is the space between the gutters that represent them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#gutters">CSS Grid Layout 2 §11.1</a></span>
+  The properties' syntax: <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-gap">CSS Gaps 1 §2.1</a></span>.</p>
+</header>
+
+<section>
+  <h2>Empty, fixed-size tracks</h2>
+  <p><q>For the purpose of track sizing, each gutter is treated as an extra, empty, fixed-size track of the specified
+  size, which is spanned by any grid items that span across its corresponding grid line.</q> Each grid has
+  <code>gap: 10px 20px</code>.</p>
+  <figure>
+    <div class=pr-stage><div style="display: grid; grid-template-columns: 40px 40px 40px; gap: 10px 20px"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d style="grid-column: span 2">D</div></div></div>
+    <figcaption>40px columns at 0, 60 and 120px. A spans the first two and the gutter between: 100px. The second row
+    starts at 30px, below a 10px gutter.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: auto auto; justify-content: start; gap: 10px 20px"><div class=t style="grid-column: span 2">abcdefghij</div><div class=u>a</div><div class=u>b</div></div></div>
+    <figcaption><code>auto</code> columns; the blue item, 100px of text, spans both. The 20px gutter takes its share,
+    so the columns are 40px each: "b" at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only between tracks</h2>
+  <p><q>Gutters only appear between tracks of the implicit grid; there is no gutter before the first track or after the
+  last track. (In particular, there is no gutter between the first/last track of the implicit grid and the “auto”
+  lines in the augmented grid.)</q></p>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="display: inline-grid; grid-template-columns: 40px 40px; column-gap: 20px"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>An <code>inline-grid</code> of two 40px columns: 100px wide, A at its left edge and B at its right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cb><div class=pr-a>A</div><div class=pr-b>B</div><div class=abs style="grid-column: auto / 1"></div><div class=abs style="grid-column: 2 / auto"></div></div></div>
+    <figcaption>The 100px grid centered, from 50 to 150px. Purple boxes, absolutely positioned: <code>auto / 1</code>
+    from 0 to 50px, against A; <code>2 / auto</code> from 110px, B's left, to 200px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

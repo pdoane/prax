@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-wrap-style: pretty, stable, avoid-short-last-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 150px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.4 Selecting How to Wrap: the text-wrap-style property</div>
+  <h1>text-wrap-style: pretty, stable, avoid-short-last-line</h1>
+  <p class=pr-lede><q>It does not change which soft wrap opportunity exist, but changes how the user agent selects
+  among them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-wrap-style">CSS Text 4 §5.4</a></span>
+  Letters are 10px wide. Most stages are 150px wide and hold "a cat sat on it today", whose first fifteen
+  letters fill a line. The text is highlighted.</p>
+</header>
+
+<section>
+  <h2>A short last line</h2>
+  <p><code>avoid-short-last-line</code>: <q>Specifies the UA should avoid excessively short last lines</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=t>a cat sat on it today</span></div>
+    <figcaption><code>auto</code>: "a cat sat on it", 150px, then "today" alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="text-wrap-style: avoid-short-last-line"><span class=t>a cat sat on it today</span></div>
+    <figcaption><code>avoid-short-last-line</code>: the last line takes a word more, "a cat sat on", "it today".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "today"
+    alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>pretty, stable, and not at the cost of a worse line</h2>
+  <p><code>pretty</code>: <q>The user agent may among other things attempt to avoid excessively short last lines</q>.
+  <code>stable</code>: <q>content on subsequent lines should not be considered when making break decisions</q>.
+  <q>The user agent may decide against improving the last line when it would make some prior line(s) substantially
+  unbalanced.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-style: pretty"><span class=t>a cat sat on it today</span></div>
+    <figcaption><code>pretty</code>: the UA's choice of a better layout, such as "a cat sat on", "it
+    today".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-style: stable"><span class=t>a cat sat on it today</span></div>
+    <figcaption><code>stable</code>: each line takes all it can, "a cat sat on it", "today".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 170px; text-wrap-style: avoid-short-last-line"><span class=t>Circumnavigating the Mississippi river</span></div>
+    <figcaption>170px, <code>avoid-short-last-line</code>, the specification's example: "Circumnavigating", "the
+    Mississippi", "river", not "the" alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

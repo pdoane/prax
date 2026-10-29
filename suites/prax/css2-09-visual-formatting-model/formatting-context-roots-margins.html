@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block formatting contexts: roots beside floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; width: 60px; height: 40px; }
+  .fr { float: right; width: 60px; height: 40px; }
+  .root { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.1 Block formatting contexts</div>
+  <h1>Block formatting contexts: roots beside floats</h1>
+  <p class=pr-lede>A box that establishes a block formatting context <q>may become narrower due to the floats</q>, and
+  its border box may not overlap them. Each orange box has <code>overflow: hidden</code>; each float is 60 by 40. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#block-formatting">CSS 2 §9.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Beside a float, or below it</h2>
+  <p><q>... must not overlap the margin box of any floats in the same block formatting context as the element itself.
+  If necessary, implementations should clear the said element by placing it below any preceding floats, but may place
+  it adjacent to such floats if there is sufficient space.</q> <q>CSS 2 does not define when a UA may put said element
+  next to the float or by how much said element may become narrower.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2 §9.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit fl">float</div><div class="pr-b root" style="margin-left: -20px">ml −20</div></div>
+    <figcaption>A left float, then <code>margin-left: -20px</code>. Chrome and Firefox put the box beside the float,
+    at 60px and 140px wide; Safari below it, at −20 and 220px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit fl">float</div><div class="pr-b root" style="margin-right: -20px">mr −20</div></div>
+    <figcaption><code>margin-right: -20px</code>. Chrome and Firefox: beside the float, at 60px and 140px wide, its
+    right edge at the stage's. Safari: below it, 220px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit fr">float</div><div class="pr-b root" style="margin-left: -20px">ml −20</div></div>
+    <figcaption>A right float, then <code>margin-left: -20px</code>. Chrome and Firefox: beside it, ending at the
+    float, and with its left edge kept at the stage's, 0, though no float is on that side. Safari: below it, from −20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

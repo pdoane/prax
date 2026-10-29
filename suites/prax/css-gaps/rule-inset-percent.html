@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentage insets and overlap-join</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.3 Adjusting gap decoration endpoints, percentages</div>
+  <h1>Percentage insets and overlap-join</h1>
+  <p class=pr-lede>The inset properties take <q>&lt;length-percentage&gt; | overlap-join</q>; <q>Percentages are
+  resolved against the crossing gap width</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#inset">CSS Gaps 1 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Against the crossing gap, or joined</h2>
+  <p>At a junction, the crossing gap width is <q>the size of the gap junction in the same dimension as the gap in which
+  the segment endpoint lies</q>; at <q>Other segment endpoints</q>, <q>The crossing gap width is '0'.</q> For
+  <code>overlap-join</code>, <q>At a junction segment endpoint, the gap decoration extends into the gap junction by
+  half the crossing gap width, plus half the used value of the crossing gap's 'column-rule-width' or
+  'row-rule-width'</q>; <q>At a cap segment endpoint, 'overlap-join' is treated as '0'.</q> Each grid has
+  <code>rule-break: intersection</code>; column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: -50%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset: -50%</code>: 5px into each 10px junction, meeting in its middle; at the
+    container's edges, 0, so the rules stop there. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: overlap-join; row-rule-width: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset: overlap-join</code>, with 8px black rules: each red rule reaches
+    5 + 4 = 9px into the 10px junction, so the two overlap and the red runs on unbroken; at the edges, 0. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-visibility-items: between; column-rule-inset-cap-end: 50%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>Only D in the second row, <code>rule-visibility-items: between</code>, and
+    <code>column-rule-inset-cap-end: 50%</code>: the second red rule ends at a cap inside the grid, at a 10px
+    junction, so 5px above the row gap; the first red rule there meets the black rule, a junction, and reaches it.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

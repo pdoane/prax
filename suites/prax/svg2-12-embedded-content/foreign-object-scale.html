@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>foreignObject: laid out in user units</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .small { width: 20px; height: 10px; font-size: 6px; line-height: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>foreignObject: laid out in user units</h1>
+  <p class=pr-lede><q>The scale of the containing block is defined in the current coordinate system, including all
+  explicit and implicit (e.g., ‘viewBox’) transformations.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60. In each, a <code>foreignObject</code> at 10, 5, 60 by 20 in user units, outlined
+  dashed grey, holds the HTML box A, <code>width: 20px; height: 10px</code>.</p>
+</header>
+
+<section>
+  <h2>Implicit and explicit scale</h2>
+  <p>Each scales its user units by 2, so the <code>foreignObject</code> covers 20 to 140 across and 10 to 50 down on
+  the stage, and a CSS pixel inside it is 2 of the stage's.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 30"><foreignObject x="10" y="5" width="60" height="20"><div class="pr-a pr-fit small">A</div></foreignObject><rect x="10.25" y="5.25" width="59.5" height="19.5" fill="none" stroke="#6b7381" stroke-width="0.5" stroke-dasharray="1.5 1" /></svg></div>
+    <figcaption><code>viewBox="0 0 80 30"</code>: A drawn 40 by 20, from 20 to 60 across and 10 to 30 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(2)"><foreignObject x="10" y="5" width="60" height="20"><div class="pr-a pr-fit small">A</div></foreignObject><rect x="10.25" y="5.25" width="59.5" height="19.5" fill="none" stroke="#6b7381" stroke-width="0.5" stroke-dasharray="1.5 1" /></g></svg></div>
+    <figcaption>A group with <code>transform="scale(2)"</code>: the same, A 40 by 20 from 20, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 30" preserveAspectRatio="none"><foreignObject x="10" y="5" width="60" height="20" transform="scale(1 0.5) translate(0 5)"><div class="pr-a pr-fit small" style="height: 20px">A</div></foreignObject><rect x="10.25" y="5.25" width="59.5" height="9.5" fill="none" stroke="#6b7381" stroke-width="0.5" stroke-dasharray="1.5 1" /></svg></div>
+    <figcaption>The <code>viewBox</code>, and on the <code>foreignObject</code> <code>scale(1 0.5)</code>: A, 20 by
+    20 inside, drawn 40 by 20, from 20 to 60 and 10 to 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

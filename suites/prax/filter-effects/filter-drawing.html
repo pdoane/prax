@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>filter: all of the drawing, none of the geometry</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .frame { width: 60px; height: 20px; margin: 0 10px; background: #4f81bd; border: 5px solid #d68a3c; outline: 5px solid #6aa36a; }
+  .frame span { display: block; width: 20px; height: 10px; margin: 5px 20px; background: #8e44ad; }
+  .row { display: flex; gap: 10px; margin: 0 10px; }
+  .row div { width: 40px; height: 30px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 5 Graphic filters: the filter property</div>
+  <h1>filter: all of the drawing, none of the geometry</h1>
+  <p class=pr-lede><q>Conceptually, any parts of the drawing are effected by filter operations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">Filter Effects 1 §5</a></span></p>
+</header>
+
+<section>
+  <h2>Everything the box draws, and nothing of its place</h2>
+  <p><q>This includes any content, background, borders, text decoration, outline and visible scrolling mechanism of the
+  element to which the filter is applied, and those of its descendants.</q> <q>The filter property has no effect on
+  the geometry of the target element's CSS boxes</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="padding: 15px 0"><div class=frame style="filter: grayscale(1)"><span></span></div></div>
+    <figcaption>Background, orange border, green outline and purple child: all gray.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=row><div style="filter: blur(4px)"></div><div></div><div></div></div></div>
+    <figcaption>Three 40px boxes 10px apart, the first blurred: the other two are where they would be without it, at
+    50 and 100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

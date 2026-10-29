@@ -1,0 +1,79 @@
+00-supports-1.html
+# css-ui-4/#intro 1 Introduction: no page; it says what the module replaces
+# css-ui-4/#purpose 1.1 Purpose: no page; it lists the module's aims
+# css-ui-4/#interaction 2 Module Interactions: no page; box-sizing moved to CSS Box Sizing 3 (css-sizing) and text-overflow to CSS Overflow (css-overflow), whose pages show them; the stacking of outlines is shown in 3
+# css-ui-4/#values 2.1 Value Definitions: no page; it defines terms
+css-ui-4/#outline-props 3 Outline properties
+    outline-painting.html
+css-ui-4/#outline 3.1 Outlines Shorthand: the outline property
+    outline-auto.html
+    outline-shape.html
+css-ui-4/#outline-width 3.2 Outline Thickness: the outline-width property
+    outline-width.html
+css-ui-4/#outline-style 3.3 Outline Patterns: the outline-style property
+    outline-style.html
+css-ui-4/#outline-color 3.4 Outline Colors: the outline-color property
+    outline-color.html
+css-ui-4/#outline-offset 3.5 Offsetting the Outline: the outline-offset property
+    outline-offset.html
+    outline-offset-negative.html
+# css-ui-4/#resizing 4 Resizing: no page; it introduces 4.1
+css-ui-4/#resize 4.1 Resizing Boxes: the resize property
+    resize.html
+    resize-direction.html
+# css-ui-4/#pointing-keyboard 5 Pointing Devices and Keyboards: no page; it introduces the subsections
+# css-ui-4/#pointer-interaction 5.1 Pointer interaction: no page; it introduces 5.1.1
+# css-ui-4/#cursor 5.1.1 Styling the Cursor: the cursor property: no page; a cursor is not drawn in a page's stills; CSS 2's cursor pages (css2-18-user-interface) have stages to point at
+# css-ui-4/#predefined-cursors 5.1.1.1 Predefined Cursors: no page; cursors are not drawn in stills, as for 5.1.1
+# css-ui-4/#canvas_cursor 5.1.1.2 Cursor of the canvas: no page; cursors are not drawn in stills, as for 5.1.1
+css-ui-4/#the-insertion-caret 5.2 Insertion caret
+    caret.html
+css-ui-4/#caret-color 5.2.1 Coloring the Insertion Caret: the caret-color property
+    caret-color.html
+    caret-color-block.html
+css-ui-4/#caret-animation 5.2.2 Animation of the insertion caret: caret-animation
+    caret-animation.html
+css-ui-4/#caret-shape 5.2.3 Shape of the insertion caret: caret-shape
+    caret-shape.html
+    caret-shape-end.html
+    caret-shape-vertical.html
+css-ui-4/#caret 5.2.4 Insertion caret shorthand: caret
+    caret-shorthand.html
+# css-ui-4/#keyboard 5.3 Keyboard control: no page; it introduces 5.3.1
+# css-ui-4/#nav-dir 5.3.1 Directional Focus Navigation: the nav-up, nav-right, nav-down, nav-left properties: no page; they move the focus in response to keys, which draws nothing until a key is pressed, and no browser ships them
+# css-ui-4/#example-positioned-buttons 5.3.1.1 Example: positioned buttons: no page; an example of 5.3.1
+# css-ui-4/#example-moving-focus-to-inside-a-frame 5.3.1.2 Example: moving focus to inside a frame: no page; an example of 5.3.1
+# css-ui-4/#input-method-editor 5.3.2 Obsolete: the ime-mode property: no page; obsolete, and it affects input methods, not what is drawn
+# css-ui-4/#user-interaction 6 User Interaction: no page; it introduces the subsections
+css-ui-4/#content-selection 6.1 Controlling content selection
+    user-select.html
+    user-select-all.html
+    user-select-contain.html
+# css-ui-4/#pointer-events-control 6.2 Exclusion from Hit-testing: the pointer-events property: no page; it changes which element a pointer targets, which draws nothing
+css-ui-4/#inertness 6.3 Preventing All Interaction: the interactivity property
+    interactivity.html
+# css-ui-4/#interest 6.4 User Interest Delay: the interest-delay-* properties: no page; delays before interest is shown or lost, which a still cannot show
+# css-ui-4/#styling-widgets 7 Styling Widgets: no page; it introduces the subsections
+css-ui-4/#widget-accent 7.1 Widget Accent Colors: the accent-color property
+    accent-color.html
+css-ui-4/#appearance-switching 7.2 Switching appearance: the appearance property
+    appearance.html
+    appearance-base.html
+    appearance-compat.html
+    appearance-native-box.html
+css-ui-4/#appearance-disabling-properties 7.2.1 Properties Disabling Native Appearance
+    appearance-devolved.html
+css-ui-4/#appearance-decorative 7.2.2 Effects of appearance on Decorative Aspects of Elements
+    appearance-decorative.html
+css-ui-4/#appearance-semantics 7.2.3 Effects of appearance on Semantic Aspects of Elements
+    appearance-semantics.html
+# css-ui-4/#control-specific-rules 7.3 Control-Specific Rules: no page; it holds only issues; field-sizing and input-security are not defined in this module's text (their tests are listed as not covering it)
+css-ui-4/#input-rules 7.3.1 Single-Line Text Input Controls
+    text-input.html
+# css-ui-4/#window-interaction 8 Window Interaction: no page; it introduces 8.1
+# css-ui-4/#window-drag 8.1 Moving the window: the window-drag property: no page; dragging moves an installed app's window, which draws nothing in the page
+# css-ui-4/#acknowledgments A Acknowledgments: no page; nothing to see
+# css-ui-4/#changes B Changes: no page; nothing to see
+# css-ui-4/#privacy C Privacy Considerations: no page; nothing to see
+# css-ui-4/#security D Security Considerations: no page; nothing to see
+# css-ui-4/#default-style-sheet E Default style sheet additions for HTML: no page; informative, and its textarea's resize is shown in 4.1

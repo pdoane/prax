@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>continue: normal, collapse, discard</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 0; background: #f4f5f7; max-lines: 2; }
+  .stage { height: 120px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.3 Handling of Excess Content: the continue property</div>
+  <h1>continue: normal, collapse, discard</h1>
+  <p class=pr-lede><code>continue: normal | discard | collapse</code>. <q>The continue property gives authors the
+  ability to truncate/interrupt the content inside a box, either by visually suppressing the remaining content, or by
+  turning the box into a fragmentation container and discarding the content after the fragmentation break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#continue">CSS Overflow 4 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>After two lines</h2>
+  <p>Each dashed box is 100px wide with <code>max-lines: 2</code>, holds four lines of <code>.pr-measure</code> text,
+  and is followed by an orange box. <code>normal</code>: <q>the excess content is handled according to the usual
+  rules</q>; <code>collapse</code>: content after the clamp point is <q>visually suppressed</q>, and not in the box's
+  height; <code>discard</code>: the box is a fragmentation container, and <q>Content after the first region break is
+  not rendered.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c">line one<br>line two<br>line three<br>line four</div><div class=pr-b>next</div></div>
+    <figcaption><code>normal</code>: four lines, 80px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="continue: collapse">line one<br>line two<br>line three<br>line four</div><div class=pr-b>next</div></div>
+    <figcaption><code>collapse</code>: two lines, 40px, "next" below. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="continue: discard">line one<br>line two<br>line three<br>line four</div><div class=pr-b>next</div></div>
+    <figcaption><code>discard</code>: two lines, 40px, the rest not drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not break.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

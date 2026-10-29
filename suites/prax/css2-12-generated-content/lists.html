@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lists: principal box and marker</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .li { display: list-item; margin-left: 30px; }
+  .in { list-style-position: inside; }
+  .no-marker { list-style-type: none; }
+  .big { color: #c0392b; font-size: 18px; }
+  .num { list-style-type: decimal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5 Lists</div>
+  <h1>Lists: principal box and marker</h1>
+  <p class=pr-lede><q>An element with 'display: list-item' generates a principal block box for the element's content and,
+  depending on the values of 'list-style-type' and 'list-style-image', possibly also a marker box as a visual
+  indication that the element is a list item.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lists">CSS 2 §12.5</a></span></p>
+</header>
+
+<section>
+  <h2>The marker box</h2>
+  <p>The list properties <q>allow style sheets to specify the marker type (image, glyph, or number), and the marker
+  position with respect to the principal box (outside it or within it before content). They do not allow authors to
+  specify distinct style (colors, fonts, alignment, etc.) for the marker or adjust its position with respect to the
+  principal box; these may be derived from the principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lists">CSS 2 §12.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=li>a div, list-item</div><div class="li no-marker">list-style-type: none</div></div>
+    <figcaption>Each div is a block box 30px from the left. The first has a disc marker in the margin; the second, with
+    <code>list-style-type: none</code>, has none.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="li num big">red, 18px</div></div>
+    <figcaption>A list item in red at 18px: its number marker "1." is red and 18px too, derived from the principal
+    box. <span class="pr-flag pr-since">Since CSS 2</span> <code>::marker</code> styles it apart, next
+    page.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Backgrounds</h2>
+  <p><q>The background properties apply to the principal box only; an 'outside' marker box is transparent.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#lists">CSS 2 §12.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="li pr-hl">outside</div></div>
+    <figcaption>The orange background starts 30px in, at the principal box; the disc to its left is on the stage's
+    grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="li pr-hl in">inside</div></div>
+    <figcaption>An <code>inside</code> marker is in the principal box, so it sits on the orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

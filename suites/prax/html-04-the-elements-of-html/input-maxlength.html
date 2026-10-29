@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>maxlength and minlength</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.1 The maxlength and minlength attributes</div>
+  <h1>maxlength and minlength</h1>
+  <p class=pr-lede><q>The maxlength attribute, when it applies, is a form control maxlength attribute.</q> <q>The minlength
+  attribute, when it applies, is a form control minlength attribute.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-maxlength-and-minlength-attributes">HTML §4.10.5.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>A limit on what the user types</h2>
+  <p><q>User agents may prevent the user from causing the element's API value to be set to a value whose length is
+  greater than the element's maximum allowed value length.</q> It is too long only if <q>its value was last changed by
+  a user edit (as opposed to a change made by a script)</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#limiting-user-input-length:-the-maxlength-attribute">§4.10.19.3</a></span>
+  Each field is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input maxlength=5 placeholder="maxlength=5" size=16></div>
+        <div><input maxlength=5 value="much too long" size=16></div>
+      </div>
+    </div>
+    <figcaption>Type "abcdefgh" into the first: "abcde", and no more. The second's value attribute is longer, and shown
+    whole, and green; delete its last letter: it may turn red, too long after a user's edit.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A lower bound, once something is typed</h2>
+  <p><q>If the form control has no required attribute, then the value can still be omitted; the minlength attribute only
+  kicks in once the user has entered a value at all.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute">§4.10.19.4</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input minlength=5 placeholder="minlength=5" size=16></div>
+        <div><input minlength=5 value="abc" size=16></div>
+      </div>
+    </div>
+    <figcaption>Both green: empty, then "abc" from the attribute. Type "a" into the first: red, too short; three more
+    letters: still red; a fifth: green. Type a "d" after "abc": red.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

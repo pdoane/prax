@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Decorations of highlighted text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 20px/40px "PR Arimo"; color: #1f2430; }
+  .own .t { text-decoration: underline #c0392b 2px; }
+  .own ::highlight(h) { background-color: #4f81bd; color: white; }
+  .stack .t { text-decoration: underline #c0392b 2px; text-underline-offset: 2px; }
+  .stack ::highlight(h) { text-decoration: underline wavy #6aa36a 2px; text-underline-offset: 8px; }
+  .through ::highlight(h) { text-decoration: line-through #c0392b 3px; background-color: #b9cde6; }
+  .child ::highlight(h) { text-decoration: underline #d68a3c 2px; }
+  .child .box { display: inline-block; padding: 0 4px; border: 1px solid #6b7381; line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.6.3 Text and Text Decorations</div>
+  <h1>Decorations of highlighted text</h1>
+  <p class=pr-lede><q>Any text decorations introduced by each highlight pseudo-element are stacked in the same order as
+  their backgrounds over the text’s original decorations and are all drawn, each decoration in its own color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-text">CSS Pseudo-Elements 4 §3.6.3</a></span>
+  Each stage holds dark grey text, all or part of it in a custom highlight.</p>
+</header>
+
+<section>
+  <h2>The text's own decorations, and the highlight's</h2>
+  <p>The highlight redraws the text <q>(and those decorations)</q> <q>using that highlight’s own color</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage own"><div class=t><span data-highlight=h>Underlined</span> text</div></div>
+    <figcaption>A red underline on the text, and a white highlight on blue: “Underlined” and its underline white;
+    “text” and its underline red. <span class=pr-flag>Firefox</span> The underline under “Underlined” red.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stack"><div class=t><span data-highlight=h>Underlined</span> text</div></div>
+    <figcaption>A red underline 2px below, and the highlight's green wavy one 8px below: both drawn under
+    “Underlined”, each in its own color. <span class=pr-flag>Chrome</span> One dark underline. <span class=pr-flag>Safari</span> Only the green one, close under the text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over the text, and into an inline block</h2>
+  <p><q>all underlines are drawn below overlines which are drawn below the text which is drawn below any
+  line-throughs.</q> <q>Unlike the originating element’s own decorations, decorations declared on a highlight
+  pseudo-element propagate to out-of-flow elements and inline blocks</q> (a Note).</p>
+  <figure>
+    <div class="pr-stage through"><div class=t><span data-highlight=h>Struck</span> text</div></div>
+    <figcaption>The highlight's red line-through, 3px: over the letters of “Struck”, on light blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage child"><div class=t data-highlight=h>Line <span class=box>box</span></div></div>
+    <figcaption>An orange underline on the highlight of the line's element, which holds an inline block: under
+    “Line” and under “box”, inside the block.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

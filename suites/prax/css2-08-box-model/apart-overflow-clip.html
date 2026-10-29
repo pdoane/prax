@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: overflow clip</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: overflow clip</h1>
+  <p class=pr-lede>CSS 2 names <q>elements with 'overflow' other than 'visible'</q> among the roots of block formatting
+  contexts, whose margins do not collapse with their children's. A later value is not <code>visible</code> and
+  makes no such root. Every box is 20px tall.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></div>
+  <h2>overflow: clip</h2>
+  <p><code>clip</code> clips as <code>hidden</code> does, but <q>Unlike hidden, this value does not cause the element
+  to establish a new formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span> Its margins collapse with
+  its children's as a plain parent's do. In each figure the dashed parent has mt 20 and its child mt 40.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; overflow: hidden"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>overflow: hidden</code>, a formatting context root: 20 above the parent, 40 inside
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; overflow: clip"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>overflow: clip</code>: not a root, so the margins collapse to one 40px gap above both, as with
+    <code>visible</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

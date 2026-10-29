@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The dominant baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .diag { font: 30px "PR Baseline Diagnostic Zero"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.3 Glyph metrics and layout</div>
+  <h1>The dominant baseline</h1>
+  <p class=pr-lede><q>When a different font (or change in font size) is specified in the middle of a run of text, the
+  dominant baseline determines the baseline used to align glyphs in the new font (new size) to those in the previous
+  font.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphsMetrics">SVG 2 §11.1.3</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Baseline Diagnostic Zero at 30px, whose "H" fills the band from
+  its alphabetic baseline up to its hanging baseline, 0.65 em above; the text's <code>y</code> is dashed in
+  red.</p>
+</header>
+
+<section>
+  <h2>The dominant baseline</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 60H160" class=pr-baseline /><text class=diag x="20" y="60">H<tspan font-size="60">H</tspan></text></svg></div>
+    <figcaption>"H", then "H" at 60px: both stand on y 60, the second twice as tall, its top at 21.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 20H160" class=pr-baseline /><text class=diag x="20" y="20" dominant-baseline="hanging">H<tspan font-size="60">H</tspan></text></svg></div>
+    <figcaption>The same with <code>dominant-baseline="hanging"</code> at y 20: both hang from y 20, the second
+    reaching down to 59. <span class=pr-flag>Safari</span> The 60px H stands on y 20, its top above the stage.
+    <span class=pr-flag>Firefox</span> The 60px H hangs from y 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

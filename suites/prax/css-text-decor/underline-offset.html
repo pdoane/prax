@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-underline-offset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/40px "PR Arimo"; text-decoration-skip-ink: none; }
+  .u { text-decoration: underline #c0392b 2px; text-decoration-skip-ink: none; }
+  .pr-stage.v { padding: 6px 10px; font: 20px/40px "PR Noto Sans JP"; height: 70px; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.8 Text Underline Offset: the text-underline-offset property</div>
+  <h1>text-underline-offset</h1>
+  <p class=pr-lede>It <q>sets the offset of underlines from their zero position. Positive offsets represent distances
+  outward from the text; negative offsets inward.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#underline-offset">CSS Text Decoration 4 §2.8</a></span>
+  Each underline is red and 2px thick; red dashes mark the baseline.</p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <p><q>A percentage value specifies the offset of underlines as a percentage of the used 'font-size'.</q></p>
+  <figure>
+    <div class="pr-stage t" style="text-underline-offset: 0"><span class=pr-baseline></span><span class=u style="text-underline-offset: 0">0</span> <span class=u style="text-underline-offset: 8px">8px</span> <span class=u style="text-underline-offset: -6px">-6px</span> <span class=u style="text-underline-offset: 40%">40%</span></div>
+    <figcaption>Below the baseline by 0 and 8px; 6px up, through the letters, for -6px; and 8px for 40% of
+    20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span class=pr-baseline></span><span class=u style="text-underline-offset: 6px">near <b style="text-underline-offset: 20px">near</b> near</span></div>
+    <figcaption>The bold child sets 20px: the span's line stays 6px below the baseline under all three
+    words.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outward, whichever side</h2>
+  <p>In <code>vertical-rl</code>, with <code>left</code> and <code>right</code>, the underline moves away from the
+  text by 10px.</p>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: left"><span class=u>日本語</span></div>
+    <figcaption><code>left</code>, offset 0: the line touches the left edge of the text.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: left; text-underline-offset: 10px"><span class=u>日本語</span></div>
+    <figcaption><code>left</code>, 10px: 10px further left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: right"><span class=u>日本語</span></div>
+    <figcaption><code>right</code>, offset 0: on the right edge of the text.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: right; text-underline-offset: 10px"><span class=u>日本語</span></div>
+    <figcaption><code>right</code>, 10px: 10px further right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

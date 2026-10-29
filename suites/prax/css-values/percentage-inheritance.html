@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A percentage computes to a percentage</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .bar { height: 20px; margin: 0 0 10px; background: #4f81bd; }
+  .parent { background: rgba(79, 129, 189, 0.16); outline: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.5.1 Computation and Combination of &lt;percentage&gt;</div>
+  <h1>A percentage computes to a percentage</h1>
+  <p class=pr-lede><q>Unless otherwise specified (such as in 'font-size', which computes its &lt;percentage&gt; values to
+  &lt;length&gt;), the computed value of a percentage is the specified percentage.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combine-percentages">CSS Values and Units 4 §5.5.1</a></span>
+  So what a child inherits is the percentage, resolved again against its own base.</p>
+</header>
+
+<section>
+  <h2>width: inherit</h2>
+  <figure>
+    <div class=pr-stage><div class=parent style="width: 50%"><div class=bar style="width: inherit"></div></div></div>
+    <figcaption>The dashed parent is <code>width: 50%</code>, 100px. The child inherits 50%, half of the parent's
+    100px: a 50px bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=parent style="width: 75%; padding-top: 10%"><div class=bar style="width: 40px; padding-top: inherit"></div></div></div>
+    <figcaption>The parent's <code>padding-top: 10%</code> is 20px of the stage's 200px; the child's inherited 10% is
+    of the parent's 150px: 15px above its bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>font-size: a length</h2>
+  <p>Each bar is <code>5em</code> wide.</p>
+  <figure>
+    <div class=pr-stage style="font-size: 10px"><div class=parent style="font-size: 200%"><div class=bar style="font-size: inherit; width: 5em"></div></div></div>
+    <figcaption>The parent's <code>font-size: 200%</code> of 10px computes to 20px. The child inherits 20px, not
+    200% of 20px: its bar is 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

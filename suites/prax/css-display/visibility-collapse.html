@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>visibility: collapse</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .flex { display: flex; flex-wrap: wrap; width: 120px; }
+  .flex > div { width: 60px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 5 Invisibility: the visibility property, collapse</div>
+  <h1>visibility: collapse</h1>
+  <p class=pr-lede><q>Indicates that the box is collapsed, which can cause it to take up less space than otherwise in a
+  formatting-context–specific way.</q> Elsewhere it is <code>hidden</code>, shown with the other values. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#visibility">CSS Display 4 §5</a></span></p>
+</header>
+
+<section>
+  <h2>Table rows and columns</h2>
+  <p>See dynamic row and column effects in tables. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-effects">CSS 2 §17.5.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>a1</div><div class=pr-table-cell>a2</div></div><div class=pr-table-row style="visibility: collapse"><div class=pr-table-cell>b1</div><div class=pr-table-cell>b2</div></div><div class=pr-table-row><div class=pr-table-cell>c1</div><div class=pr-table-cell>c2</div></div></div></div>
+    <figcaption>The second row collapsed: a and c rows touch, 40px in all, with no gap for it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table style="border-spacing: 0"><col><col style="visibility: collapse"><col><tr><td class=pr-table-cell>a1</td><td class=pr-table-cell>a2</td><td class=pr-table-cell>a3</td></tr></table></div>
+    <figcaption>The second column collapsed: a1 and a3 touch, with no gap for a2. <span class=pr-flag>Safari</span> draws a2 in its place.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex items</h2>
+  <p>See collapsed flex items in flex layout. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#visibility-collapse">CSS Flexible Box Layout 2 §4.4</a></span>
+  Each stage is a wrapping flex container 120px wide of 60px items; B is 40px tall.</p>
+  <figure>
+    <div class=pr-stage><div class=flex><div class=pr-a>A</div><div class=pr-b style="height: 40px">B</div><div class=pr-c>C</div></div></div>
+    <figcaption>A and B on the first line, 40px tall from B; C on the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=flex><div class=pr-a>A</div><div class=pr-b style="height: 40px; visibility: collapse">B</div><div class=pr-c>C</div></div></div>
+    <figcaption>B collapsed: A and C on the first line, which keeps B's 40px as a strut; B is not drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> treat B as <code>hidden</code>: B's space kept, so C wraps to the second line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

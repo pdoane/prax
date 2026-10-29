@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The properties of a highlight</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 20px/30px "PR Arimo"; }
+  .colors ::highlight(h) { color: white; background-color: #4f81bd; }
+  .decor ::highlight(h) { text-decoration: underline wavy #d68a3c 2px; }
+  .shadow ::highlight(h) { text-shadow: 3px 3px #d68a3c; }
+  .layout ::highlight(h) { background-color: #b9cde6; font-size: 40px; letter-spacing: 10px; }
+  .em .t { font-size: 20px; }
+  .em ::highlight(h) { font-size: 40px; text-decoration: underline #d68a3c 0.25em; text-underline-offset: 0.25em; }
+  .translucent ::highlight(h) { background-color: rgb(214 138 60 / 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.2 Styling Highlights</div>
+  <h1>The properties of a highlight</h1>
+  <p class=pr-lede><q>The highlight pseudo-elements can only be styled by a limited set of properties that do not
+  affect layout</q>: color, background-color, text-decoration and its associated properties, text-shadow,
+  stroke-color, fill-color and stroke-width, and custom properties. <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-styling">CSS Pseudo-Elements 4 §3.2</a></span>
+  Each stage holds the word “Highlight” in 20px Arimo, all of it in a custom highlight.</p>
+</header>
+
+<section>
+  <h2>What applies</h2>
+  <figure>
+    <div class="pr-stage pr-medium colors"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption><code>color</code> and <code>background-color</code>: white on blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium decor"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption><code>text-decoration: underline wavy</code>, orange and 2px thick.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium shadow"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption><code>text-shadow: 3px 3px</code>, an orange shadow down and to the right.
+    <span class=pr-flag>Safari</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What does not, and what resolves against the element</h2>
+  <p><q>For any properties not listed above, but which are required to resolve the values of applicable properties,
+  their computed values are copied from those of the originating element, ignoring any values specified on the
+  highlight pseudo-element itself.</q> <q>If, for a given highlight pseudo-element, there are colors specified in the
+  author origin, those colors must be respected as specified</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium layout"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption><code>font-size: 40px</code> and <code>letter-spacing: 10px</code> beside a light blue background:
+    the word keeps its 20px and its width, over light blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium em"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption>An underline <code>0.25em</code> thick, <code>0.25em</code> below, with <code>font-size: 40px</code>
+    on the highlight: the em is the element's 20px, so 5px thick, 5px below. <span class=pr-flag>Safari</span> No
+    underline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium translucent"><div class=t><span data-highlight=h>Highlight</span></div></div>
+    <figcaption><code>rgb(214 138 60 / 0.5)</code>: half-strength orange, the stage's guides showing through.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

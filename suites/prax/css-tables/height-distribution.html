@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Height distribution</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; height: 100px; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  tr + tr td { background: #f6d7b4; }
+  tr + tr + tr td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.5 Distribution algorithm</div>
+  <h1>Height distribution</h1>
+  <p class=pr-lede>A row's <dfn>base size</dfn> is <q>the size it would have got if the table didn’t have a specified
+  height</q>; its <dfn>reference size</dfn> the larger of that and its size with percentages resolved against the
+  table height. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#height-distribution-algorithm">CSS Table 3 §3.10.5</a></span>
+  Each table is <code>height: 100px</code>, outlined; each row's cell is a line of <code>.pr-measure</code> text,
+  20px.</p>
+</header>
+
+<section>
+  <h2>Too little room: between base and reference</h2>
+  <p><q>If the table height is equal or smaller than sum of reference sizes, the final height assigned to each row
+  will be the weighted mean of the base and the reference size that yields the correct total height.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><tr style="height: 80%"><td>a</td></tr><tr style="height: 40%"><td>b</td></tr></table></div>
+    <figcaption>Rows of <code>80%</code> and <code>40%</code>: bases 20 and 20, references 80 and 40, 120px in all;
+    three quarters of the way, 65px and 35px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> give 80px
+    and 20px, holding the percentages to 100% in all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

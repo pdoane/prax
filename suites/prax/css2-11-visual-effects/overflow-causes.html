@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow: what makes a box overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; margin: 10px 40px; }
+  .half { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1 Overflow and clipping</div>
+  <h1>Overflow: what makes a box overflow</h1>
+  <p class=pr-lede><q>Generally, the content of a block box is confined to the content edges of the box. In certain cases,
+  a box may overflow, meaning its content lies partly or entirely outside of the box.</q> Each dashed box is 120px
+  wide, 40px from the stage's left, with <code>overflow: visible</code>, the initial value.</p>
+</header>
+
+<section>
+  <h2>Content wider than the box</h2>
+  <p><q>A line cannot be broken, causing the line box to be wider than the block box.</q> <q>A block-level box is too
+  wide for the containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-frame pr-text box1">Antidisestablishmentarianism</div></div>
+    <figcaption>One word, which cannot be broken: its line runs past the dashed box's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-frame box1"><div class="pr-a pr-fit" style="width: 150px">150px wide</div></div></div>
+    <figcaption>A child with <code>width: 150px</code>: it ends 30px past the dashed box's right edge, at 190.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Taller than an explicit height</h2>
+  <p><q>An element's height exceeds an explicit height assigned to the containing block (i.e., the containing block's
+  height is determined by the 'height' property, not by content height).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="height: 40px"><div class="pr-a pr-fit half">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption>The dashed box has <code>height: 40px</code> and holds three 20px boxes, each 60px wide: C lies wholly below its
+    bottom edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1"><div class="pr-a pr-fit half">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption>With <code>height: auto</code>, the box grows to its content, 60px, and nothing overflows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

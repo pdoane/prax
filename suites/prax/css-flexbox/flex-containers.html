@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex containers: flex and inline-flex</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .box { width: 40px; }
+  section figure .pr-stage { width: 150px; }
+  section figcaption { max-width: 150px; }
+  .flt { float: left; width: 40px; height: 40px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 3 Flex Containers: the flex and inline-flex display values</div>
+  <h1>Flex containers: flex and inline-flex</h1>
+  <p class=pr-lede><q>A flex container establishes a new flex formatting context for its contents. This is the same as
+  establishing a block formatting context, except that flex layout is used instead of block layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-containers">CSS Flexible Box Layout 2 §3</a></span></p>
+</header>
+
+<section>
+  <h2>Block-level and inline-level</h2>
+  <p><code>flex</code> <q>causes an element to generate a flex container box that is block-level when placed in flow
+  layout.</q> <code>inline-flex</code> generates one <q>that is inline-level</q>. <q>Flex containers form a
+  containing block for their contents exactly like block containers do.</q> Each dashed container holds A and
+  B, 40px wide, between "one" and "two".</p>
+  <figure>
+    <div class=pr-stage>one <span class=pr-frame style="display: flex"><span class="pr-a pr-fit box">A</span><span class="pr-b pr-fit box">B</span></span> two</div>
+    <figcaption><code>flex</code>: a line of its own, across the whole stage, "one" above it and "two" below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one <span class=pr-frame style="display: inline-flex"><span class="pr-a pr-fit box">A</span><span class="pr-b pr-fit box">B</span></span> two</div>
+    <figcaption><code>inline-flex</code>: on the line between "one" and "two", 80px wide, as its items.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="display: flex; width: 120px"><div class="pr-a pr-fit" style="width: 50%">A</div></div></div>
+    <figcaption>A <code>width: 50%</code> item in a container 120px wide: 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A formatting context of its own</h2>
+  <p><q>For example, floats do not intrude into the flex container, and the flex container's margins do not collapse
+  with the margins of its contents.</q> <q>The overflow property applies to flex containers.</q></p>
+  <figure>
+    <div class=pr-stage><div class=flt></div><div class=pr-frame style="display: flex"><div class="pr-a pr-fit box">A</div></div></div>
+    <figcaption>After a purple float 40px wide, the dashed flex container sits beside it, from 40px, and its item A
+    with it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="display: flex"><div class="pr-a pr-fit box" style="margin: 20px 0">A</div></div></div>
+    <figcaption>A has <code>margin: 20px 0</code>: the tinted container is 60px tall and A from 20px to 40px; the
+    margins stay inside.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="display: flex; width: 100px; overflow: hidden"><div class="pr-a pr-fit" style="flex: none; width: 160px">A</div></div></div>
+    <figcaption><code>overflow: hidden</code> on a container 100px wide: A, 160px wide, is clipped at 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

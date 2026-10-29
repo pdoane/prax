@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>viewBox: a rectangle mapped to the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="content"><rect width="40" height="20" fill="#4f81bd" /><circle cx="20" cy="10" r="5" fill="#d68a3c" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.6 The ‘viewBox’ attribute</div>
+  <h1>viewBox: a rectangle mapped to the viewport</h1>
+  <p class=pr-lede><q>The value of the ‘viewBox’ attribute is a list of four numbers […] that specify a rectangle in
+  user space that should be mapped to the bounds of the SVG viewport established by the given element</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#ViewBoxAttribute">SVG 2 §8.6</a></span>
+  Each stage is an SVG 160 by 60; the content is a blue rect 40 by 20 at 0, 0 with an orange dot at its middle.</p>
+</header>
+
+<section>
+  <h2>Mapped, and a size of zero</h2>
+  <p><q>A value of zero for &lt;width&gt; or &lt;height&gt; disables rendering of the element, consistent with the
+  treatment of other zero-sized viewports.</q> Each has <code>preserveAspectRatio="none"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 40 20" preserveAspectRatio="none"><use href="#content" /></svg></div>
+    <figcaption><code>viewBox="0 0 40 20"</code>: the rect fills the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="20 10 40 20" preserveAspectRatio="none"><use href="#content" /></svg></div>
+    <figcaption><code>viewBox="20 10 40 20"</code>: its quarter from 20, 10 fills the stage, the dot's at the top
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg width="160" height="60" viewBox="0 0 0 20" preserveAspectRatio="none"><use href="#content" /></svg><rect class=pr-ghost x="0.5" y="0.5" width="159" height="59" /></svg></div>
+    <figcaption>A nested <code>svg</code> with <code>viewBox="0 0 0 20"</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not the element's own attributes; after its transform</h2>
+  <p><q>the automatic transformation that is created due to a ‘viewBox’ does not affect the ‘x’, ‘y’, ‘width’ and
+  ‘height’ attributes</q> <q>on the element</q>. <q>The first coordinate system is post-multiplied by the second
+  coordinate system.</q> Nested <code>svg</code> elements, outlined.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="40" y="10" width="80" height="40" /><svg x="40" y="10" width="80" height="40" viewBox="0 0 40 20"><use href="#content" /></svg></svg></div>
+    <figcaption>80 by 40 at 40, 10, <code>viewBox="0 0 40 20"</code>: there in the stage's units, its content
+    scaled 2.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><svg x="10" y="5" width="60" height="20" viewBox="0 0 40 20" transform="scale(2)"><use href="#content" /></svg></svg></div>
+    <figcaption><code>scale(2)</code>, then <code>viewBox</code>: at 10, 5, 60 by 20, scaled 2, so 120 by 40 from
+    20, 10; the content scaled 1.5 more, 3 in all: the dot of radius 15 at 80, 30. <span class=pr-flag>Safari</span> No
+    <code>scale(2)</code>: 60 by 20 at 10, 5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

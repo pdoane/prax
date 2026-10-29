@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow: shape and knockout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 30px; margin: 20px 30px; border: 6px solid rgba(44, 90, 143, 0.35); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.6.1 Shadow Shape, Spread, and Knockout</div>
+  <h1>box-shadow: shape and knockout</h1>
+  <p class=pr-lede><q>An outer box-shadow casts a shadow as if the border-box of the element were opaque.</q> <q>The
+  shadow is drawn outside the border edge only: it is clipped inside the border-box of the element.</q> <q>An inner
+  box-shadow casts a shadow as if everything outside the padding edge were opaque.</q> <q>The shadow is drawn inside
+  the padding edge only</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#shadow-shape">CSS Borders and Box Decorations 4 §6.6.1</a></span>
+  Each box has no background and a faint 6px border.</p>
+</header>
+
+<section>
+  <h2>Outside the border edge, inside the padding edge</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 10px 10px #d68a3c"></div></div>
+    <figcaption>Outer, <code>10px 10px</code>: an L of orange outside the box; none shows through it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: inset 10px 10px #d68a3c"></div></div>
+    <figcaption>Inner: orange inside the padding box only, not under the border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: inset 0 0 0 10px #d68a3c"></div></div>
+    <figcaption>Inner, spread 10px: a 10px band inside the padding edge; spread insets it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Corners grow and shrink with the spread</h2>
+  <p><q>the corner radii of the shadow are also increased (decreased, for inner shadows) from the border-box
+  (padding-box) radii by adding (subtracting) the spread distance (and flooring at zero).</q> <q>The 'border-image'
+  does not affect the shape of the box-shadow.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 20px; box-shadow: 0 0 0 10px #d68a3c"></div></div>
+    <figcaption>Radius 20, outer spread 10: shadow corners of radius 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 20px; box-shadow: inset 0 0 0 10px #d68a3c"></div></div>
+    <figcaption>Radius 20, so 14 at the padding edge; inner spread 10: the band's inside corners have radius 4.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="box-shadow: 10px 10px #d68a3c; border-image: linear-gradient(#6aa36a, #6aa36a) 1 / 6px / 10px"></div></div>
+    <figcaption>A green border image outset 10px: the shadow is still the border box's, cast from inside the green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

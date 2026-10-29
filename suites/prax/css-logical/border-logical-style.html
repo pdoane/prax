@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative border styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .b { height: 40px; width: 80px; border: 6px solid #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.5.2 Flow-Relative Border Styles</div>
+  <h1>Flow-relative border styles</h1>
+  <p class=pr-lede><q>These properties correspond to the 'border-top-style', 'border-bottom-style', 'border-left-style', and 'border-right-style' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#border-style">CSS Logical Properties and Values 1 §4.5.2</a></span> Each box is 80 by 40px with a 6px solid border, in the stage's writing mode.</p>
+</header>
+
+<section>
+  <h2>The longhands</h2>
+  <p>Each box has <code>border-block-start-style: dotted; border-inline-start-style: double</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-start-style: dotted; border-inline-start-style: double"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: dotted on top, double at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-start-style: dotted; border-inline-start-style: double"></div></div>
+    <figcaption><code>rtl</code>: dotted on top, double at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-start-style: dotted; border-inline-start-style: double"></div></div>
+    <figcaption><code>vertical-rl</code>: dotted at the right, double on top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-block-style and border-inline-style</h2>
+  <p>Each box has <code>border-block-style: dashed none; border-inline-style: double dotted</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-style: dashed none; border-inline-style: double dotted"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: dashed on top, none below, double at the left, dotted at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-style: dashed none; border-inline-style: double dotted"></div></div>
+    <figcaption><code>rtl</code>: dashed on top, double at the right, dotted at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-style: dashed none; border-inline-style: double dotted"></div></div>
+    <figcaption><code>vertical-rl</code>: dashed at the right, none at the left, double on top, dotted below.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ex and cap: the font's x-height and cap height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .glyphs { padding: 0 10px; box-sizing: border-box; font-size: 80px; line-height: 100px; white-space: nowrap; }
+  .diag { font-family: "PR Baseline Diagnostic Zero"; }
+  .mono { font-family: "PR Noto Sans Mono"; }
+  .box { display: inline-block; width: 40px; margin-left: 10px; background: rgba(79, 129, 189, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, ex and cap</div>
+  <h1>ex and cap: the font's x-height and cap height</h1>
+  <p class=pr-lede>An ex is <q>the used x-height of the first available font</q>, and a cap <q>the used cap-height of
+  the first available font</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span>
+  In each stage, 80px text and a blue box on its baseline, dashed red.</p>
+</header>
+
+<section>
+  <h2>ex</h2>
+  <p><q>Some fonts contain reliable metrics for the x-height.</q> Both of these do. The box is <code>1ex</code>
+  tall.</p>
+  <figure>
+    <div class="pr-stage glyphs diag"><span class=pr-baseline></span>x<span class=box style="height: 1ex"></span></div>
+    <figcaption>PR Baseline Diagnostic Zero's x-height is 0.25em: the box is 20px tall, as tall as the x beside it,
+    not the 40px of half an em.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage glyphs mono"><span class=pr-baseline></span>x<span class=box style="height: 1ex"></span></div>
+    <figcaption>PR Noto Sans Mono's is 0.536em: the box is about 43px tall, its top level with the top of the
+    x.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>cap</h2>
+  <p><q>The cap-height is so called because it is approximately equal to the height of a capital Latin letter.</q>
+  The box is <code>1cap</code> tall.</p>
+  <figure>
+    <div class="pr-stage glyphs diag"><span class=pr-baseline></span>B<span class=box style="height: 1cap"></span></div>
+    <figcaption>PR Baseline Diagnostic Zero's cap height is 0.55em: the box is 44px tall, as tall as the B, not the
+    64px of the font's ascent.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage glyphs mono"><span class=pr-baseline></span>H<span class=box style="height: 1cap"></span></div>
+    <figcaption>PR Noto Sans Mono's is 0.714em: the box is about 57px tall, level with the top of the
+    H.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

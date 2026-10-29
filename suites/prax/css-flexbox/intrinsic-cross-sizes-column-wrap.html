@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic widths of column-wrap flex containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; flex-flow: column wrap; height: 40px; align-items: flex-start; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.2 Flex Container Intrinsic Cross Sizes, column multi-line</div>
+  <h1>Intrinsic widths of column-wrap flex containers</h1>
+  <p class=pr-lede>For a column multi-line flex container, <q>The max-content cross size is the sum of the flex line
+  cross sizes resulting from sizing the flex container under a cross-axis max-content constraint, using the largest
+  max-content cross-size contribution among the flex items as the available space in the cross axis for each of the
+  flex items during layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-cross-sizes">CSS Flexible Box Layout 2 §9.10.2</a></span></p>
+</header>
+
+<section>
+  <h2>max-content: the sum of the columns</h2>
+  <p>Each dashed container is <code>column wrap</code>, 40px tall, two 20px items to a line, of
+  <code>align-items: flex-start</code>: "aaa", "bb", "cccc", "d" and "ee", 30, 20, 40, 10 and 20px wide.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa</div><div class=i2>bb</div><div class=i3>cccc</div><div class=i1>d</div><div class=i2>ee</div></div></div>
+    <figcaption><code>width: max-content</code>: lines 30, 40 and 20px wide, so 90px, every column inside it.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 40px, the widest
+    item, as if it were one column; the second and third columns overflow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="float: left"><div class=i1>aaa</div><div class=i2>bb</div><div class=i3>cccc</div><div class=i1>d</div><div class=i2>ee</div></div></div>
+    <figcaption>A float, sized by the fit-content formula: 90px too.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>min-content: the largest contribution</h2>
+  <p><q>The min-content cross size is the largest min-content contribution among all of its flex items.</q> The items are "aaa bb" and "c dddd": min-content
+  contributions of 30 and 40px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bb</div><div class=i2>c dddd</div></div></div>
+    <figcaption><code>width: min-content</code>: 40px. Each item, laid out in that 40px, takes two lines and a
+    column of its own: "aaa bb", then "c dddd" from 40 to 80px, overflowing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+  <!-- A red square that multiplies with what is under it: in an image, only with the image's own transparent start. -->
+  <rect width="40" height="40" fill="#ff0000" style="mix-blend-mode: multiply"/>
+</svg>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline-size containment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 60px; }
+  figure figcaption { max-width: 152px; }
+  .k { contain: inline-size; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .sec { display: flow-root; width: 120px; height: auto; }
+  .f1 { float: left; width: 30px; height: 40px; background: #4f81bd; }
+  .f2 { float: right; width: 30px; height: 40px; background: #4f81bd; }
+  .f3 { float: left; width: 100px; height: 40px; background: #2c5a8f; }
+  article { display: flow-root; min-width: min-content; outline: 1px solid #c0392b; }
+  article div { background: #f6d7b4; aspect-ratio: 1/1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.2 Inline-Size Containment</div>
+  <h1>Inline-size containment</h1>
+  <p class=pr-lede><q>the inline-axis intrinsic sizes of the principal box are determined as if the element had no
+  content. However, content continues to impact the box’s block-axis intrinsic sizes as usual</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-inline-size">CSS Containment 2 §3.2</a></span>
+  Each blue box has <code>contain: inline-size</code>; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>No inline size from content, a block size from it</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl">two words</div></div>
+    <figcaption>A float: 0 wide, so each word is on its own line, and 40 tall from the two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=k style="width: max-content; padding-right: 20px">two words</div></div>
+    <figcaption><code>width: max-content</code> with 20px right padding: 20 wide, 40 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure pr-vertical" style="height: 100px"><div class="k fl">two words</div></div>
+    <figcaption>A float in <code>vertical-rl</code>: the inline size is the height, 0, and the width 40 from the two
+    lines.</figcaption>
+  </figure>
+</section>
+
+
+<section>
+  <h2>Where it has no effect</h2>
+  <p>As for size containment: no principal box, a table, an internal table box, <q>an internal ruby box or a non-atomic
+  inline-level box</q>. See <a href="size-containment-exceptions.html">Where size containment has no effect</a>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-table k"><div class=pr-table-cell>table</div></div></div>
+    <figcaption>On a table: the table is 64 wide, around "table".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">an <span class=k>inline box</span> here</div>
+    <figcaption>On a <code>span</code>: its background covers its words.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

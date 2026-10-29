@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The positioning rectangle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .place { x: 40px; y: 20px; width: 80px; height: 30px; }
+  .box { x: 20px; y: 10px; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>The positioning rectangle</h1>
+  <p class=pr-lede><q>The 'x', 'y', width, and height geometry properties specify the rectangular region into which
+  the embedded content is positioned (the positioning rectangle).</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60; the images are the flag 40 by 20 in quarters, blue, orange, green, purple. A dashed
+  grey outline marks each positioning rectangle.</p>
+</header>
+
+<section>
+  <h2>From attributes or from CSS</h2>
+  <p>Each <code>image</code> has <code>preserveAspectRatio="none"</code>, so the flag fills the rectangle.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>x="20" y="10" width="120" height="40"</code>: the flag stretched over 120 by 40, the seams
+    at x 80 and y 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=place href="../shared/resources/flag-40x20.png" preserveAspectRatio="none" /><rect x="40.5" y="20.5" width="79" height="29" class=pr-ghost /></svg></div>
+    <figcaption>From a style sheet, <code>x: 40px; y: 20px; width: 80px; height: 30px</code>: the flag over 40 to 120
+    across and 20 to 50 down. <span class=pr-flag>Safari</span> At 0, 0: the size, but not
+    <code>x</code> and <code>y</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=box><div class=pr-a style="height: 40px; box-sizing: border-box">A</div></foreignObject></svg></div>
+    <figcaption>A <code>foreignObject</code> from a style sheet, <code>x: 20px; y: 10px; width: 60px; height:
+    40px</code>, holding a box 40 tall: blue from 20 to 80 across, 10 to 50 down. <span class=pr-flag>Safari</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The bounding box</h2>
+  <p><q>The positioning rectangle is used as the bounding box of the element</q>, whatever part of it the image
+  covers. Each <code>image</code> is 120 by 40 at 20, 10, with <code>preserveAspectRatio="xMinYMid meet"</code>, so the
+  flag is 80 by 40 at its left, and is clipped by a <code>clipPath</code> in <code>objectBoundingBox</code> units.</p>
+  <svg width="0" height="0" style="position: absolute">
+    <clipPath id="left-half" clipPathUnits="objectBoundingBox"><rect width="0.5" height="1" /></clipPath>
+    <clipPath id="right-quarter" clipPathUnits="objectBoundingBox"><rect x="0.75" width="0.25" height="1" /></clipPath>
+  </svg>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMinYMid meet" clip-path="url(#left-half)" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The left half of the box, x 0 to 0.5: 20 to 80, so the flag's left half, 20 to 60, and 20 of its
+    right half, to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMinYMid meet" clip-path="url(#right-quarter)" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The box's right quarter, 0.75 to 1: 110 to 140, past the flag's right edge at 100, so nothing is
+    drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

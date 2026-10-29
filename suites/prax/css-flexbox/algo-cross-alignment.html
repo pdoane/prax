@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Steps 14 to 16: items, container, lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; align-items: flex-start; }
+  .pr-stage > div { width: 80px; }
+  .h40 { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.6 Cross-Axis Alignment, steps 14 to 16</div>
+  <h1>Steps 14 to 16: items, container, lines</h1>
+  <p class=pr-lede><q>Align all flex items along the cross-axis per align-self, if neither of the item's cross-axis
+  margins are auto.</q> <q>Determine the flex container's used cross size using the rules of the formatting context in
+  which it participates. If a content-based cross size is needed, use the sum of the flex lines' cross sizes.</q>
+  <q>Align all flex lines per align-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-alignment">CSS Flexible Box Layout 2 §9.6</a></span></p>
+</header>
+
+<section>
+  <h2>Each item in its line, the container from its lines</h2>
+  <p>Each stage wraps items 80px wide two to a line, with <code>align-items: flex-start</code>. A is 40px tall, the
+  others 20px, so the first line is 40px tall and the second 20px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit h40">A</div><div class="pr-b pr-fit" style="align-self: flex-end">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit" style="align-self: flex-end">D</div></div>
+    <figcaption>Step 14: B, <code>align-self: flex-end</code>, is at the bottom of its line, 20 to 40px; D's line is
+    as tall as D, so D is at 40px. Step 15: the stage's <code>height: auto</code> is the sum, 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-wrap: nowrap"><div class="pr-a pr-fit h40">A</div><div class="pr-b pr-fit" style="align-self: center">B</div></div>
+    <figcaption><code>nowrap</code>: one line, as tall as A, so the stage is 40px tall and B, <code>center</code>, at
+    10 to 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then the lines</h2>
+  <p>Step 16 comes last, so a container sized from its lines leaves <code>align-content</code> nothing to do.</p>
+  <figure>
+    <div class=pr-stage style="align-content: flex-end"><div class="pr-a pr-fit h40">A</div><div class="pr-b pr-fit" style="align-self: flex-end">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>height: auto</code>, <code>align-content: flex-end</code>: 60px tall, the lines at 0 and 40px
+    as before.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-content: flex-end; height: 100px"><div class="pr-a pr-fit h40">A</div><div class="pr-b pr-fit" style="align-self: flex-end">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>height: 100px</code>, <code>align-content: flex-end</code>: the lines are moved down 40px, to
+    40 and 80px; B is still at the bottom of its line, 60 to 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

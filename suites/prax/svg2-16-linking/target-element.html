@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Identifying the target element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7.4 Identifying the target element</div>
+  <h1>Identifying the target element</h1>
+  <p class=pr-lede><q>If the URL does not specify a specific element in a target fragment, the target element is the root
+  element of the referenced document.</q> <q>If the referenced document is immutable, then the URL reference is
+  invalid. An external subresource document is always immutable once fully parsed</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL-target">SVG 2 §16.1.7.4</a></span>
+  Each stage is an SVG 160 by 60 with a <code>use</code> at 20, 10 of <code>support/quadrants.svg</code>, a drawing 160
+  by 60 in four colored quadrants.</p>
+</header>
+
+<section>
+  <h2>The root, an element, or nothing</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/quadrants.svg" x="20" y="10" /></svg></div>
+    <figcaption>No fragment: its root <code>svg</code>, the quadrants from 20, 10, cut by the stage.
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/quadrants.svg#right" x="20" y="10" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>#right</code>, a <code>view</code>, which draws nothing: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/quadrants.svg#missing" x="20" y="10" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>#missing</code>, in an immutable document: invalid, nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

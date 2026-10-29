@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The metadata element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; }
+  text { font: 700 24px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.8 The ‘metadata’ element</div>
+  <h1>The metadata element</h1>
+  <p class=pr-lede><q>Metadata content is not directly rendered; the display value for the ‘metadata’ element must
+  always be set to none by the user agent style sheet, and this declaration must have importance over any other CSS
+  rule or presentation attribute.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#MetadataElement">SVG 2 §5.8</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Not rendered, whatever it holds</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><metadata><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></metadata></svg></div>
+    <figcaption>A <code>metadata</code> holding an SVG rect: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><metadata class=shown display="inline"><text x="20" y="40" fill="#d68a3c">Data</text></metadata></svg></div>
+    <figcaption>One holding text, with <code>display: inline !important</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

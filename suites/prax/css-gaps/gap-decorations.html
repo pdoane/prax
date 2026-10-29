@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gap decorations</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .rules { column-rule: 2px solid #c0392b; row-rule: 2px solid #1f2430; }
+  .see > div { opacity: 0.6; }
+  .boxed { border: 6px solid #8a93a1; background: #f4f5f7; margin: 10px; }
+  .scroller { height: 50px; overflow: hidden; border: 6px solid #8a93a1; }
+  .scroller .g { grid-auto-rows: 20px; }
+  .pr-stage.pr-vertical { height: 100px; }
+  .fc { display: flex; flex-flow: column wrap; height: 70px; gap: 10px; }
+  .fc > div { width: 40px; padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3 Gap decorations</div>
+  <h1>Gap decorations</h1>
+  <p class=pr-lede><q>Gaps may contain a gap decoration, which is a visible separator (such as a line) painted
+  between adjacent boxes.</q> <q>Gap decorations do not take up space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-decorations">CSS Gaps 1 §3</a></span></p>
+</header>
+
+<section>
+  <h2>No room of their own</h2>
+  <p><q>If a gap decoration is wider than its gap, any adjacent boxes will overlap the decoration</q>. Each grid has
+  <code>gap: 10px</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-width: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>rule: 8px solid</code>: an 8px rule in each gap, red down, black across; the items are
+    60px wide, where they are with no rules. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g see" style="column-rule: 20px solid #c0392b"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>A 20px rule in a 10px gap reaches 5px under each item, seen through the items, which are
+    translucent. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painted above the border, scrolled with the items</h2>
+  <p><q>Gap decorations are painted just above the border of the container. For scrollable containers, note that while
+  the border and background of the container aren't scrolled, the decorations need to scroll along with items in the
+  container.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g boxed" style="column-rule: 4px solid #c0392b; column-rule-inset-cap: -10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>The red rules, stretched 10px past each end, cross the grey border and run 4px beyond it, under
+    nothing. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=scroller id=scroller><div class="g rules"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-a>4</div><div class=pr-b>5</div><div class=pr-c>6</div><div class=pr-a>7</div><div class=pr-b>8</div><div class=pr-c>9</div></div></div></div>
+    <figcaption>Scrolled down 20px: row 1 is out of sight, and the black rules have moved up with
+    the rows, 5px and 35px below the border, which stays. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("scroller").scrollTop = 20;</script>
+</body>
+</html>

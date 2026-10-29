@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute positioning: a static position in the grid area</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .pr-stage.pr-cb { height: 50px; }
+  .g { display: grid; grid-template-columns: 40px 40px; height: 30px; padding: 10px; }
+  .s { position: absolute; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 10.2 With a Grid Container as Parent, and as containing block</div>
+  <h1>Absolute positioning: a static position in the grid area</h1>
+  <p class=pr-lede><q>The static position of an absolutely-positioned child of a grid container is determined as if
+  it were the sole grid item in a grid area whose edges coincide with the content edges of the grid
+  container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#static-position">CSS Grid Layout 2 §10.2</a></span>
+  Each stage holds a grid container with 10px of padding and two 40px columns, its content box from 10 to 190px
+  across and 10 to 40px down. S, 40 by 20px, is absolutely positioned with no offsets.</p>
+</header>
+
+<section>
+  <h2>When the grid container is the containing block</h2>
+  <p><q>However, if that grid container also establishes the box’s actual containing block, then the grid area
+  specified by the grid-placement properties establishes its static-position rectangle instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#staticpos-rect">CSS Box Alignment 3 §A</a></span>
+  Here the grid container itself is <code>position: relative</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=g style="position: relative"><div class="pr-d pr-fit s" style="justify-self: end; align-self: end">S</div></div></div>
+    <figcaption><code>end</code> in both, and <code>grid-area: auto</code>: the auto lines are the padding edges, so
+    S is from 160 to 200px across and 30 to 50px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=g style="position: relative"><div class="pr-d pr-fit s" style="grid-column: 2; grid-row: 1">S</div></div></div>
+    <figcaption><code>grid-column: 2; grid-row: 1</code>: S at the start of that area, 50px in and 10px
+    down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

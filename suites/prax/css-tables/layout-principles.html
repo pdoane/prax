@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A table's width is fit-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .sized { outline: 1px dashed #6b7381; }
+  .sized table { border-spacing: 10px; background: #e0e3e8; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.1 Core layout principles</div>
+  <h1>A table's width is fit-content</h1>
+  <p class=pr-lede><q>Unlike other block-level boxes, tables do not fill their containing block by default. When their
+  'width' computes to auto, they behave as if they had fit-content specified instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#layout-principles">CSS Table 3 §3.1</a></span>
+  Text is <code>.pr-measure</code>, 10px a letter.</p>
+</header>
+
+<section>
+  <h2>As wide as the content, up to the containing block</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>aaa bbb</td><td>cc</td></tr></table></div>
+    <figcaption>Short content: the table is 90px, its max-content width, not 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>aaa bbb ccc ddd eee fff</td><td>gg</td></tr></table></div>
+    <figcaption>Content wider than the stage: the table is 200px, and the first cell wraps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="margin: 0 auto"><tr><td>aaa bbb</td><td>cc</td></tr></table></div>
+    <figcaption><q>a table can be centered using left and right auto margins</q>: 90px wide, 55px in from each
+    side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The table's min-content and max-content widths</h2>
+  <p>The min-content width of a table is <q>the width required to fit all of its columns min-content widths and its
+  undistributable spaces</q>, and its max-content width the same with their max-content widths. Each dashed block is
+  sized to its content around a grey table with <code>border-spacing: 10px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=sized style="width: min-content"><table><tr><td>aaa bbb</td><td>cc dd</td></tr></table></div></div>
+    <figcaption><code>width: min-content</code>: columns of 30px and 20px and three 10px spaces, 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=sized style="width: max-content"><table><tr><td>aaa bbb</td><td>cc dd</td></tr></table></div></div>
+    <figcaption><code>width: max-content</code>: columns of 70px and 50px and the spaces, 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

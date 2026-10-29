@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hwb()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 8 HWB Colors: hwb() function</div>
+  <h1>hwb()</h1>
+  <p class=pr-lede><q>It describes colors with a starting hue, then a degree of whiteness and blackness to mix into
+  that base hue.</q> <q>HWB colors resolve to sRGB.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#the-hwb-notation">CSS Color 4 §8</a></span> Each pair is the HWB color,
+  then the color it converts to.</p>
+</header>
+
+<section>
+  <h2>Whiteness and blackness</h2>
+  <p><q>The second argument specifies the amount of white to mix in, as a percentage from 0% (no whiteness) to 100%
+  (full whiteness). Similarly, the third argument specifies the amount of black to mix in</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hwb(150 20% 10%)"></div><div class=sw style="background: rgb(20% 90% 55%)"></div><div class=sw style="background: hsl(150 77.78% 55%)"></div></div>
+    <figcaption><code>hwb(150 20% 10%)</code>, <code>rgb(20% 90% 55%)</code> and <code>hsl(150 77.78% 55%)</code>:
+    the same green three times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hwb(0 0% 0%)"></div><div class=sw style="background: hwb(0 40% 0%)"></div><div class=sw style="background: hwb(0 0% 40%)"></div><div class=sw style="background: hwb(0 40% 40%)"></div></div>
+    <figcaption>Hue 0 with W/B of 0/0, 40/0, 0/40, 40/40: red, pink, dark red, and grayish red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>W + B of 100% or more: a gray</h2>
+  <p><q>If the sum white+black is greater than or equal to 100%, it defines an achromatic color, i.e. a shade of gray;
+  when converted to sRGB the R, G and B values are identical and have the value white / (white + black).</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hwb(45 40% 80%)"></div><div class=sw style="background: rgb(33.33% 33.33% 33.33%)"></div><div class=sw style="background: hwb(200 60% 40%)"></div><div class=sw style="background: rgb(60% 60% 60%)"></div></div>
+    <figcaption><code>hwb(45 40% 80%)</code>: 40 / 120, as <code>rgb(33.33% 33.33% 33.33%)</code>. <code>hwb(200 60%
+    40%)</code>: as <code>rgb(60% 60% 60%)</code>. No hue in either.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: hwb(150 20% 10% / 0.5)"></div><div class=sw style="background: rgb(20% 90% 55% / 0.5)"></div></div>
+    <figcaption>The fourth argument, alpha: <code>hwb(150 20% 10% / 0.5)</code> beside <code>rgb(20% 90% 55% /
+    0.5)</code>, on a checkerboard.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

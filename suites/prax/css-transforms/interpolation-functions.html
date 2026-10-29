@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating functions through their primitives</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 20px; top: 40px; width: 40px; height: 20px; }
+  .half { animation: 4s ease-in-out -2s infinite alternate both; }
+  @keyframes same { from { transform: translate(0); } to { transform: translate(80px); } }
+  @keyframes xy { from { transform: translateX(80px); } to { transform: translateY(40px); } }
+  @keyframes sxy { from { transform: scaleX(2); } to { transform: scaleY(2); } }
+  @keyframes xz { from { transform: translateX(40px); } to { transform: translateZ(50px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 10 Interpolation of primitives and derived transform functions</div>
+  <h1>Interpolating functions through their primitives</h1>
+  <p class=pr-lede><q>Two different types of transform functions that share the same primitive, or transform functions
+  of the same type with different number of arguments can be interpolated. Both transform functions need a former
+  conversion to the common primitive first and get interpolated numerically afterwards.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#interpolation-of-transform-functions">CSS Transforms 1 §10</a></span>
+  Each blue box is 40 by 20 at (20, 40), on the dashed outline, animating; a still shows the middle, <i>p</i> = 0.5.</p>
+</header>
+
+<section>
+  <h2>The same function, and a shared 2D primitive</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: same">A</div></div>
+    <figcaption><code>translate(0)</code> to <code>translate(80px)</code>: numerically, 40px right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: xy">A</div></div>
+    <figcaption><code>translateX(80px)</code> to <code>translateY(40px)</code>: 40px right, 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: sxy">A</div></div>
+    <figcaption><code>scaleX(2)</code> to <code>scaleY(2)</code>: <code>scale(1.5)</code>, 60 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A 3D primitive when either is 3D</h2>
+  <p><q>If one or both transform functions are three-dimensional transform functions, the common three-dimensional
+  primitive is used.</q> The stage has <code>perspective: 75px</code> about the box's center, (40, 50).</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion" style="perspective: 75px; perspective-origin: 40px 50px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: xz">A</div></div>
+    <figcaption><code>translateX(40px)</code> to <code>translateZ(50px)</code>: <code>translate3d(20px, 0,
+    25px)</code>, 60 by 30, 40 to 100 across.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

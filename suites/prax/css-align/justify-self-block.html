@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self on blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .t { display: table; border: 1px solid #2c5a8f; background: #b9cde6; font-size: 12px; line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.1 Block-Level Boxes</div>
+  <h1>justify-self on blocks</h1>
+  <p class=pr-lede>For a block-level box the alignment container is <q>The box's containing block</q>, the subject
+  <q>The block's margin box</q>, and <q>normal</q> <q>The box lays out according to the default rules for block
+  layout</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-block">CSS Box Alignment 3 §6.1.1</a></span>
+  Each stage is a block holding blocks.</p>
+</header>
+
+<section>
+  <h2>Fit-content, then aligned</h2>
+  <p><q>The automatic size of a block-level box whose 'justify-self' is not normal is equivalent to fit-content
+  (rather than e.g. stretch, as is typical for a non-replaced block-level box).</q></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b style="justify-self: normal">B normal</div></div>
+    <figcaption><code>auto</code> and <code>normal</code>: A and B as wide as the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-a style="justify-self: end">A end</div><div class=pr-b style="justify-self: center">B center</div></div>
+    <figcaption>A <code>end</code>, B <code>center</code>: each as wide as its text, A at the right, B centered.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Both as
+    wide as the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-a style="justify-self: start">A start</div><div class=pr-b style="justify-self: stretch">B stretch</div></div>
+    <figcaption>A <code>start</code>: as wide as its text, at the left; B <code>stretch</code>: the stage's width.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A as
+    wide as the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A table, aligned and with margins</h2>
+  <p><q>The effect of these rules is that an auto-sized block-level table, for example, can be aligned while still
+  having side margins.</q> The table has <code>margin: 0 20px</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=t style="margin: 0 20px; justify-self: end"><div class=pr-table-row><div class=pr-table-cell>table</div></div></div></div>
+    <figcaption><code>end</code>: the table shrink-wrapped, 20px from the right. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 20px from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t style="margin: 0 20px; justify-self: end"><div class=pr-table-row><div class=pr-table-cell>a table wider than the stage is</div></div></div></div>
+    <figcaption>Wider than its containing block: it fills it less its margins, 20px in at each side, its text
+    wrapped.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

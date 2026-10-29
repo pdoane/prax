@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font variant is inherited</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .heading { padding: 0 6px; font-size: 20px; font-weight: bold; line-height: 40px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.5 Small-caps: the 'font-variant' property</div>
+  <h1>Font variant is inherited</h1>
+  <p class=pr-lede><q>Another type of variation within a font family is the small-caps.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#small-caps">CSS 2
+  §15.5</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/variant-caps.html">font-variant-caps</a>.</p>
+</header>
+
+<section>
+  <h2>Inherited, and combined with font-style</h2>
+  <p><q>The following example results in an 'H3' element in small-caps, with any emphasized words in oblique, and any
+  emphasized words within an 'H3' oblique small-caps</q>: <code>h3 { font-variant: small-caps } em { font-style:
+  oblique }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#small-caps">CSS 2 §15.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide heading" style="font-family: Helvetica; font-variant: small-caps">A heading <em style="font-style: oblique">with emphasis</em></div>
+    <figcaption>The heading is in small-caps; its <code>em</code> inherits small-caps and is also oblique.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide heading" style="font-family: Helvetica; font-weight: normal">Text <em style="font-style: oblique">with emphasis</em></div>
+    <figcaption>Outside the heading, the <code>em</code> is oblique, in normal letters.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

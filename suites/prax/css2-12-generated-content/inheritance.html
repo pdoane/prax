@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Before and after: inherited and initial values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .quote { font: italic 18px/20px Georgia, serif; }
+  .quote:before { content: open-quote; color: red; }
+  .quote:after { content: close-quote; }
+  .warn { color: #2c5a8f; font-weight: 700; }
+  .warn:before { content: "Note: "; }
+  .block-note { padding: 0 4px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+  .block-note:before { content: "Note: "; font-weight: 600; }
+  .doc:after { content: "The End"; display: block; margin-top: 2em; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.1 The :before and :after pseudo-elements</div>
+  <h1>Before and after: inherited and initial values</h1>
+  <p class=pr-lede>A pseudo-element's own properties come from its element where they inherit, and from their initial
+  values where they do not.</p>
+</header>
+
+<section>
+  <h2>Inheritable properties come from the element</h2>
+  <p><q>The :before and :after pseudo-elements inherit any inheritable properties from the element in the document tree
+  to which they are attached.</q> In the specification's example, <q>The color of the quote mark will be red, but the
+  font will be the same as the font of the rest of the Q element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#before-after-content">CSS 2 §12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=quote>Quote me!</span></div>
+    <figcaption><code>:before { content: open-quote; color: red }</code>: the opening mark is red, and in the same
+    18px serif italic as the quotation; the closing mark is black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=warn>keep dry.</div></div>
+    <figcaption>The element is blue and bold, and so is the generated "Note: ", which sets neither.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other properties take their initial values</h2>
+  <p><q>In a :before or :after pseudo-element declaration, non-inherited properties take their initial values.</q>
+  <q>So, for example, because the initial value of the 'display' property is 'inline', the quote in the previous
+  example is inserted as an inline box</q>. <q>The next example explicitly sets the 'display' property to 'block', so
+  that the inserted text becomes a block</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#before-after-content">CSS 2 §12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=block-note>keep dry.</div></div>
+    <figcaption>The element is a block with a blue border; its <code>:before</code> is inline, on the same line as
+    "keep dry.", with no border of its own.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=doc>Last line of a body.</div></div>
+    <figcaption><code>display: block; margin-top: 2em; text-align: center</code>: "The End" is centered on its own
+    line, 26px (2em of 13px) below the body's line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

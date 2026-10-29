@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Submit buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.18 Submit Button state (type=submit)</div>
+  <h1>Submit buttons</h1>
+  <p class=pr-lede><q>The input element represents a button that, when activated, submits the form.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#submit-button-state-(type=submit)">HTML §4.10.5.1.18</a></span></p>
+</header>
+
+<section>
+  <h2>Its label, and what a click submits</h2>
+  <p><q>If the element has a value attribute, the button's label must be the value of that attribute; otherwise, it must
+  be an implementation-defined string that means "Submit" or some such.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#submit-button-state-(type=submit)">§4.10.5.1.18</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=submit-result>
+        <div><input name=q value=hello size=8> <input type=submit> <input type=submit name=go value="Send it"></div>
+      </form>
+      <iframe class=pr-result name=submit-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>The browser's word for Submit, then "Send it". Click the first: <code>q=hello</code>. Click the
+    second: <code>q=hello</code> and, since it has a name, <code>go=Send it</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Enter in a field: implicit submission</h2>
+  <p>Where the user can submit a form implicitly, <q>for example, on some platforms hitting the "enter" key while a text
+  control is focused</q>, doing so <q>must cause the user agent to fire a click event at that default button</q>, the
+  form's first submit button. With no submit button, the form is submitted unless it has more than one field that
+  blocks implicit submission. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission">§4.10.22.2</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=implicit-result>
+        <div><input name=q value=enter size=6> <input type=submit id=save name=act value=Save>
+        <input type=submit id=delete name=act value=Delete></div>
+      </form>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=1></ol>
+      <iframe class=pr-result name=implicit-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click into the field and press Enter: a <code>click</code> at Save, the default button, which submits
+    <code>q=enter</code> and <code>act=Save</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=one-field-result>
+        <div><input name=x value=one size=5></div>
+      </form>
+      <form class=pad action=support/form-echo.html target=two-field-result style="padding-top: 0">
+        <div><input name=x value=two size=5> <input name=y value=fields size=5></div>
+      </form>
+      <iframe class=pr-result name=one-field-result src=support/form-echo.html style="height: 20px"></iframe>
+      <iframe class=pr-result name=two-field-result src=support/form-echo.html style="height: 20px"></iframe>
+    </div>
+    <figcaption>No submit buttons. Enter in the lone field: the upper frame turns green, <code>x=one</code>. Enter in
+    either of the two fields: nothing.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

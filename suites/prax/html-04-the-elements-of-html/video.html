@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The video element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .frame { outline: 1px dashed #c0392b; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.8 The video element</div>
+  <h1>The video element</h1>
+  <p class=pr-lede><q>A video element represents what is given for the first matching condition in the list
+  below</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#the-video-element">HTML §4.8.8</a></span>
+  The video, <code>clip.mp4</code>, is 160 by 80 and two seconds long: blue, orange, green, purple, half a second each. The
+  poster is blue, 80 by 40. Each video is outlined in dashed red.</p>
+</header>
+
+<section>
+  <h2>Before any video data: the poster, or nothing</h2>
+  <p><q>When no video data is available</q>, <q>The video element represents its poster frame, if any, or else
+  transparent black with no natural dimensions.</q> The playback area's natural size is <q>the natural width of the
+  poster frame, if that is available and the element currently represents its poster frame</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video class=frame style="width: 140px; height: 40px"></video></div>
+    <figcaption>No src or poster, 140 by 40: transparent, the guides showing through.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video class=frame poster="support/blue-80x40.png"></video></div>
+    <figcaption>A poster, no src: blue, 80 by 40, the poster's size.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video class=frame poster="support/blue-80x40.png" preload=none src="support/clip.mp4"></video></div>
+    <figcaption>A poster, and <code>preload=none</code>: blue, 80 by 40, though the video is 160 by 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Paused at the start: the poster, or the first frame</h2>
+  <p><q>When the video element is paused, the current playback position is the first frame of video, and the
+  element's show poster flag is set</q>, <q>The video element represents its poster frame, if any, or else the first
+  frame of the video.</q></p>
+  <figure>
+    <div class="pr-stage pic"><video class=frame src="support/clip.mp4"></video></div>
+    <figcaption>No poster: the first frame, blue, 160 by 80.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pic"><video class=frame poster="support/blue-80x40.png" src="support/clip.mp4" style="background: #8a93a1"></video></div>
+    <figcaption>A poster, the video loaded, a grey background: still the poster, and the box the poster's 80 by 40,
+    with no grey around it. <span class=pr-flag>Firefox</span> the box is the video's 160 by 80, the poster filling
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

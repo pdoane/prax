@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: a whole file in a rectangle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: a whole file in a rectangle</h1>
+  <p class=pr-lede><q>The ‘image’ element indicates that the contents of a complete file are to be rendered into a
+  given rectangle within the current user coordinate system.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> at 40, 10, 80 by 40, of a flag 40 by 20 in quarters
+  unless a figure says otherwise.</p>
+</header>
+
+<section>
+  <h2>PNG, JPEG and SVG</h2>
+  <p><q>Conforming SVG viewers need to support at least PNG, JPEG and SVG format files.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>PNG: blue and orange above y 30, green and purple below, the seam at x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQEBAQIBAQECAgICAgQDAgICAgUEBAMEBgUGBgYFBgYGBwkIBgcJBwYGCAsICQoKCgoKBggLDAsKDAkKCgr/2wBDAQICAgICAgUDAwUKBwYHCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgr/wAARCAAUACgDAREAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDDr+mD8HCgDvvgf/zFP+2H/tSv5L+lH/zKP+5j/wBwH9KfR5/5mf8A3B/9ynfV/JZ/SgUAec/8Ij4e/wCgf/5Ff/Gv69/4iTxr/wBBX/klP/5A/wA6fq9HsH/CI+Hv+gf/AORX/wAaP+Ik8a/9BX/klP8A+QD6vR7HL/EnxTr3ww+xf8INffYft3mfav3Sy79m3b/rA2Mb26Y619ZwxlOX+K/tv9aofWfq3L7PV0+X2nNz/wAJwvfkj8V7W0td3/c/BetVwX1/2Ltf2V+u3tO9+5y//DQHxc/6G3/yQt//AI3X1f8AxAnwq/6F3/lav/8ALT9z/tXH/wA/4L/IP+GgPi5/0Nv/AJIW/wD8bo/4gT4Vf9C7/wArV/8A5aH9q4/+f8F/kexV/N5/D4UAea/tDf8AMH/7eP8A2nX7t4Kf8x//AHC/9yH7R4Q/8xv/AHD/APch5rX7sftAUAf/2Q==" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>JPEG: the same flag, its seams a little soft.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>SVG: the same flag, sharp.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Always four channels</h2>
+  <p><q>The result of processing an ‘image’ is always a four-channel RGBA result.</q> An image with three channels is
+  as if converted <q>with the alpha channel uniformly set to 1</q>; a grayscale one as if <q>the single channel from
+  the referenced object is used to compute the three color channels and the alpha channel is uniformly set to 1.</q>
+  A purple bar runs behind each image, from y 20 to 40.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#8e44ad" /><image href="../shared/resources/flag-40x20.png" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>The PNG flag, RGB without alpha: opaque, the bar hidden from 40 to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#8e44ad" /><image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAUCAAAAADaLSBnAAAAIklEQVR42mM0YMAECVjEmBiIBKMKqaOQ8QIWwQmjwTPwCgEuNgIXNnnysQAAAABJRU5ErkJggg==" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>A grayscale PNG in quarters: dark and mid grey above, light and darker grey below, all opaque, the
+    bar hidden from 40 to 120.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

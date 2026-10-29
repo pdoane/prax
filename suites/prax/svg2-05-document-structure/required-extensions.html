@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The requiredExtensions attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.6.4 The ‘requiredExtensions’ attribute</div>
+  <h1>The requiredExtensions attribute</h1>
+  <p class=pr-lede><q>Determines whether all of the named extensions are supported by the user agent. If all of the
+  given extensions are supported, then the attribute evaluates to true; otherwise, the current element and its
+  children are skipped and thus will not be rendered.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#ConditionalProcessingRequiredExtensionsAttribute">SVG 2 §5.6.4</a></span>
+  Each stage is an SVG 160 by 60 with a blue rect 120 by 40 at 20, 10, outlined dashed.</p>
+</header>
+
+<section>
+  <h2>Absent, empty, or an extension</h2>
+  <p><q>If the attribute is not present, then it implicitly evaluates to "true". If a null string or empty string value
+  is given to attribute ‘requiredExtensions’, the attribute evaluates to "false".</q> <q>If the ‘requiredExtensions’
+  is used in other situations, then it represents a simple switch on the given element whether to render the element
+  or not.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>No attribute: the rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" requiredExtensions="" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>requiredExtensions=""</code>: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" requiredExtensions="http://example.org/SVGExtensionXYZ/1.0" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>An extension no user agent supports, <code>http://example.org/SVGExtensionXYZ/1.0</code>:
+    nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline width since CSS 2</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ol { outline: solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline width since CSS 2</h1>
+  <p class=pr-lede>Later specifications fix the widths of the keywords and round widths to whole device pixels. Every outline is solid and blue.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a>, <a href="https://drafts.csswg.org/css-values-4/#lengths">CSS Values and Units 4 §6</a></div>
+  <h2>Keywords are 1px, 3px and 5px, and widths snap to device pixels</h2>
+  <p><q>The thin, medium, and thick keywords are equivalent to 1px, 3px, and 5px, respectively.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span> Computed value: <q>absolute length, snapped as a border width</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-width">CSS Basic User Interface 4 §3.2</a></span>: <q>If the absolute value of len is greater than 1 device pixel, round it
+  towards zero to the nearest integer number of device pixels.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#lengths">CSS Values and Units 4 §6</a></span> CSS 2
+  left the keywords to the UA and did not round.</p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class="pr-plain ol" id=k1 style="outline-width: thin; margin: 0 0 10px"></div>
+      <div class="pr-plain ol" id=k2 style="outline-width: medium; margin: 0 0 10px"></div>
+      <div class="pr-plain ol" id=k3 style="outline-width: thick"></div>
+    </div>
+    <figcaption><code>thin</code>, <code>medium</code>, <code>thick</code>: <code class=pr-computed data-of=k1
+    data-property=outline-width></code>, <code class=pr-computed data-of=k2 data-property=outline-width></code>, <code
+    class=pr-computed data-of=k3 data-property=outline-width></code>, and must be 1px, 3px and 5px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding: 10px 20px">
+      <div class="pr-plain ol" id=s1 style="outline-width: 2.5px; margin: 0 0 10px"></div>
+      <div class="pr-plain ol" id=s2 style="outline-width: 0.5px"></div>
+    </div>
+    <figcaption>At one device pixel per CSS pixel, <code>2.5px</code> is 2px wide, rounded down, and
+    <code>0.5px</code> 1px, rounded up; here <code class=pr-computed data-of=s1 data-property=outline-width></code>
+    and <code class=pr-computed data-of=s2 data-property=outline-width></code>. <span class=pr-flag>Safari</span>
+    keeps 2.5px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

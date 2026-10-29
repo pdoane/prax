@@ -1,0 +1,23 @@
+# Real pages that pull features together, by name. Each names what it leans on below its title.
+article-with-figures.html
+card-grid.html
+chat.html
+code-listing.html
+comment-thread.html
+dashboard.html
+data-table.html
+documentation.html
+faq.html
+form.html
+gallery.html
+invoice.html
+landing-page-hero.html
+newsletter.html
+pricing-table.html
+print-stylesheet.html
+prose-stress-test.html
+rtl-article.html
+settings-panel.html
+sidebar-layout.html
+survey.html
+vertical-text-poster.html

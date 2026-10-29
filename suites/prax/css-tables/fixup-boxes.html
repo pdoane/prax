@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup boxes: unstyled, but inheriting</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .t { font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.2 Characteristics of fixup boxes</div>
+  <h1>Fixup boxes: unstyled, but inheriting</h1>
+  <p class=pr-lede><q>Beside their display type, the anonymous boxes created for fixup purposes do not receive any
+  specific or default styling, except where otherwise mentioned by this specification.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-boxes">CSS Table 3 §2.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>No padding, border or background</h2>
+  <p>A note spells it out: <q>their computed background is “transparent”, their computed padding is “0px”, their
+  computed border-style is “none”.</q></p>
+  <figure>
+    <div class="pr-stage t"><div class=pr-table-row style="background: #f6d7b4">loose<div class="pr-table-cell blue">A</div></div></div>
+    <figcaption>In an orange row, "loose" is in an anonymous cell: no border, no padding, flush at the row's left;
+    the orange row shows through it. Cell A has its own border, padding and blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>They inherit through the box tree</h2>
+  <p><q>It is also worth reminding that an anonymous box inherits property values through the box tree.</q> Each
+  outlined block holds two bordered cell elements and no table, so the table is anonymous.</p>
+  <figure>
+    <div class="pr-stage t"><div class=pr-ghost style="border-spacing: 10px"><div class=pr-table-cell>A</div><div class=pr-table-cell>B</div></div></div>
+    <figcaption><code>border-spacing: 10px</code> on the block: the anonymous table inherits it, and A and B are
+    10px apart and 10px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class=pr-ghost style="border-collapse: collapse"><div class=pr-table-cell>A</div><div class=pr-table-cell>B</div></div></div>
+    <figcaption><code>border-collapse: collapse</code> on the block: inherited, so A and B share one 1px border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

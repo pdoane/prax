@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Animating content-visibility</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 50px; }
+  .box { height: 30px; margin: 10px; background: #b9cde6; outline: 1px dashed #2c5a8f; animation-duration: 10s; animation-timing-function: linear; animation-play-state: paused; }
+  @keyframes hv { from { content-visibility: hidden; } to { content-visibility: visible; } }
+  @keyframes vh { from { content-visibility: visible; } to { content-visibility: hidden; } }
+  @keyframes av { from { content-visibility: auto; } to { content-visibility: visible; } }
+  .hv { animation-name: hv; }
+  .vh { animation-name: vh; }
+  .av { animation-name: av; }
+  .t { position: relative; left: 60px; top: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4.1 Animating and Interpolating content-visibility</div>
+  <h1>Animating content-visibility</h1>
+  <p class=pr-lede><q>during interpolation between hidden and any other 'content-visibility' value, p values between 0
+  and 1 map to the non-hidden value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#content-visibility-animation">CSS Containment 2 §4.1</a></span>
+  Each blue box, 30px tall, runs a paused 10s linear animation, held at the progress <i>p</i> given by a negative
+  delay. Its content, "contents", is shifted down and right, so that it spills out unless clipped.</p>
+</header>
+
+<section>
+  <h2>From hidden to visible</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box hv"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 0: hidden; the box is empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box hv" style="animation-delay: -1s"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 0.1: already <code>visible</code>; "contents" is drawn, spilling out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From visible to hidden</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box vh" style="animation-delay: -9s"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 0.9: still <code>visible</code>; "contents" is drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box vh" style="animation-delay: -10s; animation-fill-mode: forwards"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 1, held: hidden; the box is empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise discrete</h2>
+  <p><q>In general, the 'content-visibility' property’s animation type is discrete.</q> Between <code>auto</code> and
+  <code>visible</code> the value flips at <i>p</i> = 0.5.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box av" style="animation-delay: -4s"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 0.4: <code>auto</code>, so paint containment cuts "contents" at the box's edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="box av" style="animation-delay: -6s"><div class=t>contents</div></div></div>
+    <figcaption><i>p</i> = 0.6: <code>visible</code>; "contents" spills out whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

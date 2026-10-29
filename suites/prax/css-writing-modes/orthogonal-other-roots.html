@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows: other formatting contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; overflow: hidden; height: 120px; }
+  .cb { max-height: 60px; outline: 1px dashed #c0392b; }
+  .v { writing-mode: vertical-rl; background: #b9cde6; }
+  .item { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3.3 Auto-sizing Other Orthogonal Flow Roots</div>
+  <h1>Orthogonal flows: other formatting contexts</h1>
+  <p class=pr-lede><q>For calculating the automatic inline size for other display types when the available inline
+  space is infinite, if the box is block-level or the formatting context otherwise calculates an automatic inline size
+  using its max-content size, use the same formula used for the block containers’ column-width (see above) in place of
+  that max-content size: min(max-content, max(min-content, constraint)).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#orthogonal-layout">CSS Writing Modes 4 §7.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>A table and a flex container</h2>
+  <p><q>For example, a table or flex container establishing an orthogonal flow is laid out into its given available
+  space.</q> Each containing block, outlined in red, has <code>max-height: 60px</code>; the blue box is
+  <code>vertical-rl</code> and holds a long run of words.</p>
+  <figure>
+    <div class=pr-stage><div class=cb><div class="v pr-table"><div class=pr-table-row><div class=pr-table-cell style="height: auto; font-size: 13px; line-height: 20px">aaa bbb ccc ddd eee fff ggg hhh</div></div></div></div></div>
+    <figcaption>A table: 60px tall, its cell's lines wrapping at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cb><div class=v style="display: flex"><div class=item>aaa bbb ccc ddd eee fff ggg hhh</div></div></div></div>
+    <figcaption>A flex container: 60px tall, its item's lines wrapping at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cb><div class=v style="display: flex"><div class=item>ab</div></div></div></div>
+    <figcaption>Short content, whose max-content is less than 60px: as tall as "ab".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

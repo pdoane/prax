@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What is dragged</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { margin: 0 0 10px; padding: 0 6px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  .card { margin: 0 0 10px; padding: 4px 6px; background: #b9cde6; font-size: 12px; line-height: 20px }
+  .card span { background: #f6d7b4 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.5 Processing model</div>
+  <h1>What is dragged</h1>
+  <p class=pr-lede><q>If the drag operation was invoked on a selection, then it is the selection that is being dragged.</q>
+  <q>Otherwise, if the drag operation was invoked on a Document, it is the first element, going up the ancestor chain,
+  starting at the node that the user tried to drag, that has the IDL attribute draggable set to true. If there is no
+  such element, then nothing is being dragged</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">HTML §6.11.5</a></span></p>
+</header>
+<section>
+  <h2>The draggable ancestor, the selection, or nothing</h2>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=card id=card draggable=true>a draggable card, <span id=inner>with a span in it</span></div>
+        <div class=line id=text>select some of this text, then drag it</div>
+        <div class=line id=plain>plain text, not selected</div>
+      </div>
+      <ol class="pr-log drag-log" data-log="dragstart" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Drag the orange span: dragstart at <code>card</code>, the whole card drawn under the pointer. Select a
+    few words of the second line and drag them: dragstart at the text node where the drag began, logged as
+    <code>#text</code>, the words drawn under the pointer. Drag the third line without selecting: no dragstart, and
+    the drag selects text instead.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A canceled dragstart</h2>
+  <p><q>If the event is canceled, then the drag-and-drop operation should not occur; return.</q> The page's script
+  cancels dragstart at this card. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">§6.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=card id=refused draggable=true>a draggable card whose dragstart is canceled</div>
+      </div>
+      <ol class="pr-log drag-log" data-log="dragstart drag dragend" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Drag the card: dragstart, and nothing follows it: no image under the pointer, no drag, no
+    dragend.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels dragstart at the second card.
+  document.getElementById("refused").addEventListener("dragstart", event => event.preventDefault());
+</script>
+<script src=support/drag-log.js></script>
+</body>
+</html>

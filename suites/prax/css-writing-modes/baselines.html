@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/50px "PR Noto Sans JP"; padding: 0 6px; box-sizing: border-box; }
+  .lat { font-family: "PR Arimo"; }
+  .pr-baseline { width: 188px; margin-right: -188px; }
+  .big { font-size: 32px; }
+  .v { writing-mode: vertical-rl; width: 60px; height: 200px; padding: 6px 0; }
+  .vguide { display: inline-block; width: 0; height: 188px; margin-bottom: -188px; border-left: 1px dashed #c0392b; }
+  figure.s figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 4.1 Introduction to Baselines</div>
+  <h1>Baselines</h1>
+  <p class=pr-lede><q>A baseline is a line along the inline axis of a line box along which individual glyphs of text
+  are aligned.</q> The section is non-normative. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#intro-baselines">CSS Writing Modes 4 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Two sizes on one baseline</h2>
+  <p><q>the bottom of most alphabetic glyphs typically align with the alphabetic baseline</q>. The dashed line is the
+  line's baseline.</p>
+  <figure>
+    <div class="pr-stage lat"><span class=pr-baseline></span>Alphabetic <span class=big>Text</span></div>
+    <figcaption>16px and 32px Latin: both sizes' letters stand on the dashed line, the "p" below it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Horizontal and vertical tables</h2>
+  <p><q>Different baseline tables can be provided for alignment in horizontal and vertical text. UAs should use the
+  vertical tables in vertical typographic modes and the horizontal tables otherwise.</q> The dashed lines mark the
+  line's dominant baseline.</p>
+  <figure class=s>
+    <div class=pr-stage><span class=pr-baseline></span><span class=lat>Ap</span>日本<span class=big>語</span></div>
+    <figcaption>Horizontal: Latin and Han on the alphabetic baseline, the Han squares reaching a little below
+    it.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span><span class=lat>Ap</span>日本<span class=big>語</span></div>
+    <figcaption>Vertical: each centered on the dashed line, the central baseline, the large 語 too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

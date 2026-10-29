@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>orphans and widows in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+  .p { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 5.1 Controlling Fragmentation: orphans and widows</div>
+  <h1>orphans and widows in columns</h1>
+  <p class=pr-lede><q>The orphans property specifies the minimum number of line boxes in a block container that must
+  be left in a fragment before a fragmentation break. The widows property specifies the minimum number of line boxes
+  of a block container that must be left in a fragment after a break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#widows-orphans">CSS Fragmentation 4 §3.3</a></span>
+  Each stage has three columns of 60px, 60px tall; B comes first, then the tinted paragraph of four lines.</p>
+</header>
+
+<section>
+  <h2>Lines before the break</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="orphans: 1; widows: 1"><div class=pr-b>B</div><div class=p>one two six ten</div></div>
+    <figcaption><code>orphans: 1; widows: 1</code>: "one" and "two" under B; "six" and "ten" in the second
+    column. <span class=pr-flag>Safari</span> Fits one line under B: "one" there, "two" and "six" in the second
+    column, "ten" in the third.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="orphans: 3; widows: 1"><div class=pr-b>B</div><div class=p>one two six ten</div></div>
+    <figcaption><code>orphans: 3</code>: two lines may not be left before the break, so the paragraph starts the
+    second column, three lines there, and "ten" in the third.
+    <span class=pr-flag>Firefox</span> "one" and "two" under B, as with orphans 1.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lines after the break</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="orphans: 1; widows: 3"><div class=pr-b>B</div><div class=p>one two six ten</div></div>
+    <figcaption><code>widows: 3</code>: three lines must follow the break, so only "one" is under B; "two", "six"
+    and "ten" in the second column. <span class=pr-flag>Safari</span> "two" in the second column, "six" and "ten"
+    in the third. <span class=pr-flag>Firefox</span> "one" and "two" under B, as with widows 1.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=pr-b>B</div><div class=p>one two six ten</div></div>
+    <figcaption>The initial values, 2 and 2: "one" and "two" under B, "six" and "ten" in the second column. <span
+    class=pr-flag>Safari</span> "one" under B, "two" and "six" in the second column, "ten" in the third.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: solving for replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { position: absolute; top: 10px; }
+  figure { display: block; }
+  .pair figure { display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.8 Absolutely positioned, replaced elements</div>
+  <h1>Absolute widths: solving for replaced elements</h1>
+  <p class=pr-lede>Each purple box is an absolutely positioned <code>img</code> of an SVG image 60 by 40, and each stage,
+  200 by 50, is its containing block.</p>
+</header>
+
+<section>
+  <h2>One auto left, or none</h2>
+  <p><q>If at this point there is an 'auto' left, solve the equation for that value.</q> <q>If at this point the values
+  are over-constrained, ignore the value for either 'left' (in case the 'direction' property of the containing block is
+  'rtl') or 'right' (in case 'direction' is 'ltr') and solve for that value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-replaced-width">CSS 2
+  §10.3.8</a></span></p>
+  <div class=pair>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><img alt="" style="left: 20px; right: 20px; margin-left: auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>left: 20px; right: 20px; margin-left: auto</code>: the margin is 100px, and the image ends 20px
+    from the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><img alt="" style="left: 20px; right: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>left: 20px; right: 20px</code>, <code>ltr</code>: over-constrained, <code>right</code> is
+    ignored. The image is 60px wide at 20, not stretched.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px; direction: rtl"><img alt="" style="left: 20px; right: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>The same in <code>rtl</code>: <code>left</code> is ignored, and the image ends 20px from the
+    right.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Auto margins that would be negative</h2>
+  <p><q>unless this would make them negative, in which case when the direction of the containing block is 'ltr'
+  ('rtl'), set 'margin-left' ('margin-right') to zero and solve for 'margin-right' ('margin-left').</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-replaced-width">CSS 2 §10.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><img alt="" style="left: 0; right: 0; width: 250px; height: 40px; margin: 0 auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>left: 0; right: 0; width: 250px; margin: 0 auto</code>, <code>ltr</code>:
+    <code>margin-left</code> is 0, and the image overflows 50px to the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

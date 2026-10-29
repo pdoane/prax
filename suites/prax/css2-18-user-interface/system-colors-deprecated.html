@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System colors since CSS 2</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sys { height: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; white-space: nowrap; }
+  .sys:nth-child(odd) { background: #f4f5f7; }
+  .name { display: inline-block; width: 118px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.2 System Colors</div>
+  <h1>System colors since CSS 2</h1>
+  <p class=pr-lede>CSS Color 4 keeps a smaller set of system colors, with new names, and maps every name of CSS 2's
+  list that it dropped onto one of them.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · CSS Color 4 Appendix A</div>
+  <h2>The deprecated names take the colors of the new ones</h2>
+  <p><q>User agents must support these keywords, and to mitigate fingerprinting must map them to the (undeprecated)
+  system colors as listed below. Authors must not use these keywords.</q> Window <q>Computes to the color of
+  Canvas.</q> ThreeDShadow <q>Computes to the color of ButtonBorder.</q> <span class=pr-cite>CSS Color 4 Appendix
+  A</span> In CSS 2 each name was its own color of the operating system; now 23 of them are copies.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=sys><span class=pr-swatch style="background-color: Window"></span><span class=name>Window</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: Canvas"></span><span class=name>= Canvas</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: WindowText"></span><span class=name>WindowText</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: CanvasText"></span><span class=name>= CanvasText</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: InfoBackground"></span><span class=name>InfoBackground</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ThreeDShadow"></span><span class=name>ThreeDShadow</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ButtonBorder"></span><span class=name>= ButtonBorder</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ButtonHighlight"></span><span class=name>ButtonHighlight</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ButtonFace"></span><span class=name>= ButtonFace</span></div>
+    </div>
+    <figcaption>Each deprecated name's swatch is the color of the "=" name it maps to: Window and InfoBackground
+    as Canvas, WindowText as CanvasText, ThreeDShadow as ButtonBorder, ButtonHighlight as ButtonFace. <span
+    class=pr-flag>Safari</span> differs on the last three: a yellow, a black and a white.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><p class=pr-text style="margin: 0; padding: 0 6px; color: CanvasText; background-color: Canvas">A paragraph in the colors of the user's window.</p></div>
+    <figcaption>CSS 2's example in the names to use now, <code>color: CanvasText; background-color: Canvas</code>:
+    the same as <code>WindowText</code> on <code>Window</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-hdr()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 5 HDR colors parameterized by headroom: the hdr-color() function</div>
+  <h1>color-hdr()</h1>
+  <p class=pr-lede><q>The hdr-color() function allows a range of colors to be specified, whose value is automatically calculated based on the HDR headroom.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#hdr-color-function">CSS Color HDR 1
+  §5</a></span></p>
+</header>
+
+<section>
+  <h2>A color for SDR, and another for HDR</h2>
+  <p>The title names <code>hdr-color()</code>, and the grammar <code>color-hdr()</code>, which
+  <a href="https://github.com/w3c/csswg-drafts/issues/11616">csswg-drafts#11616</a> resolved to add;
+  <a href="https://github.com/w3c/csswg-drafts/issues/13597">csswg-drafts#13597</a> is open on the names.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-hdr(color(rec2100-linear 0.9 1.0 0.8) 0, color(rec2100-linear 1.8 2.0 1.5) 2)"></div><div class=sw style="background: color(rec2100-linear 0.9 1.0 0.8)"></div><div class=sw style="background: color(rec2100-linear 1.8 2.0 1.5)"></div></div>
+    <figcaption>The specification's example, then its colors at headroom 0 and at 2. An SDR display shows the first
+    like the second, and a display with two stops of headroom like the third. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color-hdr()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No headroom</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-hdr(white, color(rec2100-linear 4 4 4) 2)"></div><div class=sw style="background: white"></div></div>
+    <figcaption><code>color-hdr(white, color(rec2100-linear 4 4 4) 2)</code>, whose first color names no headroom,
+    beside <code>white</code>. An SDR display shows one white if the omitted headroom is 0, which
+    <a href="https://github.com/w3c/csswg-drafts/issues/13597">csswg-drafts#13597</a> asks.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color-hdr()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

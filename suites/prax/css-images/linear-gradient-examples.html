@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient() examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .strip { height: 20px; }
+  .ex { width: 200px; height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.1.2 Linear Gradient Examples</div>
+  <h1>linear-gradient() examples</h1>
+  <p class=pr-lede><q>All of the following linear-gradient() examples are presumed to be backgrounds applied to a
+  box that is 200px wide and 100px tall.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#linear-gradient-examples">CSS Images 3 §3.1.2</a></span>
+  Spellings shown together draw the same.</p>
+</header>
+
+<section>
+  <h2>The same gradient, spelled differently</h2>
+  <figure>
+    <div class=pr-stage>
+      <div class=strip style="background: linear-gradient(yellow, blue) 0 0 / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(to bottom, yellow, blue) 0 -20px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(180deg, yellow, blue) 0 -40px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(to top, blue, yellow) 0 -60px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(to bottom, yellow 0%, blue 100%) 0 -80px / 200px 100px"></div>
+    </div>
+    <figcaption>One 200 by 100 vertical gradient cut into five 20px strips, each strip from one of the five
+    spellings of the example: <code>(yellow, blue)</code>, <code>(to bottom, …)</code>, <code>(180deg, …)</code>,
+    <code>(to top, blue, yellow)</code>, <code>(… 0%, … 100%)</code>. No seams between the strips.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=strip style="background: linear-gradient(135deg, yellow, blue) 0 0 / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(-45deg, blue, yellow) 0 -20px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(135deg, yellow, blue) 0 -40px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(-45deg, blue, yellow) 0 -60px / 200px 100px"></div>
+      <div class=strip style="background: linear-gradient(135deg, yellow, blue) 0 -80px / 200px 100px"></div>
+    </div>
+    <figcaption><code>135deg, yellow, blue</code> and <code>-45deg, blue, yellow</code> in alternate strips: one
+    gradient, yellow exactly at the top left corner and blue at the bottom right, with no seams.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Three colors, and a corner</h2>
+  <figure>
+    <div class=pr-stage><div class=ex style="background: linear-gradient(yellow, blue 20%, #0f0)"></div></div>
+    <figcaption><code>yellow, blue 20%, #0f0</code>: yellow at the top, blue 20px down, then green at the
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=ex style="background: linear-gradient(to top right, red, white, blue)"></div></div>
+    <figcaption><code>to top right, red, white, blue</code>: red at the bottom left corner, blue at the top right,
+    and white along the line from the top left corner to the bottom right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

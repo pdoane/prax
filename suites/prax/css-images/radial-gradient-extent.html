@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): a circle's size by keyword</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.1 radial-gradient() Syntax</div>
+  <h1>radial-gradient(): a circle's size by keyword</h1>
+  <p class=pr-lede>&lt;radial-size&gt; <q>Determines the size of the gradient's ending shape. If omitted it defaults
+  to farthest-corner.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-gradient-syntax">CSS Images 3 §3.2.1</a></span>
+  Each box is 160 by 80, orange inside the ending shape, light blue beyond it.</p>
+</header>
+
+<section>
+  <h2>Sides and corners, near and far</h2>
+  <p>closest-side: <q>exactly meets the side of the gradient box closest to the gradient's center</q>;
+  closest-corner: <q>passes through the corner of the gradient box closest to the gradient's center</q>; the farthest
+  likewise. The first four circles are <code>at 40px 30px</code>: 40 from the left, 30 from the top, 50 from the
+  bottom, 120 from the right; the top left corner is 50 away, the bottom right 130. The last two are
+  <code>farthest-side</code>, centered 20 outside the box: <q>consider the gradient box edges as extending infinitely
+  in both directions, rather than being finite line segments.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle closest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>closest-side</code>: the top, radius 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle farthest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>farthest-side</code>: the right, radius 120; the bottom right corner
+    is beyond.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle closest-corner at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>closest-corner</code>: top left, radius 50, so it meets the bottom
+    too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle at 40px 30px, #d68a3c 50%, #b9cde6 50%, #b9cde6 100%)"></div></div>
+    <figcaption>Omitted, <code>farthest-corner</code>: radius 130; the edge here is at 50%, 65,
+    to 105 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle farthest-side at 80px -20px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>at 80px -20px</code>: the bottom is 100 away; met at 80 across, its
+    corners outside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle farthest-side at -20px 40px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>at -20px 40px</code>: the right is 180 away; met 40 down, its corners
+    outside.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

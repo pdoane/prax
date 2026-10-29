@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The 2D context's coordinate space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+  .edge { outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1 The 2D rendering context</div>
+  <h1>The 2D context's coordinate space</h1>
+  <p class=pr-lede><q>The CanvasRenderingContext2D 2D rendering context represents a flat linear Cartesian surface whose
+  origin (0,0) is at the top left corner, with the coordinate space having x values increasing when going right, and y
+  values increasing when going down.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#2dcontext">HTML §4.12.5.1</a></span>
+  Each canvas's edge is dashed red.</p>
+</header>
+<section>
+  <h2>Origin at the top left, y down</h2>
+  <p><q>The x-coordinate of the right-most edge is equal to the width of the rendering context's output bitmap</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas class=edge width=200 height=100 data-draw=corners></canvas></div>
+    <figcaption>Squares of 20: blue at (0, 0); orange at (60, 40); green at (180, 80), its corner at (200,
+    100).</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas class=edge width=200 height=200 data-draw=half style="width: 100px; height: 100px"></canvas></div>
+    <figcaption>A 200 by 200 bitmap drawn at 100 by 100: a square to (100, 100) covers the top-left 50 by
+    50.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Setting the size resets the bitmap</h2>
+  <p>Setting width or height, even <q>redundantly</q>, runs <q>the steps to set bitmap dimensions</q>, which <q>Reset
+  the rendering context to its default state</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-element">§4.12.5</a></span></p>
+  <figure>
+    <div class=pr-stage><canvas class=edge width=200 height=100 data-draw=reset></canvas></div>
+    <figcaption>Squares of 40 filled blue at (0, 0) and (0, 60), then at (100, 0), the width set after each of the
+    first two: only the last remains, black, since the reset restored the fill style.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    corners(context) {
+      context.fillStyle = "#4f81bd"; context.fillRect(0, 0, 20, 20);
+      context.fillStyle = "#d68a3c"; context.fillRect(60, 40, 20, 20);
+      context.fillStyle = "#6aa36a"; context.fillRect(180, 80, 20, 20);
+    },
+    half(context) {
+      context.fillStyle = "#4f81bd"; context.fillRect(0, 0, 100, 100);
+    },
+    reset(context, canvas) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 40, 40);
+      canvas.setAttribute("width", "200");
+      context.fillRect(0, 60, 40, 40);
+      canvas.width = canvas.width;
+      context.fillRect(100, 0, 40, 40);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

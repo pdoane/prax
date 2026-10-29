@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.7 Shorthand font property: the 'font' property</div>
+  <h1>The font shorthand</h1>
+  <p class=pr-lede>'font' sets 'font-style', 'font-variant', 'font-weight' and 'font-width' in any order, then
+  'font-size', an optional '/ line-height', and 'font-family'. Only <code>normal | small-caps</code> of 'font-variant'
+  and the CSS 3 keywords of 'font-width' are allowed. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-prop">CSS Fonts 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>What it sets</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: italic bold 24px/40px 'PR Tinos'">Handgloves</div>
+    <figcaption><code>italic bold 24px/40px 'PR Tinos'</code>: bold, italic, serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: small-caps 24px/40px 'PR Literata'">Handgloves</div>
+    <figcaption><code>small-caps 24px/40px 'PR Literata'</code>: lowercase as small capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: condensed oblique 10deg 753 24px/40px 'PR Roboto Flex'">Handgloves</div>
+    <figcaption><code>condensed oblique 10deg 753 24px/40px</code>: narrow, slanted and heavy.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What it resets</h2>
+  <p><q>All subproperties of the 'font' property in the Set Explicitly and Reset Implicitly groups are first reset to
+  their initial values.</q> 'font-palette' and the 'font-synthesis' longhands are <q>neither set nor reset</q>.</p>
+  <figure>
+    <div style="font-variant-numeric: oldstyle-nums; font-kerning: none"><div class="pr-stage pr-sample" style="font: 24px/40px 'PR Literata'">1234 AV</div></div>
+    <figcaption>The parent sets old-style figures and no kerning; 'font' resets both: lining figures and a kerned
+    AV.</figcaption>
+  </figure>
+  <figure>
+    <div style="font-synthesis-weight: none"><div class="pr-stage pr-sample" style="font: bold 24px/40px 'PR Cousine'">Handgloves</div></div>
+    <figcaption>The parent sets <code>font-synthesis-weight: none</code>, which 'font' keeps: PR Cousine has no
+    bold, so regular.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

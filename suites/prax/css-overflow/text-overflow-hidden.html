@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow: what the ellipsis replaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; margin: 10px 50px; overflow: hidden; white-space: nowrap; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1 Overflow Ellipsis, what is hidden</div>
+  <h1>text-overflow: what the ellipsis replaces</h1>
+  <p class=pr-lede><q>implementations must hide characters and atomic inline-level elements at the end edge of the line as
+  necessary to fit the ellipsis, and place the ellipsis immediately adjacent to the end edge of the remaining inline
+  content. The first character or atomic inline-level element on a line must be clipped rather than ellipsed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#text-overflow">CSS Overflow 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Characters and atomic inlines at the end</h2>
+  <p>Each dashed box holds <code>.pr-measure</code> text, 10px a letter, with <code>overflow: hidden; white-space: nowrap; text-overflow: ellipsis</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis; width: 55px">ab<span class="pr-b pr-fit" style="display: inline-block; width: 30px; height: 20px; vertical-align: top"></span>cd</div></div>
+    <figcaption>55px holding "ab", an orange inline-block 30px wide, and "cd": the block does not fit with the
+    ellipsis, so it is hidden: "ab…", and blank after.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis; width: 15px">abc</div></div>
+    <figcaption>15px holding "abc": "a" is the first character, so it stays, and the ellipsis after it is cut at the
+    edge. <span class=pr-flag>Firefox</span> draws "b" there, cut, and no ellipsis.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage" style="height: 60px"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis; white-space: pre">short
+a line too long</div></div>
+    <figcaption>Two lines: each is ellipsed alone, the first fits whole, the second ends "a line to…".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The direction property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The direction property</h1>
+  <p class=pr-lede><code>direction</code> takes <code>ltr | rtl</code>. Initial <code>ltr</code>, inherited. <q>This
+  property specifies the base writing direction of blocks and the direction of embeddings and overrides ... for the
+  Unicode bidirectional algorithm.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+</header>
+
+<section>
+  <h2>The base direction of a block</h2>
+  <p><q>The paragraph embedding level is set according to the value of the 'direction' property of the containing
+  block rather than by the heuristic given in steps P2 and P3 of the Unicode algorithm.</q> The base direction decides
+  where a line starts and where neutral characters at its ends go. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: ltr">Hello, world!</div>
+    <figcaption><code>ltr</code>: at the left, "!" after "world".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl">Hello, world!</div>
+    <figcaption><code>rtl</code>: at the right, and the "!", taking the base direction, at the left: "!Hello,
+    world".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Mixed text</h2>
+  <p>The order of the runs of each direction follows the base direction. Here, the Hebrew word for "peace" between two
+  English words. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: ltr">one שלום two</div>
+    <figcaption><code>ltr</code>: "one", the Hebrew word, "two", from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl">one שלום two</div>
+    <figcaption><code>rtl</code>: "one", the Hebrew word, "two", from the right: "two" is at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

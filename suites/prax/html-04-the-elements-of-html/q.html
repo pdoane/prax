@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The q element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 13px/20px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.7 The q element</div>
+  <h1>The q element</h1>
+  <p class=pr-lede><q>The q element represents some phrasing content quoted from another source.</q> Its quotation marks <q>will be inserted into the rendering by the user agent.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-q-element">HTML §4.5.7</a></span></p>
+</header>
+<section>
+  <h2>Quotation marks before and after</h2>
+  <p><q>q::before { content: open-quote; }</q> <q>q::after { content: close-quote; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> Each quote nested in another
+  takes the next pair of marks, and the pairs are those of the element's language, as <code>quotes: auto</code>
+  chooses. <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#quotes-property">CSS Generated Content 3 §2.4.1</a></span> This page's own quotations are styled; the stage's are not.</p>
+  <figure>
+    <div class="pr-stage t" lang=en>She said <q>he called it <q>fine</q></q>.</div>
+    <figcaption>English: double curly quotes outside, “ ”, single ones inside, ‘ ’.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" lang=fr>Elle a dit <q>bien</q>.</div>
+    <figcaption>French: guillemets, « », around "bien".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

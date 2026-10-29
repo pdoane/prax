@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Using content-visibility: hidden</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 70px; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .wide { width: 300px; height: 30px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4.2 Using content-visibility: hidden</div>
+  <h1>Using content-visibility: hidden</h1>
+  <p class=pr-lede><q>content-visibility: hidden lays powerful restrictions onto an element, and so should be used
+  with caution. It also enables some very useful scenarios, often improving on existing techniques</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#using-cv-hidden">CSS Containment 2 §4.2</a></span>
+  The section is informative; what it describes follows from <a href="content-visibility-skipped.html">skipping</a>.</p>
+</header>
+
+<section>
+  <h2>Content that is never drawn, however big</h2>
+  <p><q>If the wrapper has no border, background, etc, then it and its skipped contents are guaranteed to never render
+  anything to the screen, no matter how big they get.</q> The wrapper holds an orange box 300 wide; "after" follows
+  it. <q>A "single-page app" often consists of several independent panes or "views", of which only one is displayed
+  at a time.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="content-visibility: hidden"><div class=wide></div></div>after</div>
+    <figcaption><code>content-visibility: hidden</code>: nothing of the orange box, and the wrapper is 0 tall, so
+    "after" is at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="content-visibility: hidden">view 1</div><div>view 2</div><div style="content-visibility: hidden">view 3</div></div>
+    <figcaption>Three <q>views</q>, the first and third hidden: only "view 2" is drawn, at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unlike visibility: hidden, descendants cannot undo it</h2>
+  <p><q>descendants of a visibility: hidden element can set visibility: visible and start showing up again</q>;
+  <q>content-visibility: hidden performs a very similar purpose, but descendants can't turn it "off" and start
+  displaying</q>. Each blue box is 40px tall and holds "shown?" with <code>visibility: visible</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=b style="visibility: hidden; height: 40px"><div style="visibility: visible">shown?</div></div></div>
+    <figcaption><code>visibility: hidden</code> on the box: its background is not drawn, but "shown?" is.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=b style="content-visibility: hidden; height: 40px"><div style="visibility: visible">shown?</div></div></div>
+    <figcaption><code>content-visibility: hidden</code>: the box is drawn, and "shown?" is not.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

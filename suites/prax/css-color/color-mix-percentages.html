@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix(): percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3.2 Percentage Normalization</div>
+  <h1>color-mix(): percentages</h1>
+  <p class=pr-lede><q>Percentages are required to be in the range 0% to 100%.</q> <q>Percentages are normalized by
+  normalizing mix percentages.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix-percent-norm">CSS Color 5
+  §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Forms that are the same mix</h2>
+  <p><q>These syntactic forms are thus all equivalent</q>: purple and plum at
+  50% and 50%, at 50% and omitted, omitted and 50%, both omitted, in the other order, and at 80% and 80%, <code>in
+  lch</code>. <q>All produce a 50-50 mix</q>, <code>lch(51.51% 52.21 325.8)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: color-mix(in lch, purple 50%, plum 50%)"></div><div class=sw style="background: color-mix(in lch, purple 50%, plum)"></div><div class=sw style="background: color-mix(in lch, purple, plum 50%)"></div><div class=sw style="background: color-mix(in lch, purple, plum)"></div><div class=sw style="background: color-mix(in lch, plum, purple)"></div><div class=sw style="background: color-mix(in lch, purple 80%, plum 80%)"></div></div>
+    <figcaption>The six: one orchid six times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(51.51% 52.21 325.8)"></div><div class=sw style="background: purple"></div><div class=sw style="background: plum"></div></div>
+    <figcaption>The same orchid as <code>lch(51.51% 52.21 325.8)</code>, and its two colors.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Less than 100%: transparency</h2>
+  <p><q>However, this form is <em>not</em> the same, as the alpha is less than
+  one</q>: <code>color-mix(in lch, purple 30%, plum 30%)</code> <q>produces lch(51.51% 52.21 325.8 / 0.6)</q>. On a
+  checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: color-mix(in lch, purple 30%, plum 30%)"></div><div class=sw style="background: lch(51.51% 52.21 325.8 / 0.6)"></div></div>
+    <figcaption>The mix beside <code>lch(51.51% 52.21 325.8 / 0.6)</code>: one orchid, 60% opaque.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

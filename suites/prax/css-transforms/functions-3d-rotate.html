@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D transform functions: the rotations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 200px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 20px; width: 80px; height: 40px; }
+  .q, .h { position: absolute; left: 60px; top: 20px; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 12.2 3D Transform Functions</div>
+  <h1>3D transform functions: the rotations</h1>
+  <p class=pr-lede><q>rotate3d() specifies a 3D rotation by the angle specified in last parameter about the [x,y,z]
+  direction vector described by the first three parameters.</q> <q>the rotation is clockwise as one looks from the end
+  of the vector toward the origin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#three-d-transform-functions">CSS Transforms 2 §12.2</a></span>
+  Each stage has <code>perspective: 200px</code>; X points right, Y down, Z toward the viewer. Each blue box is on the
+  dashed outline, "AB" at its top left.</p>
+</header>
+
+<section>
+  <h2>rotateX(), rotateY(), rotateZ()</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotateX(60deg)">AB</div></div>
+    <figcaption><code>rotateX(60deg)</code>: the top goes away, the bottom comes near and is wider.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotateY(60deg)">AB</div></div>
+    <figcaption><code>rotateY(60deg)</code>: the left comes near and is taller.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotateZ(90deg)">AB</div></div>
+    <figcaption><code>rotateZ(90deg)</code>, as <code>rotate(90deg)</code>: 40 by 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>rotate3d()</h2>
+  <p><q>A direction vector that cannot be normalized, such as [0,0,0], will cause the rotation to not be applied.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate3d(0, 2, 0, 60deg)">AB</div></div>
+    <figcaption><code>rotate3d(0, 2, 0, 60deg)</code>, normalized: <code>rotateY(60deg)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost h"></div><div class="pr-a pr-fit q" style="transform: rotate3d(1, 1, 0, 180deg)">AB</div></div>
+    <figcaption>A square, <code>rotate3d(1, 1, 0, 180deg)</code>: flipped over its diagonal, "AB" down the left,
+    mirrored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate3d(0, 0, 0, 90deg)">AB</div></div>
+    <figcaption><code>rotate3d(0, 0, 0, 90deg)</code>: no rotation.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

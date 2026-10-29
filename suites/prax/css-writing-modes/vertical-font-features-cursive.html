@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cursive scripts typeset upright</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 136px; padding: 0 6px; }
+  .lat { font-family: "PR Arimo"; }
+  .ar { font: 24px/48px "PR Noto Sans Arabic"; height: 200px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1.1 Vertical Typesetting and Font Features, cursive scripts</div>
+  <h1>Cursive scripts typeset upright</h1>
+  <p class=pr-lede><q>Furthermore, characters from horizontal cursive scripts (such as Arabic) are shaped in their
+  isolated forms when typeset upright.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-font-features">CSS Writing Modes 4 §5.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Arabic upright and sideways</h2>
+  <p>Each <code>vertical-rl</code> stage holds the word عربي, four letters, in PR Noto Sans Arabic.</p>
+  <figure class="s pr-erratum">
+    <div class="pr-stage ar" style="text-orientation: upright">عربي</div>
+    <figcaption>Upright: four letters in isolated forms, ع at the top, as <code>upright</code> also makes them strong
+    LTR. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> read them from the bottom, ي at the
+    top, and Safari draws joining forms.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage ar" style="text-orientation: sideways">عربي</div>
+    <figcaption>Sideways: joined, turned clockwise, read upward.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

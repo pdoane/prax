@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Three plan columns with a raised middle plan, feature checklists, and buttons. Leans on: equal-height flex columns, one column lifted by a negative margin and a shadow, a positioned badge, generated content list markers, and buttons pinned to the bottom of unequal columns. -->
+<title>Pricing table</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.intro { text-align:center; margin-bottom:12px }
+.intro h2 { font-size:20px; margin:0 0 3px; letter-spacing:-.01em }
+.intro p { font-size:12px; color:#5d6673; max-width:420px; margin:0 auto }
+.switch { display:inline-flex; margin-top:8px; border:1px solid #ccd3da; border-radius:99px; background:#fff; font-size:10px; overflow:hidden }
+.switch span { padding:4px 12px; color:#5d6673 }
+.switch span.on { background:#22303f; color:#fff; font-weight:bold }
+.plans { display:flex; align-items:stretch; gap:10px; margin-bottom:12px }
+.plan { flex:1; background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:12px 13px; display:flex; flex-direction:column; color:#22282f }
+.plan.mid { border:2px solid #3d82c4; box-shadow:0 3px 10px rgba(61,130,196,.18); margin-top:-8px; padding-top:16px; padding-bottom:16px }
+.badge { position:relative; top:-24px; align-self:center; background:#3d82c4; color:#fff; font-size:9px; font-weight:bold; letter-spacing:.06em; text-transform:uppercase; border-radius:99px; padding:2px 10px; margin-bottom:-16px }
+.plan h3 { font-size:13px; margin:0 }
+.plan .for { font-size:10px; color:#8a93a0; margin-bottom:7px; min-height:26px }
+.price { font-size:26px; font-weight:bold; letter-spacing:-.02em; line-height:1 }
+.price small { font-size:11px; font-weight:normal; color:#8a93a0 }
+.per { font-size:10px; color:#8a93a0; margin-bottom:9px }
+ul { list-style:none; font-size:11px; line-height:1.5; margin-bottom:10px }
+li { padding-left:16px; position:relative; margin-bottom:4px; color:#3f4954 }
+li::before { content:"\2713"; position:absolute; left:0; color:#3a9c62; font-weight:bold }
+li.no { color:#a9b1bb }
+li.no::before { content:"\2013"; color:#c3c9d1 }
+.grow { flex:1 }
+.btn { display:block; text-align:center; font-size:11px; font-weight:bold; border-radius:6px; padding:6px 0; border:1px solid #ccd3da; color:#3f4954; background:#fff }
+.plan.mid .btn { background:#3d82c4; border-color:#2f6ba6; color:#fff }
+.foot { background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:9px 14px; font-size:11px; color:#5d6673; display:flex; gap:18px }
+.foot div { flex:1 }
+.foot b { display:block; color:#22282f; font-size:11px; margin-bottom:1px }
+</style>
+</head>
+<body>
+<div class="intro">
+  <h2>Plans for teams that ship</h2>
+  <p>Every plan includes the build cache, unlimited public projects, and the
+  command line tools. Change or cancel at any time.</p>
+  <div class="switch"><span class="on">Yearly, save 20%</span><span>Monthly</span></div>
+</div>
+
+<div class="plans">
+  <div class="plan">
+    <h3>Starter</h3>
+    <div class="for">One developer, side projects, and evaluation.</div>
+    <div class="price">&#8364;0</div>
+    <div class="per">free while your team is one person</div>
+    <ul>
+      <li>3 concurrent builds</li>
+      <li>2 GB cache</li>
+      <li>7 day log retention</li>
+      <li class="no">Shared runners only</li>
+      <li class="no">Email support</li>
+    </ul>
+    <div class="grow"></div>
+    <span class="btn">Start free</span>
+  </div>
+
+  <div class="plan mid">
+    <div class="badge">Most chosen</div>
+    <h3>Team</h3>
+    <div class="for">Small teams with a release cadence to keep.</div>
+    <div class="price">&#8364;29 <small>per seat</small></div>
+    <div class="per">billed yearly, &#8364;36 monthly</div>
+    <ul>
+      <li>20 concurrent builds</li>
+      <li>50 GB cache</li>
+      <li>90 day log retention</li>
+      <li>Dedicated runners</li>
+      <li>Email support, one business day</li>
+      <li>SSO with Google and Okta</li>
+    </ul>
+    <div class="grow"></div>
+    <span class="btn">Start 14 day trial</span>
+  </div>
+
+  <div class="plan">
+    <h3>Scale</h3>
+    <div class="for">Organisations with audit and residency rules.</div>
+    <div class="price">&#8364;89 <small>per seat</small></div>
+    <div class="per">billed yearly, minimum 25 seats</div>
+    <ul>
+      <li>Unlimited concurrent builds</li>
+      <li>500 GB cache</li>
+      <li>2 year log retention</li>
+      <li>Isolated runners, EU or US</li>
+      <li>Support with a 2 hour target</li>
+      <li>Audit log export and SCIM</li>
+    </ul>
+    <div class="grow"></div>
+    <span class="btn">Talk to sales</span>
+  </div>
+</div>
+
+<div class="foot">
+  <div><b>Seats are people, not machines.</b> Runners and build minutes are never
+  counted against a seat.</div>
+  <div><b>Yearly plans are refundable.</b> Cancel in the first 30 days and we
+  return the whole amount.</div>
+</div>
+</body>
+</html>

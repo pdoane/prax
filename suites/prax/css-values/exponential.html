@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pow(), sqrt(), hypot(), log() and exp()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.5 Exponential Functions</div>
+  <h1>pow(), sqrt(), hypot(), log() and exp()</h1>
+  <p class=pr-lede><q>The exponential functions-- pow(), sqrt(), hypot(), log(), and exp()-- compute various
+  exponential functions with their arguments.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#exponent-funcs">CSS Values and Units 4 §10.5</a></span>
+  Each bar's <code>width</code> is under it.</p>
+</header>
+
+<section>
+  <h2>Numbers, multiplied into lengths</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(10px * pow(2, 4))">A</div></div>
+    <figcaption><code>10px * pow(2, 4)</code>: 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(1px * sqrt(10000))">A</div></div>
+    <figcaption><code>1px * sqrt(10000)</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(50px * log(1000, 10))">A</div></div>
+    <figcaption><code>50px * log(1000, 10)</code>: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(40px * exp(log(3)))">A</div></div>
+    <figcaption><code>40px * exp(log(3))</code>: log is natural, so 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>hypot() of lengths</h2>
+  <p><q>You are allowed to write expressions like hypot(30px, 40px), which resolves to 50px</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: hypot(60px, 80px)">A</div></div>
+    <figcaption><code>hypot(60px, 80px)</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 16px"><div class="pr-a pr-fit" style="width: hypot(-9em)">A</div></div>
+    <figcaption><code>hypot(-9em)</code> in 16px text, <q>the absolute value of its input</q>: 144px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

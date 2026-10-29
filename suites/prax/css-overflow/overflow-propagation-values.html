@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The viewport's visible and clip</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.4 Overflow Viewport Propagation, values</div>
+  <h1>The viewport's visible and clip</h1>
+  <p class=pr-lede><q>If overflow/visible is applied to the viewport, it must be interpreted as overflow/auto. If
+  overflow/clip is applied to the viewport, it must be interpreted as overflow/hidden.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-propagation">CSS Overflow 3 §3.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>What the viewport is given</h2>
+  <p>Each frame is a document 200 by 100 whose body, dashed, is 30px tall at 10, 10 and holds a box 60px tall and a
+  second one 200px tall. A script calls <code>scrollTo(0, 40)</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption>Both <code>visible</code>: the viewport is <code>auto</code>, and scrolled 40px: the blue box's
+    lower 30px are seen.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { overflow: clip; background: #e7eaef } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>html { overflow: clip }</code>: the viewport is <code>hidden</code>, which a script can still
+    scroll: scrolled 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { overflow: clip; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>body { overflow: clip }</code>: propagated, so the body is <code>visible</code> and the
+    viewport <code>hidden</code>, scrolled 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { overflow: auto; background: #e7eaef } body { overflow: hidden; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>html { overflow: auto }</code>, <code>body { overflow: hidden }</code>: the root's value goes
+    to the viewport, and the body keeps its own: the blue box is cut at the body's bottom, 30px tall, and the
+    viewport has nothing to scroll.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

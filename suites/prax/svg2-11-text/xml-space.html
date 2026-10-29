@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>xml:space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.3.2 Legacy white-space handling, the ‘xml:space’ property</div>
+  <h1>xml:space</h1>
+  <p class=pr-lede><q>For compatibility, SVG 2 also supports the XML attribute ‘xml:space’ to specify the handling of
+  white space characters within a given ‘text’ element's character data.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#LegacyXMLSpace">SVG 2 §11.10.3.2</a></span>
+  Each stage is an SVG 160 by 60 holding text in PR Noto Sans Mono at <code>calc(50px / 3)</code>, every character,
+  spaces too, 10 wide, at <code>x="20" y="35"</code>; red ticks mark where the letters are to start.</p>
+</header>
+
+<section>
+  <h2>preserve</h2>
+  <p><q>When xml:space="preserve", the SVG user agent will do the following using a copy of the original character
+  data content. It will convert all newline and tab characters into space characters. Then, it will draw all space
+  characters, including leading, trailing and multiple contiguous space characters.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M60 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="preserve">a   b</text></svg></div>
+    <figcaption>"a", three spaces, "b": all drawn, a at 20, b at 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M50 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="preserve">a
+	b</text></svg></div>
+    <figcaption>"a", a newline, a tab, "b": each a space, one line, b at 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M40 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="preserve">  ab</text></svg></div>
+    <figcaption>Two spaces, then "ab": the leading spaces drawn, a at 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>default</h2>
+  <p><q>Then, it will strip off all leading and trailing space characters. Then, all contiguous space characters will
+  be consolidated.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M40 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="default">  a   b  </text></svg></div>
+    <figcaption><code>xml:space="default"</code>, "  a   b  ": stripped and consolidated, a at 20, b at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+00-supports-1.html
+CSS2/#box-dimensions 8.1 Box dimensions
+    areas.html
+    edges.html
+    size.html
+    backgrounds.html
+CSS2/#mpb-examples 8.2 Example of margins, padding, and borders
+    example.html
+    what-to-see.html
+CSS2/#margin-properties 8.3 Margin properties: margin-top, margin-right, margin-bottom, margin-left, and margin
+    margin-length.html
+    margin-percentage.html
+    margin-percentage-inline-size.html
+    margin-auto.html
+    margin-negative.html
+    margin-shorthand.html
+    margin-applies-to.html
+CSS2/#collapsing-margins 8.3.1 Collapsing margins
+    adjoining-siblings.html
+    adjoining-parent.html
+    adjoining-own.html
+    adjoining-others.html
+    collapsed-width.html
+    collapsed-width-mixed.html
+    apart-padding.html
+    apart-lines.html
+    apart-clearance.html
+    apart-roots.html
+    apart-overflow-clip.html
+    apart-out-of-flow.html
+    through.html
+    through-not.html
+    through-position.html
+CSS2/#padding-properties 8.4 Padding properties: padding-top, padding-right, padding-bottom, padding-left, and padding
+    padding-length.html
+    padding-percentage.html
+    padding-percentage-inline-size.html
+    padding-background.html
+    padding-shorthand.html
+    padding-applies-to.html
+CSS2/#border-width-properties 8.5.1 Border width: border-top-width, border-right-width, border-bottom-width, border-left-width, and border-width
+    border-width-keywords.html
+    border-width-length.html
+    border-width-sides.html
+    border-width-shorthand.html
+    border-width-style.html
+    border-width-used.html
+CSS2/#border-color-properties 8.5.2 Border color: border-top-color, border-right-color, border-bottom-color, border-left-color, and border-color
+    border-color-values.html
+    border-color-initial.html
+    border-color-sides.html
+CSS2/#border-style-properties 8.5.3 Border style: border-top-style, border-right-style, border-bottom-style, border-left-style, and border-style
+    border-style-values.html
+    border-style-dots-dashes.html
+    border-style-3d.html
+    border-style-3d-color.html
+    border-style-double.html
+    border-style-tables.html
+    border-style-sides.html
+CSS2/#border-shorthand-properties 8.5.4 Border shorthand properties: border-top, border-right, border-bottom, border-left, and border
+    border-side.html
+    border-reset.html
+    border.html
+    border-example.html
+CSS2/#bidi-box-model 8.6 The box model for inline elements in bidirectional context
+    inline-ltr.html
+    inline-rtl.html
+    inline-rtl-block.html

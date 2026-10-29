@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-style: italic and oblique</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.4 Font style: the 'font-style' property</div>
+  <h1>font-style: italic and oblique</h1>
+  <p class=pr-lede><q>Italic forms are generally cursive in nature while oblique faces are typically sloped versions
+  of the regular face.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-prop">CSS Fonts 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>italic: an italic face</h2>
+  <p><code>italic</code> <q>Matches against a font that is labeled as an italic face, or an oblique face if one does
+  not exist.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-style: italic">Handgloves</div>
+    <figcaption>PR Tinos's italic face: cursive forms, a single-storey a.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Roboto Flex'; font-style: italic">Handgloves</div>
+    <figcaption>PR Roboto Flex has no italic, but slants: its oblique face, the regular forms sloped. <span class=pr-flag>Safari</span> draws it upright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>oblique &lt;angle&gt;: a slant</h2>
+  <p><q>Positive angles represent a clockwise slant; negative angles represent a counter-clockwise slant. The lack of
+  an &lt;angle&gt; represents 14deg.</q> PR Roboto Flex slants from 0 to 10 degrees.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Roboto Flex'; font-style: oblique 5deg">Handgloves</div>
+    <figcaption><code>oblique 5deg</code>: half the font's slant. <span class=pr-flag>Safari</span> draws it upright.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Roboto Flex'; font-style: oblique 10deg">Handgloves</div>
+    <figcaption><code>oblique 10deg</code>: its full slant. <span class=pr-flag>Safari</span> draws it upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: oblique">Handgloves</div>
+    <figcaption>PR Cousine, with no italic or oblique: <q>a synthetic oblique face will be generated</q>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: oblique -14deg">Handgloves</div>
+    <figcaption><code>oblique -14deg</code>: synthesized, leaning the other way. <span class=pr-flag>Safari</span> draws it upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup: the examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; }
+  .row { display: table-row; }
+  .cell { display: table-cell; }
+  .inline-table { display: inline-table; }
+  .pr-stage tr, .pr-stage .row { background: #b9cde6; }
+  .pr-stage tr:nth-child(2), .pr-stage .row:nth-child(2) { background: #f6d7b4; }
+  .pr-stage :is(td, .cell):nth-child(2) { background: #f6d7b4; }
+  .pr-stage :is(td, .cell):nth-child(3) { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.3 Examples</div>
+  <h1>Fixup: the examples</h1>
+  <p class=pr-lede>Each example's markup, with its classes, beside the HTML table that the section says it produces
+  boxes as though it were, with HTML's spacing and padding set to 0. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-examples">CSS Table 3 §2.2.3</a></span>
+  Text is <code>.pr-measure</code>, 10px a letter.</p>
+</header>
+
+<section>
+  <h2>A row and its cells</h2>
+  <p><q>After fixup, this will produce layout boxes as though this was the initial HTML</q>: a table around the row.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="row">
+      <div class="cell">George</div>
+      <div class="cell">4287</div>
+      <div class="cell">1998</div>
+    </div></div>
+    <figcaption><code>.row</code> and three <code>.cell</code>s: one table, 140px wide, "George", "4287" and "1998"
+    side by side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>George</td><td>4287</td><td>1998</td></tr></table></div>
+    <figcaption>The HTML table: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows of text in an inline-table</h2>
+  <p><q>three table-cell anonymous boxes are assumed to contain the text in the rows</q>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="inline-table">
+      <div class="row">This is the top row.</div>
+      <div class="row">This is the middle row.</div>
+      <div class="row">This is the bottom row.</div>
+    </div></div>
+    <figcaption>An <code>.inline-table</code> of three <code>.row</code>s: three rows of one cell each, as wide as
+    the longest line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><table style="display: inline-table"><tr><td>This is the top row.</td></tr><tr><td>This is the middle row.</td></tr><tr><td>This is the bottom row.</td></tr></table></div>
+    <figcaption>The HTML table: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

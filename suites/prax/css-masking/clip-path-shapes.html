@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clip-path: basic shapes and their reference box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 20px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 5.1 Clipping Shape: the clip-path property</div>
+  <h1>clip-path: basic shapes and their reference box</h1>
+  <p class=pr-lede><q>A basic shape makes use of the specified reference box to size and position the basic shape.
+  If no reference box is specified, the border-box will be used as reference box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-clip-path">CSS Masking 1 §5.1</a></span>
+  Each box is 100 by 70 at 20, 20, with a 20px margin: an orange 10px border, light blue padding and blue content,
+  60 by 30 at 40, 40.</p>
+</header>
+
+<section>
+  <h2>The same shape, three reference boxes</h2>
+  <p>Each box has <code>clip-path: inset(10px)</code> and the box given: the shape is the box, 10px in from each
+  side.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: inset(10px)"></div></div>
+    <figcaption>None given, so the border box: 30 to 110 across, 30 to 80 down, all padding and content.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: inset(10px) padding-box"></div></div>
+    <figcaption><code>padding-box</code>: 40 to 100 across, 40 to 70 down, the content alone.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: inset(10px) content-box"></div></div>
+    <figcaption><code>content-box</code>: 50 to 90 across, 50 to 60 down, a blue strip 40 by 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages from the box, and a box larger than it</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: circle(50%) content-box"></div></div>
+    <figcaption><code>circle(50%) content-box</code>: centered on the content, 70, 55, with a radius half of
+    √(60² + 30²) / √2, 23.7.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: polygon(0 0, 100% 0, 0 100%)"></div></div>
+    <figcaption><code>polygon(0 0, 100% 0, 0 100%)</code>: the triangle with corners at 20, 20, at 120, 20 and at 20,
+    90.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: inset(10px) margin-box"></div></div>
+    <figcaption><code>inset(10px) margin-box</code>: 10 to 130 across, 10 to 100 down, more than the box: all of it
+    drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

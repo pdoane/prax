@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placing items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { display: grid; grid-template-columns: [sidebar-start] 20px 20px [sidebar-end] 20px 20px; grid-template-rows: [header-start] 20px 20px [footer-end] 20px;
+       grid-template-areas: ". . . ." ". . a ." ". . . ."; width: 80px; margin: 5px; background: #f4f5f7; }
+  .g + .g { margin-top: 0; }
+  .g > div { padding: 0; }
+  .pr-stage { width: 90px; }
+  figure.pr-narrow { margin-right: 10px; }
+  figure.pr-narrow figcaption { max-width: 92px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 2.2 Placing Items</div>
+  <h1>Placing items</h1>
+  <p class=pr-lede><q>The contents of the grid container are organized into individual grid items (analogous to flex
+  items), which are then assigned to predefined areas in the grid. They can be explicitly placed using coordinates
+  through the grid-placement properties or implicitly placed into empty areas using auto-placement.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overview-placement">CSS Grid Layout 2 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>grid-area, and grid-row with grid-column</h2>
+  <p>Each grid has four 20px columns and three 20px rows, an area "a" at row 2, column 3, column lines 1 and 3 named
+  <code>sidebar-start</code> and <code>sidebar-end</code>, and row lines 1 and 3 <code>header-start</code> and
+  <code>footer-end</code>. In each stage, the upper grid's item A is placed with <code>grid-area</code>, the lower
+  grid's B with the equivalent <code>grid-row</code> and <code>grid-column</code>: the two land in the same
+  cells.</p>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: a"></div></div><div class=g><div class=pr-b style="grid-row: a; grid-column: a"></div></div></div>
+    <figcaption><code>a</code>: <q>Place into named grid area “a”</q>, row 2, column 3.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: auto"></div></div><div class=g><div class=pr-b style="grid-row: auto; grid-column: auto"></div></div></div>
+    <figcaption><code>auto</code>: <q>Auto-place into next empty area</q>, the first cell.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: 2 / 4"></div></div><div class=g><div class=pr-b style="grid-row: 2; grid-column: 4"></div></div></div>
+    <figcaption><code>2 / 4</code>: <q>Place into row 2, column 4</q>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: 1 / 3 / -1"></div></div><div class=g><div class=pr-b style="grid-row: 1 / -1; grid-column: 3"></div></div></div>
+    <figcaption><code>1 / 3 / -1</code>: <q>Place into column 3, span all rows</q>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: header-start / sidebar-start / footer-end / sidebar-end"></div></div><div class=g><div class=pr-b style="grid-row: header-start / footer-end; grid-column: sidebar-start / sidebar-end"></div></div></div>
+    <figcaption><code>header-start / sidebar-start / footer-end / sidebar-end</code>: <q>Place using named lines</q>,
+    the top-left two rows and two columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

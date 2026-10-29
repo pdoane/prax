@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gaps and rules between columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .red { column-rule: 2px solid #c0392b; }
+  .fixed { height: 40px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4 Column Gaps and Rules</div>
+  <h1>Gaps and rules between columns</h1>
+  <p class=pr-lede><q>Column gaps take up space. That is, column gaps will push apart content in adjacent
+  columns</q>. <q>A column rule is drawn in the middle of the column gap with the endpoints at opposing content edges of
+  the multicol container. Column rules do not take up space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-gaps-and-rules">CSS Multi-column Layout 1 §4</a></span></p>
+</header>
+
+<section>
+  <h2>In the middle of the gap, between the content edges</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent red" style="columns: 2; column-gap: 20px; padding: 10px 0">one two three four</div></div>
+    <figcaption>Columns of 90px; the 2px rule centered at 100px, from the container's content edge 10px down to
+    the one 10px up from its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 2; column-gap: 10px; column-rule: 30px solid #f9cc9d">one two three four</div>
+    <figcaption>A 30px rule in a 10px gap: still columns of 95px, the rule from 85 to 115px, under the text that
+    overlaps it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only between columns with content</h2>
+  <p><q>Column rules are only drawn between two columns that both have content.</q> Three columns, 40px tall
+  (<code>column-fill: auto</code>).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure red fixed" style="columns: 3; column-gap: 10px">one two three</div>
+    <figcaption>"three" in the second column, nothing in the third: a rule at 65px, none at 135px. <span class=pr-flag>Safari</span> Fits one line to a
+    40px column, so "three" is in the third, and rules at both.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure red fixed" style="columns: 3; column-gap: 10px">one two three four five</div>
+    <figcaption>All three columns have content: rules at 65 and 135px, 40px long.
+    <span class=pr-flag>Safari</span> A line to a column, "four" and "five" in columns past the stage, with rules
+    before them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

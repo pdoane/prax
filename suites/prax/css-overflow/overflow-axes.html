@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow longhands and shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 70px; height: 40px; margin: 8px 9px 14px; }
+  .pr-stage.pr-narrow { width: 90px; }
+  figure.pr-narrow { margin-right: 6px; }
+  figure.pr-narrow figcaption { max-width: 92px; }
+  .w { width: 100px; }
+  .h { width: 40px; }
+  .v { writing-mode: vertical-rl; width: 40px; height: 70px; margin: 10px 30px 20px 10px; }
+  .v .w { width: auto; height: 100px; }
+  .v .h { width: auto; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, the axes</div>
+  <h1>The overflow longhands and shorthand</h1>
+  <p class=pr-lede><q>The overflow-x property specifies the handling of overflow in the horizontal axis</q>, <q>the
+  overflow-y property specifies the handling of overflow in the vertical axis</q>. <code>overflow-block</code> and <code>overflow-inline</code> likewise, in the block and inline axes. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>One axis clipped</h2>
+  <p>Each dashed box is 70 by 40 and holds a 100px wide A, then B and C. <code>clip</code> beside
+  <code>visible</code> clips one axis alone.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow-x: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow-x: clip</code>: A is cut at the right; C hangs below.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow-y: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow-y: clip</code>: C is cut off; A runs out to the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: clip visible"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow: clip visible</code>, x then y: as <code>overflow-x: clip</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow: clip</code>: <q>If the second value is omitted, it is copied from the first.</q> Both
+    cut.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative axes</h2>
+  <p>In <code>vertical-rl</code> the block axis is horizontal and the inline axis vertical. Each dashed box is 40 by
+  70 in <code>vertical-rl</code>, and holds A, 100px tall, then B and C to its left.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 110px"><div class="pr-frame v"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>visible</code>: A runs out at the bottom, C out at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 110px"><div class="pr-frame v" style="overflow-inline: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow-inline: clip</code>, the vertical axis here: A is cut at the bottom; C still hangs
+    out at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 110px"><div class="pr-frame v" style="overflow-block: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>overflow-block: clip</code>, the horizontal axis: C is cut off at the left; A runs out at the
+    bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

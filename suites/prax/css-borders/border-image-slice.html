@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-image-slice: nine pieces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 20px; margin: 10px; border: 10px solid #2c5a8f; background: #f4f5f7; border-image-source: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.2 Image Slicing: the border-image-slice property</div>
+  <h1>border-image-slice: nine pieces</h1>
+  <p class=pr-lede><q>This property specifies inward offsets from the top, right, bottom, and left edges of the image,
+  dividing it into nine regions: four corners, four edges and a middle. The middle image part is discarded (treated
+  as fully transparent) unless the fill keyword is present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-slice">CSS Borders and Box Decorations 4 §4.2</a></span>
+  The image, 30 by 30, has orange 10px corners, a blue dot in each side and a green center. Each box is 100 by 40 with
+  a 10px border, the image stretched.</p>
+</header>
+
+<section>
+  <h2>Numbers, percentages, fill</h2>
+  <p><q>Numbers represent pixels in the image (if the image is a raster image) or vector coordinates (if the image is a
+  vector image).</q> <q>Percentages are relative to the size of the image</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-slice: 10"></div></div>
+    <figcaption><code>10</code>: orange corners; each side a dot stretched along it; the middle empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-slice: 33.3333%"></div></div>
+    <figcaption><code>33.3333%</code>: the same cuts, the same drawing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-slice: 10 fill"></div></div>
+    <figcaption><code>10 fill</code>: the green middle fills the box inside the border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Slices too large</h2>
+  <p><q>Computed values larger than the size of the image are interpreted as 100%.</q> <q>if the sum of the right and
+  left widths is equal to or greater than the width of the image, the images for the top and bottom edge and the
+  middle part are empty</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-slice: 20 fill"></div></div>
+    <figcaption><code>20 fill</code>: 20 + 20 &gt; 30: each corner holds a 20 by 20 part of the image; the sides and
+    middle are empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-slice: 40 fill"></div></div>
+    <figcaption><code>40 fill</code>, read as 100%: each corner holds the whole image, shrunk to 10 by 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

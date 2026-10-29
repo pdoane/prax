@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table layers and transparency</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.2); }
+  .L1 { background: #f2e394; }
+  .L2 { background: #d68a3c; }
+  .L3 { background: #c0392b; }
+  .L4 { background: #6aa36a; }
+  .L5 { background: #4f81bd; }
+  .L6 { background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.1 Table layers and transparency</div>
+  <h1>Table layers and transparency</h1>
+  <p class=pr-lede><q>For the purposes of finding the background of each table cell, the different table elements may be
+  thought of as being on six superimposed layers. The background set on an element in one of the layers will only be
+  visible if the layers above it have a transparent background.</q></p>
+</header>
+
+<section>
+  <h2>Six layers, bottom to top</h2>
+  <p>The table, yellow; <q>The next layer contains the column groups</q>, orange; <q>On top of the column groups are
+  the areas representing the column boxes</q>, red; <q>Next is the layer containing the row groups</q>, green; <q>The
+  next to last layer contains the rows</q>, blue; <q>The topmost layer contains the cells themselves</q>, purple. Each
+  figure adds one layer to a 3 by 3 table. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layers">CSS 2 §17.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup span=2><tr><td>1<td>2<td>3<tbody><tr><td>4<td>5<td>6<tr><td>7<td>8<td>9</tbody></table></div>
+    <figcaption>1. The table: every cell shows yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup class=L2 span=2><tr><td>1<td>2<td>3<tbody><tr><td>4<td>5<td>6<tr><td>7<td>8<td>9</tbody></table></div>
+    <figcaption>2. A column group over columns 2 and 3: orange over yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup class=L2><col><col class=L3></colgroup><tr><td>1<td>2<td>3<tbody><tr><td>4<td>5<td>6<tr><td>7<td>8<td>9</tbody></table></div>
+    <figcaption>3. Column 3: red over the column group.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup class=L2><col><col class=L3></colgroup><tr><td>1<td>2<td>3<tbody class=L4><tr><td>4<td>5<td>6<tr><td>7<td>8<td>9</tbody></table></div>
+    <figcaption>4. A row group of rows 2 and 3: green over the columns.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup class=L2><col><col class=L3></colgroup><tr><td>1<td>2<td>3<tbody class=L4><tr><td>4<td>5<td>6<tr class=L5><td>7<td>8<td>9</tbody></table></div>
+    <figcaption>5. Row 3: blue over the row group.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=L1><col><colgroup class=L2><col><col class=L3></colgroup><tr><td>1<td>2<td>3<tbody class=L4><tr><td>4<td>5<td>6<tr class=L5><td>7<td>8<td class=L6>9</tbody></table></div>
+    <figcaption>6. Cell 9: purple, over everything.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

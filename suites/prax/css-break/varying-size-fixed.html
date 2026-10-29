@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed widths across pages of different widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.1 Breaking into Varying-size Fragmentainers</div>
+  <h1>Fixed widths across pages of different widths</h1>
+  <p class=pr-lede><q>Layout is performed per-fragmentainer, with each fragmentainer continuing progress from the breakpoint on the previous, but recalculating sizes and positions using its own size as if the entire element were fragmented across fragmentainers of this size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#varying-size-boxes">CSS Fragmentation 4 §5.1</a></span> Each frame’s first page has 60px side margins (<code>@page :first</code>): its content area is 120px wide, the others’ 220px.</p>
+</header>
+
+<section>
+  <h2>Fixed widths stay</h2>
+  <p><q>Boxes (including tables) fulfilling layout constraints at their min-content, max-content, or absolute-length size will maintain their inline size across pages.</q></p>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } @page :first { margin: 10px 60px } .k { background: #b9cde6 }</style><body class=pr-measure><div class=k style='width: 100px'>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www xxx yyy zzz aaa bbb ccc ddd eee</div>"></iframe>
+    <figcaption><code>width: 100px</code>: 100px on both pages, two words to a line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

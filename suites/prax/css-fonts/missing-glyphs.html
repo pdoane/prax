@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Characters no font has</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 8</div>
+  <h1>Characters no font has</h1>
+  <p class=pr-lede><q>If a particular character cannot be displayed using any font, the user agent should indicate by
+  some means that a character is not being displayed, displaying either a symbolic representation of the missing
+  glyph (e.g. using a Last Resort Font) or using the missing character glyph from a default font.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>A visible symbol</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">a &#x378; b</div>
+    <figcaption>U+0378, unassigned, between "a" and "b": a box or other symbol, not nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">a &#x10FFFD; b</div>
+    <figcaption>U+10FFFD, private use: a symbol for it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

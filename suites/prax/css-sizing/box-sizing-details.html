@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What box-sizing affects</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .b { box-sizing: border-box; padding: 0 10px; border: 0 solid #2c5a8f; border-width: 0 10px; background: #c3d08b; height: 20px; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.3 Box Edges for Sizing: the box-sizing property, its reach</div>
+  <h1>What box-sizing affects</h1>
+  <p class=pr-lede>box-sizing <q>affects the interpretation of all sizing properties, including flex-basis.</q>
+  <q>Values affected by box-sizing include both raw &lt;length-percentage&gt; values and those used in functional
+  notations such as fit-content()</q>. <q>In contrast, non-quantitative values such as auto and min-content are not
+  influenced by the box-sizing property</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#box-sizing">CSS Box Sizing 3 §3.3</a></span>
+  Each green box is <code>border-box</code> with 10px of blue border and 10px of padding each side.</p>
+</header>
+
+<section>
+  <h2>Every sizing property, and only quantities</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=b style="width: 20px; min-width: 100px"></div></div>
+    <figcaption><code>min-width: 100px</code>: the border box is 100px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=b style="max-width: 60%"></div></div>
+    <figcaption><code>max-width: 60%</code>: the border box is 90px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s" style="display: flex"><div class=b style="flex: 0 0 100px"></div></div>
+    <figcaption><code>flex-basis: 100px</code>: the border box is 100px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=b style="width: min-content; height: auto">abc def</div></div>
+    <figcaption><code>width: min-content</code>: the 27px of "abc" plus the 40px of edges, 67px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=b style="width: fit-content(100px); height: auto">abc def ehg</div></div>
+    <figcaption><code>width: fit-content(100px)</code>, from Box Sizing 4: the argument is the border box, so 100px, the
+    text wrapped in 60px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> drop the declaration: 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

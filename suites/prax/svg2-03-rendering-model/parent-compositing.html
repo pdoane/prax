@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Parent compositing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg, img { display: block; }
+  .band { position: relative; }
+  .band::before { content: ""; position: absolute; left: 0; right: 0; top: 20px; height: 20px; background: #d68a3c; }
+  .band > * { position: relative; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.10 Parent compositing</div>
+  <h1>Parent compositing</h1>
+  <p class=pr-lede><q>SVG document fragments can be semi-opaque.</q> <q>In all other cases, the SVG document or document
+  fragment is composited into the parent document with opacity preserved.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#ParentCompositing">SVG 2 §3.10</a></span>
+  Each stage is 160 by 60 with an orange band across its middle, under a blue rect at half opacity, 120 by 40 at 20,
+  10.</p>
+</header>
+
+<section>
+  <h2>Opacity preserved</h2>
+  <figure>
+    <div class="pr-stage pr-medium band"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" fill-opacity="0.5" /></svg></div>
+    <figcaption>An inline fragment: the band shows through the rect, and the guides around it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium band"><img src="support/translucent.svg" alt=""></div>
+    <figcaption>An SVG document in an <code>img</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium band"><svg width="160" height="60" opacity="0.5"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>An opaque rect in an <code>svg</code> with <code>opacity="0.5"</code>: the same, the fragment
+    itself half opaque.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

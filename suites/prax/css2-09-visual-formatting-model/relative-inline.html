@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative positioning: inlines, inline blocks and floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rel { position: relative; }
+  .ib { display: inline-block; vertical-align: top; height: 20px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.3 Relative positioning</div>
+  <h1>Relative positioning: inlines, inline blocks and floats</h1>
+  <p class=pr-lede>Text is on 20px lines; the guides are 10px apart. In each figure the orange box is relatively
+  positioned.</p>
+</header>
+
+<section>
+  <h2>Every box of an inline</h2>
+  <p><q>For relatively positioned elements, 'left' and 'right' move the box(es) horizontally, without changing their
+  size.</q> A percentage is <q>a percentage of the containing block's width (for 'left' or 'right') or height (for 'top'
+  and 'bottom').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span>, <span class=pr-cite><a href="https://drafts.csswg.org/css2/#position-props">CSS 2 §9.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px">one two <span class="pr-chip rel" style="top: 10px; left: 10px">three four five six seven eight nine</span> ten</div>
+    <figcaption>A span on two lines, with <code>top: 10px; left: 10px</code>: both of its boxes move 10px down and right;
+    "one two" and "ten" stay put.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 80px">one <span class="pr-chip rel" style="top: 25%">two</span> three</div>
+    <figcaption><code>top: 25%</code> of the 80px block that is its containing block: "two" moves down 20px, onto the
+    second line's place.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An inline block and a float</h2>
+  <p><q>Once a box has been laid out according to the normal flow or floated, it may be shifted relative to this
+  position.</q> <q>B2 is given a position as if B1 were not offset</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px">one <span class="pr-b ib rel" style="top: 20px; left: 20px">B</span> three<br>next line</div>
+    <figcaption>An inline block with <code>top: 20px; left: 20px</code> moves; "three" keeps its place after the gap
+    it left, and the lines stay where they were.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="position: relative; height: 60px"><div class=pr-ghost style="position: absolute; width: 60px; height: 40px"></div><div class="pr-b pr-fit rel" style="float: left; left: 80px; width: 60px; height: 40px">float</div>text wraps around where the float was laid out</div>
+    <figcaption>A float with <code>left: 80px</code>: the text wraps beside its old place, dashed, as if it had
+    not moved, and the float covers the text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>self-start, self-end, flex-start, flex-end</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-rows: 20px 20px; height: 40px; }
+  .gv { display: grid; grid-template-columns: 30px 30px; height: 80px; }
+  .vi { writing-mode: vertical-rl; padding: 6px 0; }
+  .fc { display: flex; flex-direction: column; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.1 Positional Alignment, self-start to flex-end</div>
+  <h1>self-start, self-end, flex-start, flex-end</h1>
+  <p class=pr-lede><q>self-start</q> <q>Aligns the alignment subject to be flush with the edge of the alignment
+  container corresponding to the alignment subject’s start side in the appropriate axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#positional-values">CSS Box Alignment 3 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>The subject's start, not the container's</h2>
+  <p>In an <code>ltr</code>, <code>horizontal-tb</code> grid, A and B are <code>direction: rtl</code>; C and D are
+  <code>vertical-rl</code> and <code>rtl</code>, so their start is at the bottom.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="direction: rtl; justify-self: start">A start</div><div class=pr-b style="direction: rtl; justify-self: self-start">B self-start</div></div></div>
+    <figcaption>A, <code>start</code>, at the left; B, <code>self-start</code>, at the right, its own start.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=gv><div class="pr-c vi" style="direction: rtl; align-self: start">C</div><div class="pr-d vi" style="direction: rtl; align-self: self-start">D</div></div></div>
+    <figcaption><code>align-self</code>: C, <code>start</code>, at the top; D, <code>self-start</code>, at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>flex-start and flex-end outside flex layout</h2>
+  <p><q>When used outside of a flex formatting context, this value behaves as start.</q> <q>left</q> and
+  <q>right</q>: <q>If the property's axis is not parallel with either left↔right axis, this value behaves as
+  start.</q> For flex's own rules see <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#alignment">CSS Flexible Box Layout 2 §8</a></span>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: flex-end">A</div><div class=pr-b style="justify-self: flex-start">B</div></div></div>
+    <figcaption>A grid: A, <code>flex-end</code>, at the right, as <code>end</code>; B, <code>flex-start</code>, at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=fc style="flex-direction: column-reverse; justify-content: flex-start"><div class=pr-a>A</div></div></div>
+    <figcaption><code>column-reverse</code>, <code>flex-start</code>: A at the bottom, main-start.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=fc style="justify-content: right"><div class=pr-a>A</div></div></div>
+    <figcaption><code>column</code>, <code>justify-content: right</code>: as <code>start</code>, A at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

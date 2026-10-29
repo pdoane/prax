@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>marker: markerUnits, markerWidth and markerHeight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="stroke-units" refX="1.5" refY="1.5"><circle cx="1.5" cy="1.5" r="1.5" fill="#d68a3c" /></marker>
+  <marker id="user-units" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="6" refY="6"><circle cx="6" cy="6" r="6" fill="#d68a3c" /></marker>
+  <marker id="no-width" markerWidth="0" refX="1.5" refY="1.5"><circle cx="1.5" cy="1.5" r="1.5" fill="#d68a3c" /></marker>
+  <marker id="no-height" markerHeight="0" refX="1.5" refY="1.5"><circle cx="1.5" cy="1.5" r="1.5" fill="#d68a3c" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.1 The ‘marker’ element</div>
+  <h1>marker: markerUnits, markerWidth and markerHeight</h1>
+  <p class=pr-lede><q>The ‘markerUnits’ attribute defines the coordinate system for attributes ‘markerWidth’,
+  ‘markerHeight’ and the contents of the ‘marker’.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#MarkerElement">SVG 2 §13.7.1</a></span>
+  Each stage is an SVG 160 by 60 with a dark blue line from 30, 30 to 130, 30 and a marker at each end.</p>
+</header>
+
+<section>
+  <h2>strokeWidth and userSpaceOnUse</h2>
+  <p><b>strokeWidth</b>, the initial value: <q>a coordinate system which has a single unit equal to the size in user
+  units of the painted stroke width of the element referencing the marker.</q> <b>userSpaceOnUse</b>: <q>values in
+  the current user coordinate system in place for the element referencing the marker.</q> The first two markers have
+  no <code>markerUnits</code>, <code>markerWidth</code> or <code>markerHeight</code>, so they are 3 by 3, and a circle
+  of radius 1.5 fills them.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" stroke="#2c5a8f" stroke-width="4" marker-start="url(#stroke-units)" marker-end="url(#stroke-units)" /></svg></div>
+    <figcaption>Stroke 4 wide: units of 4, so dots 12 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" stroke="#2c5a8f" stroke-width="8" marker-start="url(#stroke-units)" marker-end="url(#stroke-units)" /></svg></div>
+    <figcaption>Stroke 8 wide: the same marker, dots 24 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" stroke="#2c5a8f" stroke-width="8" marker-start="url(#user-units)" marker-end="url(#user-units)" /></svg></div>
+    <figcaption><code>userSpaceOnUse</code>, 12 by 12 with a circle of radius 6, on the stroke 8 wide: dots 12
+    across.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A size of zero</h2>
+  <p><q>A value of zero for either attribute results in nothing being rendered for the marker.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" stroke="#2c5a8f" stroke-width="4" marker-start="url(#no-width)" marker-end="url(#no-width)" /></svg></div>
+    <figcaption><code>markerWidth="0"</code>: no dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 30 H 130" stroke="#2c5a8f" stroke-width="4" marker-start="url(#no-height)" marker-end="url(#no-height)" /></svg></div>
+    <figcaption><code>markerHeight="0"</code>: no dots.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>gotpointercapture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { padding: 10px 20px; touch-action: none; }
+  .area .pr-target { width: 120px; margin: 0; }
+  .area .pr-target.captured { background: #6aa36a; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.10 gotpointercapture</div>
+  <h1>gotpointercapture</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named gotpointercapture when an element receives pointer
+  capture.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#gotpointercapture">Pointer Events §3.3.10</a></span></p>
+</header>
+<section>
+  <h2>At the capturing element, and the events after it</h2>
+  <p><q>This event is fired at the element that is receiving pointer capture. Subsequent events for that pointer will be
+  fired at this element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#gotpointercapture">§3.3.10</a></span>
+  A <code>pointerdown</code> listener captures the pointer to the box, which is green while it has capture.</p>
+  <figure>
+    <div class="pr-stage pr-wide" id=stage>
+      <div class=area id=area><div class=pr-target id=captor>Press, drag away</div></div>
+      <ol class=pr-log data-log="gotpointercapture pointermove pointerover pointerout" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Press the box: <code>gotpointercapture</code> at <code>captor</code>, which turns green. Drag across
+    the stage and out of it: each <code>pointermove</code> is at <code>captor</code>, and no <code>pointerout</code>
+    or <code>pointerover</code> comes, until you release.</figcaption>
+  </figure>
+</section>
+<script>
+  // Captures the pointer to the box when it is pressed, and turns it green while it has capture.
+  const captor = document.getElementById("captor");
+  captor.addEventListener("pointerdown", event => captor.setPointerCapture(event.pointerId));
+  captor.addEventListener("gotpointercapture", () => captor.classList.add("captured"));
+  captor.addEventListener("lostpointercapture", () => captor.classList.remove("captured"));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

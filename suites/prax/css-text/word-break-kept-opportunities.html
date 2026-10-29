@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-break: kept breaks, and break-word</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 100px; font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+  .ib { display: inline-block; width: 30px; height: 20px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1 Breaking Rules for Letters: the word-break property</div>
+  <h1>word-break: kept breaks, and break-word</h1>
+  <p class=pr-lede><q>User agents must not, in response to any value of this property, suppress soft wrap
+  opportunities which are: introduced by the &lt;wbr&gt; HTML element or U+200B ZERO WIDTH SPACE, required by the
+  'line-break' property, surrounding atomic inlines</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-break-property">CSS Text 4 §6.1</a></span>
+  Each stage is 100px wide and <code>word-break: keep-all</code>, which suppresses breaks between characters.</p>
+</header>
+
+<section>
+  <h2>Kept under keep-all</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" style="word-break: keep-all"><span class=t>日本語の<wbr>文章です</span></div>
+    <figcaption>A <code>wbr</code> after "日本語の": the line breaks there.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" style="word-break: keep-all"><span class=t>日本語の&#x200B;文章です</span></div>
+    <figcaption>U+200B there instead: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" style="word-break: keep-all; line-break: anywhere"><span class=t>日本語の文章です</span></div>
+    <figcaption>With <code>line-break: anywhere</code>, which requires a break anywhere: five, then
+    three.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja pr-row" style="word-break: keep-all"><span class="pr-a pr-fit ib"></span><span class="pr-b pr-fit ib"></span><span class="pr-c pr-fit ib"></span><span class="pr-d pr-fit ib"></span></div>
+    <figcaption>Four 30px inline-blocks: three, then the fourth on the next line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>break-word</h2>
+  <p><q>For compatibility with legacy content, the 'word-break' property also supports a deprecated break-word
+  keyword. When specified, this has the same effect as 'word-break: normal' and 'overflow-wrap: anywhere', regardless
+  of the actual value of the 'overflow-wrap' property.</q> Letters are 10px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="word-break: break-word; overflow-wrap: normal"><span class=t>wordbreaking</span></div>
+    <figcaption><code>break-word</code>, with <code>overflow-wrap: normal</code>: the long word breaks anyway,
+    "wordbreaki", "ng".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t style="display: inline-block; width: min-content; word-break: break-word">abcd ef</span></div>
+    <figcaption>As <code>anywhere</code>, its breaks count for <code>min-content</code>: the box is one letter
+    wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="word-break: break-word"><span class=t>one twothree</span></div>
+    <figcaption>As <code>normal</code> where a word fits: "one", then "twothree", not broken.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

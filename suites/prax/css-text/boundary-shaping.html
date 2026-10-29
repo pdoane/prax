@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shaping across element boundaries</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ar { padding: 0 8px; font: 30px/50px "PR Noto Sans Arabic"; }
+  .lig { padding: 0 8px; font: 30px/50px "PR Literata"; }
+  .pr-stage { width: 100px; }
+  figure { margin-right: 8px; }
+  figure.pr-narrow figcaption { max-width: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.7 Shaping Across Element Boundaries</div>
+  <h1>Shaping across element boundaries</h1>
+  <p class=pr-lede><q>Text shaping must be broken at inline box boundaries when any of the following are true for any
+  box whose boundary separates the two typographic character units: Any of 'margin'/'border'/'padding' separating the
+  two typographic character units in the inline axis is non-zero. 'vertical-align' is not its initial value</q> <q>The
+  boundary is a bidi isolation boundary.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#boundary-shaping">CSS Text 4 §8.7</a></span>
+  Each stage is the Arabic بب, the second letter in a span.</p>
+</header>
+
+<section>
+  <h2>Broken by spacing, vertical-align, or isolation</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ar" dir=rtl>ب<span style="padding-right: 6px">ب</span></div>
+    <figcaption>6px of padding between: two isolated forms. <span class=pr-flag>Chrome</span> Joined.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ar" dir=rtl>ب<span style="vertical-align: 4px">ب</span></div>
+    <figcaption><code>vertical-align: 4px</code>: isolated forms, the second raised. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Joined, and not raised.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ar" dir=rtl>ب<span style="unicode-bidi: isolate">ب</span></div>
+    <figcaption><code>unicode-bidi: isolate</code>: isolated forms.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not broken where nothing changes the glyphs</h2>
+  <p><q>Text shaping must not be broken across inline box boundaries when there is no effective change in formatting,
+  or if the only formatting changes do not affect the glyphs (as in applying text decoration).</q> <q>Text shaping
+  should not be broken across inline box boundaries otherwise, if it is reasonable and possible</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ar" dir=rtl>ب<span>ب</span></div>
+    <figcaption>A plain span: joined, initial and final.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ar" dir=rtl>ب<span style="text-decoration: underline">ب</span></div>
+    <figcaption>Underlined: joined.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ar" dir=rtl>ب<span style="color: #c0392b">ب</span></div>
+    <figcaption>Red, which may be shaped across: joined.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage lig">f<span style="text-decoration: underline">i</span>ve</div>
+    <figcaption>Literata, "f" and an underlined "i": the "fi" ligature kept. <span class=pr-flag>Safari</span> "f" and "i" apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

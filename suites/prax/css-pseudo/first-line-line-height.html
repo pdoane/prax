@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-height on ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 0; background: #b9cde6; }
+  .tall::first-line { line-height: 40px; }
+  .short::first-line { line-height: 10px; }
+  .span-tall::first-line { line-height: 40px; }
+  .span-tall span { line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1.2 Styling the ::first-line Pseudo-element</div>
+  <h1>line-height on ::first-line</h1>
+  <p class=pr-lede><q>Setting line-height on ::first-line inherits to the fragment of the root inline box that wraps
+  the contents of the first line, and therefore can both increase and decrease the height of the first line box.</q>
+  (A Note.) <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-line-styling">CSS Pseudo-Elements 4 §2.1.2</a></span>
+  Each paragraph, light blue, has two lines of text, 10px a character on 20px lines.</p>
+</header>
+
+<section>
+  <h2>Taller and shorter</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><p>aaaa bbbb cccc dddd eeee ffff</p></div>
+    <figcaption>No <code>::first-line</code> rule: two 20px lines, 40px in all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=tall>aaaa bbbb cccc dddd eeee ffff</p></div>
+    <figcaption><code>line-height: 40px</code>: the first line 40px, the second 20px, 60px in all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=short>aaaa bbbb cccc dddd eeee ffff</p></div>
+    <figcaption><code>line-height: 10px</code>: the first line 10px, so 30px in all; its letters overflow it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=span-tall><span>aaaa bbbb cccc dddd eeee ffff</span></p></div>
+    <figcaption>The text in a <code>span</code> of <code>line-height: 20px</code>: the root inline box's fragment
+    still makes the first line 40px, 60px in all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

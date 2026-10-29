@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where a mouse event happened</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .layer { position: relative; height: 100px; margin: 10px 20px; background: var(--pr-plain);
+           border: 1px solid var(--pr-accent); font-size: 12px; overflow: hidden; }
+  .layer p { margin: 30px 0 0 40px; padding: 10px; width: 120px; background: #f6d7b4; }
+  .cross { position: absolute; width: 21px; height: 21px; margin: -10px 0 0 -10px; pointer-events: none;
+           background: linear-gradient(#c0392b, #c0392b) center / 1px 100% no-repeat,
+                       linear-gradient(#c0392b, #c0392b) center / 100% 1px no-repeat; }
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.1 MouseEvent interface</div>
+  <h1>Where a mouse event happened</h1>
+  <p class=pr-lede>clientX: <q>The horizontal coordinate at which the event occurred relative to the viewport associated
+  with the event.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">Pointer Events §11.1</a></span></p>
+</header>
+<section>
+  <h2>layerX and layerY</h2>
+  <p><q>The horizontal offset from the nearest ancestor element which is a stacking context, is positioned, or paints
+  in the positioned phase when painting a stacking context.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=layer id=layer><p id=inner>a paragraph inside a positioned box</p><div class=cross id=cross></div></div>
+      <ol class=pr-log data-log="mousemove" data-fields="target layerX layerY" data-on="#layer" data-lines=1></ol>
+    </div>
+    <figcaption>The red cross is drawn at <code>layerX</code>, <code>layerY</code> in the box, which is positioned.
+    Move over the box and over the orange paragraph in it: the cross stays under the pointer, as the offsets are from
+    the box, not the paragraph.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The modifier keys held</h2>
+  <p>ctrlKey: <q>Refer to the KeyboardEvent's ctrlKey attribute.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span>
+  <q>Set event.shiftKey to true if the event's shift flag is set, false otherwise</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#set-mouse-event-modifiers">§11.2.7</a></span>
+  The page cancels the context menu over the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Click here, holding keys.</div>
+      <ol class=pr-log data-log="mousedown" data-fields="shiftKey ctrlKey altKey metaKey" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box holding Shift: <code>shiftKey</code>. Holding Control, Alt (Option) or Meta (Command,
+    or the Windows key): <code>ctrlKey</code>, <code>altKey</code> or <code>metaKey</code>; holding several, each of
+    them.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws a cross at the last mousemove's layerX and layerY, and keeps Control-click's menu from opening.
+  const cross = document.getElementById("cross");
+  document.getElementById("layer").addEventListener("mousemove", event => {
+    cross.style.left = event.layerX + "px";
+    cross.style.top = event.layerY + "px";
+  });
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

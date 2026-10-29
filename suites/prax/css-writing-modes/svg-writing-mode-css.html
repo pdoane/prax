@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG 1.1 writing-mode values in CSS</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/20px "PR Noto Sans JP"; width: 100px; height: 60px; }
+  .pr-stage > div { background: #b9cde6; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2.1.1 Supporting SVG1.1 writing-mode values in CSS syntax</div>
+  <h1>SVG 1.1 writing-mode values in CSS</h1>
+  <p class=pr-lede>The values <code>lr</code>, <code>lr-tb</code>, <code>rl</code>, <code>rl-tb</code>,
+  <code>tb</code> and <code>tb-rl</code> <q>are obsolete in any context except SVG1 documents and are therefore
+  optional for non-SVG UAs.</q> <q>UAs that wish to support these values in the context of CSS must compute them as
+  follows</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#svg-writing-mode-css">CSS Writing Modes 4 §3.2.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>tb and tb-rl draw as vertical-rl</h2>
+  <p>Each tinted block is in a <code>horizontal-tb</code> stage, which it keeps where it does not take the value.</p>
+  <figure class=s>
+    <div class=pr-stage><div id=tb style="writing-mode: tb">縦書き</div></div>
+    <figcaption><code>tb</code>: set top to bottom, as <code>vertical-rl</code>.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage><div id=tbrl style="writing-mode: tb-rl">縦書き</div></div>
+    <figcaption><code>tb-rl</code>: set top to bottom, as <code>vertical-rl</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>lr, lr-tb, rl and rl-tb draw as horizontal-tb</h2>
+  <p>Each tinted block is in a <code>vertical-lr</code> stage, which it keeps where it does not take the value.</p>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr"><div id=lr style="writing-mode: lr">横書き</div></div>
+    <figcaption><code>lr</code>: set left to right, as <code>horizontal-tb</code>.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr"><div id=lrtb style="writing-mode: lr-tb">横書き</div></div>
+    <figcaption><code>lr-tb</code>: set left to right, as <code>horizontal-tb</code>.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr"><div id=rl style="writing-mode: rl">横書き</div></div>
+    <figcaption><code>rl</code>: set left to right, as <code>horizontal-tb</code>.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr"><div id=rltb style="writing-mode: rl-tb">横書き</div></div>
+    <figcaption><code>rl-tb</code>: set left to right, as <code>horizontal-tb</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

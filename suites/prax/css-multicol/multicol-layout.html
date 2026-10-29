@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Multi-column layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .span { column-span: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 1 Introduction</div>
+  <h1>Multi-column layout</h1>
+  <p class=pr-lede><q>The child elements of a multi-column container however continue in normal flow, that flow is
+  arranged into a number of columns. These columns have a flexible inline size, and therefore respond to available
+  space by changing the size or number of columns displayed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#introduction">CSS Multi-column Layout 1 §1</a></span>
+  Each stage is 200px wide, in text whose every letter is 10px wide on 20px lines.</p>
+</header>
+
+<section>
+  <h2>A width, or a number</h2>
+  <p><q>The number of columns can also be set explicitly in the style sheet</q>: <q>In this case, the number of columns
+  is fixed and the column widths will vary depending on the available width.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 60px; column-gap: 10px">one two three four five six</div>
+    <figcaption><code>columns: 60px</code>, 10px gaps: three columns of 60px, each word on its line, two lines to
+    a column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 2; column-gap: 10px">one two three four five six</div>
+    <figcaption><code>columns: 2</code>, a 10px gap: two columns of 95px, "one two" and "three" in the first,
+    "four five" and "six" in the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Gaps, rules, and spanning</h2>
+  <p><q>Column gaps are similar to padding areas. In the middle of the gap there will be a rule</q>. <q>The
+  column-fill and column-span properties give style sheets a wider range of visual expressions in multi-column
+  layouts.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 2; column-gap: 40px; column-rule: 2px solid #c0392b">one two three four five six</div>
+    <figcaption><code>column-gap: 40px</code> and a 2px rule: columns of 80px, from 0 and from 120px, the red rule
+    at 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 3; column-gap: 10px">one two three <div class="pr-a span">A spanner</div>four five six</div>
+    <figcaption>A spans the three 60px columns: "one", "two" and "three" above it, one to a column, and "four",
+    "five" and "six" below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

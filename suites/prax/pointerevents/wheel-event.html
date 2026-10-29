@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>WheelEvent</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 12.1 WheelEvent interface</div>
+  <h1>WheelEvent</h1>
+  <p class=pr-lede><q>The WheelEvent interface provides specific contextual information associated with wheel events.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheelevent-interface">Pointer Events §12.1</a></span></p>
+</header>
+<section>
+  <h2>Deltas and their unit</h2>
+  <p><q>In user agents where the default action of the wheel event is to scroll, the value MUST be the measurement
+  along the y-axis (in pixels, lines, or pages) to be scrolled in the case where the event is not cancelled.</q>
+  <q>The default value is DOM_DELTA_PIXEL (pixels).</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheelevent-interface">§12.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=box><p>Turn the wheel here.</p></div>
+      <ol class=pr-log data-log="wheel" data-fields="deltaX deltaY deltaMode" data-on="#box" data-lines=4></ol>
+    </div>
+    <figcaption>Turn the wheel down over the box, or swipe on a trackpad: wheel events with a positive
+    <code>deltaY</code>, and the box scrolls down by as much. Up gives a negative <code>deltaY</code>; sideways,
+    <code>deltaX</code>. A <code>deltaMode</code> of 0, logged as nothing, is pixels.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Momentum after the fingers lift</h2>
+  <p><q>This attribute must be true if this event is synthesized by the platform to simulate scroll inertia after the
+  user has ended the physical scroll interaction (e.g. lifted the finger from a trackpad after a fling), and false
+  otherwise.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheelevent-interface">§12.1</a></span></p>
+  <figure class="pr-erratum pr-beside">
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=fling><p>Fling here on a trackpad.</p></div>
+      <ol class=pr-log data-log="wheel" data-fields="deltaY momentum" data-on="#fling" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a trackpad that flings. Swipe two fingers up the box quickly and lift them: the box glides on,
+    and the wheel events after the lift are <code>momentum</code>; those while the fingers move are not. A mouse
+    wheel gives none. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no
+    <code>momentum</code>, and log none.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

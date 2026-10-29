@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pattern attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 110px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.6 The pattern attribute</div>
+  <h1>The pattern attribute</h1>
+  <p class=pr-lede><q>The pattern attribute specifies a regular expression against which the control's value, or, when
+  the multiple attribute applies and is set, the control's values, are to be checked.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-pattern-attribute">HTML §4.10.5.3.6</a></span></p>
+</header>
+
+<section>
+  <h2>The whole value, or none of it</h2>
+  <p>The pattern is wrapped as <q>"^(?:", followed by pattern, followed by ")$"</q> and compiled with the
+  <code>v</code> flag; an empty value never mismatches. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-pattern-attribute">§4.10.5.3.6</a></span>
+  Each field is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>[0-9]{3}</code><input pattern="[0-9]{3}" value="123" size=10></div>
+        <div><code>[0-9]{3}</code><input pattern="[0-9]{3}" value="1234" size=10></div>
+        <div><code>a|bc</code><input pattern="a|bc" value="ac" size=10></div>
+        <div><code>[0-9]{3}</code><input pattern="[0-9]{3}" value="" size=10></div>
+        <div><code>[\p{L}--[a-z]]+</code><input pattern="[\p{L}--[a-z]]+" value="ÉTÉ" size=10></div>
+        <div><code>email, multiple</code><input type=email multiple pattern=".+@example\.com" value="a@example.com,b@example.org" size=10></div>
+      </div>
+    </div>
+    <figcaption>Green; red, "1234" contains three digits but is not three; red, "ac" is neither "a" nor "bc"; green,
+    empty; green, letters other than a to z, a set difference that needs the <code>v</code> flag; red, since one
+    address is not at example.com.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The title, when the pattern is not matched</h2>
+  <p><q>User agents may use the contents of this attribute, if it is present, when informing the user that the pattern
+  is not matched</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-pattern-attribute">§4.10.5.3.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class="pad pr-validity" onsubmit="return false">
+        <div><input name=part pattern="[0-9][A-Z]{3}" value="1abc" size=8
+             title="A part number is a digit followed by three uppercase letters."> <input type=submit value=Check></div>
+      </form>
+    </div>
+    <figcaption>Click Check: the browser says the value does not match, and may add the title, "A part number is a
+    digit followed by three uppercase letters."</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>MathML that its elements do not allow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { padding: 10px; font-size: 20px; line-height: 30px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.15 MathML</div>
+  <h1>MathML that its elements do not allow</h1>
+  <p class=pr-lede><q>The semantics of MathML elements are defined by MathML and other applicable specifications.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content-other.html#mathml">HTML §4.8.15</a></span> Each stage sets its text at 20px.</p>
+</header>
+
+<section>
+  <h2>Text and contents that MathML does not allow</h2>
+  <p><q>User agents must handle text other than inter-element whitespace found in MathML elements whose content
+  models do not allow straight text by pretending for the purposes of MathML content models, layout, and rendering
+  that the text is actually wrapped in a MathML mtext element.</q> <q>User agents must act as if any MathML element
+  whose contents does not match the element's content model was replaced, for the purposes of MathML layout and
+  rendering, by a MathML merror element containing some appropriate error message.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage line"><math><mrow>x</mrow><mo>=</mo><mi>x</mi></math></div>
+    <figcaption>"x" straight in an mrow, then = and an mi: the first x upright, as mtext is; the second italic.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> no first x.</figcaption>
+  </figure>
+  <p>Since, MathML's group resolved that such an element is laid out as an mrow instead, which MathML Core now says
+  (<a href="https://github.com/w3c/mathml-core/issues/136">mathml-core#136</a>).</p>
+  <figure>
+    <div class="pr-stage line"><math><mfrac><mi>a</mi></mfrac></math></div>
+    <figcaption>An mfrac with one child, not two: no fraction and no error, but its child laid out as an mrow's,
+    a small <i>a</i> at the size of a fraction's parts.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

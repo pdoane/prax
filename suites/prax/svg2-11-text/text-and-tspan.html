@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text and tspan</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 30px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#d68a3c" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2 The ‘text’ and ‘tspan’ elements</div>
+  <h1>text and tspan</h1>
+  <p class=pr-lede><q>The ‘text’ element defines a graphics element consisting of text. The ‘tspan’ element within a
+  ‘text’ or another ‘tspan’ element, allows one to switch the style and/or adjust the position of the rendered text
+  inside the ‘tspan’ element relative to the parent element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextElement">SVG 2 §11.2</a></span>
+  Each stage is an SVG 160 by 60 holding 30px bold PR Arimo, its baseline at y 40 dashed in red.</p>
+</header>
+
+<section>
+  <h2>A tspan's style and position</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=big x="10" y="40">is <tspan fill="#d68a3c">not</tspan></text></svg></div>
+    <figcaption>"is " and a <code>tspan</code> of "not" with <code>fill="#d68a3c"</code>: "is" blue, "not"
+    orange, on one baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160 M0 25H160" class=pr-baseline /><text class=big x="10" y="40">is <tspan dy="-15">up</tspan></text></svg></div>
+    <figcaption>A <code>tspan</code> of "up" with <code>dy="-15"</code>: "up" stands on y 25, 15 above "is".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painted as shapes are, but without markers</h2>
+  <p><q>all of the same painting features that apply to shapes such as paths and rectangles also apply to ‘text’ and
+  ‘tspan’ elements, except for markers.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=big x="10" y="40">is <tspan fill="none" stroke="#d68a3c" stroke-width="1.5">not</tspan></text></svg></div>
+    <figcaption>"not" in a <code>tspan</code> with <code>fill="none"</code> and an orange stroke: "not" hollow,
+    outlined in orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=big x="10" y="40" marker-start="url(#dot)" marker-mid="url(#dot)" marker-end="url(#dot)">is not</text></svg></div>
+    <figcaption><code>marker-start</code>, <code>-mid</code> and <code>-end</code> naming an orange dot: no dots,
+    just "is not".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

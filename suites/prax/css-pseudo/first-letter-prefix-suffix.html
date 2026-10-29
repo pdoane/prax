@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter::prefix and ::suffix</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .fl::first-letter { background: #d68a3c; color: white; }
+  .fl::first-letter::prefix { background: #8e44ad; }
+  .fl::first-letter::suffix { background: #6aa36a; }
+  #nest::first-letter { background: #d68a3c; color: white; }
+  #nest::first-letter::prefix { color: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2 First-Letter Text: ::first-letter pseudo-element and its ::prefix and ::suffix children</div>
+  <h1>::first-letter::prefix and ::suffix</h1>
+  <p class=pr-lede><q>associated preceding punctuation is represented by the ::prefix sub-pseudo-element of the
+  ::first-letter pseudo-element (::first-letter::prefix); and associated following punctuation is represented by the
+  ::suffix sub-pseudo-element of the ::first-letter pseudo-element (::first-letter::suffix).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-pseudo">CSS Pseudo-Elements 4 §2.2</a></span>
+  The first letter is white on orange, its prefix on purple and its suffix on green; every character is 10px wide.</p>
+</header>
+
+<section>
+  <h2>The letter and its punctuation, styled apart</h2>
+  <p>Both are at risk in the draft, which is a request for implementations; the text is normative until it is
+  dropped.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="fl pr-measure">“A” was</p></div>
+    <figcaption>“ on purple from 0 to 10, A on orange from 10 to 20, ” on green from 20 to 30. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All three on
+    orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="fl pr-measure">¿«Y»?, no</p></div>
+    <figcaption>¿« purple, 0 to 20; Y orange, 20 to 30; »?, green, 30 to 60. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All six on orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nested within the innermost ::first-letter</h2>
+  <p><q>If any ::first-letter::prefix or ::first-letter::suffix pseudo-elements exist, they are nested within the
+  innermost ::first-letter, and otherwise interpreted similar to ::first-letter itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-tree">§2.2.3</a></span>
+  Here only the prefix sets a color, and the letter's background shows through its own.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="pr-measure" id=nest>“A” was</p></div>
+    <figcaption>“ in purple text, A and ” in white, all on orange from 0 to 30. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All three white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

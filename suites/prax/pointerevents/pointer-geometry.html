@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Contact geometry</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { position: relative; height: 140px; margin: 10px 20px; overflow: hidden; touch-action: none;
+         background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; }
+  .pad p { margin: 0; padding: 0 6px; }
+  .contact { position: absolute; display: none; box-sizing: border-box; border: 1px solid #c0392b;
+             background: rgba(192, 57, 43, 0.2); pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1 PointerEvent interface</div>
+  <h1>Contact geometry</h1>
+  <p class=pr-lede><q>The width (magnitude on the X axis), in CSS pixels (see [CSS21]), of the contact geometry of the
+  pointer.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">Pointer Events §3.1</a></span></p>
+</header>
+<section>
+  <h2>The area a finger covers</h2>
+  <p><q>This value MAY be updated on each event for a given pointer. For inputs that typically lack contact geometry
+  (such as a traditional mouse), and in cases where the actual geometry of the input is not detected by the hardware,
+  the user agent MUST return a default value of 1.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad id=pad><p>Press and drag here.</p><div class=contact id=contact></div></div>
+      <ol class=pr-log data-log="pointerdown pointermove" data-fields="pointerType width height" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>A red box <code>width</code> by <code>height</code> is drawn centred on each event. Drag the mouse:
+    a 1 by 1 box, a dot. Press with a finger on a screen that senses its contact: a box about the size of the
+    fingertip, which grows as you press harder and spreads it.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws each event's contact geometry, centred on where it happened.
+  const pad = document.getElementById("pad"), contact = document.getElementById("contact");
+  for (const type of ["pointerdown", "pointermove"]) {
+    pad.addEventListener(type, event => {
+      const box = pad.getBoundingClientRect();
+      contact.style.display = "block";
+      contact.style.width = event.width + "px";
+      contact.style.height = event.height + "px";
+      contact.style.left = event.clientX - box.left - 1 - event.width / 2 + "px";
+      contact.style.top = event.clientY - box.top - 1 - event.height / 2 + "px";
+    });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

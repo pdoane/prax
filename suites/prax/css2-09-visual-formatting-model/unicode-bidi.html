@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The unicode-bidi property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The unicode-bidi property</h1>
+  <p class=pr-lede><code>unicode-bidi</code> takes <code>normal | embed | bidi-override</code>. Initial
+  <code>normal</code>, not inherited. <q>For the 'direction' property to affect reordering in inline elements, the
+  'unicode-bidi' property's value must be 'embed' or 'override'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+</header>
+
+<section>
+  <h2>An inline element with direction: rtl</h2>
+  <p><q>normal: The element does not open an additional level of embedding.</q> <q>embed: If the element is inline,
+  this value opens an additional level of embedding ... The direction of this embedding level is given by the
+  'direction' property.</q> <q>bidi-override: ... inside the element, reordering is strictly in sequence according to
+  the 'direction' property; the implicit part of the bidirectional algorithm is ignored.</q> Each orange span has
+  <code>direction: rtl</code> in a left-to-right line. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-hl style="direction: rtl; unicode-bidi: normal">two three!</span> four</div>
+    <figcaption><code>normal</code>: no effect, "two three!".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-hl style="direction: rtl; unicode-bidi: embed">two three!</span> four</div>
+    <figcaption><code>embed</code>: a right-to-left embedding, where the "!" goes to its left: "!two
+    three".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-hl style="direction: rtl; unicode-bidi: bidi-override">two three!</span> four</div>
+    <figcaption><code>bidi-override</code>: every character right to left: "!eerht owt".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On a block</h2>
+  <p><q>For block container elements this creates an override for inline-level descendants not within another block
+  container element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: ltr; unicode-bidi: bidi-override">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>ltr</code> override on the block: unchanged, "abc def ghi".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl; unicode-bidi: bidi-override">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>rtl</code> override on the block: "ihg fed cba", at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

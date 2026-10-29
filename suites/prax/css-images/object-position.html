@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>object-position: placing the content in the box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 80px; height: 60px; margin: 10px; background: #f9cc9d; object-fit: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.6 Positioning Objects: the object-position property</div>
+  <h1>object-position: placing the content in the box</h1>
+  <p class=pr-lede><q>The object-position property determines the alignment of the replaced element inside its box.</q>
+  It <q>is resolved using the concrete object size as the object area and the content box as the positioning
+  area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#the-object-position">CSS Images 3 §4.6</a></span>
+  Each image is 80 by 60 on a light orange background, <code>object-fit: none</code>, so its content is the flag at
+  its natural 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Positioned as a background is</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png alt=""></div>
+    <figcaption>The initial <code>50% 50%</code>: centered, 20px from the left and the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-position: left top" alt=""></div>
+    <figcaption><code>left top</code>: at the top left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-position: 25% 75%" alt=""></div>
+    <figcaption><code>25% 75%</code>: 25% of the 40px to spare, 10px from the left; 75% of 40, 30px from the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-position: right 10px bottom 10px" alt=""></div>
+    <figcaption><code>right 10px bottom 10px</code>: 10px from the right and the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clipped to the content box</h2>
+  <p><q>Areas of the box not covered by the replaced element will show the element's background.</q> The content past
+  the content box is clipped.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-position: -20px 0" alt=""></div>
+    <figcaption><code>-20px 0</code>: only the right half, orange over purple, 20 wide at the top left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: cover; object-position: left" alt=""></div>
+    <figcaption><code>cover</code>, <code>left</code>: 120 by 60 from the left edge, clipped at 80: blue and green
+    60 wide, then 20px of orange and purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

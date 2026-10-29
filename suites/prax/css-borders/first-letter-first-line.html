@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter and ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage p { margin: 10px; }
+  .letter::first-letter { background: #b9cde6; border: 3px solid #2c5a8f; border-radius: 6px; box-shadow: 4px 4px #8a93a1; }
+  .letter-image::first-letter { border: 4px solid; border-image: linear-gradient(#d68a3c, #8e44ad) 1; }
+  .lines { width: 120px; }
+  .line::first-line { background: #f9cc9d; border: 4px solid #2c5a8f; border-radius: 10px; }
+  .line-shadow::first-line { background: #f9cc9d; box-shadow: 0 0 0 3px #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 1.1 Module Interactions</div>
+  <h1>::first-letter and ::first-line</h1>
+  <p class=pr-lede><q>All properties in this module apply to the ::first-letter pseudo-element. The border-radius
+  properties also apply to the ::first-line pseudo-element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#placement">CSS Borders and Box Decorations 4 §1.1</a></span></p>
+</header>
+
+<section>
+  <h2>::first-letter takes all of them</h2>
+  <p>Each stage's text is "Handgloves", whose first letter is styled.</p>
+  <figure>
+    <div class=pr-stage><p class="letter pr-measure">Handgloves</p></div>
+    <figcaption>The H has a light blue background, a 3px blue border with rounded corners, and a grey shadow 4px down
+    and right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="letter-image pr-measure">Handgloves</p></div>
+    <figcaption>A border image, a gradient from orange to purple, frames the H in a 4px border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>::first-line takes corners, not borders</h2>
+  <p><q>The UA must not apply the border-color/style/width properties to ::first-line.</q> <q>The UA may (but is not
+  required to) apply the 'border-image' or 'box-shadow' properties to ::first-line.</q> Each stage holds "aaa bbb ccc
+  ddd" in a block 120px wide, so the first line is "aaa bbb ccc".</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="lines line pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption>The first line has an orange background 110px wide, its corners rounded by
+    <code>border-radius: 10px</code>. Its 4px border is not drawn: the second line starts 20px below the first.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The corners
+    are square.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="lines line-shadow pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption>A 3px purple shadow around the first line, which a user agent may draw or not.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

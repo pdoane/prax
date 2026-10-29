@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Custom color spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  @color-profile --swap { src: url(../../../third_party/wpt/css/css-color/support/swapped.icc); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 5.2 Custom Color Spaces</div>
+  <h1>Custom color spaces</h1>
+  <p class=pr-lede><q>CSS allows colors to be specified by reference to a color profile.</q> <q>The colors not using a predefined
+  color space [...] are distinguished by their use of &lt;dashed-ident&gt; and also need a matching @color-profile
+  at-rule</q>. Here <code>--swap</code> is the profile <code>swapped.icc</code>: sRGB with its red and green colorants
+  swapped. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#custom-color">CSS Color 5
+  §5.2</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Colors in the profile's space</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--swap 0.6 0 0)"></div><div class=sw style="background: #009900"></div><div class=sw style="background: color(--swap 0 0.6 0)"></div><div class=sw style="background: #990000"></div></div>
+    <figcaption><code>color(--swap 0.6 0 0)</code>: green, as <code>#009900</code>. <code>color(--swap 0 0.6 0)</code>: red, as <code>#990000</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out of range, too few, too many</h2>
+  <p><q>specified component values less than 0 or 0%, or greater than 1 or 100% are
+  not invalid; they are clamped to the valid range at computed value time.</q> <q>if fewer &lt;number&gt;s [...] are
+  provided than parameters that the color space takes, the missing parameters default to 0.</q> <q>if more [...] the
+  excess &lt;number&gt;s at the end are ignored.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--swap 1.5 0 0)"></div><div class=sw style="background: #00ff00"></div></div>
+    <figcaption><code>color(--swap 1.5 0 0)</code>: as 1, bright green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--swap 0.6)"></div><div class=sw style="background: color(--swap 0.6 0 0 0.5)"></div><div class=sw style="background: #009900"></div></div>
+    <figcaption><code>color(--swap 0.6)</code> and <code>color(--swap 0.6 0 0 0.5)</code>: <code>#009900</code> twice. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

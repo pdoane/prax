@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating filter()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 80px; height: 40px; margin: 0 10px; background: #f9cc9d no-repeat center; animation: 100s linear -50s infinite alternate both; }
+  @keyframes gray { from { background-image: filter(url(../shared/resources/flag-40x20.png), grayscale(0)); } to { background-image: filter(url(../shared/resources/flag-40x20.png), grayscale(1)); } }
+  @keyframes other { from { background-image: filter(url(../shared/resources/flag-40x20.png), grayscale(0)); } to { background-image: filter(url(../shared/resources/flag-1x.png), grayscale(0)); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 12.1 Interpolating filter()</div>
+  <h1>Interpolating filter()</h1>
+  <p class=pr-lede><q>If both the starting and ending image are filter()s which may only differ by their used filter
+  functions, they must be interpolated by interpolating their filter function lists</q>. <q>Otherwise, they must be
+  interpolated as generic &lt;image&gt;s.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#interpolating-filter-image">Filter Effects 1 §12.1</a></span>
+  Each box is 80 by 40, light orange, its <code>background-image</code> animated to and fro (a still shows the frame
+  the caption gives), drawn once in the middle.</p>
+</header>
+
+<section>
+  <h2>The same image</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class=box style="animation-name: gray"></div></div>
+    <figcaption>The flag from <code>grayscale(0)</code> to <code>grayscale(1)</code>: at 50%, <code>grayscale(0.5)</code>,
+    the four colors dulled halfway. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No
+    flag.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Different images</h2>
+  <p>As generic images, the two cross-fade: <q>images are interpolated by scaling them to the size of the start image
+  and cross-fading the two while they transition to the size of the end image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-images">CSS Images 4 §7.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class=box style="animation-name: other"></div></div>
+    <figcaption>The 40 by 20 flag to the same flag 80 by 40: at 50%, one 60 by 30. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> No flag. <span class=pr-flag>Safari</span> The 80 by 40 flag: switched at
+    50%.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

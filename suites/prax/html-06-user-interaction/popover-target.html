@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The popover target attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.12.1 The popover target attributes</div>
+  <h1>The popover target attributes</h1>
+  <p class=pr-lede>A button's <code>popovertarget</code> names a popover, and <code>popovertargetaction</code> says what activating
+  the button does to it: <q>toggle</q>, <q>Shows or hides the targeted popover element.</q>, <q>show</q>, <q>Shows the
+  targeted popover element.</q>, <q>hide</q>, <q>Hides the targeted popover element.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-target-attributes">HTML §6.12.1</a></span></p>
+</header>
+<section>
+  <h2>Toggle, show and hide</h2>
+  <p>The popover is manual, so that clicks outside it leave it open. <q>The attribute's missing value default and
+  invalid value default are both the Toggle state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-target-attributes">§6.12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target popovertarget=pop>no action: toggle</button>
+        <button class=pr-target popovertarget=pop popovertargetaction=show>show</button>
+        <button class=pr-target popovertarget=pop popovertargetaction=hide>hide</button>
+      </div>
+    </div>
+    <figcaption>Click the first button twice: the popover opens, then closes. Click <code>show</code> twice: it opens
+    and stays. Click <code>hide</code> twice: it closes and stays closed.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Buttons that do nothing</h2>
+  <p>Getting the target returns null <q>If node is disabled</q>, and <q>If node has a form owner and node is a submit
+  button</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-target-attributes">§6.12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form style="padding: 10px 20px 0" id=form>
+        <button class=pr-target type=button popovertarget=pop2 disabled>disabled</button>
+        <button class=pr-target popovertarget=pop2>a submit button in a form</button>
+        <button class=pr-target type=button popovertarget=pop2>type=button in the form</button>
+      </form>
+    </div>
+    <figcaption>Click the first two: nothing shows; the second submits nothing, the page's script canceling the form's
+    submission. Click the third: the popover shows.</figcaption>
+  </figure>
+</section>
+<div popover=manual id=pop>a manual popover</div>
+<div popover id=pop2>an auto popover</div>
+<script>
+  // Keeps the form from navigating away.
+  document.getElementById("form").addEventListener("submit", event => event.preventDefault());
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-grow: shares of the free space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.2.1 The flex-grow property</div>
+  <h1>flex-grow: shares of the free space</h1>
+  <p class=pr-lede><q>The flex-grow property sets the flex grow factor to the provided &lt;number&gt;. Negative values
+  are not allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-grow-property">CSS Flexible Box Layout 2 §7.2.1</a></span>
+  The flex grow factor <q>determines how much the flex item will grow relative to the rest of the flex items in the
+  flex container when positive free space is distributed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-property">§7.1</a></span></p>
+</header>
+
+<section>
+  <h2>In proportion</h2>
+  <p>Each item is 40px wide, in a stage of 200px, so the free space is the stage less their widths.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 40px; flex-grow: 1">A</div><div class="pr-b pr-fit" style="width: 40px; flex-grow: 2">B</div><div class="pr-c pr-fit" style="width: 40px; flex-grow: 1">C</div></div>
+    <figcaption><code>flex-grow</code> 1, 2, 1: the 80px is shared 20, 40, 20, so 60px, 80px, 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 40px; flex-grow: 1">A</div><div class="pr-b pr-fit" style="width: 40px">B</div></div>
+    <figcaption><code>flex-grow</code> 1 and the initial 0: all 120px to A, 160px; B stays 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 40px; flex-grow: 1; flex-grow: -1">A</div><div class="pr-b pr-fit" style="width: 40px">B</div></div>
+    <figcaption><code>flex-grow: -1</code> after <code>flex-grow: 1</code>: the negative value is dropped, the 1
+    stands, and A is 160px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Factors that sum to less than 1</h2>
+  <p><q>if the items request less than the full amount (such as three items that are each flex-grow: .25) then
+  they'll each get exactly what they request (25% of the free space to each, with the final 25% left
+  unfilled).</q></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .25">A</div><div class="pr-b pr-fit" style="flex: .25">B</div><div class="pr-c pr-fit" style="flex: .25">C</div></div>
+    <figcaption><code>flex: .25</code> each, from a basis of <code>0%</code>, here 0: 50px each, and the last 50px of the stage is left
+    empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .25">A</div><div class="pr-b pr-fit" style="flex: .25">B</div><div class="pr-c pr-fit" style="flex: .25">C</div><div class="pr-d pr-fit" style="flex: .25">D</div></div>
+    <figcaption>A fourth item: the factors sum to 1, and the four fill the stage, 50px each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .5">A</div><div class="pr-b pr-fit" style="flex: 1.5">B</div></div>
+    <figcaption><code>flex: .5</code> and <code>1.5</code>: the sum is 2, so the stage is shared 1:3, 50px and
+    150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

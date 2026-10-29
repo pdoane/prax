@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Counter Styles 3 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · Support</div>
+  <h1>CSS Counter Styles 3 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do. The
+  <code>@counter-style</code> descriptors are not properties, and are not listed.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>list-style-type: decimal-leading-zero</code>
+  <code class=pr-decl>list-style-type: cjk-decimal</code>
+  <code class=pr-decl>list-style-type: disclosure-closed</code>
+  <code class=pr-decl>list-style-type: japanese-formal</code>
+  <code class=pr-decl>list-style-type: trad-chinese-formal</code>
+  <code class=pr-decl>list-style-type: ethiopic-numeric</code>
+  <code class=pr-decl>list-style-type: circled-decimal</code>
+  <code class=pr-decl>list-style: symbols("*" "\2020" "\2021" "\A7")</code>
+  <code class=pr-decl>list-style: symbols(fixed "a" "b")</code>
+  <code class=pr-decl>list-style-position: inside</code>
+  <code class=pr-decl>content: counter(n, symbols(alphabetic "x" "y"))</code>
+  <code class=pr-decl>content: counters(item, "-", lower-greek) " "</code>
+  <code class=pr-decl>counter-reset: n 4</code>
+  <code class=pr-decl>counter-increment: item</code>
+  <code class=pr-decl>font-family: "PR Noto Sans"</code>
+  <code class=pr-decl>font-size: 20px</code>
+  <code class=pr-decl>writing-mode: vertical-rl</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

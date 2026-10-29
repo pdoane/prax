@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color fonts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 32px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9 Color font support</div>
+  <h1>Color fonts</h1>
+  <p class=pr-lede><q>Color fonts allow for font files to describe, not just the contours describing the edges of
+  glyphs, but also the colors present inside the glyphs.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#color-font-support">CSS Fonts 4 §9</a></span></p>
+</header>
+
+<section>
+  <h2>Colors from the font</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Nabla'">Nabla</div>
+    <figcaption>PR Nabla, COLRv1: isometric letters in yellow and orange gradients, whatever 'color' is.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Bungee Spice'; color: blue">Spice</div>
+    <figcaption>PR Bungee Spice in <code>color: blue</code>: red to yellow gradients, not blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Twemoji'">&#x1F600;&#x1F308;&#x1F34E;</div>
+    <figcaption>PR Twemoji, COLRv1 vector emoji. Safari, which draws no COLRv1, draws nothing for them.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Noto Color Emoji'">&#x1F600;&#x1F308;&#x1F34E;</div>
+    <figcaption>PR Noto Color Emoji, CBDT bitmap emoji, scaled to the font size.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

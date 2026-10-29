@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- An SVG document with private data in another namespace: an element of that namespace holding an SVG rect, and an
+     attribute of it on a drawn rect. The foreign element is not rendered, nor the rect in it; the attribute is
+     ignored. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:myapp="http://example.org/myapp" width="160" height="60">
+  <myapp:piechart title="Sales by Region">
+    <rect x="20" y="10" width="50" height="40" fill="#d68a3c" />
+  </myapp:piechart>
+  <rect x="90" y="10" width="50" height="40" fill="#4f81bd" myapp:value="1.23" />
+</svg>

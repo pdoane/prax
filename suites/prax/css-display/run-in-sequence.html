@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Run-in sequences</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .ri { display: run-in; font-weight: bold; }
+  .para { background: #b9cde6; }
+  .fl::first-letter { color: #c0392b; font-size: 20px; }
+  .box { background: #f6d7b4; border: 1px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 6 Run-In Layout, sequences</div>
+  <h1>Run-in sequences</h1>
+  <p class=pr-lede><q>A run-in sequence is a maximal sequence of consecutive sibling run-in boxes and intervening white
+  space and/or out-of-flow boxes.</q> No browser ships <code>run-in</code>; each figure is flagged for all three.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#run-in-layout">CSS Display 4 §6</a></span></p>
+</header>
+
+<section>
+  <h2>Sequences, and what follows</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=ri>One.</div> <div class=ri>Two.</div><div class=para>The block.</div></div>
+    <figcaption>Two run-ins in a row: one sequence, both on the block's line, "One. Two. The block." <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> three lines.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=ri>Run-in.</div>text after it<div class=para>The block.</div></div>
+    <figcaption>Followed by text, not a block: <q>an anonymous block box is generated around the run-in sequence and
+    all immediately following inline-level content</q>: "Run-in. text after it", then the block. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> three lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its contents inlinified; the block's first letter is its own</h2>
+  <p><q>A run-in box with a flow inner display type inlinifies its contents.</q> <q>As the earliest run-in represents the first text on the first formatted line of its containing block, a
+  ::first-letter pseudo-element applied to that block element selects the first letter of the run-in, rather than
+  the first letter of its own contents.</q> The block's first letter is large and red.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=ri>Run <div class=box>in</div>.</div><div class=para>The block.</div></div>
+    <figcaption>A <code>div</code> in the run-in becomes an inline-block: "Run [in]. The block." on one line. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> stack them,
+    the div a block of its own.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=ri>Run-in.</div><div class="para fl">The block.</div></div>
+    <figcaption>The large red letter is the run-in's R; the block's T is plain. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> make the T large and red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

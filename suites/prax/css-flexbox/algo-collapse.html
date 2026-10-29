@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 10: collapse visibility: collapse items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; align-items: flex-start; width: 100px; height: 100px; }
+  .w60 { width: 60px; }
+  .w40 { width: 40px; }
+  figure figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 10</div>
+  <h1>Step 10: collapse visibility: collapse items</h1>
+  <p class=pr-lede><q>If any flex items have visibility: collapse, note the cross size of the line they're in as the
+  item's strut size, and restart layout from the beginning.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span></p>
+</header>
+
+<section>
+  <h2>The second round</h2>
+  <p><q>In this second layout round, when collecting items into lines, treat the collapsed items as having zero main
+  size. For the rest of the algorithm following that step, ignore the collapsed items entirely (as if they were
+  display:none) except that after calculating the cross size of the lines, if any line's cross size is less than the
+  largest strut size among all the collapsed items in the line, set its cross size to that strut size.</q> Each stage
+  is 100 by 100 and wraps; A, B and C are 20px tall, A and C 60px wide, B 40px.</p>
+  <figure class=n>
+    <div class=pr-stage><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40">B</div><div class="pr-c pr-fit w60">C</div></div>
+    <figcaption>As is: lines A B and C, stretched to 50px each: C at 50px.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class=pr-stage><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="visibility: collapse">B</div><div class="pr-c pr-fit w60">C</div></div>
+    <figcaption>B collapsed: strut 50px, its stretched line's. Line 1, 20px from A, is raised to 50; stretch shares
+    the 30px left: 65 and 35, C at 65px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> C at
+    50px.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class=pr-stage><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="display: none">B</div><div class="pr-c pr-fit w60">C</div></div>
+    <figcaption>B <code>display: none</code>: no strut; C at 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero main size, and ignored after</h2>
+  <p>The first two stages are 120 by 60, <code>align-content: flex-start</code>.</p>
+  <figure class=n>
+    <div class=pr-stage style="width: 120px; height: 60px; align-content: flex-start"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="height: 40px">B</div><div class="pr-c pr-fit w60">C</div></div>
+    <figcaption>As is: B 40px tall, C wraps to a second line at 40px.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class=pr-stage style="width: 120px; height: 60px; align-content: flex-start"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="height: 40px; visibility: collapse">B</div><div class="pr-c pr-fit w60">C</div></div>
+    <figcaption>B collapsed, zero wide: A and C fill one line, C from 60px. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> C on a second line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="width: 160px; height: 20px; flex-wrap: nowrap; justify-content: center"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40" style="visibility: collapse">B</div><div class="pr-c pr-fit w40">C</div></div>
+    <figcaption>160px wide, <code>justify-content: center</code> over A, B collapsed and C, 40px each: A and C
+    centered alone, from 40px and 80px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    From 20px and 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

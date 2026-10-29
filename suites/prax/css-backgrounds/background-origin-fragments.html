@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-origin: boxes in fragments</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .lines { width: 140px; margin: 10px; }
+  .lines span { background-image: linear-gradient(to right, #b9cde6, #d68a3c); border: 2px solid #2c5a8f; border-radius: 6px; }
+  .cols { columns: 2; column-gap: 20px; width: 180px; height: 60px; margin: 10px; }
+  .cols div { height: 100px; background-image: linear-gradient(#b9cde6, #d68a3c); border: 2px solid #2c5a8f; border-radius: 10px; }
+  .clone { box-decoration-break: clone; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.9 Positioning Area: the background-origin property, fragments</div>
+  <h1>background-origin: boxes in fragments</h1>
+  <p class=pr-lede><q>For elements rendered as multiple box fragments (e.g., inline boxes on several lines, boxes on
+  several pages), specifies which boxes 'box-decoration-break' [CSS-BREAK-3] operates on to determine the background
+  positioning area(s).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-origin">CSS Backgrounds 4 §2.9</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-break-3/#break-decoration">CSS Fragmentation 3 §5.4</a></span></p>
+</header>
+
+<section>
+  <h2>An inline box on two lines</h2>
+  <p>A span with a gradient from blue to orange, a 2px border and rounded corners, broken after "bbb ccc".</p>
+  <figure>
+    <div class=pr-stage><p class="lines pr-measure">aa <span>bbb ccc ddd eee</span></p></div>
+    <figcaption><code>slice</code>, the initial value: one gradient as if the pieces were laid end to end, blue to mauve,
+    then mauve to orange; no border where the box breaks.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="lines pr-measure">aa <span class=clone>bbb ccc ddd eee</span></p></div>
+    <figcaption><code>clone</code>: each piece has the whole gradient, blue to orange, and its own border and rounded
+    corners all round. <span class=pr-flag>Safari</span> Draws it as <code>slice</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A block in two columns</h2>
+  <p>A block 100px tall in two columns 60px tall, with a vertical gradient, a 2px border and rounded corners.</p>
+  <figure>
+    <div class=pr-stage><div class=cols><div></div></div></div>
+    <figcaption><code>slice</code>: the gradient runs once down both columns, blue to mauve in the first, mauve to
+    orange in the second; the border is open where the block breaks.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=cols><div class=clone></div></div></div>
+    <figcaption><code>clone</code>: each column's piece has the whole gradient and a closed, rounded
+    border. <span class=pr-flag>Safari</span> Draws it as <code>slice</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

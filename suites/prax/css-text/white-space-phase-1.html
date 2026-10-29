@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Phase I: collapsing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3.1 Phase I: Collapsing and Transformation</div>
+  <h1>Phase I: collapsing</h1>
+  <p class=pr-lede><q>For each inline (including anonymous inlines ...) within an inline formatting context, white
+  space characters are processed as follows prior to line breaking and bidi reordering, ignoring bidi formatting
+  characters (characters with the Bidi_Control property [UAX9]) as if they were not there</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-phase-1">CSS Text 4 §4.3.1</a></span>
+  CSS 2's <a href="../css2-16-text/processing-collapsing.html">page</a> shows the steps; these are what Text 4
+  adds. Letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>Bidi formatting characters are not there</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=t>a &#x2067; b&#x2069;</span></div>
+    <figcaption>"a", a space, U+2067 RIGHT-TO-LEFT ISOLATE, a space, "b", U+2069: the two spaces are adjacent and
+    collapse to one, so "b" starts at 20px and the highlight ends at 30. <span class=pr-flag>Chrome</span> keeps
+    the second, drawn after "b" in the right-to-left isolate: the highlight is 40px. <span class=pr-flag>Safari</span>
+    keeps both before "b", at 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="white-space: pre-line"><span class=t>a &#x200E;
+&#x200E; b</span></div>
+    <figcaption><code>pre-line</code>: a space, U+200E LEFT-TO-RIGHT MARK, a newline, U+200E, a space: the spaces
+    beside the break are removed, so "b" starts the second line at 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across inline boundaries</h2>
+  <p><q>Any collapsible space immediately following another collapsible space—even one outside the boundary of the
+  inline containing that space, provided both spaces are within the same inline formatting context—is collapsed to
+  have zero advance width. (It is invisible, but retains its soft wrap opportunity, if any.)</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=t>one </span><span class=u> two</span></div>
+    <figcaption>"one " in orange and " two" in blue: the blue span's space follows the orange one's and has no
+    width, so the blue starts at "t", 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="width: 40px"><span class=t>one </span><span class=u> two</span></div>
+    <figcaption>40px wide: the line breaks after "one ", and the blue span's zero-width space does not start the
+    second line: "two" at 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

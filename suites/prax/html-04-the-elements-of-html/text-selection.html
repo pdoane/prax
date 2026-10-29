@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The selection in a text control</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea { display: block; margin: 0 0 10px; padding: 0 4px; border: 1px solid #2c5a8f; resize: none; }
+  .pad button { margin: 0 4px 10px 0; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.20 APIs for the text control selections</div>
+  <h1>The selection in a text control</h1>
+  <p class=pr-lede><q>All input elements to which these APIs apply, and all textarea elements, have either a selection
+  or a text entry cursor position at all times</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#textFieldSelection">HTML §4.10.20</a></span></p>
+</header>
+
+<section>
+  <h2>Setting the selection</h2>
+  <p><q>Set the selection of the text control to the sequence of code units within the relevant value starting with the
+  code unit at the startth position (in logical order) and ending with the code unit at the (end-1)th position.</q> If
+  that changes the selection, <q>fire an event named select at the element</q>. Each button then focuses the
+  textarea. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#textFieldSelection">§4.10.20</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <textarea id=fox class=pr-measure cols=24 rows=1>The quick brown fox</textarea>
+        <button onclick="fox.select(); fox.focus()">select()</button>
+        <button onclick="fox.setSelectionRange(4, 9); fox.focus()">setSelectionRange(4, 9)</button>
+        <button onclick="fox.setSelectionRange(4, 4); fox.focus()">(4, 4)</button>
+      </div>
+      <ol class=pr-log data-log="select" data-fields="target" data-lines=1 data-on="#fox"></ol>
+    </div>
+    <figcaption>select(): the whole line highlighted. (4, 9): "quick", 50px wide. (4, 4): no highlight,
+    the caret before "quick". Each logs <code>select</code>; so does dragging across the text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replacing a range</h2>
+  <p><code>setRangeText()</code> replaces the text from start to end; its last argument <q>determines how the selection
+  will be set after the text has been replaced.</q> Each button puts "The quick brown fox" back, selects
+  "brown", replaces "quick" with "slow", and focuses the textarea. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#textFieldSelection">§4.10.20</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <textarea id=range class=pr-measure cols=24 rows=1>The quick brown fox</textarea>
+        <button onclick="replace('select')">select</button>
+        <button onclick="replace('start')">start</button>
+        <button onclick="replace('end')">end</button>
+        <button onclick="replace('preserve')">preserve</button>
+      </div>
+    </div>
+    <figcaption>Each shows "The slow brown fox". select: "slow" highlighted. start: the caret before "slow". end: the
+    caret after it. preserve: "brown" still highlighted, moved left by the one character the text lost.</figcaption>
+  </figure>
+</section>
+<script>
+  // Replaces "quick" with "slow" in a fresh copy of the text, with "brown" selected, then focuses the textarea.
+  function replace(mode) {
+      const range = document.getElementById("range");
+      range.value = "The quick brown fox";
+      range.setSelectionRange(10, 15);
+      range.setRangeText("slow", 4, 9, mode);
+      range.focus();
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

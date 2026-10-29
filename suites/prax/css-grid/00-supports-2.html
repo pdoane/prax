@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Grid Layout 2 declaration support, continued</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · Support</div>
+  <h1>CSS Grid Layout 2 declaration support, continued</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Subgrids, rows, areas and the implicit grid</h2>
+  <code class=pr-decl>grid-template-columns: subgrid</code>
+  <code class=pr-decl>grid-template-columns: subgrid [p] [q] [r]</code>
+  <code class=pr-decl>grid-template-columns: subgrid [a] repeat(auto-fill, [b]) [c]</code>
+  <code class=pr-decl>grid-template-columns: subgrid [] [] [m]</code>
+  <code class=pr-decl>grid-template-rows: 20px 1fr 20px</code>
+  <code class=pr-decl>grid-template-rows: 25% 50%</code>
+  <code class=pr-decl>grid-template-rows: minmax(40px, auto)</code>
+  <code class=pr-decl>grid-template-rows: repeat(3, 10px 20px)</code>
+  <code class=pr-decl>grid-template-rows: subgrid</code>
+  <code class=pr-decl>grid-template-areas: none</code>
+  <code class=pr-decl>grid-template-areas: ". a" "b a" ". a"</code>
+  <code class=pr-decl>grid-template-areas: "a...b"</code>
+  <code class=pr-decl>grid-template-areas: "1st 2nd 3rd"</code>
+  <code class=pr-decl>grid-template: none</code>
+  <code class=pr-decl>grid-template: 20px 40px / 60px 1fr</code>
+  <code class=pr-decl>grid-template: "a a b" 20px "c d d" 40px / 40px 1fr 60px</code>
+  <code class=pr-decl>grid-auto-columns: 20px 40px</code>
+  <code class=pr-decl>grid-auto-rows: auto</code>
+  <code class=pr-decl>grid-auto-flow: column</code>
+  <code class=pr-decl>grid-auto-flow: row dense</code>
+  <code class=pr-decl>grid-auto-flow: dense</code>
+  <code class=pr-decl>grid-template: [top] "a a" [mid] "b b" 1fr [end] / 40px 1fr</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

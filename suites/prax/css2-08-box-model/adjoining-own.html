@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adjoining margins: a box's own</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Adjoining margins: a box's own</h1>
+  <p class=pr-lede>Adjoining vertical margins collapse into one. Every box is 20px tall and the guides are 10px apart. A dashed outline is a parent, which has no border or padding.</p>
+</header>
+
+<section>
+  <h2>A box's own top and bottom</h2>
+  <p>The <q>top and bottom margins of a box that does not establish a new block formatting context and that has zero
+  computed 'min-height', zero or 'auto' computed 'height', and no in-flow children</q> adjoin. Margins collapse through
+  such a box. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div style="margin: 20px 0 30px"></div><div class=pr-b>B</div></div>
+    <figcaption>An empty box with mt 20 and mb 30 between A and B: one 30px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div style="margin: 20px 0 30px"></div><div class=pr-b style="margin-top: 15px">B: mt 15</div></div>
+    <figcaption>With A's 10 and B's 15 as well: all four collapse to the largest, 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div style="height: 0; margin: 20px 0 30px"></div><div class=pr-b>B</div></div>
+    <figcaption><code>height: 0</code> collapses through as auto does: 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Commands for dialogs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  dialog { font-size: 12px; }
+  dialog .pr-target { width: 160px; margin: 6px 0 0; }
+  dialog label { display: block; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.4 The dialog element</div>
+  <h1>Commands for dialogs</h1>
+  <p class=pr-lede>A button's <code>commandfor</code> and <code>command</code> run the command steps of a
+  <code>dialog</code>, with the button as the source. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">HTML §4.11.4</a></span></p>
+</header>
+<section>
+  <h2>show-modal and close</h2>
+  <p><q>If command is the Show Modal state and element does not have an open attribute, then show a modal dialog
+  given element and source.</q> <q>If command is in the Close state and element has an open attribute, then close the
+  dialog element with source's optional value and source.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=opener commandfor=confirm command=show-modal>show-modal</button>
+        <dialog id=confirm>Delete the file?
+          <button class=pr-target id=closer commandfor=confirm command=close value=cancel>close</button>
+          <button class=pr-target id=again commandfor=confirm command=show-modal>show-modal, while open</button>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="command toggle close" data-fields="command source newState" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>show-modal</code>: a <code>command</code> event, then the dialog opens as modal, over a
+    backdrop, and <code>toggle source=opener</code>. Click "show-modal, while open": a <code>command</code> event, and
+    nothing else. Click <code>close</code>: the dialog closes, with <code>source=closer</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>request-close</h2>
+  <p><q>If command is in the Request Close state and element has an open attribute, then request to close the
+  dialog</q>: <code>cancel</code> is fired first, and a listener that cancels it keeps the dialog open. The page's
+  script cancels it while the box is checked. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=opener2 commandfor=asked command=show-modal>show-modal</button>
+        <dialog id=asked>Unsaved changes.
+          <label><input type=checkbox id=keep checked> cancel the cancel event</label>
+          <button class=pr-target id=requester commandfor=asked command=request-close>request-close</button>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="cancel close" data-fields="target cancelable" data-lines=2></ol>
+    </div>
+    <figcaption>Open the dialog and click <code>request-close</code>: <code>cancel</code> is logged and the dialog
+    stays open. Uncheck the box and click it again: <code>cancel</code>, then <code>close</code>, and it
+    closes.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the cancel event while the box is checked.
+  const keep = document.getElementById("keep");
+  document.getElementById("asked").addEventListener("cancel", event => {
+    if (keep.checked)
+      event.preventDefault();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

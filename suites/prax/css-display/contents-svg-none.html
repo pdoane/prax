@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG elements where contents is none</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  svg { display: block; font: 16px "PR Arimo"; }
+  .c { display: contents; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · B.2 SVG Elements, as none</div>
+  <h1>SVG elements where contents is none</h1>
+  <p class=pr-lede><q>The intention here is that the display: none behavior applies whenever the "rendering context"
+  inside the element is different than the context outside of it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox-svg">CSS Display 4 §B.2</a></span></p>
+</header>
+
+<section>
+  <h2>As none</h2>
+  <p><q>An svg element that has CSS box layout (this includes all svg whose parent is an HTML element, as well as
+  document root elements)</q>, and <q>any other SVG elements</q>: <q>display: contents computes to display: none.</q></p>
+  <figure>
+    <div class=pr-stage style="height: 40px"><svg id=s1 class=c width=200 height=40><rect x=10 y=10 width=60 height=20 fill="#8e44ad"/></svg></div>
+    <figcaption>An <code>svg</code> in HTML: nothing drawn, as for <code>display: none</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=40><text id=s2 class=c x=10 y=26>text</text><rect id=s3 class=c x=90 y=10 width=60 height=20 fill="#8e44ad"/></svg></div>
+    <figcaption>A <code>text</code> and a <code>rect</code>: neither drawn: no word, no purple box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=40><defs class=c><rect x=10 y=10 width=60 height=20 fill="#8e44ad"/></defs></svg></div>
+    <figcaption>A <code>defs</code>, never rendered: its rectangle is not hoisted, and nothing is drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

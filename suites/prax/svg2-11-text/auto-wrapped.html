@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto-wrapped text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .wrap { inline-size: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.7 Auto-wrapped text</div>
+  <h1>Auto-wrapped text</h1>
+  <p class=pr-lede><q>In the case where the content area is defined by the inline-size property, the ‘x’ and ‘y’
+  attributes corresponding to the first rendered typographic character define the initial current text position.</q>
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutAuto">SVG 2 §11.7</a></span>
+  Each stage holds "wraps here wrap", <code>inline-size: 100px</code>, in PR Noto Sans Mono 10 a letter.</p>
+</header>
+
+<section>
+  <h2>The first position, and no other</h2>
+  <p><q>Except when used to determine the initial current text position, all values ‘x’ and ‘y’ are ignored on
+  ‘text’, and ‘tspan’ elements in auto-wrapped text.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M30 0V80 M130 0V80 M0 35H160 M0 55H160" class=pr-baseline /><text class="pr-measure wrap"><tspan x="30" y="35">wraps here wrap</tspan></text></svg></div>
+    <figcaption>No <code>x</code> or <code>y</code> on the <code>text</code>, a first <code>tspan</code> at 30, 35:
+    the lines from 30, on y 35 and 55. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 0V80 M120 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30">wraps <tspan x="100" y="70">here</tspan> wrap</text></svg></div>
+    <figcaption>"here" in a <code>tspan</code> at 100, 70: ignored, the text wrapped as it would be without
+    it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    "here" moved to 100, 70.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No relative shifts or rotation</h2>
+  <p><q>the ‘x’, ‘y’, ‘dx’, ‘dy’, and ‘rotate’ attributes are ignored for auto-wrapped text</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanNotes">§11.2.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 0V80 M120 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30" dx="0 15" dy="0 15" rotate="30">wraps here wrap</text></svg></div>
+    <figcaption><code>dx="0 15" dy="0 15" rotate="30"</code>: all ignored, two upright lines. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One line, turned, and moved
+    15 from the r on.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

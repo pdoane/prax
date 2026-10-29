@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rect: its path, and where the stroke starts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.2 The ‘rect’ element</div>
+  <h1>rect: its path, and where the stroke starts</h1>
+  <p class=pr-lede><q>Mathematically, a ‘rect’ element is mapped to an equivalent ‘path’ element</q>, which begins:
+  <q>perform an absolute moveto operation to location (x+rx,y);</q> <q>perform an absolute horizontal lineto with
+  parameter x+width-rx;</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">SVG 2 §10.2</a></span>
+  Each stage is an SVG 160 by 60 holding a light blue rectangle 120 by 40 at 20, 10, stroked with one orange dash, 6
+  wide, followed by a gap longer than the outline: the dash shows where the path starts and which way it runs.</p>
+</header>
+
+<section>
+  <h2>From the top left, after the corner</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption><code>stroke-dasharray="40 1000"</code>: the dash on the top edge, from x 20 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="20" ry="20" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>With <code>rx="20" ry="20"</code>: the path starts at x+rx, past the corner, so the dash runs from
+    x 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" stroke-dashoffset="-100" /></svg></div>
+    <figcaption>Offset 100 along: the dash from x 120 along the top, round the top right corner, and down the right
+    side to y 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then clockwise, round to the start</h2>
+  <p><q>perform an absolute vertical lineto parameter y+height-ry;</q> <q>perform an absolute horizontal lineto
+  parameter x+rx;</q> <q>perform an absolute vertical lineto parameter y+ry</q> <q>perform a closepath command.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" stroke-dashoffset="-150" /></svg></div>
+    <figcaption>Offset 150, past the top's 120 and 30 down the right: the dash from 140, 40 down to the bottom right
+    corner and left along the bottom to x 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" stroke-dashoffset="-290" /></svg></div>
+    <figcaption>Offset 290, of 320 round: up the left side from y 40 to the top left corner, where the path
+    closes and the dash ends, 30 long.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="20" ry="20" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="31.42 1000" stroke-dashoffset="-80" /></svg></div>
+    <figcaption>Rounded, a dash of 31.42, a quarter circle of radius 20, offset by the straight top's 80: the
+    dash is the top right arc, from 120, 10 round to 140, 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

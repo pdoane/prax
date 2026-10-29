@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tall rows across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 80px; }
+  table { border-spacing: 0; width: 100%; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; box-shadow: inset 0 0 0 1px #2c5a8f; }
+  tr:nth-child(even) td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 6.1 Breaking across fragmentainers, tall rows</div>
+  <h1>Tall rows across columns</h1>
+  <p class=pr-lede>Rows too tall to keep whole are <dfn>freely fragmentable</dfn>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#breaking-rules">CSS Table 3 §6.1</a></span> Stages: two 90px columns, 80px tall; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>A tall row is fragmented, cell by cell</h2>
+  <p><q>user agents must attribute all the remaining height in the fragmentainer to the cells of that row, and fit as
+  much content as it can in each of the cells independently, then break to the next fragment and start the content of
+  each cell where it was stopped in its previous fragment (top borders must not be repainted in continuation
+  fragments).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><table><tr><td>1</td><td>1</td></tr><tr><td>a<br>b<br>c<br>d<br>e</td><td>f<br>g</td></tr></table></div>
+    <figcaption>A second row of 100px, more than half the 80px column: freely fragmentable, so "a" to "c" and "f",
+    "g" in the first column, "d" and "e" in the second, the cells' outlines open where they break. <span class=pr-flag>Safari</span> breaks after "b", leaving
+    "c" room unused. <span class=pr-flag>Firefox</span> does not fragment it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

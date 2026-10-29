@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus rings in a canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.14 Drawing focus rings</div>
+  <h1>Focus rings in a canvas</h1>
+  <p class=pr-lede>drawFocusIfNeeded(path, element): <q>If element is focused, draws a focus ring around path, following
+  the platform conventions for focus rings.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-focus-rings-and-scrolling-paths-into-view">HTML §4.12.5.1.14</a></span></p>
+</header>
+<section>
+  <h2>A ring for the focused fallback element</h2>
+  <p><q>If element is not focused or is not a descendant of context's canvas element, then return.</q> <q>Draw a focus
+  ring of the appropriate style along path, following platform conventions.</q> The ring <q>should not be subject to</q>
+  the fill or stroke style or the line styles. The canvas's fallback holds two checkboxes, <code>a</code> and
+  <code>b</code>; the page draws a box and a label for each, then calls drawFocusIfNeeded with the path round them, on
+  every focus, blur and change.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=before>before the canvas</button>
+        <canvas width=260 height=40 id=boxes><label><input type=checkbox id=a> Show A</label><label><input type=checkbox id=b> Show B</label></canvas>
+      </div>
+      <ol class=pr-log data-log="focus change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click "before the canvas" and press Tab: a focus ring round "Show A". Press Space: its box filled. Tab:
+    the ring moves to "Show B". Shift+Tab twice: no ring. <span class=pr-flag>Firefox</span> No drawFocusIfNeeded:
+    "Show B" is never drawn, and no ring.</figcaption>
+  </figure>
+</section>
+<script>
+  const canvas = document.getElementById("boxes");
+  const context = canvas.getContext("2d");
+  const boxes = [[document.getElementById("a"), 10, "Show A"], [document.getElementById("b"), 140, "Show B"]];
+  function redraw() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.font = "14px sans-serif";
+    context.textBaseline = "middle";
+    context.lineWidth = 6;
+    context.strokeStyle = "#d68a3c";
+    for (const [input, x, label] of boxes) {
+      context.fillStyle = "#1f2430";
+      context.fillText(label, x + 24, 20);
+      context.save();
+      context.lineWidth = 1.5;
+      context.strokeStyle = "#1f2430";
+      context.strokeRect(x + 4, 13, 14, 14);
+      if (input.checked)
+        context.fillRect(x + 7, 16, 8, 8);
+      context.restore();
+      const ring = new Path2D();
+      ring.rect(x, 6, 110, 28);
+      context.drawFocusIfNeeded(ring, input);
+    }
+  }
+  for (const type of ["focus", "blur", "change"])
+    canvas.addEventListener(type, redraw, true);
+  redraw();
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

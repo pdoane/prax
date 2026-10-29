@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>place-self</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.3 Self-Alignment Shorthand: the place-self property</div>
+  <h1>place-self</h1>
+  <p class=pr-lede><q>The first value is assigned to 'align-self'. The second value is assigned to 'justify-self'; if
+  omitted, it is copied from the first value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#place-self-property">CSS Box Alignment 3 §6.3</a></span>
+  Each stage is a grid 200 by 60 of one cell, holding A.</p>
+</header>
+
+<section>
+  <h2>One value and two</h2>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="place-self: end start">A</div></div></div>
+    <figcaption><code>place-self: end start</code>: A at the bottom left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="place-self: center">A</div></div></div>
+    <figcaption><code>place-self: center</code>: A in the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="place-self: stretch end">A</div></div></div>
+    <figcaption><code>place-self: stretch end</code>: A 60px tall, at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="place-self: last baseline">A</div></div></div>
+    <figcaption><code>place-self: last baseline</code>: copied to both, A at the bottom right by the fallback
+    <code>safe self-end</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

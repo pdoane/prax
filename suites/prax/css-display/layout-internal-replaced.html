@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout-internal display on replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .cell { display: table-cell; padding: 0 6px; background: #b9cde6; border: 1px solid #2c5a8f; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.4 Layout-Internal Display Types, replaced elements</div>
+  <h1>Layout-internal display on replaced elements</h1>
+  <p class=pr-lede><q>Authors should not assign a layout-internal display value to replaced elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#layout-specific-display">CSS Display 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>Replaced elements: used inline</h2>
+  <p><q>When the 'display' property of a replaced element computes to one of the layout-internal values, it is handled
+  as having a used value of display/inline. White space collapsing and anonymous box generation must happen around
+  those replaced elements based on that display/inline value</q>. Between two cells, a 40 by 20 image.</p>
+  <figure>
+    <div class=pr-stage><div class=cell>one</div><img id=r1 alt="" width=40 height=20 style="display: table-cell" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"><div class=cell>two</div></div>
+    <figcaption><code>display: table-cell</code> on the image: inline, so it ends the first anonymous table: "one", the
+    image on a line of its own, "two", one above another.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>before <img id=r2 alt="" width=40 height=20 style="display: table-row" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"> after</div>
+    <figcaption><code>display: table-row</code> on an image between words: inline, on the line between them, with no
+    anonymous table round it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> wrap it in an anonymous table, on a line of its own.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

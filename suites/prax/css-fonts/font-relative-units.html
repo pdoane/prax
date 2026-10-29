@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font-affecting properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .bar { height: 10px; margin: 5px 0; background: #4f81bd; }
+  .ex { width: 10ex; }
+  .em { width: 5em; }
+  .pr-sample { font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 1.2 Interaction with font-relative units</div>
+  <h1>Font-affecting properties</h1>
+  <p class=pr-lede><q>The following properties defined in this specification are font-affecting properties: All
+  longhands (including reset-only sub-properties) of the 'font' shorthand, except 'font-variant-emoji' and
+  'line-height'</q>, and <q>All longhands of the 'font-synthesis' shorthand</q>. A font-relative length reads the
+  font they choose. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-relative">CSS Fonts 4 §1.2</a></span></p>
+</header>
+
+<section>
+  <h2>The family chooses the font that ex reads</h2>
+  <p>Each bar is <code>10ex</code> wide in 20px text. An ex is the x-height of the first available font.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">xxx<div class="bar ex"></div></div>
+    <figcaption>PR Tinos, an x-height of 0.459em: a bar of about 92px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Arimo'">xxx<div class="bar ex"></div></div>
+    <figcaption>PR Arimo, an x-height of 0.528em: a bar of about 106px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>font-size chooses the em; line-height chooses no font</h2>
+  <p>Each bar is <code>5em</code> wide. 'line-height' and 'font-variant-emoji' are longhands of 'font' that leave the
+  font alone.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Arimo'; font-size: 30px">Em<div class="bar em"></div></div>
+    <figcaption><code>font-size: 30px</code>: a bar of 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Arimo'; line-height: 3; font-variant-emoji: emoji">Em<div class="bar em"></div></div>
+    <figcaption><code>line-height: 3; font-variant-emoji: emoji</code> at 20px: a taller line, and a bar of
+    100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

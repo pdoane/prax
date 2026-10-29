@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 3: misparented boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .orange { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, stage 3, misparented boxes</div>
+  <h1>Fixup, stage 3: misparented boxes</h1>
+  <p class=pr-lede><q>A table-row is misparented if its parent is neither a table-row-group nor a table-root box.</q>
+  <q>A table-column box is misparented if its parent is neither a table-column-group box nor a table-root box.</q>
+  <q>A table-row-group, table-column-group, or table-caption box is misparented if its parent is not a table-root
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span>
+  Tinted, dashed boxes are table elements, with <code>border-spacing: 10px</code>, which anonymous tables inherit.</p>
+</header>
+
+<section>
+  <h2>Rows</h2>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-row orange">one</div>x<div class="pr-table-row orange">two</div></div>
+    <figcaption>Two orange row elements in a block, with "x" between: not consecutive, so two tables, one above and
+    one below "x".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-row orange">one</div><div class="pr-table-row orange">two</div></div>
+    <figcaption>The same rows next to each other: one table, the rows 10px apart and as wide as each
+    other.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Row groups not in a table</h2>
+  <p>Stage 2 wraps them first where they sit in a table: a group in a row group is not a row, so it gets a row and
+  a cell, and in that cell it is misparented.</p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row-group><div class=pr-table-row-group>text</div></div></div></div>
+    <figcaption>Text in a row group in a row group: the inner group gets a table of its own in an anonymous cell, so
+    the text is 20px in, two spacings.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-row-group"><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></div></div>
+    <figcaption>A row group with cells A and B, in a block: a row inside the group, and a table around it, so A
+    and B sit side by side, 10px apart and 10px in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

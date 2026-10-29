@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Edges of a split box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .edged { background: #f9cc9d; border-style: solid; border-width: 0 6px 0 3px; border-color: #c0392b #c0392b #c0392b #2c5a8f; }
+  .pr-narrow + figcaption { max-width: 116px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.5.2 Box Model of Reordering-induced Box Fragments</div>
+  <h1>Edges of a split box</h1>
+  <p class=pr-lede><q>For each line box, UAs must take the fragments of each inline box and assign the margins,
+  borders and padding in visual order (not logical order). The start-most fragment on the first line box in which the
+  box appears has the start edge's margin, border, and padding; and the end-most fragment on the last line box in
+  which the box appears has the end edge's margin, border, and padding.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-fragment-boxes">CSS Writing Modes 4 §2.4.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Left and right borders</h2>
+  <p>Each tinted span has a blue left border 3px wide and a red right border 6px wide. In <code>ltr</code>, <q>the
+  left-most box fragment on the first line box</q> has the left edge; in <code>rtl</code>, <q>the right-most fragment of
+  the first line box</q> has the right edge.</p>
+  <figure>
+    <div class=pr-stage>here is <span class=edged>some עברית</span> טקסט.</div>
+    <figcaption>One line, the span in two pieces: blue at the left of "some", red at the right of עברית, nothing
+    where the pieces meet טקסט.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow">aa <span class=edged>bb cc dd ee ff</span> gg</div>
+    <figcaption><code>ltr</code>: blue before "bb" on the first line, red after "ff" on the last.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow" dir=rtl>אאא <span class=edged>בבב גגג דדד ההה</span> ווו</div>
+    <figcaption><code>rtl</code>: red right of בבב on the first line, blue left of ההה on the last.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A box whose direction is not its parent's</h2>
+  <p>The section says <q>start</q> without saying whose, and words its examples by the parent's: <q>When the parent's
+  direction property is ltr</q>. Here the span is <code>rtl</code> in an <code>ltr</code> line.</p>
+  <figure>
+    <div class="pr-stage pr-narrow"><span class=edged style="direction: rtl; unicode-bidi: embed">the box runs on to its end</span></div>
+    <figcaption style="max-width: 360px">By the parent's <code>ltr</code>, blue at the left of the first line and
+    red at the right of the last. By the span's own <code>rtl</code>, red, its start, at the right of the first line and
+    blue at the left of the last, as all three browsers draw it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

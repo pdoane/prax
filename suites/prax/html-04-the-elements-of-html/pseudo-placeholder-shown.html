@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:placeholder-shown</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows input, .rows textarea { display: block; box-sizing: border-box; width: 100%; margin: 0 0 10px; font-size: 12px; border: 3px solid #b5bcc7; }
+  .rows textarea { height: 44px; }
+  .rows :placeholder-shown { border-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:placeholder-shown</h1>
+  <p class=pr-lede><q>The :placeholder-shown pseudo-class must match any element falling into one of the following
+  categories</q>: input and textarea elements <q>that have a placeholder attribute whose value is currently being
+  presented to the user</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>While the placeholder shows</h2>
+  <p>A field's border is green while it matches <code>:placeholder-shown</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <input placeholder="an input's placeholder">
+        <input placeholder="hidden by the value" value="a value">
+        <textarea placeholder="a textarea's placeholder"></textarea>
+        <input value="no placeholder">
+      </div>
+    </div>
+    <figcaption>The first and third are green, showing their placeholders. Type into either: the placeholder goes and
+    the border turns grey; delete what was typed and both come back. Delete the second's value: its placeholder
+    shows, and it turns green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

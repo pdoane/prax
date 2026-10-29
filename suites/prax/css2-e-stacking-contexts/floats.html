@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { box-sizing: border-box; width: 100px; height: 60px; padding: 0 6px; font-size: 13px; line-height: 20px; white-space: normal; }
+  .f { float: left; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: floats</h1>
+  <p class=pr-lede>Step 5. A float is painted after the blocks' backgrounds and before any line. A float with a negative
+  margin as wide as itself takes no room, so that the lines after it overlap it.</p>
+</header>
+
+<section>
+  <h2>After the blocks, before the lines</h2>
+  <p><q>All non-positioned floating descendants, in tree order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px"><div class="pr-a box f" style="margin: 10px -100px 0 30px"></div><div class=pr-hl style="height: 80px; padding: 0 6px">text over the float, text over the float, text over the float</div></div>
+    <figcaption>The blue float, 100 by 60, covers the light orange block's background, and the block's text covers
+    the float.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-a box f" style="margin-right: -100px"></div><div class=pr-b style="margin: 20px 0 0 40px; height: 60px; box-sizing: border-box"></div></div>
+    <figcaption>The orange block comes after the float in the tree, and the float still covers it: blocks are all
+    painted before floats.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each float as a whole, in tree order</h2>
+  <p><q>For each one of these, treat the element as if it created a new stacking context</q>: a float's text is
+  painted with the float, not with the lines of step 7. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light box f">A's text, which runs on</div><div class="pr-a pr-light box f" style="margin: 10px 0 0 -70px; text-align: right">B</div></div>
+    <figcaption>Float B, light blue, is pulled 70px over float A, and covers A's background and A's text alike.
+    </figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light box">A's text, which runs on</div><div class="pr-a pr-light box" style="margin: -50px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>For comparison, two blocks: B covers A's background, but A's text is painted later, over B.
+    </figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

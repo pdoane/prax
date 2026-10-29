@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Loading a src entry</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: "Load Fragment"; src: url(../../../third_party/fonts/Literata.ttf#NoSuchName), url(../../../third_party/fonts/Cousine.ttf); }
+  @font-face { font-family: "Load Postscript"; src: url(../../../third_party/fonts/Literata.ttf#Literata-Regular), url(../../../third_party/fonts/Cousine.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.3.2 Loading an individual item in the 'src' descriptor</div>
+  <h1>Loading a src entry</h1>
+  <p class=pr-lede><q>As with other URLs in CSS, the URL can be relative, in which case it is resolved relative to the
+  location of the style sheet containing the @font-face rule.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-face-src-loading">CSS Fonts 4 §4.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Relative to the style sheet</h2>
+  <p><code>../shared/fonts.css</code> gives its sources as <code>url(../../../third_party/fonts/...)</code>, three
+  levels up from the sheet, not from this page.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata', sans-serif">Handgloves</div>
+    <figcaption>PR Literata, from the shared sheet: a book serif.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fragment identifiers name a face</h2>
+  <p><q>Conformant user agents must not use a face from the resource unless its PostScript name exactly matches the
+  fragment identifier</q>. Each rule falls back to Cousine, a monospace.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'Load Fragment', sans-serif">Handgloves</div>
+    <figcaption><code>#NoSuchName</code>: Literata has no face of that name, so Cousine. <span class=pr-flag>Safari</span> ignores the fragment: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Load Postscript', sans-serif">Handgloves</div>
+    <figcaption><code>#Literata-Regular</code>, its PostScript name: Literata.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

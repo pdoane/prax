@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow: clip and ellipsis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; margin: 10px 50px; overflow: hidden; white-space: nowrap; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1 Overflow Ellipsis: the text-overflow property</div>
+  <h1>text-overflow: clip and ellipsis</h1>
+  <p class=pr-lede><code>text-overflow: clip | ellipsis</code>, initial <code>clip</code>, for block containers.
+  <q>This property specifies rendering when inline content overflows its end line box edge in the inline progression
+  direction of its block container element ("the block") that has overflow other than visible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#text-overflow">CSS Overflow 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Clipped, or an ellipsis</h2>
+  <p>Each dashed box is 100px wide, <code>overflow: hidden; white-space: nowrap</code>, and holds "a sentence too
+  long", 19 letters of <code>.pr-measure</code> text, each 10px wide: 10 fit.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t">a sentence too long</div></div>
+    <figcaption><code>clip</code>: <q>Clip inline content that overflows its block container element.</q> "a
+    sentence" shows, cut at the edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis">a sentence too long</div></div>
+    <figcaption><code>ellipsis</code>: <q>Render an ellipsis character (U+2026) to represent clipped inline
+    content.</q> Nine letters and "…": "a sentenc…".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis; overflow: visible">a sentence too long</div></div>
+    <figcaption><code>ellipsis</code> with <code>overflow: visible</code>: the property does not apply, and the
+    text runs out of the box whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="text-overflow: ellipsis" dir=rtl>a sentence too long</div></div>
+    <figcaption><code>ellipsis</code> in <code>rtl</code>: the end edge is the left, so the text is cut there:
+    "…too long" read from the box's right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

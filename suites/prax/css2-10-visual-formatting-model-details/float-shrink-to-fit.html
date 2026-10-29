@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Float widths: shrink-to-fit</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.5 Floating, non-replaced elements</div>
+  <h1>Float widths: shrink-to-fit</h1>
+  <p class=pr-lede>The shrink-to-fit width is the preferred width, unless the content does not fit. Orange boxes are
+  floats with text in them.</p>
+</header>
+
+<section>
+  <h2>The available width</h2>
+  <p><q>Thirdly, find the available width: in this case, this is the width of the containing block minus the used
+  values of 'margin-left', 'border-left-width', 'padding-left', 'padding-right', 'border-right-width',
+  'margin-right', and the widths of any relevant scroll bars.</q> <q>Then the shrink-to-fit width is: min(max(preferred
+  minimum width, available width), preferred width).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2 §10.3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-chip fl">A float whose text is longer than one line of the stage.</div></div>
+    <figcaption>The preferred width is more than the stage, so the float takes the available width, 196px: it
+    fills the stage with its 2px borders.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-chip fl" style="margin-right: 50px; padding: 0 10px">A float whose text is longer than one line of the stage.</div></div>
+    <figcaption>With <code>margin-right: 50px</code> and 10px of padding, the available width is 200 − 50 − 20 − 4 =
+    126px: the float is 150px wide with its padding and border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The preferred minimum width</h2>
+  <p><q>and also calculate the preferred minimum width, e.g., by trying all possible line breaks.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2 §10.3.5</a></span></p>
+  <figure style="display: block">
+    <div class="pr-stage pr-narrow pr-text"><div class="pr-chip fl">an unbreakable_long_word</div></div>
+    <figcaption>In a 100px stage, a word wider than the available width: the float is as wide as the word, which is
+    its preferred minimum, and overflows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font-synthesis shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Cousine'; font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8.5 Controlling synthetic faces: the 'font-synthesis' shorthand</div>
+  <h1>The font-synthesis shorthand</h1>
+  <p class=pr-lede>'font-synthesis' is <code>none | [ weight || style || small-caps || position ]</code>: each keyword
+  given sets its longhand to <code>auto</code>, and each left out sets it to <code>none</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis">CSS Fonts 4 §2.8.5</a></span></p>
+</header>
+
+<section>
+  <h2>The longhands it sets</h2>
+  <p>Each stage is bold, italic small capitals in PR Cousine, which has none of them.</p>
+  <figure>
+    <div class="pr-stage pr-sample" id=f1 style="font-weight: bold; font-style: italic; font-variant-caps: small-caps; font-synthesis: weight style small-caps position">Handgloves</div>
+    <figcaption>The initial value: all synthesized. <code>auto</code> only allows bold to be synthesized, and
+    Chrome does not: italic small capitals, regular weight.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" id=f2 style="font-weight: bold; font-style: italic; font-variant-caps: small-caps; font-synthesis: none">Handgloves</div>
+    <figcaption><code>none</code>: regular, upright, lowercase.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" id=f3 style="font-weight: bold; font-style: italic; font-variant-caps: small-caps; font-synthesis: style">Handgloves</div>
+    <figcaption><code>style</code>: sheared, but regular weight and lowercase.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" id=f4 style="font-weight: bold; font-style: italic; font-variant-caps: small-caps; font-synthesis: weight small-caps">Handgloves</div>
+    <figcaption><code>weight small-caps</code>: bold small capitals, upright. Chrome, synthesizing no bold: regular
+    small capitals.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic minimum size and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 1fr; width: 20px; }
+  .r { display: grid; grid-template-rows: 1fr; height: 20px; width: 60px; }
+  .ta { background: #b9cde6; }
+  .kid { background: #d68a3c; color: white; }
+  .bar { height: 6px; background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.6 Automatic Minimum Size of Grid Items, percentages</div>
+  <h1>Automatic minimum size and percentages</h1>
+  <p class=pr-lede><q>For the purpose of calculating an intrinsic size of the box (e.g. the box’s min-content size), a
+  content-based minimum size causes the box’s size in that axis to become indefinite</q>. <q>However, if a percentage
+  resolved against the box's size before this minimum was applied, it must be re-resolved against the new size after it
+  is applied.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#min-size-auto">CSS Grid Layout 2 §6.6</a></span></p>
+</header>
+
+<section>
+  <h2>Widths</h2>
+  <p>Each dashed grid is 20px wide, one <code>1fr</code> column, so the light blue item's content-based minimum sets
+  the column; the bar below fills it. The orange child has <code>width: 50%</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame"><div class=ta><div class=kid style="width: 50%">abcdef</div></div><div class=bar></div></div></div>
+    <figcaption>To find the minimum, the child's 50% is taken to <q>behave as auto</q>: its "abcdef" makes it 60px, and the
+    column is 60px. Then the child is 50% of 60, 30px, and its text spills.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame"><div class=ta>abcdefgh<div class=kid style="width: 50%; height: 20px"></div></div><div class=bar></div></div></div>
+    <figcaption>The item's text sets an 80px minimum; the empty child is 50% of 80px, 40px, not of the grid's
+    20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Heights</h2>
+  <p>Each dashed grid is 20px tall, one <code>1fr</code> row, 60px wide. The orange child has <code>height:
+  50%</code>, and the item holds two more lines after it.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 70px"><div class="r pr-frame"><div class=ta><div class=kid style="height: 50%">ab</div>cd<br>ef</div></div></div>
+    <figcaption>To find the minimum, the child's 50% behaves as auto, 20px: the row is 60px. Then the child is 50% of
+    60, 30px, and "cd" starts at 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

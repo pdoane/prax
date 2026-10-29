@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-style: inset and outset in collapsed tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .grid { padding: 6px 0 0 6px; }
+  .grid div { display: inline-block; vertical-align: top; width: 30px; height: 20px; margin: 0 6px 6px 0; border: 9px #6aa36a; background: #f4f5f7; }
+  .over { width: 100px; height: 20px; margin: 10px; padding: 0; border: 10px solid #2c5a8f; background: #f9cc9d; }
+  .over div { margin: -5px 0 0 -5px; width: 40px; height: 20px; background: #6aa36a; }
+  .cell { border: 6px solid #6aa36a; width: 24px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.2 Line Patterns: the border-style properties, collapsed tables</div>
+  <h1>border-style: inset and outset in collapsed tables</h1>
+  <p class=pr-lede><q>inset: Treated as ridge in the collapsing border model.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-style">CSS Borders and Box Decorations 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>inset and outset in collapsed tables</h2>
+  <p><q>inset: Treated as ridge in the collapsing border model.</q> <q>outset: Treated as groove in the collapsing border
+  model.</q> Four tables, each with one cell with a 6px green border.</p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; box-sizing: border-box"><table style="display: inline-table; border-collapse: collapse; margin-right: 6px"><tr><td class=cell style="border-style: inset"></td></tr></table><table style="display: inline-table; border-collapse: collapse; margin-right: 6px"><tr><td class=cell style="border-style: ridge"></td></tr></table><table style="display: inline-table; border-collapse: collapse; margin-right: 6px"><tr><td class=cell style="border-style: outset"></td></tr></table><table style="display: inline-table; border-collapse: collapse; margin-right: 6px"><tr><td class=cell style="border-style: groove"></td></tr></table></div>
+    <figcaption>Collapsed: <code>inset</code>, <code>ridge</code>, <code>outset</code>, <code>groove</code>: the
+    first two alike, the last two alike.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

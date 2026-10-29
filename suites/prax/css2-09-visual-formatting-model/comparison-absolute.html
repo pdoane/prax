@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Comparing positioning schemes: absolute positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { font-size: 12px; line-height: 200%; }
+  .doc p { margin: 0; }
+  .outer { color: red; }
+  .inner { color: blue; }
+  .abs-outer { position: absolute; top: 100px; left: 100px; width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.8 Comparison of normal flow, floats, and absolute positioning</div>
+  <h1>Comparing positioning schemes: absolute positioning</h1>
+  <p class=pr-lede>The specification's examples at half their offsets and sizes, in a stage 300 by 180 that stands for the
+  initial containing block: <code>outer</code> is red, <code>inner</code> blue, on 24px lines.</p>
+</header>
+
+<section>
+  <h2>Positioning the outer box</h2>
+  <p><q>The top side of the outer box is '200px' below the top of the containing block and the left side is '200px'
+  from the left side. The child box of outer is flowed normally with respect to its parent.</q> Here, 100px. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-abspos">CSS 2 §9.8.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-cb doc" style="height: 180px"><p>Beginning of body contents. <span class="outer abs-outer"> Start of outer contents. <span class=inner> Inner contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#outer { position: absolute; top: 100px; left: 100px; width: 150px }</code></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

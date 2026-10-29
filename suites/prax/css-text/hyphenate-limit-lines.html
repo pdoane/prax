@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hyphenate-limit-lines and hyphenate-limit-last</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 80px; }
+  figure { margin-right: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.5 Hyphenation Line Limits: the hyphenate-limit-lines and hyphenate-limit-last properties</div>
+  <h1>hyphenate-limit-lines and hyphenate-limit-last</h1>
+  <p class=pr-lede><q>This property indicates the maximum number of successive hyphenated lines in an element.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphenate-line-limits">CSS Text 4 §6.3.5</a></span>
+  No browser has either property. Each stage is <code>lang=en</code>, <code>hyphens: manual</code>, 80px wide,
+  eight 10px letters to a line; soft hyphens are marked here with "·".</p>
+</header>
+
+<section>
+  <h2>hyphenate-limit-lines</h2>
+  <p>The stages hold "abcd ef·gh ijk·lmn op".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en><span class=t>abcd ef&shy;gh ijk&shy;lmn op</span></div>
+    <figcaption><code>no-limit</code>: two hyphenated lines in a row, "abcd ef-", "gh ijk-", then "lmn
+    op".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-lines: 1"><span class=t>abcd ef&shy;gh ijk&shy;lmn op</span></div>
+    <figcaption><code>1</code>: the second line may not hyphenate: "abcd ef-", "gh", "ijklmn", "op". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As at the
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>hyphenate-limit-last</h2>
+  <p><code>always</code>: <q>The last full line of the element, or the last line before any column, page, or spread
+  break inside the element should not be hyphenated.</q> The stages hold "abcd ef·gh".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en><span class=t>abcd ef&shy;gh</span></div>
+    <figcaption><code>none</code>: "abcd ef-", then "gh".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-last: always"><span class=t>abcd ef&shy;gh</span></div>
+    <figcaption><code>always</code>: the last full line is not hyphenated: "abcd", "efgh". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "abcd
+    ef-".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

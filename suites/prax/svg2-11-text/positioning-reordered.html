@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positions for reordered text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+  .override { direction: rtl; unicode-bidi: bidi-override; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.2 Notes on 'x', 'y', 'dx', 'dy' and 'rotate'</div>
+  <h1>Positions for reordered text</h1>
+  <p class=pr-lede><q>The following additional rules apply to attributes ‘x’, ‘y’, ‘dx’, ‘dy’, and ‘rotate’ when they
+  contain a list of numbers</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanNotes">SVG 2 §11.2.2</a></span>
+  Each stage is an SVG 160 by 60, the baseline at y 45 dashed in red.</p>
+</header>
+
+<section>
+  <h2>Reordered with the characters</h2>
+  <p><q>Whenever the character data within a ‘tspan’ element is re-ordered, the corresponding elements within the
+  ‘x’, ‘y’, ‘dx’, ‘dy’, and ‘rotate’ are also re-ordered to maintain the correspondence.</q> Here "LLLT" in 30px PR
+  Noto Sans Mono, 18 a letter, with <code>direction: rtl; unicode-bidi: bidi-override</code>, ending at x 150. Which edge of a
+  right-to-left glyph it turns about is left open: its alignment point is <q>on the start-edge of the glyph</q>, its
+  right, but the reordered text is <q>positioned using standard left-to-right layout rules</q>. Chrome turns it about
+  its left edge, Firefox its right.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160 M150 35V55" class=pr-baseline /><text class="big override" x="150" y="45" rotate="0 0 0 90">LLLT</text></svg></div>
+    <figcaption><code>rotate="0 0 0 90"</code>: drawn "TLLL", the T, the fourth character, leftmost and turned
+    90°. <span class=pr-flag>Safari</span> Turns the rightmost glyph instead.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160 M150 35V55" class=pr-baseline /><text class="big override" x="150" y="45" rotate="90 0">TLLL</text></svg></div>
+    <figcaption><code>rotate="90 0"</code> on "TLLL": drawn "LLLT", the T, the first character, rightmost and
+    turned 90°. <span class=pr-flag>Safari</span> Turns the leftmost glyph instead.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

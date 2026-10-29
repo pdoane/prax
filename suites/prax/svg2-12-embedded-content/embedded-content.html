@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Embedded content: image and foreignObject</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.1 Overview</div>
+  <h1>Embedded content: image and foreignObject</h1>
+  <p class=pr-lede><q>Embedded content is content that imports another resource into the document, or content from
+  another vocabulary that is inserted into the document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Overview">SVG 2 §12.1</a></span>
+  Each stage is an SVG 160 by 60. The images are a flag 40 by 20 in quarters: blue and orange above, green and purple
+  below.</p>
+</header>
+
+<section>
+  <h2>Another resource, imported with image</h2>
+  <p><q>SVG supports embedded content with the use of ‘image’ and ‘foreignObject’ elements.</q> Each
+  <code>image</code> is at 40, 10, 80 by 40.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>A PNG file: the flag drawn 80 by 40, each quarter 40 by 20, the seams at x 80 and y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>An SVG file of the same flag: the same 80 by 40, the seams at x 80 and y 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Another vocabulary, inserted with foreignObject</h2>
+  <p>A <code>foreignObject</code> at 20, 10, 120 by 40, holds HTML: two block boxes, A and B, each a line 20
+  tall.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class=pr-a>A</div><div class=pr-b>B</div></foreignObject></svg></div>
+    <figcaption>A from y 10 to 30 and B from 30 to 50, each as wide as the foreignObject, from x 20 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="60" height="40" fill="#6aa36a" /><foreignObject x="20" y="10" width="120" height="40"><div class=pr-a style="margin-left: 60px">A</div></foreignObject></svg></div>
+    <figcaption>The two vocabularies together: a green SVG rect from x 20 to 80, and beside it the HTML box A, which a
+    left margin of 60 puts from 80 to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

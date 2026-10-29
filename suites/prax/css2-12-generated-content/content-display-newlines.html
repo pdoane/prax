@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: block, inline and newlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .h { font-size: 16px; font-weight: 700; line-height: 20px; }
+  .ch-inline::before { content: "Chapter: "; display: inline; color: #2c5a8f; }
+  .ch-block::before { content: "Chapter: "; display: block; color: #2c5a8f; }
+  .tri::before { display: block; text-align: center; white-space: pre; content: "chapter\A hoofdstuk\A chapitre"; color: #2c5a8f; }
+  .tri-normal::before { display: block; text-align: center; content: "chapter\A hoofdstuk\A chapitre"; color: #2c5a8f; }
+  .counted { counter-reset: p; }
+  .counted > div { counter-increment: p; }
+  .counted > div::after { content: " (" counter(p) ")"; }
+  .gen-p::before { content: "<div>made</div>"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: block, inline and newlines</h1>
+  <p class=pr-lede>Generated text in blue.</p>
+</header>
+
+<section>
+  <h2>Block or inline</h2>
+  <p><q>The 'display' property controls whether the content is placed in a block or inline box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h ch-inline">Rivers</div></div>
+    <figcaption><code>H1:before</code>, <code>display: inline</code>: "Chapter: Rivers".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h ch-block">Rivers</div></div>
+    <figcaption><code>display: block</code>: "Chapter:" on its own line, "Rivers" below it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Newlines</h2>
+  <p>The specification's example: <code>content: "chapter\A hoofdstuk\A chapitre"</code>. <q>Authors may include newlines in the generated content by writing the "\A" escape sequence in one of the strings
+  after the 'content' property. This inserted line break is still subject to the 'white-space' property.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h tri">Rivers</div></div>
+    <figcaption><code>white-space: pre</code>: three centered lines, then "Rivers".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h tri-normal">Rivers</div></div>
+    <figcaption><code>white-space: normal</code>: newlines collapse to spaces, and wrap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The document tree is not altered</h2>
+  <p><q>Generated content does not alter the document tree. In particular, it is not fed back to the document language
+  processor (e.g., for reparsing).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text counted"><div class=gen-p>one</div><div>two</div></div>
+    <figcaption><code>"&lt;div&gt;made&lt;/div&gt;"</code> is text, not an element: still divs (1) and (2).</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

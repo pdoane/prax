@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>outline-offset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 60px; height: 20px; background: #b9cde6; border: 10px solid #4f81bd; outline: 4px solid #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.5 Offsetting the Outline: the outline-offset property</div>
+  <h1>outline-offset</h1>
+  <p class=pr-lede><q>By default, the outline is drawn starting just outside the border edge. However, it is possible
+  to offset the outline and draw it beyond the border edge.</q> <q>If the computed value of outline-offset is anything
+  other than 0, then the outline is outset from the border edge by that amount.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-offset">CSS Basic User Interface 4 §3.5</a></span></p>
+</header>
+
+<section>
+  <h2>Outset from the border edge</h2>
+  <p>Each box is 60 by 20 inside a 10px blue border, and has a 4px red outline.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=box></div></div>
+    <figcaption><code>0</code>: the red touches the blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=box style="outline-offset: 10px"></div></div>
+    <figcaption><code>10px</code>: a 10px gap of the stage between the blue and the red.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=box style="outline-offset: 10px; border-radius: 10px"></div></div>
+    <figcaption><code>10px</code> with <code>border-radius: 10px</code>: the red's corners rounded too, following
+    the curve 10px out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative: into the border box</h2>
+  <p><q>Negative values must cause the outline to shrink into the border box.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=box style="outline-offset: -10px"></div></div>
+    <figcaption><code>-10px</code>: the red's inner edge on the blue's inner edge, so it covers the inner 4px of the
+    blue border.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=box style="outline-offset: -4px"></div></div>
+    <figcaption><code>-4px</code>: the red over the outer 4px of the blue border, flush with its edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

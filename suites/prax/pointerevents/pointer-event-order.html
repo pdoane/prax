@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pointer event types</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3 Pointer Event types</div>
+  <h1>The pointer event types</h1>
+  <p class=pr-lede><q>Below are the event types defined in this specification.</q> <q>In the case of the primary pointer,
+  these events (with the exception of gotpointercapture and lostpointercapture) may also fire compatibility mouse
+  events.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointer-event-types">Pointer Events §3.3</a></span></p>
+</header>
+<section>
+  <h2>A mouse that hovers</h2>
+  <p>pointerdown: <q>For mouse, this is when the device transitions from no buttons depressed to at least one button
+  depressed.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerdown">§3.3.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=mouse>Move in, click, move out.</div>
+      <ol class=pr-log data-log="pointerover pointerenter pointerdown pointerup pointerout pointerleave" data-fields="pointerType" data-on="#mouse" data-lines=6></ol>
+    </div>
+    <figcaption>With the mouse, move into the box, click it, and move out: <code>pointerover</code>,
+    <code>pointerenter</code>, <code>pointerdown</code>, <code>pointerup</code>, <code>pointerout</code>,
+    <code>pointerleave</code>, with unlogged <code>pointermove</code>s between.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A finger that does not hover</h2>
+  <p><q>For input devices that do not support hover, the user agent MUST also fire a pointer event named pointerover
+  followed by a pointer event named pointerenter prior to dispatching the pointerdown event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerdown">§3.3.3</a></span>
+  After pointerup, likewise, pointerout and pointerleave. <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerup">§3.3.6</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=touch>Tap here.</div>
+      <ol class=pr-log data-log="pointerover pointerenter pointerdown pointerup pointerout pointerleave" data-fields="pointerType" data-on="#touch" data-lines=6></ol>
+    </div>
+    <figcaption>Needs a touch screen. Tap the box: the same six events, all at once, with
+    <code>pointerType="touch"</code>: <code>pointerover</code> and <code>pointerenter</code> come with the touch,
+    and <code>pointerout</code> and <code>pointerleave</code> as the finger lifts.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

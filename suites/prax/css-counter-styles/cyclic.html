@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The cyclic system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style triangle { system: cyclic; symbols: ‣; suffix: " "; }
+  @counter-style abc { system: cyclic; symbols: "A" "B" "C"; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 40px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.1 Cycling Symbols: the cyclic system</div>
+  <h1>The cyclic system</h1>
+  <p class=pr-lede><q>The cyclic counter system cycles repeatedly through its provided symbols, looping back to the
+  beginning when it reaches the end of the list.</q> <q>If there are N counter symbols and a representation is being
+  constructed for the integer value, the representation is the counter symbol at index ( (value-1) mod N) of the list of
+  counter symbols (0-indexed).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#cyclic-system">CSS Counter Styles 3 §3.1.1</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>One symbol, and several</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: triangle"><li>One<li>Two<li>Three</ol></div>
+    <figcaption>The example's <code>triangle</code>, <code>symbols: ‣; suffix: " "</code>: "‣ One", "‣ Two",
+    "‣ Three".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: abc"><li>1<li>2<li>3<li>4<li>5</ol></div>
+    <figcaption>A, B, C from 1, then A and B again for 4 and 5.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero and negative values</h2>
+  <p><q>This system is defined over all counter values.</q> The index is the mathematical remainder, never
+  negative.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: abc" start=-2><li>-2<li>-1<li>0<li>1</ol></div>
+    <figcaption>From -2: A, B, C, A. Index (-3 mod 3) is 0, (-2 mod 3) is 1, (-1 mod 3) is 2. No negative sign: a
+    cyclic style does not use one.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

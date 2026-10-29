@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The default UA stylesheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/36px "PR Arimo"; }
+  .j { padding: 0 6px; font: 20px/48px "PR Noto Sans JP"; }
+  .pr-stage.v { padding: 6px; font: 20px/44px "PR Noto Sans JP"; height: 90px; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · B Default UA Stylesheet</div>
+  <h1>The default UA stylesheet</h1>
+  <p class=pr-lede><q>This appendix is informative, and is to help UA developers to implement default stylesheet, but
+  UA developers are free to ignore or change.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#default-stylesheet">CSS Text Decoration 4 §B</a></span>
+  No browser is flagged here; each caption says what the sheet suggests.</p>
+</header>
+
+<section>
+  <h2>HTML's decorated elements</h2>
+  <pre class=pr-source>s, strike, del { text-decoration: line-through; }
+u, ins, :link, :visited { text-decoration: underline; }
+abbr[title], acronym[title] { text-decoration: dotted underline; }
+rt { text-emphasis: none; }</pre>
+  <figure>
+    <div class="pr-stage t"><s>s</s> <del>del</del> <u>u</u> <ins>ins</ins><br><abbr title="title">abbr</abbr> <a href="#">link</a></div>
+    <figcaption>s and del struck through; u, ins and the link underlined; abbr with a dotted underline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" lang=ja style="text-emphasis: dot #c0392b"><ruby>東京<rt>とうきょう</rt></ruby></div>
+    <figcaption>Dots over 東京, none over the ruby text とうきょう, which inherits <code>text-emphasis</code> but is
+    reset. Safari draws no dots over 東京 either.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positions by language</h2>
+  <pre class=pr-source>:root:lang(zh), [lang|=zh] { text-emphasis-position: under right; }
+:root:lang(zh), [lang|=zh] { text-underline-position: left; }
+:root:lang(ja), [lang|=ja] { text-underline-position: right; }</pre>
+  <figure class=s>
+    <div class="pr-stage j" lang=zh style="text-emphasis: dot #c0392b">重要</div>
+    <figcaption>Chinese: the dots under 重要.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" lang=zh><u>中文</u></div>
+    <figcaption>Vertical Chinese: the underline on the left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" lang=ja><u>日本語</u></div>
+    <figcaption>Vertical Japanese: the underline on the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

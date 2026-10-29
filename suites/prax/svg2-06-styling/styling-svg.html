@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Styling SVG content using CSS</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #filled { fill: #4f81bd; }
+  #sized { width: 120px; height: 40px; }
+  .stage-a rect { stroke: #2c5a8f; stroke-width: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.1 Styling SVG content using CSS</div>
+  <h1>Styling SVG content using CSS</h1>
+  <p class=pr-lede><q>Elements in an SVG document can be styled using CSS. Most visual characteristics and some aspects
+  of element geometry are controlled using CSS properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#StylingUsingCSS">SVG 2 §6.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect at 20, 10, orange by its <code>fill</code> attribute.</p>
+</header>
+
+<section>
+  <h2>Visual characteristics and geometry</h2>
+  <p><q>For example, the ‘fill’ property controls the paint used to fill the inside of a shape, and the width and
+  height properties are used to control the size of a ‘rect’ element.</q> The page's style sheet sets each.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id=filled x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>#filled { fill: #4f81bd }</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id=sized x="20" y="10" width="40" height="20" fill="#d68a3c" /></svg></div>
+    <figcaption><code>#sized { width: 120px; height: 40px }</code> over 40 by 20: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium stage-a"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>.stage-a rect</code>, a selector across HTML and SVG: stroked dark blue, 6 wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

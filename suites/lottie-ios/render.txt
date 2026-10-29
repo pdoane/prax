@@ -1,0 +1,9 @@
+# How the suite renders (tools/suite/suite_render.h): on transparent pixels, as lottie-ios's snapshots are, with text
+# set in the system's fonts and the fonts that lottie-ios's snapshot tests register, and Helvetica where a family is
+# missing, as CoreText falls back to it.
+font third_party/lottie/lottie-ios/Tests/Samples/Fonts/Cereal-Book.ttf
+font third_party/lottie/lottie-ios/Tests/Samples/Fonts/Cereal-Medium.ttf
+font third_party/lottie/lottie-ios/Tests/Samples/Fonts/Pacifico-Regular.ttf
+font third_party/lottie/lottie-ios/Tests/Samples/Fonts/Venezuela.ttf
+system
+default Helvetica

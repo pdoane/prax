@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous table objects: irrelevant boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .clear { background: transparent; color: var(--pr-ink); }
+  .stray { background: #c0392b; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2.1 Anonymous table objects</div>
+  <h1>Anonymous table objects: irrelevant boxes</h1>
+  <p class=pr-lede>The first of three stages: <q>Remove irrelevant boxes</q>. Each stage has <code>border-spacing:
+  10px</code>, which its tables inherit, so every cell, anonymous or not, is 10px from its neighbors.</p>
+</header>
+
+<section>
+  <h2>Inside columns and column groups</h2>
+  <p><q>All child boxes of a 'table-column' parent are treated as if they had 'display: none'.</q> <q>If a child C of
+  a 'table-column-group' parent is not a 'table-column' box, then it is treated as if it had 'display: none'.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-table><div class=pr-table-column style="background: #d68a3c"><div class="pr-table-cell stray">red</div></div><div class=pr-table-row><div class="pr-table-cell blue clear">1</div><div class="pr-table-cell blue clear">2</div></div></div></div>
+    <figcaption>A column holds a red cell, which is not shown; the column makes cell 1 orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-table><div class=pr-table-column-group style="background: #6aa36a"><div class="pr-table-cell stray">red</div><div class=pr-table-column></div></div><div class=pr-table-row><div class="pr-table-cell blue clear">1</div><div class="pr-table-cell blue clear">2</div></div></div></div>
+    <figcaption>A column group holds a red cell and a column: no red, and only cell 1 is green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>White space between table boxes</h2>
+  <p>A white-space-only anonymous inline child of a <q>tabular container</q> (a row, row group or table) whose
+  siblings are <q>either 'table-caption' or internal table boxes</q> is <q>treated as if it had 'display: none'</q>.
+  So is one <q>between two immediate siblings each of which is either an internal table box or a 'table-caption'
+  box</q>, whatever its parent. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-table><div class=pr-table-row>
+      <div class="pr-table-cell blue">A</div>
+      <div class="pr-table-cell blue">B</div>
+    </div></div></div>
+    <figcaption>White space between cells A and B of a row makes no cell: they are 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-table><div class=pr-table-row>
+      <div class="pr-table-cell blue">A</div> x <div class="pr-table-cell blue">B</div>
+    </div></div></div>
+    <figcaption>Not only white space: " x " between them is in an anonymous cell, 10px from A and from B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced">
+      <div class="pr-table-cell blue">A</div>
+      <div class="pr-table-cell blue">B</div>
+    </div>
+    <figcaption>Two cells with white space between them, in a block: one anonymous table and row, the cells 10px
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

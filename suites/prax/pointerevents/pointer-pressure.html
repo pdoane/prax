@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pressure</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+  .meter { position: relative; height: 20px; margin: 0 20px 10px; background: var(--pr-plain); }
+  .meter .bar { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: #4f81bd; }
+  .meter.signed .bar { left: 50%; }
+  .meter.signed::after { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1 PointerEvent interface</div>
+  <h1>Pressure</h1>
+  <p class=pr-lede><q>The normalized pressure of the pointer input in the range of [0,1], where 0 and 1 represent the
+  minimum and maximum pressure the hardware is capable of detecting, respectively.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">Pointer Events §3.1</a></span></p>
+</header>
+<section>
+  <h2>Half, without a sensor</h2>
+  <p><q>For hardware and platforms that do not support pressure, the value MUST be 0.5 when in the active buttons state
+  and 0 otherwise.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Move over here, then press and drag.</div>
+      <div class=meter><div class=bar id=bar></div></div>
+      <ol class=pr-log data-log="pointermove pointerdown pointerup" data-fields="pointerType pressure" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>The bar is <code>pressure</code> across the 260px meter. Move the mouse over the box: no bar. Press
+    and drag: 130px, half. Release: the <code>pointerup</code>'s pressure is 0. A pen or a finger on a sensing screen
+    makes the bar follow how hard it presses.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Tangential pressure</h2>
+  <p><q>The normalized tangential pressure (also known as barrel pressure), typically set by an additional control (e.g.
+  a finger wheel on an airbrush stylus), of the pointer input in the range of [-1,1], where 0 is the neutral position of
+  the control.</q> <q>For hardware and platforms that do not support tangential pressure, the value MUST be 0.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=airbrush>Drag here.</div>
+      <div class="meter signed"><div class=bar id=barrel></div></div>
+    </div>
+    <figcaption>The bar runs from the dashed middle by <code>tangentialPressure</code>, right for positive. Drag
+    with a mouse or a plain pen: no bar. An airbrush pen's finger wheel moves it either way.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws pressure as the width of a bar, and tangential pressure as a bar either side of the middle.
+  const bar = document.getElementById("bar"), barrel = document.getElementById("barrel");
+  for (const type of ["pointermove", "pointerdown", "pointerup", "pointerleave"]) {
+    document.getElementById("pad").addEventListener(type, event => {
+      bar.style.width = (type === "pointerleave" ? 0 : event.pressure * 100) + "%";
+    });
+    document.getElementById("airbrush").addEventListener(type, event => {
+      const value = type === "pointerleave" ? 0 : event.tangentialPressure;
+      barrel.style.width = Math.abs(value) * 50 + "%";
+      barrel.style.transform = value < 0 ? "translateX(-100%)" : "none";
+    });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

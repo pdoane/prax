@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Bidi paragraphs</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .pr-stage div { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4 Applying the Bidirectional Reordering Algorithm</div>
+  <h1>Bidi paragraphs</h1>
+  <p class=pr-lede><q>User agents that support bidirectional text must apply the Unicode bidirectional algorithm to
+  every sequence of inline-level boxes uninterrupted by any block boundary or “bidi type B” forced paragraph break.
+  This sequence forms the paragraph unit in the bidirectional algorithm.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-algo">CSS Writing Modes 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>One paragraph</h2>
+  <p>Each stage is <code>ltr</code> and holds "abc", the Hebrew word אבג, "!", and the Hebrew word דהו. In one
+  paragraph the "!" sits between two right-to-left words, and goes with them.</p>
+  <figure>
+    <div class=pr-stage>abc אבג! דהו</div>
+    <figcaption>One paragraph: the two Hebrew words read from the right as one run, so דהו is left of אבג, with
+    the "!" between them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Paragraphs end at forced breaks and blocks</h2>
+  <p>Ending the paragraph after the "!" leaves it between a right-to-left word and the paragraph's end, whose
+  direction is <code>ltr</code>: it stays at the right of אבג.</p>
+  <figure>
+    <div class=pr-stage>abc אבג!<br>דהו</div>
+    <figcaption>A <code>br</code>: "abc", the Hebrew word, then "!"; דהו on the next line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="white-space: pre">abc אבג!
+דהו</div>
+    <figcaption>A preserved newline, also bidi type B: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>abc אבג!<div>דהו</div></div>
+    <figcaption>A block boundary, the tinted block: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

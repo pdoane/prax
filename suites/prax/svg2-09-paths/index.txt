@@ -1,0 +1,45 @@
+00-supports-1.html
+SVG2/paths.html#Introduction 9.1 Introduction
+    paths.html
+# SVG2/paths.html#PathElement 9.2 The ‘path’ element: no page; it says only that the 'd' property gives the outline, which 9.3.2's pages show
+# SVG2/paths.html#PathData 9.3 Path data: no page; its subsections have them
+SVG2/paths.html#PathDataGeneralInformation 9.3.1 General information about path data
+    path-data.html
+SVG2/paths.html#TheDProperty 9.3.2 Specifying path data: the ‘d’ property
+    d-property.html
+    d-animation.html
+SVG2/paths.html#PathDataMovetoCommands 9.3.3 The "moveto" commands
+    moveto.html
+SVG2/paths.html#PathDataClosePathCommand 9.3.4 The "closepath" command
+    closepath.html
+SVG2/paths.html#PathDataLinetoCommands 9.3.5 The "lineto" commands
+    lineto.html
+SVG2/paths.html#PathDataCubicBezierCommands 9.3.6 The cubic Bézier curve commands
+    cubic-bezier.html
+SVG2/paths.html#PathDataQuadraticBezierCommands 9.3.7 The quadratic Bézier curve commands
+    quadratic-bezier.html
+SVG2/paths.html#PathDataEllipticalArcCommands 9.3.8 The elliptical arc curve commands
+    elliptical-arc.html
+    elliptical-arc-flags.html
+# SVG2/paths.html#PathDataBNF 9.3.9 The grammar for path data: no page; it is syntax
+SVG2/paths.html#PathDirectionality 9.4 Path directionality
+    path-direction.html
+    path-direction-zero-length.html
+# SVG2/paths.html#PathElementImplementationNotes 9.5 Implementation notes: no page; its subsections have them
+SVG2/paths.html#ArcOutOfRangeParameters 9.5.1 Out-of-range elliptical arc parameters
+    arc-omitted-or-straight.html
+    arc-radii-adjusted.html
+SVG2/paths.html#ReflectedControlPoints 9.5.2 Reflected control points
+    reflected-control-points.html
+SVG2/paths.html#ZeroLengthSegments 9.5.3 Zero-length path segments
+    zero-length-segments.html
+SVG2/paths.html#PathDataErrorHandling 9.5.4 Error handling in path data
+    error-handling.html
+SVG2/paths.html#DistanceAlongAPath 9.6 Distance along a path
+    distance-along-a-path.html
+SVG2/paths.html#PathLengthAttribute 9.6.1 The ‘pathLength’ attribute
+    path-length-attribute.html
+SVG2/paths.html#PathLengthProperty 9.6.2 The ‘path-length’ property
+    path-length-property.html
+# SVG2/paths.html#DOMInterfaces 9.7 DOM interfaces: no page; it is object model
+# SVG2/paths.html#InterfaceSVGPathElement 9.7.1 Interface SVGPathElement: no page; it is object model

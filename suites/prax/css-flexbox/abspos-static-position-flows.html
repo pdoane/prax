@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The static position in other flows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .ab { position: absolute; width: 40px; height: 20px; }
+  figure.n figcaption { max-width: 116px; }
+  figure.n .pr-stage { width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.1 Absolutely-Positioned Flex Children, other flows</div>
+  <h1>The static position in other flows</h1>
+  <p class=pr-lede><q>The main-axis edges of the static-position rectangle are where the margin edges of the child
+  would be positioned if it were the sole flex item in the flex container</q>: at main-start and cross-start, wherever
+  the flow puts them. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#abspos-items">CSS Flexible Box Layout 2 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Directions of the main axis</h2>
+  <p>Each stage, 100 by 60, is the flex container and the containing block of D, <code>position: absolute</code>,
+  40 by 20, with <code>auto</code> offsets.</p>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="flex-direction: column; justify-content: center"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>column</code>, <code>justify-content: center</code>: at the left, from 20px to 40px down.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="flex-direction: row-reverse"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>row-reverse</code>: main-start is the right; at the top right.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="flex-direction: column-reverse"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>column-reverse</code>: at the bottom left.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="flex-wrap: wrap-reverse"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>wrap-reverse</code>: cross-start is the bottom; at the bottom left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Writing modes</h2>
+  <p>The same, in <code>direction: rtl</code> and in <code>writing-mode: vertical-rl</code>, where a row runs down
+  and cross-start is the right.</p>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="direction: rtl"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>rtl</code> row: at the top right.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="direction: rtl; justify-content: flex-end; align-items: center"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>rtl</code>, <code>flex-end</code> and <code>center</code>: at the left, 20px down.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="writing-mode: vertical-rl"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>vertical-rl</code> row: at the top right.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="writing-mode: vertical-rl; justify-content: flex-end"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>vertical-rl</code>, <code>justify-content: flex-end</code>: at the bottom right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

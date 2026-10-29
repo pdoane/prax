@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendering leaders</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .toc div { margin: 0; }
+  .toc span::after { content: leader(". ") "9"; }
+  .nl span::after { content: leader(".\A") "9"; }
+  .wide span::after { content: leader("  ·  ") "9"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.5.2 Rendering leaders</div>
+  <h1>Rendering leaders</h1>
+  <p class=pr-lede><q>Consider a line which contains the content before the leader (the “before content”), the leader,
+  and the content after the leader (the “after content”).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leader-rules">CSS Generated Content 3 §2.5.2</a></span>
+  Each line is a <code>span</code> with <code>::after { content: leader(". ") "9" }</code>, in
+  <code>.pr-measure</code>: a copy of the leader string is 20px.</p>
+</header>
+
+<section>
+  <h2>As long as possible, aligned across lines</h2>
+  <p><q>The leader should be as long as possible</q> <q>Visible characters in leaders should vertically align with each
+  other when possible.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc"><div><span>Loomings</span></div><div><span>Chapter</span></div><div><span>Ahab</span></div></div>
+    <figcaption>Each leader runs to "9" at the right edge, and the dots of the three lines stand in the same columns,
+    though the titles are 80, 70 and 40px long. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No leaders.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc"><div><span>Twenty characters!!</span></div></div>
+    <figcaption><q>The leader string must appear in full at least once.</q> 190px of title leaves no room for ". "
+    and "9": the leader and "9" go to a second line. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No leader.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Line breaks and white space in the string</h2>
+  <p><q>Line break characters in the leader string must be ignored.</q> <q>White space in the leader string follows
+  normal CSS rules.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc nl"><div><span>Loomings</span></div></div>
+    <figcaption><code>leader(".\A")</code>: the line break is ignored, so a row of dots on the one line, then "9".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    leader.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc wide"><div><span>Loomings</span></div></div>
+    <figcaption><code>leader("&nbsp; ·&nbsp; ")</code>: its spaces collapse to one either side of each dot, as in text.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    leader.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

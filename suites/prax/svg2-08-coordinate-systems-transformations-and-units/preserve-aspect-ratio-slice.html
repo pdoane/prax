@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>preserveAspectRatio: meet, slice and none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="square"><rect width="20" height="20" fill="#4f81bd" /><rect y="5" width="20" height="10" fill="#6aa36a" /><circle cx="10" cy="10" r="4" fill="#d68a3c" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.7 The ‘preserveAspectRatio’ attribute</div>
+  <h1>preserveAspectRatio: meet, slice and none</h1>
+  <p class=pr-lede><q>The &lt;meetOrSlice&gt; parameter is optional</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#PreserveAspectRatioAttribute">SVG 2 §8.7</a></span>
+  Each stage is an SVG 160 by 60 with <code>viewBox="0 0 20 20"</code>. The content, as large as the
+  <code>viewBox</code>, is blue with a green band across its middle half and an orange dot at its center.</p>
+</header>
+
+<section>
+  <h2>slice</h2>
+  <p><q>the entire SVG viewport is covered by the ‘viewBox’</q>; <q>the ‘viewBox’ is scaled down as much as possible,
+  while still meeting the other criteria</q>. Scaled 8, to 160 by 160.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="xMidYMin slice"><use href="#square" /></svg></div>
+    <figcaption><code>xMidYMin slice</code>: its top 60, blue to y 40, then green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="xMidYMid slice"><use href="#square" /></svg></div>
+    <figcaption><code>xMidYMid slice</code>: its middle 60, all green, the dot of radius 32 cut at its top and
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="xMidYMax slice"><use href="#square" /></svg></div>
+    <figcaption><code>xMidYMax slice</code>: its bottom 60, green to y 20, then blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none, and no viewBox</h2>
+  <p><code>none</code>: <q>Scale the graphic content of the given element non-uniformly if necessary</q>. <q>if
+  attribute ‘viewBox’ is not provided, then ‘preserveAspectRatio’ is ignored.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="none"><use href="#square" /></svg></div>
+    <figcaption><code>none</code>: scaled 8 by 3; the dot an ellipse 64 by 24.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" preserveAspectRatio="none"><use href="#square" /></svg></div>
+    <figcaption>No <code>viewBox</code>, <code>none</code>: unscaled, 20 by 20 at the top left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

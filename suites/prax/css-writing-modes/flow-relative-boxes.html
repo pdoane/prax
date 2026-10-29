@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative mappings: a box in its container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; writing-mode: vertical-rl; width: 100px; height: 80px; }
+  .pr-a, .pr-b { font-family: "PR Arimo"; }
+  .box { display: inline-block; width: 16px; height: 16px; background: #8e44ad; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.4 Flow-Relative Mappings, boxes</div>
+  <h1>Flow-relative mappings: a box in its container</h1>
+  <p class=pr-lede><q>Flow-relative directions are calculated with respect to the writing mode of the containing
+  block of the box and used to abstract layout rules related to the box properties (margins, borders, padding)</q>.
+  <q>For inline-level boxes, the writing mode of the parent box is used instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#logical-direction-layout">CSS Writing Modes 4 §7.4</a></span></p>
+</header>
+
+<section>
+  <h2>The over-constrained margin is the end margin</h2>
+  <p><q>the margin that is dropped when a box's inline dimension is over-constrained is the end margin as determined
+  by the writing mode of the containing block.</q> Each stage is <code>vertical-rl</code>, 80px tall; A is 40px tall
+  with 10px top and bottom margins.</p>
+  <figure class=s>
+    <div class=pr-stage><div class=pr-a style="height: 40px; margin: 10px 0">A</div></div>
+    <figcaption><code>ltr</code>: the bottom margin, the end, is dropped: A 10px from the top.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="direction: rtl"><div class=pr-a style="height: 40px; margin: 10px 0">A</div></div>
+    <figcaption><code>rtl</code>: the end is the top, so A is 10px from the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins in the flow</h2>
+  <p><q>Note this means only block-start and block-end margins ever collapse.</q> In the first stage, between A and B
+  is an empty block with 20px margins on all four sides. In the second, a purple inline-block has
+  <code>margin-top: 20px</code>.</p>
+  <figure class=s>
+    <div class=pr-stage><div class=pr-a>A</div><div style="margin: 20px"></div><div class=pr-b>B</div></div>
+    <figcaption>The empty block's right and left margins collapse through it: a 20px gap between A and
+    B.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>ab<span class=box style="margin-top: 20px"></span>cd</div>
+    <figcaption>In a <code>vertical-rl</code> line, <code>margin-top</code> is the box's inline-start margin: 20px
+    between "ab" and the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

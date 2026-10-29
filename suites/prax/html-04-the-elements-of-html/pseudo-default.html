@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:default</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows label { display: block; margin: 0 0 6px; }
+  .rows label span { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows :default + span { background: #8fd18f; }
+  .rows button { display: block; width: 170px; margin: 0 0 8px; font-size: 12px; outline: 3px solid #b5bcc7; outline-offset: 1px; }
+  .rows button:default { outline-color: #3f9a3f; }
+  .rows select { width: 170px; font-size: 12px; }
+  .rows option:default { background: #8fd18f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:default</h1>
+  <p class=pr-lede><q>The :default pseudo-class must match any element falling into one of the following
+  categories</q>: <q>Submit buttons that are default buttons of their form owner</q>, inputs <q>that have a checked
+  attribute</q>, and <q>option elements that have a selected attribute</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>What the markup chose, whatever the user does</h2>
+  <p>Green is <code>:default</code>: a button's outline, a label's text, an option's background. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=rows onsubmit="return false">
+        <button type=button>type=button</button>
+        <button>first submit button</button>
+        <button>second submit button</button>
+      </form>
+    </div>
+    <figcaption>The form's first submit button, its default button, is outlined green; the others grey.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <label><input type=checkbox checked><span>checked attribute</span></label>
+        <label><input type=checkbox><span>no checked attribute</span></label>
+        <select size=2><option>oak<option selected>walnut</select>
+      </div>
+    </div>
+    <figcaption>The first label and "walnut" are green. Uncheck the first box, check the second and select "oak": the
+    green stays where it was. Safari paints a selected option in its own grey, over the page's background.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

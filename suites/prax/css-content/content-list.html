@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A content list: inline boxes in order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .n { counter-reset: n 7; }
+  .mix::before { content: "A " url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10'><rect width='20' height='10' fill='%234f81bd'/></svg>") " B" counter(n) " "; background: #f9cc9d; }
+  .rep::before { content: "a" "b" "c"; }
+  .wrap { width: 100px; }
+  .long::before { content: "one two three four five"; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2 Generated Content Values: the &lt;content-list&gt; type</div>
+  <h1>A content list: inline boxes in order</h1>
+  <p class=pr-lede><q>On pseudo-elements and page-margin boxes, it replaces the box's contents with the specified
+  content.</q> <q>Each value specified contributes an inline-level box to the element's contents, in the order
+  specified. For &lt;image&gt;, this is an inline anonymous replaced element; for the others, it's an anonymous inline
+  run of text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-values">CSS Generated Content 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Each value in its turn</h2>
+  <p>The <code>::before</code> is tinted orange; its counter <code>n</code> is 7.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="n mix">text</div></div>
+    <figcaption><code>"A " url(...) " B" counter(n) " "</code>: "A", a 20 by 10 blue image on the baseline, "B7",
+    then "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=rep>text</div></div>
+    <figcaption>Three strings, <code>"a" "b" "c"</code>: one run, "abctext", with nothing between them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline content that breaks like text</h2>
+  <p>The runs are inline, so they wrap with the element's own text; the stage holds a 100px wide block.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="wrap long"> and six</div></div>
+    <figcaption>"one two three four five and six" on lines 100px wide, the orange tint broken with them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

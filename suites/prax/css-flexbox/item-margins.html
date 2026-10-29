@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex item margins and paddings</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; align-items: flex-start; }
+  .box { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.2 Flex Item Margins and Paddings</div>
+  <h1>Flex item margins and paddings</h1>
+  <p class=pr-lede><q>The margins of adjacent flex items do not collapse.</q> <q>Auto margins expand to absorb extra space in
+  the corresponding dimension.</q> (<a href="https://drafts.csswg.org/css-flexbox-2/#auto-margins">§8.1</a> shows them.) <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#item-margins">CSS Flexible Box Layout 2 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>No collapsing</h2>
+  <p>A and B each have <code>margin: 10px 0</code>, and are 40px wide.</p>
+  <figure>
+    <div class=pr-stage style="display: flow-root"><div class="pr-a pr-fit box" style="margin: 10px 0">A</div><div class="pr-b pr-fit box" style="margin: 10px 0">B</div></div>
+    <figcaption>For comparison, block layout: the margins between A and B collapse to 10px; A from 10px, B from 40px
+    to 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-direction: column"><div class="pr-a pr-fit box" style="margin: 10px 0">A</div><div class="pr-b pr-fit box" style="margin: 10px 0">B</div></div>
+    <figcaption>A column flex container: 20px between them; A from 10px, B from 50px to 70px, and the stage is 80px
+    tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages against the inline size</h2>
+  <p><q>Percentage margins and paddings on flex items, like those on block boxes, are resolved against the inline size
+  of their containing block, e.g. left/right/top/bottom percentages all resolve against their containing block's
+  width in horizontal writing modes.</q> Each stage is 200px wide and 80px tall.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit box" style="margin-top: 10%">A</div></div>
+    <figcaption>A row: A's <code>margin-top: 10%</code> is 20px, 10% of the width, not 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px; flex-direction: column"><div class="pr-a pr-fit box" style="margin-top: 10%">A</div><div class="pr-b pr-fit box" style="height: auto; padding-top: 10%">B</div></div>
+    <figcaption>A column: A's <code>margin-top: 10%</code> is 20px; B's <code>padding-top: 10%</code> is 20px too, so B
+    is 40px tall, from 40px to 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

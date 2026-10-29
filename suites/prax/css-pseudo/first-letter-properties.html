@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties of ::first-letter</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .font::first-letter { font-size: 200%; font-weight: bold; }
+  .color::first-letter { color: #d68a3c; opacity: 0.4; }
+  .deco::first-letter { text-decoration: underline 2px #8e44ad; }
+  .va::first-letter { vertical-align: 10px; }
+  .tt::first-letter { text-transform: uppercase; }
+  .ls::first-letter { letter-spacing: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2.4 Styling the First-Letter Pseudo-elements</div>
+  <h1>Properties of ::first-letter</h1>
+  <p class=pr-lede><q>In CSS a ::first-letter pseudo-element (and its ::prefix and ::suffix sub-elements) is similar
+  to an inline box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-styling">CSS Pseudo-Elements 4 §2.2.4</a></span>
+  Every character of the text is 10px wide. Its backgrounds are <a href="../css-backgrounds/first-letter-first-line.html">CSS
+  Backgrounds'</a>, its margins and padding <a href="../css-box/first-line-letter.html">CSS Box's</a> and its borders
+  and shadows <a href="../css-borders/first-letter-first-line.html">CSS Borders'</a> to show.</p>
+</header>
+
+<section>
+  <h2>Fonts, color and opacity, text decoration</h2>
+  <p><q>all font properties</q>, <q>the color and opacity properties</q>, <q>all text decoration properties</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="font pr-measure">Hand</p></div>
+    <figcaption><code>font-size: 200%</code>, bold: an H 20px wide, then "and" from 20 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="color pr-measure">Hand</p></div>
+    <figcaption>An orange H at <code>opacity: 0.4</code>, pale against the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="deco pr-measure">Hand</p></div>
+    <figcaption>A purple underline 2px thick under the H, 0 to 10, and none under the rest.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline layout and typesetting</h2>
+  <p><q>any typesetting properties that apply to inline elements</q>, <q>any inline layout properties that apply to
+  inline elements</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="va pr-measure">Hand</p></div>
+    <figcaption><code>vertical-align: 10px</code>: the H raised 10px above the baseline of "and".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="tt pr-measure">hand</p></div>
+    <figcaption><code>text-transform: uppercase</code>: "Hand", only the first letter capital.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><p class="ls pr-measure">Hand</p></div>
+    <figcaption><code>letter-spacing: 20px</code> after the H: "and" from 30 to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

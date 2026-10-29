@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky positioning: the nearest scrollport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .gap { height: 40px; }
+  .rest { height: 200px; }
+  .st { position: sticky; top: 0; width: 60px; }
+  .inner { outline: 1px dashed #6b7381; outline-offset: -1px; }
+  .wide { width: 400px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4 Sticky positioning</div>
+  <h1>Sticky positioning: the nearest scrollport</h1>
+  <p class=pr-lede>The insets are from <q>the scrollport of the nearest scroll container with a matching scrollable
+  axis</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-insets">CSS Positioned Layout 3 §3.4</a></span>
+  Each stage is scrolled 60px down; in it, a dashed block holds a light blue block 40px tall, then A, with
+  <code>top: 0</code>.</p>
+</header>
+
+<section>
+  <h2>The nearest scroll container, whether it scrolls or not</h2>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><div class=inner><div class="gap pr-a pr-light"></div><div class="pr-b st">A</div><div class=rest></div></div></div>
+    <figcaption>The dashed block is not a scroll container: the stage is the nearest, and A is held at its
+    top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><div class=inner style="overflow: hidden"><div class="gap pr-a pr-light"></div><div class="pr-b st">A</div><div class=rest></div></div></div>
+    <figcaption><code>overflow: hidden</code>: the dashed block is the nearest, though it never scrolls: A scrolls
+    out of view.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A single-axis scroll container</h2>
+  <p><q>The sticky view rectangle can be constructed from edges of two different scrollports, if the nearest scroll
+  container is a single-axis scroll container.</q> <q>If only one axis computes to a scrollable value (i.e. the other
+  axis is clip), the box is a single-axis scroll container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span>
+  The dashed block holds content 400px wide, scrolled 50px across; A also has <code>left: 10px</code>.</p>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><div class=inner data-scroll-left=50 style="overflow-x: hidden"><div class=wide><div class="gap pr-a pr-light"></div><div class="pr-b st" style="left: 10px">A</div><div class=rest></div></div></div></div>
+    <figcaption><code>overflow-x: hidden</code>, so <code>overflow-y</code> is <code>auto</code>: the nearest in both
+    axes; A scrolls out of view.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" data-scroll=60><div class=inner data-scroll-left=50 style="overflow-x: hidden; overflow-y: clip"><div class=wide><div class="gap pr-a pr-light"></div><div class="pr-b st" style="left: 10px">A</div><div class=rest></div></div></div></div>
+    <figcaption><code>overflow-x: hidden; overflow-y: clip</code>: the dashed block scrolls across only, so A is held
+    10px in from its left, and at the top of the stage, which scrolls down. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each treats the block as scrolling both ways, as
+    in the figure before.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll; for (const s of document.querySelectorAll("[data-scroll-left]")) s.scrollLeft = s.dataset.scrollLeft;</script>
+</body>
+</html>

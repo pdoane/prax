@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>OffscreenCanvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; outline: 1px dashed #c0392b; }
+  .stage { padding: 10px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.3 The OffscreenCanvas interface</div>
+  <h1>OffscreenCanvas</h1>
+  <p class=pr-lede><q>OffscreenCanvas objects are used to create rendering contexts, much like an HTMLCanvasElement, but
+  with no connection to the DOM.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-offscreencanvas-interface">HTML §4.12.5.3</a></span>
+  Each canvas element is 80 by 40, with a dashed red edge.</p>
+</header>
+<section>
+  <h2>A placeholder canvas</h2>
+  <p><q>The bitmap of the OffscreenCanvas object is pushed to the placeholder canvas element as part of the
+  OffscreenCanvas's relevant agent's event loop's update the rendering steps.</q></p>
+  <figure>
+    <div class="pr-stage stage"><canvas width=80 height=40 id=placeholder></canvas></div>
+    <figcaption><code>transferControlToOffscreen()</code>, then squares drawn on the OffscreenCanvas's 2D context, blue
+    at (10, 10) and orange at (50, 10): both shown in the canvas element.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Its bitmap, handed on</h2>
+  <p>transferToImageBitmap <q>Returns a newly created ImageBitmap object with the image in the OffscreenCanvas object.
+  The image in the OffscreenCanvas object is replaced with a new blank image.</q></p>
+  <figure>
+    <div class="pr-stage stage" style="display: flex; gap: 20px"><canvas width=80 height=40 id=first></canvas><canvas width=80 height=40 id=second></canvas></div>
+    <figcaption>A blue square drawn, its bitmap transferred to the left canvas; then a green one drawn and transferred
+    to the right: blue alone at the left, green alone at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><canvas width=80 height=40 id=source></canvas></div>
+    <figcaption>An OffscreenCanvas of 40 by 20 holding the flag, as drawImage's source, scaled to 80 by 40: the flag
+    fills the canvas.</figcaption>
+  </figure>
+</section>
+<script>
+  const offscreen = document.getElementById("placeholder").transferControlToOffscreen();
+  const context = offscreen.getContext("2d");
+  context.fillStyle = "#4f81bd"; context.fillRect(10, 10, 20, 20);
+  context.fillStyle = "#d68a3c"; context.fillRect(50, 10, 20, 20);
+
+  const shared = new OffscreenCanvas(80, 40);
+  const pen = shared.getContext("2d");
+  pen.fillStyle = "#4f81bd"; pen.fillRect(10, 10, 20, 20);
+  document.getElementById("first").getContext("bitmaprenderer").transferFromImageBitmap(shared.transferToImageBitmap());
+  pen.fillStyle = "#6aa36a"; pen.fillRect(50, 10, 20, 20);
+  document.getElementById("second").getContext("bitmaprenderer").transferFromImageBitmap(shared.transferToImageBitmap());
+
+  const flag = new OffscreenCanvas(40, 20);
+  const flagContext = flag.getContext("2d");
+  flagContext.fillStyle = "#4f81bd"; flagContext.fillRect(0, 0, 20, 10);
+  flagContext.fillStyle = "#d68a3c"; flagContext.fillRect(20, 0, 20, 10);
+  flagContext.fillStyle = "#6aa36a"; flagContext.fillRect(0, 10, 20, 10);
+  flagContext.fillStyle = "#8e44ad"; flagContext.fillRect(20, 10, 20, 10);
+  document.getElementById("source").getContext("2d").drawImage(flag, 0, 0, 80, 40);
+</script>
+</body>
+</html>

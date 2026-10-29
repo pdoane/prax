@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 2; column-gap: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4.4 The Width Of Column Rules: the column-rule-width property</div>
+  <h1>column-rule-width</h1>
+  <p class=pr-lede><q>This property sets the width of the rule between columns. Negative values are not allowed.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#crw">CSS Multi-column Layout 1 §4.4</a></span>
+  The keywords are those of border widths: thin is 1px, medium 3px, thick 5px.</p>
+</header>
+
+<section>
+  <h2>Keywords</h2>
+  <p>Each stage has two columns of 90px, a 20px gap, and a solid red rule centered at 100px.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: thin solid #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>thin</code>: 1px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: medium solid #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>medium</code>: 3px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: thick solid #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>thick</code>: 5px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths, and the initial value</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: 12px solid #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>12px</code>: from 94 to 106px; the columns stay 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule-style: solid; column-rule-color: #c0392b">one two six ten red big fat sun</div>
+    <figcaption>Width not set: the initial <code>medium</code>, 3px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

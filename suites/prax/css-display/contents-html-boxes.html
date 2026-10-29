@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: contents on legend, button, details, fieldset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  fieldset { margin: 0; padding: 0 4px; border: 2px solid #d68a3c; }
+  legend { padding: 0 2px; background: #f6d7b4; }
+  button { font: inherit; background: #f6d7b4; border: 2px solid #d68a3c; }
+  details { border: 2px solid #d68a3c; }
+  .c { display: contents; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · B.1 HTML Elements, legend, button, details and fieldset</div>
+  <h1>display: contents on legend, button, details, fieldset</h1>
+  <p class=pr-lede><q>Per HTML, a legend with display: contents is not a rendered legend, so it does not have magical
+  display behavior. (Thus, it reacts to display: contents normally.)</q> For <code>button</code>,
+  <code>details</code> and <code>fieldset</code>, <q>display: contents simply removes their principal box, and their
+  contents render as normal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox-html">CSS Display 4 §B.1</a></span></p>
+</header>
+
+<section>
+  <h2>legend and fieldset</h2>
+  <p>Each fieldset has an orange border and holds a legend, "Legend", then "content".</p>
+  <figure>
+    <div class=pr-stage><fieldset><legend>Legend</legend>content</fieldset></div>
+    <figcaption>As usual: the legend in the top border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><fieldset><legend class=c>Legend</legend>content</fieldset></div>
+    <figcaption>The legend <code>contents</code>: not a rendered legend, its text inside the fieldset, "Legendcontent"
+    on one line, unshaded.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><fieldset class=c><legend>Legend</legend>content</fieldset></div>
+    <figcaption>The fieldset <code>contents</code>: no border; the legend a plain shaded block, then
+    "content".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>button and details</h2>
+  <figure>
+    <div class=pr-stage>x <button>button</button> x <button class=c>button</button> x</div>
+    <figcaption>The second button <code>contents</code>: no box, its word "button" plain text in the line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><details class=c open><summary>summary</summary>details text</details></div>
+    <figcaption>An open <code>details</code> with <code>contents</code>: no orange border; the summary, with its
+    marker, then the text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

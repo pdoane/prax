@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-content on blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .blk { height: 80px; }
+  .in { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.1.1 Block Containers (Including Table Cells)</div>
+  <h1>align-content on blocks</h1>
+  <p class=pr-lede>In a block container, the alignment container is <q>The block container’s content box</q> and the
+  subject <q>The entire contents of the block, as a unit.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-block">CSS Box Alignment 3 §5.1.1</a></span>
+  CSS 2 could not do this outside table cells.</p>
+</header>
+
+<section>
+  <h2>The block axis</h2>
+  <p><q>If a &lt;content-distribution&gt; is specified its fallback alignment is used instead.</q> Each stage is a
+  block 80px tall holding A and B.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow blk" style="align-content: center"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>center</code>: A and B from 20px down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow blk" style="align-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>end</code>: from 40px down, at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow blk" style="align-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>space-between</code>: as <code>start</code>, at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow blk" style="align-content: space-around"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>space-around</code>: as <code>center</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An independent formatting context</h2>
+  <p><q>All values other than normal force the block container to establish an independent formatting
+  context.</q> The tinted block, 60px tall, holds A; A has <code>margin-top: 20px</code>, or floats.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-parent in"><div class=pr-a style="margin-top: 20px">A</div></div></div>
+    <figcaption><code>normal</code>: A's margin collapses through the block: the tint starts 20px down, with A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-parent in" style="align-content: start"><div class=pr-a style="margin-top: 20px">A</div></div></div>
+    <figcaption><code>start</code>, which looks the same as <code>normal</code> otherwise: the tint from the top, A
+    20px into it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent><div class=pr-a style="float: left">A</div></div>B</div>
+    <figcaption><code>normal</code>, a block of no height: the float A and the text B beside it on one
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="align-content: start"><div class=pr-a style="float: left">A</div></div>B</div>
+    <figcaption><code>start</code>: the block contains its float, 20px tall; B below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

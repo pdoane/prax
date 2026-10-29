@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: larger and smaller</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sizes { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.25; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: larger and smaller</h1>
+  <p class=pr-lede><q>A &lt;relative-size&gt; keyword is interpreted relative to the table of font sizes and the font
+  size of the parent element. Possible values are: [ larger | smaller ].</q> Each grey bar is 10em wide, ten times its
+  box's font size. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-size.html">font-size</a>.</p>
+</header>
+
+<section>
+  <h2>One step in the table</h2>
+  <p><q>For example, if the parent element has a font size of 'medium', a value of 'larger' will make the font size of
+  the current element be 'large'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: medium"><div id=r1 style="font-size: larger">larger<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>larger</code> in a <code>medium</code> parent: by CSS 2, <code>large</code>, the same as the
+    right. <span class="pr-flag pr-since">Since CSS 2</span> a ratio may be used instead: <code class=pr-computed
+    data-of=r1 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes"><div id=r2 style="font-size: large">large<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>large</code>: <code class=pr-computed data-of=r2 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: large"><div id=r3 style="font-size: smaller">smaller<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>smaller</code> in a <code>large</code> parent: one step down, <code>medium</code>. <span
+    class="pr-flag pr-since">Since CSS 2</span> by a ratio: <code class=pr-computed data-of=r3
+    data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sizes"><div id=r4 style="font-size: medium">medium<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>medium</code>: <code class=pr-computed data-of=r4 data-property=font-size></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

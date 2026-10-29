@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The white-space property: newlines</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6 White space: the 'white-space' property</div>
+  <h1>The white-space property: newlines</h1>
+  <p class=pr-lede><code>white-space</code> takes <code>normal | pre | nowrap | pre-wrap | pre-line</code>. Initial
+  <code>normal</code>, inherited.</p>
+</header>
+
+<section>
+  <h2>Newlines</h2>
+  <p><q>The CSS 'white-space' processing model assumes all newlines have been normalized to line feeds.</q> <q>If no
+  newline rules are specified for the document language, each carriage return (U+000D) and CRLF sequence (U+000D
+  U+000A) in the document text is treated as single line feed character.</q> <q>UAs must recognize line feeds (U+000A)
+  as newline characters.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-prop">CSS 2 §16.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="white-space: pre"><span class=pr-hl>one&#10;two</span></div>
+    <figcaption><code>pre</code> with "one", a line feed (<code>&amp;#10;</code>), "two": two lines.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="white-space: pre"><span class=pr-hl>one&#13;&#10;two</span></div>
+    <figcaption>"one", a carriage return and a line feed, "two": one newline, so two lines, not three. <span class="pr-flag pr-since">Since CSS 2</span> the carriage return
+    is a space, ending the first line. <span class=pr-flag>Chrome</span> gives it no width.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#white-space-processing">CSS Text 3 §4</a></div>
+  <h2>A carriage return is a space</h2>
+  <p><q>Carriage returns (U+000D) are treated identically to spaces (U+0020) in all respects.</q> <q>For HTML documents,
+  carriage returns present in the source code are converted to line feeds at the parsing stage</q>; <q>However, the
+  character is preserved—and the above rule observable—when encoded using an escape sequence (&amp;#x0d;).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#white-space-processing">CSS Text 3 §4</a></span> A carriage return that reaches CSS no longer breaks a line.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="white-space: pre"><span class=pr-hl>one&#13;two</span></div>
+    <figcaption><code>pre</code>, "one", a carriage return, "two": one line, "one two", the carriage return a
+    preserved space. <span class=pr-flag>Chrome</span> draws it with no width: "onetwo".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl>one&#13;&#13;&#13;two</span></div>
+    <figcaption><code>normal</code>, three carriage returns: collapsible spaces, so one space, "one two".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

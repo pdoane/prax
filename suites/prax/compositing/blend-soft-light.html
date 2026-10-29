@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>soft-light: a diffused spotlight</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .over > div > div { height: 20px; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  pre.pr-source { margin-right: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.1.10 soft-light blend mode</div>
+  <h1>soft-light: a diffused spotlight</h1>
+  <p class=pr-lede><q>Darkens or lightens the colors, depending on the source color value. The effect is similar to shining a diffused spotlight on the backdrop.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blendingsoftlight">Compositing and Blending 2 §10.1.10</a></span></p>
+</header>
+
+<section>
+  <h2>The formula</h2>
+  <p>Rows, top to bottom: the backdrop, black, white, grey 50%, blue and orange; the source; <code>mix-blend-mode</code>; <code>background-blend-mode</code> over the backdrop as <code>background-color</code>; the formula's color and its hex.</p>
+  <pre class=pr-source>if(Cs &lt;= 0.5)
+    B(Cb, Cs) = Cb - (1 - 2 x Cs) x Cb x (1 - Cb)
+else
+    B(Cb, Cs) = Cb + (2 x Cs - 1) x (D(Cb) - Cb)
+with
+    if(Cb &lt;= 0.25)
+        D(Cb) = ((16 * Cb - 12) x Cb + 4) x Cb
+    else
+        D(Cb) = sqrt(Cb)</pre>
+</section>
+
+<section>
+  <h2>The two branches of D</h2>
+  <p>A darker backdrop here: black, 32, 63, 64 and 128 grey, either side of 0.25, which is 63.75.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #202020"></div><div style="background: #3f3f3f"></div><div style="background: #404040"></div><div style="background: #808080"></div></div><div><div style="background: #ffffff"></div><div style="background: #ffffff"></div><div style="background: #ffffff"></div><div style="background: #ffffff"></div><div style="background: #ffffff"></div></div><div class=over><div style="background: #000000"><div style="background: #ffffff; mix-blend-mode: soft-light"></div></div><div style="background: #202020"><div style="background: #ffffff; mix-blend-mode: soft-light"></div></div><div style="background: #3f3f3f"><div style="background: #ffffff; mix-blend-mode: soft-light"></div></div><div style="background: #404040"><div style="background: #ffffff; mix-blend-mode: soft-light"></div></div><div style="background: #808080"><div style="background: #ffffff; mix-blend-mode: soft-light"></div></div></div><div><div style="background: linear-gradient(#ffffff, #ffffff) #000000; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#ffffff, #ffffff) #202020; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#ffffff, #ffffff) #3f3f3f; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#ffffff, #ffffff) #404040; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#ffffff, #ffffff) #808080; background-blend-mode: soft-light"></div></div><div><div style="background: #000000"></div><div style="background: #585858"></div><div style="background: #7f7f7f"></div><div style="background: #808080"></div><div style="background: #b5b5b5"></div></div><div class=hex><div>000000</div><div>585858</div><div>7f7f7f</div><div>808080</div><div>b5b5b5</div></div></div>
+    <figcaption>White, <code>D(Cb)</code> itself: <code>#585858</code>, <code>#7f7f7f</code> under 0.25 by the polynomial, <code>#808080</code> over it by the root, meeting. <span class=pr-flag>Safari</span> <code>#3c3c3c</code>, <code>#6e6e6e</code>, <code>#707070</code>, and <code>#c0c0c0</code> over 128.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #202020"></div><div style="background: #3f3f3f"></div><div style="background: #404040"></div><div style="background: #808080"></div></div><div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div></div><div class=over><div style="background: #000000"><div style="background: #000000; mix-blend-mode: soft-light"></div></div><div style="background: #202020"><div style="background: #000000; mix-blend-mode: soft-light"></div></div><div style="background: #3f3f3f"><div style="background: #000000; mix-blend-mode: soft-light"></div></div><div style="background: #404040"><div style="background: #000000; mix-blend-mode: soft-light"></div></div><div style="background: #808080"><div style="background: #000000; mix-blend-mode: soft-light"></div></div></div><div><div style="background: linear-gradient(#000000, #000000) #000000; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#000000, #000000) #202020; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#000000, #000000) #3f3f3f; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#000000, #000000) #404040; background-blend-mode: soft-light"></div><div style="background: linear-gradient(#000000, #000000) #808080; background-blend-mode: soft-light"></div></div><div><div style="background: #000000"></div><div style="background: #040404"></div><div style="background: #101010"></div><div style="background: #101010"></div><div style="background: #404040"></div></div><div class=hex><div>000000</div><div>040404</div><div>101010</div><div>101010</div><div>404040</div></div></div>
+    <figcaption>Black, the other branch: Cb x Cb, so <code>#101010</code>, <code>#101010</code> and <code>#404040</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

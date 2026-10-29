@@ -1,0 +1,878 @@
+# The OpenType language system and script tag registries, as tools/gen/gen_locale.py --refresh read them
+# on 2026-10-05 from:
+#   https://learn.microsoft.com/en-us/typography/opentype/spec/languagetags
+#   https://learn.microsoft.com/en-us/typography/opentype/spec/scripttags
+# Microsoft publishes them at no versioned URL, so this copy is the version the generator reads. A line
+# holds, separated by tabs, a kind, a tag with its trailing spaces dropped, for a language system the
+# ISO 639 codes it covers, the name, and `deprecated` where the registry deprecates the tag.
+
+script	adlm	Adlam
+script	ahom	Ahom
+script	hluw	Anatolian Hieroglyphs
+script	arab	Arabic
+script	armn	Armenian
+script	avst	Avestan
+script	bali	Balinese
+script	bamu	Bamum
+script	bass	Bassa Vah
+script	batk	Batak
+script	beng	Bangla
+script	bng2	Bangla v.2
+script	berf	Beria Erfe
+script	bhks	Bhaiksuki
+script	bopo	Bopomofo
+script	brah	Brahmi
+script	brai	Braille
+script	bugi	Buginese
+script	buhd	Buhid
+script	byzm	Byzantine Music
+script	cans	Canadian Syllabics
+script	cari	Carian
+script	aghb	Caucasian Albanian
+script	cakm	Chakma
+script	cham	Cham
+script	cher	Cherokee
+script	chrs	Chorasmian
+script	hani	CJK Ideographic
+script	copt	Coptic
+script	cprt	Cypriot Syllabary
+script	cpmn	Cypro-Minoan
+script	cyrl	Cyrillic
+script	DFLT	Default
+script	dsrt	Deseret
+script	deva	Devanagari
+script	dev2	Devanagari v.2
+script	diak	Dives Akuru
+script	dogr	Dogra
+script	dupl	Duployan
+script	egyp	Egyptian Hieroglyphs
+script	elba	Elbasan
+script	elym	Elymaic
+script	ethi	Ethiopic
+script	gara	Garay
+script	geor	Georgian
+script	glag	Glagolitic
+script	goth	Gothic
+script	gran	Grantha
+script	grek	Greek
+script	gujr	Gujarati
+script	gjr2	Gujarati v.2
+script	gong	Gunjala Gondi
+script	guru	Gurmukhi
+script	gur2	Gurmukhi v.2
+script	gukh	Gurung Khema
+script	hang	Hangul
+script	jamo	Hangul Jamo
+script	rohg	Hanifi Rohingya
+script	hano	Hanunoo
+script	hatr	Hatran
+script	hebr	Hebrew
+script	kana	Hiragana
+script	armi	Imperial Aramaic
+script	phli	Inscriptional Pahlavi
+script	prti	Inscriptional Parthian
+script	java	Javanese
+script	jurc	Jurchen
+script	kthi	Kaithi
+script	knda	Kannada
+script	knd2	Kannada v.2
+script	kana	Katakana
+script	kawi	Kawi
+script	kali	Kayah Li
+script	khar	Kharosthi
+script	kits	Khitan Small Script
+script	khmr	Khmer
+script	khoj	Khojki
+script	sind	Khudawadi
+script	krai	Kirat Rai
+script	lao	Lao
+script	latn	Latin
+script	lepc	Lepcha
+script	limb	Limbu
+script	lina	Linear A
+script	linb	Linear B
+script	lisu	Lisu (Fraser)
+script	lyci	Lycian
+script	lydi	Lydian
+script	mahj	Mahajani
+script	maka	Makasar
+script	mlym	Malayalam
+script	mlm2	Malayalam v.2
+script	mand	Mandaic, Mandaean
+script	mani	Manichaean
+script	marc	Marchen
+script	gonm	Masaram Gondi
+script	math	Mathematical text layout
+script	medf	Medefaidrin (Oberi Okaime, Oberi Ɔkaimɛ)
+script	mtei	Meitei Mayek (Meithei, Meetei)
+script	mend	Mende Kikakui
+script	merc	Meroitic Cursive
+script	mero	Meroitic Hieroglyphs
+script	plrd	Miao
+script	modi	Modi
+script	mong	Mongolian
+script	mroo	Mro
+script	mult	Multani
+script	musc	Musical Symbols
+script	mymr	Myanmar
+script	mym2	Myanmar v.2
+script	nbat	Nabataean
+script	nagm	Nag Mundari
+script	nand	Nandinagari
+script	newa	Newa
+script	talu	New Tai Lue
+script	nko	N'Ko
+script	nshu	Nüshu
+script	hmnp	Nyiakeng Puachue Hmong
+script	orya	Odia
+script	ory2	Odia v.2
+script	ogam	Ogham
+script	olck	Ol Chiki
+script	onao	Ol Onal
+script	ital	Old Italic
+script	hung	Old Hungarian
+script	narb	Old North Arabian
+script	perm	Old Permic
+script	xpeo	Old Persian Cuneiform
+script	sogo	Old Sogdian
+script	sarb	Old South Arabian
+script	orkh	Old Turkic, Orkhon Runic
+script	ougr	Old Uyghur
+script	osge	Osage
+script	osma	Osmanya
+script	hmng	Pahawh Hmong
+script	palm	Palmyrene
+script	pauc	Pau Cin Hau
+script	phag	Phags-pa
+script	phnx	Phoenician
+script	pcun	Proto-Cuneiform
+script	phlp	Psalter Pahlavi
+script	rjng	Rejang
+script	runr	Runic
+script	samr	Samaritan
+script	saur	Saurashtra
+script	seal	Seal (“Small Seal”)
+script	shrd	Sharada
+script	shaw	Shavian
+script	sidd	Siddham
+script	sidt	Sidetic
+script	sgnw	Sign Writing
+script	sinh	Sinhala
+script	sogd	Sogdian
+script	sora	Sora Sompeng
+script	soyo	Soyombo
+script	xsux	Sumero-Akkadian Cuneiform
+script	sund	Sundanese
+script	sunu	Sunuwar
+script	sylo	Syloti Nagri
+script	syrc	Syriac
+script	tglg	Tagalog
+script	tagb	Tagbanwa
+script	tale	Tai Le
+script	lana	Tai Tham (Lanna)
+script	tavt	Tai Viet
+script	tayo	Tai Yo
+script	takr	Takri
+script	taml	Tamil
+script	tml2	Tamil v.2
+script	tnsa	Tangsa
+script	tang	Tangut
+script	telu	Telugu
+script	tel2	Telugu v.2
+script	thaa	Thaana
+script	thai	Thai
+script	tibt	Tibetan
+script	tfng	Tifinagh
+script	tirh	Tirhuta
+script	todr	Todhri
+script	tols	Tolong Siki
+script	toto	Toto
+script	tutg	Tulu-Tigalari
+script	ugar	Ugaritic Cuneiform
+script	vai	Vai
+script	vith	Vithkuqi
+script	wcho	Wancho
+script	wara	Warang Citi
+script	yezi	Yezidi
+script	yi	Yi
+script	zanb	Zanabazar Square (Zanabazarin Dörböljin Useg, Xewtee Dörböljin Bicig, Horizontal Square Script)
+language	AAQ	aaq	Eastern Abenaki
+language	ABA	abq	Abaza
+language	ABK	abk	Abkhazian
+language	ACH	ach	Acholi
+language	ACR	acr	Achi
+language	ACY	acy	Cypriot Arabic
+language	ADY	ady	Adyghe
+language	AFK	afr	Afrikaans
+language	AFR	aar	Afar
+language	AGW	ahg	Agaw
+language	AIO	aio	Aiton
+language	AKA	aka,fat,twi	Akan
+language	AKB	akb	Batak Angkola
+language	ALS	gsw	Alsatian
+language	ALT	atv,alt	Altai
+language	AMH	amh	Amharic
+language	ANG	ang	Anglo-Saxon
+language	APPH		Phonetic transcription—Americanist conventions
+language	ARA	ara	Arabic
+language	ARG	arg	Aragonese
+language	ARI	aiw	Aari
+language	ARK	mhv,rmz,rki	Rakhine
+language	ASM	asm	Assamese
+language	AST	ast	Asturian
+language	ATH	aht,apa,apk,apj,apl,apm,apw,ath,bea,sek,bcr,caf,chp,clc,coq,crx,ctc,den,dgr,gce,gwi,haa,hoi,hup,ing,kkz,koy,ktw,kuu,mvb,nav,qwt,scs,srs,taa,tau,tcb,tce,tfn,tgx,tht,tol,ttm,tuu,txc,wlk,xup,xsl	Athapaskan languages
+language	ATS	ats	Gros Ventre (Atsina)
+language	AVN	avn	Avatime
+language	AVR	ava	Avar
+language	AWA	awa	Awadhi
+language	AYM	aym	Aymara
+language	AZB	azb	Torki
+language	AZE	aze	Azerbaijani
+language	BAD	bfq	Badaga
+language	BAD0	bad,bbp,bfl,bjo,bpd,bqk,gox,kuw,liy,lna,lnl,mnh,nue,nuu,tor,yaj,zmz	Banda
+language	BAG	bfy	Baghelkhandi
+language	BAL	krc	Balkar
+language	BAN	ban	Balinese
+language	BAR	bar	Bavarian
+language	BAU	bci	Baulé
+language	BBC	bbc	Batak Toba
+language	BBR	auj,ber,cnu,gha,gho,grr,jbe,jbn,kab,mzb,oua,rif,sds,shi,shy,siz,sjs,swn,taq,tez,thv,thz,tia,tjo,tmh,ttq,tzm,zen,zgh	Berber
+language	BCH	bcq	Bench
+language	BCR		Bible Cree
+language	BDC	bdc	Emberá-Baudó
+language	BDY	bdy	Bandjalang
+language	BEL	bel	Belarusian
+language	BEM	bem	Bemba
+language	BEN	ben	Bangla
+language	BGC	bgc	Haryanvi
+language	BGQ	bgq	Bagri
+language	BGR	bul	Bulgarian
+language	BHI	bhi,bhb	Bhili
+language	BHO	bho	Bhojpuri
+language	BIK	bik,bhk,bcl,bto,cts,bln,fbl,lbl,rbl,ubl	Bikol
+language	BIL	byn	Bilen
+language	BIS	bis	Bislama
+language	BJJ	bjj	Kanauji
+language	BKF	bla	Blackfoot
+language	BLI	bal	Baluchi
+language	BLK	blk	Pa’o Karen
+language	BLN	bjt,ble	Balante
+language	BLT	bft	Balti
+language	BMB	bam	Bambara (Bamanankan)
+language	BML	bai,bbj,bko,byv,fmp,jgo,nla,nnh,nnz,nwe,xmg,ybb	Bamileke
+language	BOS	bos	Bosnian
+language	BPY	bpy	Bishnupriya Manipuri
+language	BRE	bre	Breton
+language	BRH	brh	Brahui
+language	BRI	bra	Braj Bhasha
+language	BRM	mya	Burmese
+language	BRX	brx	Bodo
+language	BSH	bak	Bashkir
+language	BSK	bsk	Burushaski
+language	BTD	btd	Batak Dairi (Pakpak)
+language	BTI	btb,beb,bum,bxp,eto,ewo,mct	Beti
+language	BTK	akb,bbc,btd,btk,btm,bts,btx,btz	Batak languages
+language	BTM	btm	Batak Mandailing
+language	BTS	bts	Batak Simalungun
+language	BTX	btx	Batak Karo
+language	BTZ	btz	Batak Alas-Kluet
+language	BUG	bug	Bugis
+language	BYV	byv	Medumba
+language	CAK	cak	Kaqchikel
+language	CAT	cat	Catalan
+language	CAY	cay	Cayuga
+language	CBG	cbg	Chimila
+language	CBK	cbk	Zamboanga Chavacano
+language	CCHN	cco,chj,chq,chz,cle,cnl,cnt,cpa,csa,cso,cte,ctl,cuc,cvn	Chinantec
+language	CEB	ceb	Cebuano
+language	CGG	cgg	Chiga
+language	CHA	cha	Chamorro
+language	CHE	che	Chechen
+language	CHG	sgw	Chaha Gurage
+language	CHH	hne	Chattisgarhi
+language	CHI	nya	Chichewa (Chewa, Nyanja)
+language	CHK	ckt	Chukchi
+language	CHK0	chk	Chuukese
+language	CHO	cho	Choctaw
+language	CHP	chp	Chipewyan
+language	CHR	chr	Cherokee
+language	CHU	chv	Chuvash
+language	CHY	chy	Cheyenne
+language	CJA	cja	Western Cham
+language	CJM	cjm	Eastern Cham
+language	CMI	cmi	Emberá-Chamí
+language	CMR	swb,wlc,wni,zdj	Comorian
+language	COO	coo	Comox
+language	COP	cop	Coptic
+language	COR	cor	Cornish
+language	COS	cos	Corsican
+language	CPP	abs,acf,afs,aig,aoa,bah,bew,bis,bjs,bpl,bpq,brc,bxo,bzj,bzk,cbk,ccl,ccm,chn,cks,cpe,cpf,cpi,cpp,cri,crp,crs,dcr,dep,djk,fab,fng,fpe,gac,gcf,gcl,gcr,gib,goq,gpe,gul,gyn,hat,hca,hmo,hwc,icr,idb,ihb,jam,jvd,kcn,kea,kmv,kri,kww,lir,lou,lrt,max,mbf,mcm,mfe,mfp,mkn,mod,msi,mud,mzs,nag,nef,ngm,njt,onx,oor,pap,pcm,pea,pey,pga,pih,pis,pln,pml,pmy,pov,pre,rcf,rop,scf,sci,skw,srm,srn,sta,svc,tas,tch,tcs,tgh,tmg,tpi,trf,tvy,uln,vic,vkp,wes,xmm,ycr	Creoles
+language	CRE	cre	Cree
+language	CRR	crx,caf	Carrier
+language	CRT	crh	Crimean Tatar
+language	CSB	csb	Kashubian
+language	CSL	chu	Church Slavonic
+language	CSY	ces	Czech
+language	CTG	ctg	Chittagonian
+language	CTO	cto	Emberá-Catío
+language	CTT	ctt	Wayanad Chetti
+language	CUK	cuk	San Blas Kuna
+language	DAG	dag	Dagbani
+language	DAN	dan	Danish
+language	DAR	dar	Dargwa
+language	DAX	dax	Dayi
+language	DCR	cwd	Woods Cree
+language	DEU	deu	German
+language	DGO	dgo	Dogri (individual language)
+language	DGR	doi	Dogri (macrolanguage)
+language	DHG	dhg	Dhangu
+language	DHV	div	Divehi (Dhivehi, Maldivian)	deprecated
+language	DIQ	diq	Dimli
+language	DIV	div	Divehi (Dhivehi, Maldivian)
+language	DJR	dje	Zarma
+language	DJR0	djr	Djambarrpuyngu
+language	DNG	ada	Dangme
+language	DNJ	dnj	Dan
+language	DNK	din	Dinka
+language	DRI	prs	Dari
+language	DUJ	duj,dwu,dwy	Dhuwal
+language	DUN	dng	Dungan
+language	DZN	dzo	Dzongkha
+language	EBI	igb	Ebira
+language	ECR	crj,crl	Eastern Cree
+language	EDO	bin	Edo
+language	EFI	efi	Efik
+language	ELL	ell	Greek
+language	EMK	emk	Eastern Maninkakan
+language	EMP	emp	Northern Emberá
+language	ENG	eng	English
+language	ERZ	myv	Erzya
+language	ESP	spa	Spanish
+language	ESU	esu	Central Yupik
+language	ETI	est	Estonian
+language	EUQ	eus	Basque
+language	EVK	evn	Evenki
+language	EVN	eve	Even
+language	EWE	ewe	Ewe
+language	FAN	acf	French Antillean
+language	FAN0	fan	Fang
+language	FAR	fas	Persian
+language	FAT	fat	Fanti
+language	FIN	fin	Finnish
+language	FJI	fij	Fijian
+language	FLE	vls	Dutch (Flemish)
+language	FMP	fmp	Fe’fe’
+language	FNE	enf	Forest Enets
+language	FON	fon	Fon
+language	FOS	fao	Faroese
+language	FRA	fra	French
+language	FRC	frc	Cajun French
+language	FRI	fry	Frisian
+language	FRL	fur	Friulian
+language	FRP	frp	Arpitan
+language	FTA	fuf	Futa
+language	FUL	ful	Fulah
+language	FUV	fuv	Nigerian Fulfulde
+language	GAD	gaa	Ga
+language	GAE	gla	Scottish Gaelic
+language	GAG	gag	Gagauz
+language	GAL	glg	Galician
+language	GAR		Garshuni
+language	GAW	gbm	Garhwali
+language	GEZ	gez	Geez
+language	GIH	gih	Githabul
+language	GIL	niv	Gilyak
+language	GIL0	gil	Kiribati (Gilbertese)
+language	GKP	gkp	Kpelle (Guinea)
+language	GLK	glk	Gilaki
+language	GMZ	guk	Gumuz
+language	GNN	gnn	Gumatj
+language	GOG	gog	Gogo
+language	GON	gon	Gondi
+language	GRN	kal	Greenlandic
+language	GRO	grt	Garo
+language	GUA	grn	Guarani
+language	GUC	guc	Wayuu
+language	GUF	guf	Gupapuyngu
+language	GUJ	guj	Gujarati
+language	GUZ	guz	Gusii
+language	HAI	hat	Haitian (Haitian Creole)
+language	HAI0	hai,hax,hdn	Haida
+language	HAL	cfm	Halam (Falam Chin)
+language	HAR	hoj	Harauti
+language	HAU	hau	Hausa
+language	HAW	haw	Hawaiian
+language	HAY	hay	Haya
+language	HAZ	haz	Hazaragi
+language	HBN	amf	Hammer-Banna
+language	HEI	hei	Heiltsuk
+language	HER	her	Herero
+language	HIL	hil	Hiligaynon
+language	HIN	hin	Hindi
+language	HMA	mrj	High Mari
+language	HMD	hmd	A-Hmao
+language	HMN	hmn	Hmong
+language	HMO	hmo	Hiri Motu
+language	HMZ	hmz	Hmong Shuat
+language	HND	hno,hnd	Hindko
+language	HO	hoc	Ho
+language	HRI	har	Harari
+language	HRV	hrv	Croatian
+language	HUN	hun	Hungarian
+language	HUR	hur	Halkomelem
+language	HYE	hye,hyw	Armenian
+language	HYE0	hye	Armenian East
+language	IBA	iba	Iban
+language	IBB	ibb	Ibibio
+language	IBO	ibo	Igbo
+language	IDO	ido	Ido
+language	IJO	iby,ijc,ije,ijn,ijo,ijs,nkx,okd,okr,orr	Ijo languages
+language	ILE	ile	Interlingue
+language	ILO	ilo	Ilokano
+language	INA	ina	Interlingua
+language	IND	ind	Indonesian
+language	ING	inh	Ingush
+language	INU	iku	Inuktitut
+language	INUK	ike,iku	Nunavik Inuktitut
+language	IPK	ipk	Inupiat
+language	IPPH		Phonetic transcription—IPA conventions
+language	IRI	gle	Irish
+language	IRT	ghc,gle	Irish Traditional
+language	IRU	iru	Irula
+language	ISL	isl	Icelandic
+language	ISM	smn	Inari Sami
+language	ITA	ita	Italian
+language	IWR	heb	Hebrew
+language	JAM	jam	Jamaican Creole
+language	JAN	jpn	Japanese
+language	JAV	jav	Javanese
+language	JBO	jbo	Lojban
+language	JCT	jct	Krymchak
+language	JDT	jdt	Judeo-Tat
+language	JII	yid	Yiddish
+language	JUD	lad	Ladino
+language	JUL	dyu	Jula
+language	KAB	kbd	Kabardian
+language	KAB0	kab	Kabyle
+language	KAC	kfr	Kachchi
+language	KAL	kln	Kalenjin
+language	KAN	kan	Kannada
+language	KAR	krc	Karachay
+language	KAT	kat	Georgian
+language	KAW	kaw	Kawi (Old Javanese)
+language	KAZ	kaz	Kazakh
+language	KBC	kbc	Kadiwéu
+language	KDE	kde	Makonde
+language	KEA	kea	Kabuverdianu (Crioulo)
+language	KEB	ktb	Kebena
+language	KEK	kek	Kekchi
+language	KGE	kat	Khutsuri Georgian
+language	KGF	kgf	Kube
+language	KHA	kjh	Khakass
+language	KHK	kca	Khanty-Kazim
+language	KHM	khm	Khmer
+language	KHS	kca	Khanty-Shurishkar
+language	KHT	kht	Khamti Shan
+language	KHV	kca	Khanty-Vakhi
+language	KHW	khw	Khowar
+language	KIK	kik	Kikuyu (Gikuyu)
+language	KIR	kir	Kirghiz (Kyrgyz)
+language	KIS	kqs,kss	Kisii
+language	KIU	kiu	Kirmanjki
+language	KJD	kjd	Southern Kiwai
+language	KJJ	kjj	Khinalug
+language	KJP	kjp	Eastern Pwo Karen
+language	KJZ	kjz	Bumthangkha
+language	KKN	kex	Kokni
+language	KLM	xal	Kalmyk
+language	KMB	kam	Kamba
+language	KMG	kmg	Kâte
+language	KMN	kfy	Kumaoni
+language	KMO	kmw	Komo
+language	KMS	kxc	Komso
+language	KMZ	kmz	Khorasani Turkic
+language	KNR	kau	Kanuri
+language	KOD	kfa	Kodagu
+language	KOH	kor,okm	Korean Old Hangul
+language	KOK	kok	Konkani
+language	KOM	kom	Komi
+language	KON	ktu	Kikongo
+language	KON0	kon	Kongo
+language	KOP	koi	Komi-Permyak
+language	KOR	kor	Korean
+language	KOS	kos	Kosraean
+language	KOZ	kpv	Komi-Zyrian
+language	KPL	kpe	Kpelle
+language	KRI	kri	Krio
+language	KRK	kaa	Karakalpak
+language	KRL	krl	Karelian
+language	KRM	kdr	Karaim
+language	KRN	blk,bwe,eky,ghk,jkm,jkp,kar,kjp,kjt,ksw,kvl,kvq,kvt,kvu,kvy,kxf,kxk,kyu,pdu,pwo,pww,wea	Karen
+language	KRT	kqy	Koorete
+language	KSH	kas	Kashmiri
+language	KSH0	ksh	Ripuarian
+language	KSI	kha	Khasi
+language	KSM	sjd	Kildin Sami
+language	KSU	ksu	Khamyang
+language	KSW	ksw	S’gaw Karen
+language	KUA	kua	Kuanyama
+language	KUI	kxu	Kui
+language	KUL	kfx	Kulvi
+language	KUM	kum	Kumyk
+language	KUR	kur	Kurdish
+language	KUU	kru	Kurukh
+language	KUY	kdt	Kuy
+language	KVQ	kvq	Geba Karen
+language	KWK	kwk	Kwakʼwala
+language	KYK	kpy	Koryak
+language	KYU	kyu	Western Kayah
+language	LAD	lld	Ladin
+language	LAH	bfu	Lahuli
+language	LAK	lbe	Lak
+language	LAM	lmn	Lambani
+language	LAO	lao	Lao
+language	LAT	lat	Latin
+language	LAZ	lzz	Laz
+language	LCR	crm	L-Cree
+language	LDK	lbj	Ladakhi
+language	LEF	lef	Lelemi
+language	LEZ	lez	Lezgi
+language	LIJ	lij	Ligurian
+language	LIM	lim	Limburgish
+language	LIN	lin	Lingala
+language	LIS	lis	Lisu
+language	LIV	liv	Liv
+language	LJP	ljp	Lampung
+language	LKI	lki	Laki
+language	LMA	mhr	Low Mari
+language	LMB	lif	Limbu
+language	LMO	lmo	Lombard
+language	LMW	ngl	Lomwe
+language	LOM	lom	Loma
+language	LPO	lpo	Lipo
+language	LRC	lrc,luz,bqi,zum	Luri
+language	LSB	dsb	Lower Sorbian
+language	LSM	smj	Lule Sami
+language	LTH	lit	Lithuanian
+language	LTZ	ltz	Luxembourgish
+language	LUA	lua	Luba-Lulua
+language	LUB	lub	Luba-Katanga
+language	LUG	lug	Ganda
+language	LUH	luy	Luyia
+language	LUO	luo	Luo
+language	LUT	lut	Lushootseed
+language	LVI	lav	Latvian
+language	MAD	mad	Madura
+language	MAG	mag	Magahi
+language	MAH	mah	Marshallese
+language	MAJ	mpe	Majang
+language	MAK	vmw	Makhuwa
+language	MAL	mal	Malayalam
+language	MAM	mam	Mam
+language	MAN	mns	Mansi
+language	MAP	arn	Mapudungun
+language	MAR	mar	Marathi
+language	MAW	mwr,dhd,rwr,mve,wry,mtr,swv	Marwari
+language	MBN	kmb	Mbundu
+language	MBO	mbo	Mbo
+language	MCH	mnc	Manchu
+language	MCR	crm	Moose Cree
+language	MDE	men	Mende
+language	MDR	mdr	Mandar
+language	MEN	mym	Me’en
+language	MER	mer	Meru
+language	MEV	mev	Mano
+language	MFA	mfa	Pattani Malay
+language	MFE	mfe	Morisyen
+language	MIN	min	Minangkabau
+language	MIZ	lus	Mizo
+language	MKD	mkd	Macedonian
+language	MKR	mak	Makasar
+language	MKW	mkw	Kituba
+language	MLE	mdy	Male
+language	MLG	mlg	Malagasy
+language	MLN	mlq	Malinke
+language	MLR	mal	Malayalam Reformed
+language	MLY	msa	Malay
+language	MND	mnk	Mandinka
+language	MNG	mon	Mongolian
+language	MNI	mni	Manipuri
+language	MNK	man,mnk,myq,mku,msc,emk,mwk,mlq	Maninka
+language	MNX	glv	Manx
+language	MOH	moh	Mohawk
+language	MOK	mdf	Moksha
+language	MOL	mol	Moldavian
+language	MON	mnw	Mon
+language	MONT		Thailand Mon
+language	MOR		Moroccan
+language	MOS	mos	Mossi
+language	MRI	mri	Maori
+language	MTH	mai	Maithili
+language	MTS	mlt	Maltese
+language	MUN	unr	Mundari
+language	MUS	mus	Muscogee
+language	MWL	mwl	Mirandese
+language	MWW	mww	Hmong Daw
+language	MYN	acr,agu,caa,cac,cak,chf,ckz,cob,ctu,emy,hus,itz,ixl,jac,kek,kjb,knj,lac,mam,mhc,mop,myn,poc,poh,quc,qum,quv,toj,ttc,tzh,tzj,tzo,usp,yua	Mayan
+language	MZN	mzn	Mazanderani
+language	NAG	nag	Naga-Assamese
+language	NAH	azd,azn,azz,nah,naz,nch,nci,ncj,ncl,ncx,ngu,nhc,nhe,nhg,nhi,nhk,nhm,nhn,nhp,nhq,nht,nhv,nhw,nhx,nhy,nhz,nlv,npl,nsu,nuz	Nahuatl
+language	NAN	gld	Nanai
+language	NAP	nap	Neapolitan
+language	NAS	nsk	Naskapi
+language	NAU	nau	Nauruan
+language	NAV	nav	Navajo
+language	NCR	csw	N-Cree
+language	NDB	nbl,nde	Ndebele
+language	NDC	ndc	Ndau
+language	NDG	ndo	Ndonga
+language	NDS	nds	Low Saxon
+language	NEP	nep	Nepali
+language	NEW	new	Newari
+language	NGA	nga	Ngbaka
+language	NGR		Nagari
+language	NHC	csw	Norway House Cree
+language	NIS	dap,njz,tgj	Nisi
+language	NIU	niu	Niuean
+language	NKL	nyn	Nyankole
+language	NKO	nqo	N’Ko
+language	NLD	nld	Dutch
+language	NOE	noe	Nimadi
+language	NOG	nog	Nogai
+language	NOP	nop	Numanggang
+language	NOR	nob	Norwegian
+language	NOV	nov	Novial
+language	NSM	sme	Northern Sami
+language	NSO	nso	Northern Sotho
+language	NTA	nod	Northern Tai
+language	NTO	epo	Esperanto
+language	NUK	nuk	Nuu-chah-nulth
+language	NYM	nym	Nyamwezi
+language	NYN	nno	Norwegian Nynorsk (Nynorsk, Norwegian)
+language	NZA	nza	Mbembe Tigon
+language	OCI	oci	Occitan
+language	OCR	ojs	Oji-Cree
+language	OJB	oji	Ojibway
+language	ONE	one	Oneida
+language	ONO	ono	Onondaga
+language	ORI	ori	Odia
+language	ORO	orm	Oromo
+language	OSS	oss	Ossetian
+language	PAA	sam	Palestinian Aramaic
+language	PAG	pag	Pangasinan
+language	PAL	pli	Pali
+language	PAM	pam	Pampangan
+language	PAN	pan	Punjabi
+language	PAP	plp	Palpa
+language	PAP0	pap	Papiamentu
+language	PAS	pus	Pashto
+language	PAU	pau	Palauan
+language	PCC	pcc	Bouyei
+language	PCD	pcd	Picard
+language	PDC	pdc	Pennsylvania German
+language	PGR	ell	Polytonic Greek
+language	PHK	phk	Phake
+language	PIH	pih	Norfolk
+language	PIL	fil	Filipino
+language	PLG	pce,rbb,pll	Palaung
+language	PLG0	plg	Pilagá
+language	PLK	pol	Polish
+language	PMS	pms	Piemontese
+language	PNB	pnb	Western Panjabi
+language	POH	poh	Pocomchi
+language	PON	pon	Pohnpeian
+language	PRO	pro	Provençal / Old Provençal
+language	PTG	por	Portuguese
+language	PWO	pwo	Western Pwo Karen
+language	QIN	bgr,biu,cek,cey,cfm,cbl,cka,ckn,clj,clt,cmr,cnb,cnh,cnk,cnw,csh,csj,csv,csy,ctd,cth,czt,dao,gnb,hlt,hmr,hra,lus,mrh,mwq,pck,pkh,pub,ral,rtc,sch,sez,shl,smt,tcp,tcz,vap,weu,zom,zyp	Chin
+language	QUC	quc	K’iche’
+language	QUH	quh	Quechua (Bolivia)
+language	QUZ	quz	Quechua
+language	QVI	qvi	Quechua (Ecuador)
+language	QWH	qwh	Quechua (Peru)
+language	RAJ	raj	Rajasthani
+language	RAR	rar	Rarotongan
+language	RBU	bxr	Russian Buriat
+language	RCR	atj	R-Cree
+language	REJ	rej	Rejang
+language	RIA	ria	Riang
+language	RHG	rhg	Rohingya
+language	RIF	rif	Tarifit
+language	RIT	rit	Ritarungo
+language	RKW	rkw	Arakwal
+language	RMS	roh	Romansh
+language	RMY	rmy	Vlax Romani
+language	ROM	ron	Romanian
+language	ROY	rom	Romany
+language	RSY	rue	Rusyn
+language	RTM	rtm	Rotuman
+language	RUA	kin	Kinyarwanda
+language	RUN	run	Rundi
+language	RUP	rup	Aromanian
+language	RUS	rus	Russian
+language	SAD	sck	Sadri
+language	SAN	san	Sanskrit
+language	SAS	sas	Sasak
+language	SAT	sat	Santali
+language	SAY	chp	Sayisi
+language	SCN	scn	Sicilian
+language	SCO	sco	Scots
+language	SCS	scs	North Slavey
+language	SEE	see	Seneca
+language	SEK	xan	Sekota
+language	SEL	sel	Selkup
+language	SFM	sfm	Small Flowery Miao
+language	SGA	mga,sga	Old Irish
+language	SGO	sag	Sango
+language	SGS	sgs	Samogitian
+language	SHI	shi	Tachelhit
+language	SHN	shn	Shan
+language	SIB	sjo	Sibe
+language	SID	sid	Sidamo
+language	SIG	xst,stv,wle	Silte Gurage
+language	SJA	sja	Epena
+language	SJE	sje	Pite Sami
+language	SJU	sju	Ume Sami
+language	SKS	sms	Skolt Sami
+language	SKY	slk	Slovak
+language	SLA	den,scs,xsl	Slavey
+language	SLV	slv	Slovenian
+language	SML	som	Somali
+language	SMO	smo	Samoan
+language	SNA	seh	Sena
+language	SNA0	sna	Shona
+language	SND	snd	Sindhi
+language	SNH	sin	Sinhala (Sinhalese)
+language	SNK	snk	Soninke
+language	SOG	gru	Sodo Gurage
+language	SOP	sop	Songe
+language	SOT	sot	Southern Sotho
+language	SQI	sqi	Albanian
+language	SRB	cnr,srp	Serbian
+language	SRD	srd	Sardinian
+language	SRK	skr	Saraiki
+language	SRR	srr	Serer
+language	SSL	xsl	South Slavey
+language	SSM	sma	Southern Sami
+language	STR	str	Straits Salish
+language	STQ	stq	Saterland Frisian
+language	SUK	suk	Sukuma
+language	SUN	sun	Sundanese
+language	SUR	suq	Suri
+language	SVA	sva	Svan
+language	SVE	swe	Swedish
+language	SWA	aii	Swadaya Aramaic
+language	SWK	swa	Swahili
+language	SWZ	ssw	Swati
+language	SXT	ngo,xnj,xnq	Sutu
+language	SXU	sxu	Upper Saxon
+language	SYL	syl	Sylheti
+language	SYR	aii,amw,cld,syc,syr,tru	Syriac
+language	SYRE	syc,syr	Syriac, Estrangela script-variant (equivalent to ISO 15924 'Syre')
+language	SYRJ	syc,syr	Syriac, Western script-variant (equivalent to ISO 15924 'Syrj')
+language	SYRN	syc,syr	Syriac, Eastern script-variant (equivalent to ISO 15924 'Syrn')
+language	SZL	szl	Silesian
+language	TAB	tab	Tabasaran
+language	TAJ	tgk	Tajiki
+language	TAM	tam	Tamil
+language	TAQ		Tamasheq
+language	TAT	tat	Tatar
+language	TBV	tbv	Tobo
+language	TCR	cwd	TH-Cree
+language	TDC	tdc	Emberá-Tadó
+language	TDD	tdd	Dehong Dai
+language	TEL	tel	Telugu
+language	TET	tet	Tetum
+language	TGL	tgl	Tagalog
+language	TGN	ton	Tongan
+language	TGR	tig	Tigre
+language	TGY	tir	Tigrinya
+language	THA	tha	Thai
+language	THT	tah	Tahitian
+language	THP	thp	Thompson
+language	THV		Tahaggart Tamahaq
+language	THZ		Tayart Tamajeq
+language	TIB	bod	Tibetan
+language	TIV	tiv	Tiv
+language	TJL	tjl	Tai Laing
+language	TKM	tuk	Turkmen
+language	TLI	tli	Tlingit
+language	TMH	taq,thv,thz,tmh	Tamashek
+language	TLY	tly	Talysh
+language	TMN	tem	Temne
+language	TNA	tsn	Tswana
+language	TNE	enh	Tundra Enets
+language	TNG	toi	Tonga
+language	TOD	xal	Todo
+language	TOD0	tod	Toma
+language	TPI	tpi	Tok Pisin
+language	TRK	tur	Turkish
+language	TSG	tso	Tsonga
+language	TSJ	tsj	Tshangla
+language	TTQ		Tawallammat Tamajaq
+language	TUA	tru	Turoyo Aramaic
+language	TUL	tcy	Tulu
+language	TUM	tum	Tumbuka
+language	TUS	tus	Tuscarora
+language	TUV	tyv	Tuvin
+language	TVL	tvl	Tuvalu
+language	TWI	twi	Twi
+language	TYZ	tyz	Tày
+language	TZM	tzm	Tamazight
+language	TZO	tzo	Tzotzil
+language	UDI	udi	Udi
+language	UDM	udm	Udmurt
+language	UKR	ukr	Ukrainian
+language	UMB	umb	Umbundu
+language	UPPH		Uralic Phonetic Alphabet
+language	URD	urd	Urdu
+language	USB	hsb	Upper Sorbian
+language	UYG	uig	Uyghur
+language	UZB	uzb	Uzbek
+language	VEC	vec	Venetian
+language	VEN	ven	Venda
+language	VIT	vie	Vietnamese
+language	VOL	vol	Volapük
+language	VRO	vro	Võro
+language	WA	wbm	Wa
+language	WAG	wbr	Wagdi
+language	WAR	war	Waray-Waray
+language	WBL	wbl	Wakhi
+language	WCI	wci	Waci Gbe
+language	WCR	crk	West-Cree
+language	WDT	wdt	Wendat
+language	WEL	cym	Welsh
+language	WLF	wol	Wolof
+language	WLN	wln	Walloon
+language	WTM	wtm	Mewati
+language	WYN	wyn	Wyandot
+language	XBD	khb	Lü
+language	XHS	xho	Xhosa
+language	XJB	xjb	Minjangbal
+language	XKF	xkf	Khengkha
+language	XOG	xog	Soga
+language	XPE	xpe	Kpelle (Liberia)
+language	XUB	xub	Bette Kuruma
+language	XUJ	xuj	Jennu Kuruma
+language	YAK	sah	Sakha
+language	YAO	yao	Yao
+language	YAP	yap	Yapese
+language	YBA	yor	Yoruba
+language	YCR	crj,crk,crl	Y-Cree
+language	YGP	ygp	Gepo
+language	YIC		Yi Classic
+language	YIM	iii	Yi Modern
+language	YNA	yna	Aluo
+language	YUF	yuf	Havasupai-Walapai-Yavapai
+language	YWQ	ywq	Wuding-Luquan Yi
+language	ZEA	zea	Zealandic
+language	ZGH	zgh	Standard Moroccan Tamazight
+language	ZHA	zha	Zhuang
+language	ZHH	zho	Chinese, Traditional, Hong Kong SAR
+language	ZHP	zho	Chinese, Phonetic
+language	ZHS	zho	Chinese, Simplified
+language	ZHT	zho	Chinese, Traditional
+language	ZHTM	zho	Chinese, Traditional, Macao SAR
+language	ZND	zne	Zande
+language	ZUL	zul	Zulu
+language	ZZA	zza	Zazaki

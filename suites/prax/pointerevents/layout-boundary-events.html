@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Boundary events from layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .track { position: relative; height: 60px; margin: 10px 20px; background: var(--pr-plain);
+           border: 1px dashed var(--pr-line); }
+  .track p { margin: 0; padding: 20px 6px 0 140px; font-size: 12px; }
+  #mover { position: absolute; top: 10px; left: 10px; width: 100px; height: 40px; box-sizing: border-box;
+           background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; text-align: center; line-height: 38px; }
+  #mover.right { left: 150px; }
+  #mover:hover { background: #4f81bd; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.4 Boundary events caused by layout changes</div>
+  <h1>Boundary events from layout</h1>
+  <p class=pr-lede><q>For a stationary pointing device (that neither moved relative to the screen surface nor underwent any
+  change in any properties), the user agent MUST fire certain boundary events after a layout change that affected the
+  hit test target for the pointer</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#boundary-events-caused-by-layout-changes">Pointer Events §3.1.4</a></span></p>
+</header>
+<section>
+  <h2>A box moves under a still pointer</h2>
+  <p>mouseover: <q>A user agent MUST dispatch this event when a pointing device is moved onto the boundaries of an
+  element or when the element is moved to be underneath the primary pointing device.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseover">§11.4.10</a></span>
+  <q>The user agent MAY delay the firing of these boundary events because of performance reasons</q> <q>A stationary
+  pointing device (that neither moved relative to the screen surface nor underwent any change in any properties) never
+  fires a pointermove event.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#boundary-events-caused-by-layout-changes">§3.1.4</a></span>
+  Every two seconds, the box jumps from one end of the track to the other.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=track id=track><div id=mover>box</div><p>rest here</p></div>
+      <ol class=pr-log data-log="pointerover pointerout pointerenter pointerleave pointermove" data-fields="target" data-on="#track" data-lines=4></ol>
+      <ol class=pr-log data-log="mouseover mouseout mouseenter mouseleave mousemove" data-fields="target" data-on="#track" data-lines=4></ol>
+    </div>
+    <figcaption>Put the mouse on “rest here” and leave it there. The box jumps under it: <code>pointerover</code> and
+    <code>pointerenter</code> at <code>mover</code>, which turns dark blue as it is hovered. It jumps away:
+    <code>pointerout</code> and <code>pointerleave</code>. The lower log has the same four as mouse events. No
+    <code>pointermove</code> or <code>mousemove</code> while the mouse is still.</figcaption>
+  </figure>
+</section>
+<script>
+  // Moves the box from one end of the track to the other every two seconds.
+  const mover = document.getElementById("mover");
+  setInterval(() => mover.classList.toggle("right"), 2000);
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

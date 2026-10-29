@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): the ending shape and the center</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.1 radial-gradient() Syntax</div>
+  <h1>radial-gradient(): the ending shape and the center</h1>
+  <p class=pr-lede><q>If &lt;radial-shape&gt; is omitted, the ending shape defaults to a circle if the
+  &lt;radial-size&gt; is a single &lt;length&gt;, and to an ellipse otherwise.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-gradient-syntax">CSS Images 3 §3.2.1</a></span>
+  Each box is 160 by 60, orange inside the ending shape and light blue beyond it.</p>
+</header>
+
+<section>
+  <h2>Circle or ellipse</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle closest-side, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle closest-side</code>: radius 30, meeting the top and bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse closest-side, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>ellipse closest-side</code>: 160 by 60, meeting all four sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(closest-side, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption>No shape, a keyword size: an ellipse, as beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption>No shape, one length, <code>30px</code>: a circle, from 50 to 110 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(60px 20px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption>No shape, two lengths, <code>60px 20px</code>: an ellipse, 20 to 140 across, 10 to 50 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The center</h2>
+  <p>The &lt;position&gt; <q>is resolved using the center-point as the object area and the gradient box as the
+  positioning area. If this argument is omitted, it defaults to center.</q> A point has no size, so
+  <code>100%</code> puts the center on the far edge.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 30px at left top, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 30px at left top</code>: a quarter circle in the top left corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 30px at 100% 100%, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>at 100% 100%</code>: a quarter circle in the bottom right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 20px at 25% 75%, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 20px at 25% 75%</code>: centered 40 across, 45 down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

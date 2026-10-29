@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Keys that switch an input method</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.3.1 Input Method Editor mode keys</div>
+  <h1>Keys that switch an input method</h1>
+  <p class=pr-lede><q>Some keys on certain devices are intended to activate input method editor functionality, or to
+  change the mode of an active input method editor.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-IME-keys">UI Events §4.3.3.1</a></span></p>
+</header>
+<section>
+  <h2>Kana and Hangul</h2>
+  <p><q>When one of these keys is pressed, and no IME is currently active, the appropriate IME is expected to be
+  activated in the mode indicated by the key (if available).</q> The keys include <code>"HangulMode"</code>,
+  <code>"KanaMode"</code>, <code>"Hiragana"</code> and <code>"Alphanumeric"</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-IME-keys">§4.3.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown compositionstart" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>On a Japanese keyboard with a Japanese input method installed, click the field, press かな (kana) and
+    type <code>ka</code>: the key reports the mode key's value, such as <code>key="KanaMode"</code>, and typing
+    composes か. Press 英数 (eisu): typing gives Latin letters again. On a Korean keyboard, 한/영 gives
+    <code>key="HangulMode"</code> and switches between Hangul and Latin.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

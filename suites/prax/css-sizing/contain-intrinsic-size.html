@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>contain-intrinsic-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 150px; height: 90px; }
+  figure.f figcaption { max-width: 152px; }
+  .c { contain: size; background: #b9cde6; outline: 1px solid #2c5a8f; font: 13px/20px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.2 Overriding Contained Intrinsic Sizes: the contain-intrinsic-* properties</div>
+  <h1>contain-intrinsic-size</h1>
+  <p class=pr-lede><q>These properties allow elements with size containment to specify an explicit intrinsic inner size,
+  causing the box to size as if its in-flow content totals to a width and height matching the specified explicit
+  intrinsic inner size (rather than sizing as if it were empty).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override">CSS Box Sizing 4 §5.2</a></span>
+  Each blue box has <code>contain: size</code> and the text "content", which it does not size to.</p>
+</header>
+
+<section>
+  <h2>In place of the content</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=c style="float: left">content</div></div>
+    <figcaption>A float with no <code>contain-intrinsic-size</code>: sized as if empty, 0 by 0.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=c style="float: left; contain-intrinsic-size: 100px 40px">content</div></div>
+    <figcaption><code>contain-intrinsic-size: 100px 40px</code>: the float is 100 by 40.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=c style="contain-intrinsic-size: 60px">content</div></div>
+    <figcaption>A block, <code>contain-intrinsic-size: 60px</code>: one value for both; the width stretches to 150,
+    the height is 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each axis, and its padding outside</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=c style="width: max-content; contain-intrinsic-width: 80px; padding: 5px">content</div></div>
+    <figcaption><code>width: max-content; contain-intrinsic-width: 80px; padding: 5px</code>: an inner size, so 90 by
+    10.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s" style="writing-mode: vertical-rl"><div class=c style="contain-intrinsic-block-size: 30px; contain-intrinsic-inline-size: none">content</div></div>
+    <figcaption>In <code>vertical-rl</code>, <code>contain-intrinsic-block-size: 30px</code>: 30px wide, at the
+    right, filling the height.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=c style="float: left; contain-intrinsic-size: none 50px">content</div></div>
+    <figcaption><code>contain-intrinsic-size: none 50px</code>: 0 wide, 50 tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:heading</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; }
+  .rows h1, .rows h2, .rows h3, .rows h4, .rows h5, .rows h6, .rows p { margin: 0 0 6px; padding: 0 6px; font-size: 12px; font-weight: 600; line-height: 20px; background: var(--pr-plain); }
+  .rows section, .rows div { margin: 0; }
+  .any :heading { background: #8fd18f; }
+  .two :heading(2) { background: #8fd18f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:heading</h1>
+  <p class=pr-lede><q>The :heading pseudo-class must match all h1, h2, h3, h4, h5, and h6 elements.</q> <q>The
+  :heading(integer#) pseudo-class must match all h1, h2, h3, h4, h5, and h6 elements that have a heading level of
+  integer.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Every heading, and headings of a level</h2>
+  <p>Green is the selector that each figure names. A heading's level is its number plus the
+  <code>headingoffset</code> of it and its ancestors, up to one with <code>headingreset</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/sections.html#heading-levels-&-offsets">§4.3.11.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage any">
+      <div class=rows>
+        <h1>h1</h1><h3>h3</h3><h6>h6</h6><p>p</p>
+      </div>
+    </div>
+    <figcaption><code>:heading</code>: the three headings are green, the <code>p</code> grey. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> leave all four grey.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage two">
+      <div class=rows>
+        <h2>h2</h2>
+        <section headingoffset=1><h1>h1, offset 1</h1><h2>h2, offset 1</h2></section>
+        <div headingoffset=1><section headingreset><h2>h2, offset 1, reset</h2></section></div>
+      </div>
+    </div>
+    <figcaption><code>:heading(2)</code>: the first, the <code>h1</code> at offset 1, and the last, reset to no offset,
+    are green; the <code>h2</code> at offset 1, level 3, is grey. <span class=pr-flag>Safari</span> ignores
+    <code>headingoffset</code>, greening the three <code>h2</code>s and not the <code>h1</code>. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> leave all grey.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

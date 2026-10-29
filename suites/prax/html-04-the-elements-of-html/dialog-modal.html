@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Modal dialogs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  dialog { font-size: 12px; }
+  dialog .pr-target { width: 140px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.4 The dialog element</div>
+  <h1>Modal dialogs</h1>
+  <p class=pr-lede><code>showModal()</code> must <q>show a modal dialog</q>: it adds the dialog to the top layer and sets
+  <q>subject's node document to be blocked by the modal dialog subject</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">HTML §4.11.4</a></span></p>
+</header>
+<section>
+  <h2>In the top layer, over a backdrop, the rest inert</h2>
+  <p>A modal dialog is fixed and centered in the viewport, and its <code>::backdrop</code> is
+  <code>rgba(0,0,0,0.1)</code> over everything else. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span>
+  Blocked by it, the rest of the document is inert: no click or focus reaches it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#modal-dialogs-and-inert-subtrees">§6.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=open>showModal()</button>
+        <button class=pr-target id=under>under the backdrop</button>
+        <dialog id=modal>A modal dialog.
+          <input class=pr-target id=field placeholder="a field">
+          <button class=pr-target id=done>close()</button>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>showModal()</code>: the dialog appears in the middle of the window, the page a shade
+    darker behind it, and the field takes the focus. Click "under the backdrop": the click is the dialog's,
+    <code>target=modal</code>. Tab: the focus never leaves the dialog for the page.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A close request closes it</h2>
+  <p>With no <code>closedby</code>, a modal dialog is in the <q>Close Request</q> state: a close request fires
+  <code>cancel</code>, then closes it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-requests">§6.10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=open2>showModal()</button>
+        <dialog id=escaped>Press Escape.
+          <button class=pr-target id=done2>close()</button>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="cancel close" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>showModal()</code>, then press Escape: the dialog and the backdrop go, <code>cancel</code>
+    then <code>close</code> are logged, and the focus returns to <code>showModal()</code>. Open it again and click
+    <code>close()</code>: it closes with only <code>close</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons call the methods.
+  const modal = document.getElementById("modal");
+  document.getElementById("open").addEventListener("click", () => modal.showModal());
+  document.getElementById("done").addEventListener("click", () => modal.close());
+  const escaped = document.getElementById("escaped");
+  document.getElementById("open2").addEventListener("click", () => escaped.showModal());
+  document.getElementById("done2").addEventListener("click", () => escaped.close());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

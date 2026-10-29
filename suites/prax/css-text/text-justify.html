@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-justify</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5 Justification Method: the text-justify property</div>
+  <h1>text-justify</h1>
+  <p class=pr-lede><q>This property selects the justification method used when a line’s alignment is set to
+  'justify' (see 'text-align').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-justify-property">CSS Text 4 §7.5</a></span>
+  Each stage is 200px wide and <code>text-align: justify</code>, and holds "one two six", highlighted, and
+  "seventeens", which goes to the second line. The first line has 110px of 10px letters, so 90px to share.</p>
+</header>
+
+<section>
+  <h2>none and inter-word</h2>
+  <p><code>none</code>: <q>Justification is disabled: there are no justification opportunities within the
+  text.</q> <code>inter-word</code>: <q>Justification adjusts spacing at word separators only (effectively varying
+  the used 'word-spacing' on the line).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j" style="text-justify: none"><span class=t>one two six</span> seventeens</div>
+    <figcaption><code>none</code>: nothing to stretch, so the line is aligned as
+    <code>text-align-last</code> says, <code>auto</code>, so at the start. <span class=pr-flag>Safari</span>, which
+    ignores the property, stretches the spaces.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure j" style="text-justify: inter-word"><span class=t>one two six</span> seventeens</div>
+    <figcaption><code>inter-word</code>: the two spaces take 45px each: "two" at 85px, "six" at 170.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inter-character, and distribute</h2>
+  <p>Space between two units <q>should be applied under the same rules as for 'letter-spacing'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#expanding-text">§7.5.1</a></span>,
+  so none at the line's ends. <code>inter-character</code>: <q>Justification adjusts spacing between each pair of adjacent typographic
+  character units (effectively varying the used 'letter-spacing' on the line).</q> <q>For legacy reasons, UAs must
+  also support the alternate keyword distribute which must compute to 'inter-character', thus having the exact same
+  meaning and behavior.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j" style="text-justify: inter-character"><span class=t>one two six</span> seventeens</div>
+    <figcaption>Ten gaps between eleven characters, 9px each: "one" spread from 0, "six" ending at 200. <span
+    class=pr-flag>Safari</span> stretches only the spaces. <span class=pr-flag>Firefox</span> leaves 4.5px
+    after "x", short of the edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j" style="text-justify: distribute"><span class=t>one two six</span> seventeens</div>
+    <figcaption><code>distribute</code>: the same. <span class=pr-flag>Safari</span> stretches only the
+    spaces. <span class=pr-flag>Firefox</span> As at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mouse buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.1 MouseEvent interface</div>
+  <h1>Mouse buttons</h1>
+  <p class=pr-lede><q>During mouse events caused by the depression or release of a mouse button, button MUST be used to
+  indicate which pointer device button changed state.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">Pointer Events §11.1</a></span></p>
+</header>
+<section>
+  <h2>button, and buttons</h2>
+  <p><q>During any mouse events, buttons MUST be used to indicate which combination of mouse buttons are currently being
+  pressed, expressed as a bitmask.</q> <q>For example, the value 3 indicates that the left and right button are
+  currently both pressed, while the value 5 indicates that the left and middle button are currently both pressed.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span>
+  The page cancels the context menu, navigation and middle-button scrolling over the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press buttons here, together.</div>
+      <ol class=pr-log data-log="mousedown mouseup" data-fields="button buttons" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Hold the left button, then press the middle one: <code>mousedown button=0 buttons=1</code>, then
+    <code>mousedown button=1 buttons=5</code>. Release the middle: <code>mouseup button=1 buttons=1</code>. The
+    right button is 2 and adds 2; back and forward are 3 and 4, and add 8 and 16.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>button is not updated by a move</h2>
+  <p><q>The value of button is not updated for events not caused by the depression/release of a mouse button. In these
+  scenarios, take care not to interpret the value 0 as the left button, but rather as the default value.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=move>Move here, then drag with the right button.</div>
+      <ol class=pr-log data-log="mousemove" data-fields="button buttons" data-on="#move" data-lines=2></ol>
+    </div>
+    <figcaption>Move over the box: <code>mousemove button=0 buttons=0</code>, where 0 is no button. Drag with the
+    right button: <code>buttons=2</code>, and still <code>button=0</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu, history navigation and middle-button scrolling from taking over the boxes.
+  for (const box of [document.getElementById("pad"), document.getElementById("move")]) {
+    box.addEventListener("contextmenu", event => event.preventDefault());
+    for (const type of ["mousedown", "mouseup", "auxclick"])
+      box.addEventListener(type, event => { if (event.button !== 0) event.preventDefault(); });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

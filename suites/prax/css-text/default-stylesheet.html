@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The default style sheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; margin: 0; }
+  .s { font: 20px/30px "PR Noto Sans"; margin: 0; }
+  select { font: 13px/18px sans-serif; width: 180px; }
+  textarea { width: 180px; height: 40px; font: 13px/18px sans-serif; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · C Default UA Stylesheet</div>
+  <h1>The default style sheet</h1>
+  <p class=pr-lede><q>This appendix is informative, and is to help UA developers to implement a default stylesheet for
+  HTML, but UA developers are free to ignore or modify as appropriate.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#default-stylesheet">CSS Text 4 §C</a></span>
+  Its rules are suggestions, so what each browser does here is its own choice.</p>
+</header>
+
+<section>
+  <h2>pre keeps a character grid, and does not hang</h2>
+  <p><code>pre, code, kbd, samp, tt, listing, xmp, plaintext { text-spacing: none; }</code> and <code>pre {
+  hanging-punctuation: none; }</code>.</p>
+  <figure>
+    <div class=pr-stage><p class=ja lang=ja style="text-autospace: ideograph-alpha">漢A字</p><pre class=ja lang=ja>漢A字</pre></div>
+    <figcaption>Above, a <code>p</code> with <code>ideograph-alpha</code>: spaced around "A". Below, a
+    <code>pre</code>: no space, the grid kept. Safari and Firefox do so; Chrome spaces neither.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="hanging-punctuation: first"><p class=s>"quoted"</p><pre class=s>"quoted"</pre></div>
+    <figcaption>The stage <code>hanging-punctuation: first</code>: the <code>p</code>'s quote hangs left of the stage;
+    the <code>pre</code>'s does not, as the rule resets it. Only Safari hangs the <code>p</code>'s.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A textarea keeps its spaces</h2>
+  <p><code>textarea { white-space-collapse: preserve !important; }</code>.</p>
+  <figure>
+    <div class=pr-stage><textarea style="white-space: normal">a     b</textarea></div>
+    <figcaption>A textarea of "a", five spaces, "b", with <code>white-space: normal</code>: the spaces kept, as in Chrome and Firefox; Safari collapses them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

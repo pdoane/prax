@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The display property: tables</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.4 The 'display' property</div>
+  <h1>The display property: tables</h1>
+  <p class=pr-lede><code>display</code> takes <code>inline | block | list-item | inline-block | table | inline-table |
+  table-*</code> and <code>none</code>.</p>
+</header>
+
+<section>
+  <h2>Table values</h2>
+  <p><code>table</code>, <code>inline-table</code>, <code>table-row-group</code>, <code>table-column</code>,
+  <code>table-column-group</code>, <code>table-header-group</code>, <code>table-footer-group</code>,
+  <code>table-row</code>, <code>table-cell</code> and <code>table-caption</code>: <q>These values cause an element to
+  behave like a table element.</q> Every element here is a <code>div</code> or a <code>span</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#display-prop">CSS 2 §9.2.4</a>, <a href="https://drafts.csswg.org/css2/#tables">§17</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-table><div class=pr-table-row><span class=pr-table-cell>one</span><span class=pr-table-cell>two</span></div><div class=pr-table-row><span class=pr-table-cell>three</span><span class=pr-table-cell>four</span></div></div></div>
+    <figcaption><code>table</code>, two <code>table-row</code>s and four <code>table-cell</code>s: a grid whose columns
+    line up.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-table><div class=pr-table-caption style="text-align: center">caption</div><div class=pr-table-row><span class=pr-table-cell>one</span><span class=pr-table-cell>two</span></div></div></div>
+    <figcaption>A <code>table-caption</code> above its table's row.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-inline-table style="vertical-align: top"><span class=pr-table-row><span class=pr-table-cell>one</span><span class=pr-table-cell>two</span></span></span> after</div>
+    <figcaption><code>inline-table</code>: the table sits on the line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

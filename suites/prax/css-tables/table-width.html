@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table's used width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.1 Computing the table width</div>
+  <h1>The table's used width</h1>
+  <p class=pr-lede>GRIDMIN and GRIDMAX are the sums of the columns' min-content and max-content widths <q>plus cell
+  spacing or borders</q>; <q>The used min-width of a table is the greater of the resolved 'min-width', CAPMIN, and
+  GRIDMIN.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-the-table-width">CSS Table 3 §3.9.1</a></span>
+  Tables are outlined; text is <code>.pr-measure</code>, no spacing.</p>
+</header>
+
+<section>
+  <h2>width: auto</h2>
+  <p><q>the used width is the greater of min(GRIDMAX, the table's containing block width), the used min-width of the
+  table.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>aaa bbb ccc</td><td>ddd eee fff</td></tr></table></div>
+    <figcaption>GRIDMAX 220px, more than the 200px stage: 200px, the columns sharing it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td>aaaaaa</td><td>bbbbbb</td></tr></table></div>
+    <figcaption>In a 100px stage, GRIDMIN 120px: 120px, past the stage's edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table style="min-width: 90px"><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>min-width: 90px</code>, GRIDMAX 20px: 90px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A specified width</h2>
+  <p><q>If the table-root's 'width' property has a computed value (resolving to resolved-table-width) other than auto,
+  the used width is the greater of resolved-table-width, and the used min-width of the table.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 150px"><tr><td>aaa bbb</td><td>cc</td></tr></table></div>
+    <figcaption><code>width: 150px</code>, GRIDMAX 90px: 150px, the 60px extra shared by the columns.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 40px"><tr><td>aaa bbb</td><td>cc</td></tr></table></div>
+    <figcaption><code>width: 40px</code>, GRIDMIN 50px: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 40%"><tr><td>aaa bbb</td><td>cc</td></tr></table></div>
+    <figcaption><code>width: 40%</code> of 200px: 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

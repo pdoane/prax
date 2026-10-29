@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The unicode-bidi property: fragments of a reordered box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .he { font-family: "PR Arimo", "PR Noto Sans Hebrew"; }
+  .e { background: #f9cc9d; border: solid #c0392b; border-width: 0 6px 0 2px; border-right-color: #2c5a8f;
+       -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The unicode-bidi property: fragments of a reordered box</h1>
+  <p class=pr-lede>The orange <code>em</code> has a red left border and a blue right one, and
+  <code>box-decoration-break: clone</code>, so each fragment of it is drawn with both. Hebrew is right-to-left;
+  עברית reads "Hebrew", טקסט "text".</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-fragmentation">CSS Writing Modes 4 §2.4.5.1</a></div>
+  <h2>Split as on an infinitely long line</h2>
+  <p><q>The box is considered to be thus fragmented if it would be divided by intervening content on an infinitely
+  long line, even if line breaking happens to result in both box fragments being placed adjacent to each other on the
+  line.</q> <q>However, an inline box is not considered to be broken into multiple box fragments due to bidi
+  reordering if no intervening content would force it to split.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-fragmentation">CSS Writing Modes 4 §2.4.5.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide pr-text he">here is <em class=e>some עברית</em> טקסט.</div>
+    <figcaption>On a wide line, טקסט falls between the em's two fragments: each has both borders. <span
+    class=pr-flag>Chrome</span> Draws neither border at the split, though the fragments are apart.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text he" style="width: 150px">here is <em class=e>some עברית</em> טקסט.</div>
+    <figcaption>In 150px, טקסט wraps to the next line and the fragments are side by side: still two, with borders
+    between them. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Merge them into
+    one.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide pr-text he">here is <em class=e dir=rtl>some עברית</em> טקסט.</div>
+    <figcaption>With <code>dir=rtl</code> the em is an isolate, which nothing outside it can divide: one fragment,
+    its content right to left. <span class=pr-flag>Firefox</span> Splits it in two.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+# Layout: style records, trees of boxes laid out into fragments, and painting them into draw lists.
+pr_library(layout INCLUDE include
+    src/layout_style.cpp
+    src/layout_anchor.cpp
+    src/layout_animation.cpp
+    src/layout_background.cpp
+    src/layout_bidi.cpp
+    src/layout_block.cpp
+    src/layout_box.cpp
+    src/layout_cache.cpp
+    src/layout_effects.cpp
+    src/layout_compositor.cpp
+    src/layout_exclusion.cpp
+    src/layout_flex.cpp
+    src/layout_frame.cpp
+    src/layout_float.cpp
+    src/layout_flow.cpp
+    src/layout_fragment.cpp
+    src/layout_grid.cpp
+    src/layout_grid_template.cpp
+    src/layout_inline.cpp
+    src/layout_intrinsic.cpp
+    src/layout_itemize.cpp
+    src/layout_justify.cpp
+    src/layout_line_align.cpp
+    src/layout_logical.cpp
+    src/layout_paint.cpp
+    src/layout_position.cpp
+    src/layout_query.cpp
+    src/layout_replaced.cpp
+    src/layout_scene.cpp
+    src/layout_shaping.cpp
+    src/layout_sizing.cpp
+    src/layout_space.cpp
+    src/layout_stacking.cpp
+    src/layout_table.cpp
+    src/layout_text_position.cpp
+    src/layout_tree.cpp
+    src/layout_unit.cpp
+    src/layout_value.cpp
+    src/layout_walk.cpp
+    src/layout_worker.cpp
+)
+target_link_libraries(pr_layout PUBLIC prax::draw prax::text prax::geom prax::font prax::unicode prax::path prax::color
+                                       prax::locale PRIVATE prax::core_cpp)
+
+if (PR_DEVELOP)
+    pr_module_tests(layout
+        tests/test_layout.cpp
+        tests/test_layout_align.cpp
+        tests/test_layout_anchor.cpp
+        tests/test_layout_animation.cpp
+        tests/test_layout_bidi.cpp
+        tests/test_layout_box_model.cpp
+        tests/test_layout_effects.cpp
+        tests/test_layout_faces.cpp
+        tests/test_layout_fallback.cpp
+        tests/test_layout_flex.cpp
+        tests/test_layout_frame.cpp
+        tests/test_layout_grid.cpp
+        tests/test_layout_float.cpp
+        tests/test_layout_c.c
+        tests/test_layout_intrinsic.cpp
+        tests/test_layout_itemize.cpp
+        tests/test_layout_line.cpp
+        tests/test_layout_logical.cpp
+        tests/test_layout_marker.cpp
+        tests/test_layout_position.cpp
+        tests/test_layout_stacking.cpp
+        tests/test_layout_split.cpp
+        tests/test_layout_table.cpp
+        tests/test_layout_text.cpp
+        tests/test_layout_text_position.cpp
+        tests/test_layout_tree.cpp
+        tests/test_layout_writing_mode.cpp
+    )
+    target_compile_definitions(layout_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts"
+                                                    PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    target_link_libraries(layout_tests PRIVATE prax::text prax::draw prax::font prax::locale)
+endif()

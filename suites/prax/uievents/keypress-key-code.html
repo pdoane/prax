@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>keyCode for keypress</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.3.2 How to determine keyCode for keypress events</div>
+  <h1>keyCode for keypress</h1>
+  <p class=pr-lede><q>The keyCode for keypress events is calculated as follows</q>. The section is informative.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#determine-keypress-keyCode">UI Events §7.3.2</a></span></p>
+</header>
+<section>
+  <h2>Conflated or split</h2>
+  <p><q>An implementation MAY choose to expose both virtual key codes and character codes in the keyCode property
+  (conflated model), or report separate keyCode and charCode properties (split model).</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-key-models">§7.3</a></span>
+  <q>If the implementation supports a conflated model, set keyCode to the Unicode code point of the character being
+  entered.</q> <q>If the implementation supports a split model, set keyCode to 0.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#determine-keypress-keyCode">§7.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keypress" data-fields="key keyCode charCode" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press A. keydown has <code>keyCode=65</code>. keypress has <code>charCode=97</code>
+    and, in the conflated model, <code>keyCode=97</code>, as Chrome and Safari give; in the split model,
+    <code>keyCode=0</code>, as Firefox gives.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-spacing-trim at the end of lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; text-align: right; }
+  .pr-stage { width: 160px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.5 CJK Punctuation Spacing: the text-spacing-trim property</div>
+  <h1>text-spacing-trim at the end of lines</h1>
+  <p class=pr-lede><code>normal</code>: <q>set fullwidth closing punctuation with half-width glyphs (flush) at the end
+  of each line if it does not otherwise fit prior to justification, else set the punctuation with full-width
+  glyphs</q>. <code>trim-both</code>: <q>set fullwidth closing punctuation with half-width glyphs (flush) at the end of
+  each line</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-spacing-trim-property">CSS Text 4 §8.5</a></span>
+  Each stage is <code>lang=ja</code>, 160px wide, eight 20px characters to a line, right-aligned, so a full-width
+  "。" leaves 10px blank at the right edge.</p>
+</header>
+
+<section>
+  <h2>A stop that fits</h2>
+  <p>The first line is seven characters and "。", 160px.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: normal">あいうえおかき。くけ</div>
+    <figcaption><code>normal</code>: it fits, so full-width: 10px blank after its ink.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: trim-both">あいうえおかき。くけ</div>
+    <figcaption><code>trim-both</code>: trimmed anyway, its ink flush with the right edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Full-width.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">あいうえおかき。くけ</div>
+    <figcaption><code>space-all</code>: full-width, as <code>normal</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stop that fits only trimmed</h2>
+  <p>Eight characters, then "。": 170px, but 160px with the stop half-width.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: normal">あいうえおかきく。けこ</div>
+    <figcaption><code>normal</code>: trimmed so it fits, "。" ending the first line, flush. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "く。" go down, as for <code>space-all</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-first">あいうえおかきく。けこ</div>
+    <figcaption><code>space-first</code>: the same as <code>normal</code> at the end. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "く。" go down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">あいうえおかきく。けこ</div>
+    <figcaption><code>space-all</code>: it does not fit full-width, and cannot start a line: "く。" go down
+    together.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

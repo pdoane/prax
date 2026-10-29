@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Find-in-page</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A word to search for, written by generated content so that the search does not find the caption. */
+  .word::before { content: attr(data-word) }
+  .scroller { height: 60px; overflow: auto; background: var(--pr-plain); font-size: 12px; line-height: 20px; padding: 0 6px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.9.1 Introduction</div>
+  <h1>Find-in-page</h1>
+  <p class=pr-lede><q>This section defines find-in-page — a common user-agent mechanism which allows users to search through the
+  contents of the page for particular information.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#introduction-10">HTML §6.9.1</a></span></p>
+</header>
+<section>
+  <h2>The active match, scrolled into view</h2>
+  <p><q>One of the matches is identified to the user as the active match. It is highlighted and scrolled into view. The
+  user can navigate through the matches by advancing the active match using the find-in-page interface.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#introduction-10">§6.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px 20px">
+      <div class=scroller>
+        first line<br>second line<br>third line<br>fourth line<br>
+        fifth line, frobozz one<br>sixth line<br>seventh line<br>eighth line<br>ninth line<br>tenth line<br>
+        eleventh line, frobozz two<br>twelfth line
+      </div>
+    </div>
+    <figcaption>The box shows three of its twelve lines. Search for <code class=word data-word="frobozz"></code>
+    (Ctrl+F, or ⌘F on a Mac): two matches, the first highlighted and scrolled into view in the box. Advance to the next
+    match (Enter, or the find bar's arrow): the box scrolls to the eleventh line.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

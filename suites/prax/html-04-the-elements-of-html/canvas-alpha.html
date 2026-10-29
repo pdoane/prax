@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An opaque canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.2 The canvas settings</div>
+  <h1>An opaque canvas</h1>
+  <p class=pr-lede><q>When a CanvasSettings object's alpha is false, then its alpha component must be fixed to 1.0 (fully
+  opaque) for all pixels, and attempts to change the alpha component of any pixel must be silently ignored.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-settings">HTML §4.12.5.1.2</a></span>
+  Each canvas is 160 by 60; the first three are created with <code>getContext("2d", {alpha: false})</code>.</p>
+</header>
+<section>
+  <h2>Opaque black, and opaque after every operation</h2>
+  <p><q>Thus, the bitmap of such a context starts off as opaque black instead of transparent black; clearRect() always
+  results in opaque black pixels</q> <q>drawing a 50% transparent white square on a freshly created output bitmap with
+  its alpha set to false will result in a fully-opaque gray square.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><canvas width=160 height=60 data-draw=blank data-alpha=false></canvas></div>
+    <figcaption>Nothing drawn: black, 160 by 60, hiding the guides. <span class=pr-flag>Safari</span> Transparent.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><canvas width=160 height=60 data-draw=white data-alpha=false></canvas></div>
+    <figcaption><code>rgb(255 255 255 / 0.5)</code> from (40, 10) to (120, 50): an opaque mid-grey square on
+    black. <span class=pr-flag>Safari</span> Half-transparent white on the guides.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><canvas width=160 height=60 data-draw=clear data-alpha=false></canvas></div>
+    <figcaption>Filled blue, then <code>clearRect</code> from (40, 10) to (120, 50): a black hole in the blue.
+    <span class=pr-flag>Safari</span> A transparent hole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><canvas width=160 height=60 data-draw=clear></canvas></div>
+    <figcaption>The same with <code>alpha: true</code>, the default: the hole is transparent, the guides showing
+    through.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    blank() {},
+    white(context) {
+      context.fillStyle = "rgb(255 255 255 / 0.5)";
+      context.fillRect(40, 10, 80, 40);
+    },
+    clear(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 160, 60);
+      context.clearRect(40, 10, 80, 40);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d", {alpha: canvas.dataset.alpha !== "false"}), canvas);
+</script>
+</body>
+</html>

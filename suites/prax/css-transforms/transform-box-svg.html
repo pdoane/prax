@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>transform-box on SVG elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .r { fill: #4f81bd; stroke: rgba(214, 138, 60, 0.7); stroke-width: 20px; transform: scale(0.5); }
+  .g { fill: none; stroke: #6b7381; stroke-dasharray: 2 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 5 Transform reference box: the transform-box property</div>
+  <h1>transform-box on SVG elements</h1>
+  <p class=pr-lede><q>A reference box adds an additional offset to the origin specified by the transform-origin
+  property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-box">CSS Transforms 1 §5</a></span>
+  Each stage is an <code>svg</code>, 160 by 80. A blue 40px <code>rect</code> at (20, 20) has a 20px orange stroke, from
+  10 to 70; the dashed square is the stroke's. Each has <code>scale(0.5)</code>, toward its origin.</p>
+</header>
+
+<section>
+  <h2>The viewport, the fill and the stroke</h2>
+  <p><q>For SVG elements without associated CSS layout box the initial used value is 0 0</q> <q>view-box: Uses the
+  nearest SVG viewport as reference box.</q> <q>fill-box: Uses the object bounding box</q>. <q>stroke-box: Uses the
+  stroke bounding box</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=10 y=10 width=60 height=60 /><rect class=r x=20 y=20 width=40 height=40 /></svg></div>
+    <figcaption>The initial <code>view-box</code>, <code>0 0</code>: toward the svg's corner, the fill at 10 to
+    30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=10 y=10 width=60 height=60 /><rect class=r x=20 y=20 width=40 height=40 style="transform-box: fill-box" /></svg></div>
+    <figcaption><code>fill-box</code>: toward (20, 20), the fill at 20 to 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=10 y=10 width=60 height=60 /><rect class=r x=20 y=20 width=40 height=40 style="transform-box: stroke-box" /></svg></div>
+    <figcaption><code>stroke-box</code>: toward (10, 10), the fill at 15 to 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=10 y=10 width=60 height=60 /><rect class=r x=20 y=20 width=40 height=40 style="transform-origin: 50% 50%" /></svg></div>
+    <figcaption><code>view-box</code>, <code>50% 50%</code>: toward (80, 40), the fill at 50 to 70 across, 30 to 50
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=10 y=10 width=60 height=60 /><rect class=r x=20 y=20 width=40 height=40 style="transform-box: fill-box; transform-origin: 50% 50%" /></svg></div>
+    <figcaption><code>fill-box</code>, <code>50% 50%</code>: toward (40, 40), the fill at 30 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80 viewBox="0 0 80 40"><rect class=g x=10 y=10 width=20 height=20 style="stroke-width: 0.5" /><rect x=10 y=10 width=20 height=20 fill="#4f81bd" style="transform: translateX(50%)" /></svg></div>
+    <figcaption><code>viewBox="0 0 80 40"</code>, 2px a unit: <code>translateX(50%)</code> of the viewBox, 40 units,
+    80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

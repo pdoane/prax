@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The audio element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { padding: 10px; font-size: 13px; line-height: 20px; }
+  .forced { display: block; width: 100px; height: 20px; background: #d68a3c; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.9 The audio element</div>
+  <h1>The audio element</h1>
+  <p class=pr-lede><q>An audio element represents a sound or audio stream.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#the-audio-element">HTML §4.8.9</a></span>
+  <code>tone.wav</code> is a second of a tone, 16-bit PCM in a WAVE file, a format user agents <q>must
+  support</q>. Brackets show where each audio element is.</p>
+</header>
+
+<section>
+  <h2>Without controls, not displayed</h2>
+  <p><q>audio elements without a controls attribute will not be displayed by the user agent</q>. <q>When an audio
+  element is not exposing a user interface, the user agent is expected to force its 'display' property to compute to
+  'none', irrespective of CSS rules.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#embedded-content-rendering-rules">§15.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium line">[<audio src="support/tone.wav"></audio>]</div>
+    <figcaption>No controls: [].</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium line">[<audio class=forced src="support/tone.wav"></audio>]</div>
+    <figcaption>No controls, and <code>display: block</code> with an orange background: still [], on one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With controls, a line high</h2>
+  <p>When it is exposing a user interface, the audio element is <q>expected to be treated as a replaced element about
+  one line high, as wide as is necessary to expose the user agent's user interface features.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#embedded-content-rendering-rules">§15.4.1</a></span>
+  Of its contents, <q>User agents should not show this content to the user</q>.</p>
+  <figure>
+    <div class="pr-stage pr-wide line">[<audio controls src="support/tone.wav"><b>fallback</b></audio>]</div>
+    <figcaption><code>controls</code>, and markup inside: a control bar about a line high, with at least a way to
+    play, between the brackets, and no "fallback". Its width and height are each user agent's own.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

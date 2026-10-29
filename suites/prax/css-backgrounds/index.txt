@@ -1,0 +1,56 @@
+00-supports-1.html
+00-supports-2.html
+# css-backgrounds-4/#intro 1 Introduction: no page; it says what the module draws, which the later sections show
+css-backgrounds-4/#placement 1.1 Module Interactions
+    first-letter-first-line.html
+# css-backgrounds-4/#values 1.2 Value Definitions: no page; it defines terms, and that an <image> may be a gradient, which 2.2 shows
+# css-backgrounds-4/#backgrounds 2 Defining Backgrounds: no page; that backgrounds are not inherited but show through is CSS 2's 14.2.1, whose background-color page shows it
+css-backgrounds-4/#background-color 2.1 Base Color: the background-color property
+    background-color.html
+css-backgrounds-4/#background-image 2.2 Image Sources: the background-image property
+    background-image.html
+css-backgrounds-4/#background-repeat-longhands 2.3 Tiling Images: the background-repeat-x, background-repeat-y, background-repeat-block, and background-repeat-inline properties
+    background-repeat-longhands.html
+    background-repeat-space.html
+    background-repeat-round.html
+css-backgrounds-4/#background-repeat 2.4 Tiling Images Shorthand: the background-repeat property
+    background-repeat-logical.html
+css-backgrounds-4/#background-attachment 2.5 Affixing Images: the background-attachment property
+    background-attachment.html
+    background-attachment-fixed.html
+css-backgrounds-4/#background-position-longhands 2.6 Background Positioning: the background-position-x, background-position-y, background-position-inline, and background-position-block properties
+    background-position-longhands.html
+css-backgrounds-4/#background-position 2.7 Background Positioning Shorthand: the background-position shorthand property
+    background-position-edges.html
+    background-position-logical.html
+# css-backgrounds-4/#bg-position-serialization 2.7.1 Serialization of background-position values: no page; it is serialization
+css-backgrounds-4/#background-clip 2.8 Painting Area: the background-clip property
+    background-clip.html
+    background-clip-text.html
+css-backgrounds-4/#background-origin 2.9 Positioning Area: the background-origin property
+    background-origin.html
+    background-origin-fixed.html
+    background-origin-fragments.html
+css-backgrounds-4/#background-size 2.10 Sizing Images: the background-size property
+    background-size.html
+    background-size-auto.html
+    background-size-contain-cover.html
+# css-backgrounds-4/#bg-size-serialization 2.10.1 Serialization of background-size values: no page; it is serialization
+css-backgrounds-4/#background-layers 2.11 Background Image Layers: the background-tbd shorthand property
+    background-tbd.html
+css-backgrounds-4/#background 2.12 Backgrounds Shorthand: the background property
+    background-shorthand.html
+    background-shorthand-clip.html
+css-backgrounds-4/#layering 3 Layering Multiple Background Images
+    layers.html
+css-backgrounds-4/#special-backgrounds 4 Backgrounds of Special Elements
+    canvas-surface.html
+css-backgrounds-4/#root-background 4.1 The Canvas Background and the Root Element
+    canvas-root.html
+css-backgrounds-4/#body-background 4.2 The Canvas Background and the HTML <body> Element
+    canvas-body.html
+css-backgrounds-4/#first-line-background 4.3 The ::first-line Pseudo-element‘s Background
+    first-line-background.html
+# css-backgrounds-4/#changes 5 Changes: no page; it lists changes
+# css-backgrounds-4/#level-changes 5.1 Additions since [CSS3BG]: no page; it lists the additions, which the pages above show
+# css-backgrounds-4/#acknowledgments 6 Acknowledgments: no page; nothing to see

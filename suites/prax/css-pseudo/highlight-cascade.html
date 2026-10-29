@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cascading highlight styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 16px/30px "PR Arimo"; color: #1f2430; }
+  .t p { margin: 0; }
+  em { font-style: italic; }
+  strong { font-weight: bold; }
+  .example p::highlight(h) { color: yellow; background: green; }
+  .example p > em::highlight(h) { color: orange; }
+  .example em::highlight(h) { color: red; }
+  .root .t { color: #4f81bd; }
+  .root p::highlight(h) { background-color: #f6d7b4; }
+  .universal ::highlight(h) { background-color: #4f81bd; color: white; }
+  .universal p.warning::highlight(h) { background-color: #c0392b; }
+  .scoped .t::highlight(h) { background-color: #4f81bd; color: white; }
+  .scoped p.warning::highlight(h) { background-color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.5 Cascading and Per-Element Highlight Styles</div>
+  <h1>Cascading highlight styles</h1>
+  <p class=pr-lede><q>When any supported property is not given a value by the cascade, or given a value of inherit or
+  unset, its specified value is determined by inheritance from the corresponding highlight pseudo-element of its
+  originating element's parent element. This occurs regardless of whether that property is an inherited
+  property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-cascade">CSS Pseudo-Elements 4 §3.5</a></span>
+  Each stage's paragraph is all in one custom highlight.</p>
+</header>
+
+<section>
+  <h2>From the parent's highlight</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage example"><div class=t><p data-highlight=h>Highlight this <em>and this</em>.</p></div></div>
+    <figcaption>The section's example, with <code>::highlight()</code>: green throughout, as the <code>em</code>'s
+    background inherits from the <code>p</code>'s highlight; yellow text, and orange in the <code>em</code>. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> “and this” on no background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage root"><div class=t><p data-highlight=h>Highlight this <em>and this</em>.</p></div></div>
+    <figcaption>Only a background on <code>p::highlight()</code>: <q>for highlight pseudo-elements originating from
+    the root element the inherited value of color is currentColor</q>, so the text stays the element's blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A universal rule overrides an ancestor's</h2>
+  <p><q>Authors wanting multiple selections styles should use :root::selection for their document-wide selection
+  style, since this will allow clean overriding in descendants.</q> With <code>::highlight()</code>, as with
+  <code>::selection</code>; the paragraph is <code>p.warning</code>, with a <code>strong</code>.</p>
+  <figure>
+    <div class="pr-stage universal"><div class=t><p class=warning data-highlight=h>Some <strong>very important</strong></p></div></div>
+    <figcaption><code>::highlight(h)</code> blue, <code>p.warning::highlight(h)</code> red: “Some” red, but the
+    <code>strong</code> matches the universal rule itself, so blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage scoped"><div class=t><p class=warning data-highlight=h>Some <strong>very important</strong></p></div></div>
+    <figcaption>The blue rule on the stage's text box instead of everywhere: red throughout, the
+    <code>strong</code> inheriting from the <code>p</code>. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> The <code>strong</code> on no background.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

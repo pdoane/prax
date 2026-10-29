@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alternative text is not drawn</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .star::before { content: "★ " / "New!"; }
+  .img::before { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='9' fill='%23d68a3c'/></svg>") / "New!"; vertical-align: top; }
+  .chap { counter-reset: chapter 3; }
+  .chap::before { content: "Chapter " counter(chapter) ": " / "Chapter " counter(chapter); }
+  .empty::before { content: "\25BA  " / ""; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 1.2 Alternative Text for Accessibility</div>
+  <h1>Alternative text is not drawn</h1>
+  <p class=pr-lede><q>The 'content' property thus accepts alternative text to be specified after a slash ('/') after
+  the last &lt;content-list&gt;. If such alternative text is provided, it must be used for speech output instead.</q>
+  What is drawn is the “visual content” before the slash. <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#alt">CSS Generated Content 3 §1.2</a></span></p>
+</header>
+
+<section>
+  <h2>The visual content is drawn, the alternative text is not</h2>
+  <p>The alternative text is <q>supplied to the accessibility tree for rendering to speech, braille, etc. instead of
+  the “visual content” provided before the slash.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-property">§1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=star>Fresh item</div></div>
+    <figcaption><code>"★ " / "New!"</code>: "★ Fresh item", and "New!" nowhere on the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=img> Fresh item</div></div>
+    <figcaption>An image <code>/ "New!"</code>: an orange disc, then "Fresh item".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Counters and empty alternative text</h2>
+  <p><q>&lt;alt-text&gt; = [ &lt;string&gt; | &lt;counter&gt; | &lt;attr()&gt; ]+</q>; empty alternative text lets
+  <q>purely decorative text to be elided in speech output</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=chap>Loomings</div></div>
+    <figcaption>With <code>counter-reset: chapter 3</code> and a counter in the alternative text: "Chapter 3:
+    Loomings". <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Have no counter in alternative
+    text, and draw no <code>::before</code>: "Loomings".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=empty>Details</div></div>
+    <figcaption><code>"\25BA  " / ""</code>: the pointer is still drawn, "► Details".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

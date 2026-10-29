@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing the initial letter box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Arimo"; margin: 0; }
+  .p::first-letter { initial-letter: 2; color: #2c5a8f; background: #f9cc9d; }
+  .q::first-letter { initial-letter: 3; }
+  .pad::first-letter { padding-top: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.5.5 Sizing the Initial Letter Box</div>
+  <h1>Sizing the initial letter box</h1>
+  <p class=pr-lede><q>Otherwise it is considered to have an automatic size in that dimension and its content box is
+  sized to fit both: The specified sink … The glyph outlines of all the glyphs it contains</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-box-size">CSS Inline Layout 3 §7.5.5</a></span>
+  Each paragraph is 13px PR Arimo on 20px lines; its <code>::first-letter</code>, blue on orange, has
+  <code>initial-letter</code>. <span class=pr-flag>Safari</span> supports only
+  <code>-webkit-initial-letter</code> and <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>Around the glyph's outline</h2>
+  <p><q>all line boxes impacted by the glyph outlines of an initial letter need to be excluded, not just those within
+  range of the initial letter sink.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p q">Quietly the tail of the Q drops below the third baseline, so the fourth line moves aside for it too, and the fifth does not.</p></div>
+    <figcaption><code>initial-letter: 3</code> on a Q: the box reaches down past its tail, so the fourth line starts
+    after the Q too.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>Ánother letter, with an accent above its cap height, which overflows above the box.</p></div>
+    <figcaption>Á, <code>2</code>: <q>if its block-start padding and border are both zero, then its block-start
+    content edge instead coincides with its over alignment point exactly</q>: the orange stops at the cap height and
+    the accent rises above it. <span class=pr-flag>Chrome</span> The orange holds the accent.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p pad">Ánother letter, now with 2px of top padding: the box holds its accent.</p></div>
+    <figcaption>The same with 2px of top padding: the box grows up to hold the accent, and the paragraph moves down
+    for it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

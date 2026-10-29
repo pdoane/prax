@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic cross sizes of a flex container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.2 Flex Container Intrinsic Cross Sizes</div>
+  <h1>Intrinsic cross sizes of a flex container</h1>
+  <p class=pr-lede><q>The min-content/max-content cross size of a single-line flex container is the largest
+  min-content contribution/max-content contribution (respectively) of its flex items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-cross-sizes">CSS Flexible Box Layout 2 §9.10.2</a></span></p>
+</header>
+
+<section>
+  <h2>Single-line: the largest contribution</h2>
+  <p>Each dashed container is a <code>column</code>, so its width is its cross size, of "aaa bbb" (70px, or 30px
+  wrapped) and "cccccc" (60px).</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="flex-direction: column; width: max-content"><div class=i1>aaa bbb</div><div class=i2>cccccc</div></div></div>
+    <figcaption><code>width: max-content</code>: 70px, the larger max-content contribution.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="flex-direction: column; width: min-content"><div class=i1>aaa bbb</div><div class=i2>cccccc</div></div></div>
+    <figcaption><code>width: min-content</code>: 60px, the larger min-content contribution; "aaa bbb" on one
+    line would be 70px, so "aaa" over "bbb".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Row, multi-line: the sum of the lines</h2>
+  <p><q>The min-content/max-content cross size is the sum of the flex line cross sizes resulting from sizing the flex
+  container under a cross-axis min-content constraint/max-content constraint (respectively).</q> Boxes 80px long in
+  the main axis, of cross sizes 20px, 40px and 30px, wrap two to a line.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="f pr-parent" style="flex-wrap: wrap; width: 160px"><div class="pr-a pr-fit" style="width: 80px">A</div><div class="pr-b pr-fit" style="width: 80px; height: 40px">B</div><div class="pr-c pr-fit" style="width: 80px; height: 30px">C</div></div></div>
+    <figcaption>A <code>row wrap</code> 160px wide: lines of 40px and 30px, so 70px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="f pr-parent" style="flex-wrap: wrap; writing-mode: vertical-rl; height: 80px; width: max-content"><div class="pr-a pr-fit" style="height: 40px">A</div><div class="pr-b pr-fit" style="height: 40px; width: 40px">B</div><div class="pr-c pr-fit" style="height: 40px; width: 30px">C</div></div></div>
+    <figcaption>The same in <code>vertical-rl</code> at <code>width: max-content</code>, boxes 40px long in an
+    80px main size: lines of 40px and 30px from the right, so 70px wide; A, of <code>width: auto</code>, stretches to its line's 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

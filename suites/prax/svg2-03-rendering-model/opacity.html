@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Object and group opacity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.6.1 Object and group opacity: the effect of the ‘opacity’ property</div>
+  <h1>Object and group opacity</h1>
+  <p class=pr-lede><q>Conceptually, the object or group to which opacity applies is rendered into an RGBA offscreen
+  image. The offscreen image as whole is then blended into the canvas with the specified opacity value used uniformly
+  across the offscreen image.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#ObjectAndGroupOpacityProperties">SVG 2 §3.6.1</a></span>
+  Each stage is an SVG 160 by 60 on a blue band, with a red circle of radius 20 at 70, 30 and a green one at 90,
+  30.</p>
+</header>
+
+<section>
+  <h2>Group opacity, and the order inside it</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="10" width="160" height="40" fill="#4f81bd" /><g opacity="0.5"><circle cx="70" cy="30" r="20" fill="#c0392b" /><circle cx="90" cy="30" r="20" fill="#6aa36a" /></g></svg></div>
+    <figcaption>On the <code>g</code>: green hides red where they overlap, and the group shows the band through at
+    half.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="10" width="160" height="40" fill="#4f81bd" /><circle cx="70" cy="30" r="20" fill="#c0392b" opacity="0.5" /><circle cx="90" cy="30" r="20" fill="#6aa36a" opacity="0.5" /></svg></div>
+    <figcaption>On each circle, green over red: the overlap more green than red, and red showing through.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="10" width="160" height="40" fill="#4f81bd" /><circle cx="90" cy="30" r="20" fill="#6aa36a" opacity="0.5" /><circle cx="70" cy="30" r="20" fill="#c0392b" opacity="0.5" /></svg></div>
+    <figcaption>Red over green: <q>opacity is not commutative</q>; the overlap more red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multiplied</h2>
+  <p><q>The fifth group shows the multiplicative effect of opacity settings.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="10" width="160" height="40" fill="#4f81bd" /><g opacity="0.5"><circle cx="70" cy="30" r="20" fill="#c0392b" opacity="0.5" /><circle cx="90" cy="30" r="20" fill="#6aa36a" opacity="0.5" /></g></svg></div>
+    <figcaption>0.5 on the group and on each circle: the red's left edge 0.25 opaque, 25% red over 75% blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

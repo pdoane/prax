@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Reflected control points</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.5.2 Reflected control points</div>
+  <h1>Reflected control points</h1>
+  <p class=pr-lede><q>If the current point is (<i>curx</i>, <i>cury</i>) and the final control point of the
+  previous path segment is (<i>oldx2</i>, <i>oldy2</i>), then the reflected point (i.e., (<i>newx1</i>,
+  <i>newy1</i>), the first control point of the current path segment) is:</q> <code>(2*curx - oldx2, 2*cury -
+  oldy2)</code>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#ReflectedControlPoints">SVG 2 §9.5.2</a></span>
+  Each stage is an SVG 160 by 60 with a path stroked dark blue, 4 wide. On it, a grey line runs from each given
+  control point, ringed, through the current point to its reflection, orange.</p>
+</header>
+
+<section>
+  <h2>S and s</h2>
+  <p><q>The S/s and T/t commands indicate that the first control point of the given cubic Bézier segment is
+  calculated by reflecting the previous path segment's final control point relative to the current point.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 C 20 20 50 10 80 30 S 130 50 140 20" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 50 10 L 110 50" /><circle cx="50" cy="10" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="110" cy="50" r="3" /></svg></div>
+    <figcaption><code>C 20 20 50 10 80 30 S 130 50 140 20</code>: 50, 10 through 80, 30 is 110, 50, so the curve
+    goes on down through 80, 30 before it turns up.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 c 20 0 40 30 60 30 s 40 -20 60 -20" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 60 50 L 100 50" /><circle cx="60" cy="50" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="100" cy="50" r="3" /></svg></div>
+    <figcaption><code>M 20 20 c 20 0 40 30 60 30 s 40 -20 60 -20</code>: the <b>c</b>'s 60, 50 through 80, 50 is
+    100, 50, so the <b>s</b> leaves 80, 50 level, then rises to 140, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 C 30 10 40 10 50 30 S 70 50 80 30 S 100 10 110 30 S 130 50 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 40 10 L 60 50 M 70 50 L 90 10 M 100 10 L 120 50" /><circle cx="40" cy="10" r="2.5" fill="#fff" /><circle cx="70" cy="50" r="2.5" fill="#fff" /><circle cx="100" cy="10" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="60" cy="50" r="3" /><circle fill="#d68a3c" cx="90" cy="10" r="3" /><circle fill="#d68a3c" cx="120" cy="50" r="3" /></svg></div>
+    <figcaption>An <b>S</b> after an <b>S</b> reflects the earlier <b>S</b>'s given control point: a wave
+    crossing y 30 every 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>T and t</h2>
+  <p>A <b>T</b>'s control point is the reflection of the previous one, which after a <b>T</b> was itself
+  reflected.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 Q 40 10 80 30 T 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 40 10 L 120 50" /><circle cx="40" cy="10" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="120" cy="50" r="3" /></svg></div>
+    <figcaption><code>Q 40 10 80 30 T 140 30</code>: 40, 10 through 80, 30 is 120, 50, so the <b>T</b> dips
+    to y 40 between 80, 30 and 140, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 Q 30 10 50 30 T 80 30 T 110 30 T 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 30 10 L 70 50 L 90 10 L 130 50" /><circle cx="30" cy="10" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="70" cy="50" r="3" /><circle fill="#d68a3c" cx="90" cy="10" r="3" /><circle fill="#d68a3c" cx="130" cy="50" r="3" /></svg></div>
+    <figcaption><code>Q 30 10 50 30 T 80 30 T 110 30 T 140 30</code>: 70, 50, then 90, 10, then 130, 50, each
+    from the last: the lopsided wave repeats, mirrored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 q 30 -20 60 0 t 60 0" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 50 10 L 110 50" /><circle cx="50" cy="10" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="110" cy="50" r="3" /></svg></div>
+    <figcaption><code>M 20 30 q 30 -20 60 0 t 60 0</code>: 50, 10 through 80, 30 is 110, 50, so the <b>t</b> dips
+    to y 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

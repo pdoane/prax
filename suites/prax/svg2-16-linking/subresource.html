@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>External references: subresource documents</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7.3 Processing the subresource document</div>
+  <h1>External references: subresource documents</h1>
+  <p class=pr-lede><q>If the fetched document is a type that the user agent can parse to create a document object model,
+  it must process it in secure static mode (meaning, do not fetch any additional external resources and do not run
+  scripts or play animations).</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL-parsing">SVG 2 §16.1.7.3</a></span>
+  Each stage is an SVG 160 by 60. <code>support/defs.svg</code> holds a blue square, <code>#square</code>; the same
+  square with a <code>set</code> that would turn it orange, <code>#animated</code>; and a green gradient,
+  <code>#green</code>.</p>
+</header>
+
+<section>
+  <h2>Elements of another document</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/defs.svg#square" x="60" y="10" /></svg></div>
+    <figcaption>A <code>use</code> of <code>#square</code>: the blue square at 60, 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/defs.svg#animated" x="60" y="10" /></svg></div>
+    <figcaption>Of <code>#animated</code>: the animation does not play, so blue.
+    <span class=pr-flag>Firefox</span> Orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(support/defs.svg#green) #d68a3c" /></svg></div>
+    <figcaption>A fill of <code>url(support/defs.svg#green)</code>, with an orange fallback: green.
+    <span class=pr-flag>Safari</span> Orange, the fallback.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

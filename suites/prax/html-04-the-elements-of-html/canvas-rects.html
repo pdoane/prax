@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drawing rectangles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.11 Drawing rectangles to the bitmap</div>
+  <h1>Drawing rectangles</h1>
+  <p class=pr-lede><q>Shapes are painted without affecting the current default path, and are subject to the clipping
+  region, and, with the exception of clearRect(), also shadow effects, global alpha, and the current compositing and
+  blending operator.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-rectangles-to-the-bitmap">HTML §4.12.5.1.11</a></span></p>
+</header>
+<section>
+  <h2>Fill and stroke</h2>
+  <p>strokeRect: <q>If just one of either w or h is zero</q> the path is <q>a single straight line</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=fillstroke></canvas></div>
+    <figcaption>fillRect from (10, 10) to (90, 50), blue. strokeRect from (110, 10) to (190, 50), 6 wide: an orange
+    frame centered on those edges, 107 to 193 across.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=zero></canvas></div>
+    <figcaption>strokeRect 180 by 0 at (10, 40), 6 wide: a bar from x 10 to 190, y 37 to 43. strokeRect 0 by 0 at
+    (100, 20): nothing.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>clearRect</h2>
+  <p><q>Let pixels be the set of pixels in the specified rectangle that also intersect the current clipping region.</q>
+  <q>Clear the pixels in pixels to a transparent black, erasing any previous image.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clearclip></canvas></div>
+    <figcaption>Blue everywhere, then a clip to a circle of radius 30 round (100, 50) and clearRect of the whole canvas:
+    only the circle cleared, the guides showing through it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clearalpha></canvas></div>
+    <figcaption>Blue everywhere, <code>globalAlpha</code> 0.2, then clearRect from (50, 20) to (150, 80): cleared
+    entirely, the global alpha taking no part.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    fillstroke(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(10, 10, 80, 40);
+      context.strokeStyle = "#d68a3c";
+      context.lineWidth = 6;
+      context.strokeRect(110, 10, 80, 40);
+    },
+    zero(context) {
+      context.strokeStyle = "#d68a3c";
+      context.lineWidth = 6;
+      context.strokeRect(10, 40, 180, 0);
+      context.strokeRect(100, 20, 0, 0);
+    },
+    clearclip(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 200, 100);
+      context.beginPath();
+      context.arc(100, 50, 30, 0, 2 * Math.PI);
+      context.clip();
+      context.clearRect(0, 0, 200, 100);
+    },
+    clearalpha(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 200, 100);
+      context.globalAlpha = 0.2;
+      context.clearRect(50, 20, 100, 60);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

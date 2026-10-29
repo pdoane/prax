@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 8: the cross size of each line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; }
+  .flex > div { width: 40px; }
+  .end { align-self: flex-end; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 8</div>
+  <h1>Step 8: the cross size of each line</h1>
+  <p class=pr-lede><q>If the flex container is single-line and has a definite cross size, the cross size of the flex
+  line is the flex container's inner cross size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span>
+  In each stage, a purple item of <code>align-self: flex-end</code> marks the bottom of its line.</p>
+</header>
+
+<section>
+  <h2>A single line, and a definite cross size</h2>
+  <figure>
+    <div class="pr-stage flex" style="height: 60px; align-items: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption><code>height: 60px</code>, <code>nowrap</code>: the line is 60px, so D at the bottom, from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="height: 60px; flex-wrap: wrap; align-content: flex-start; align-items: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption>The same with <code>wrap</code>: multi-line, so the line is as tall as its items, 20px, and D at
+    the top beside A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise, the largest outer hypothetical cross size</h2>
+  <figure>
+    <div class="pr-stage flex" style="align-items: flex-start"><div class="pr-a pr-fit" style="height: 30px">A</div><div class="pr-b pr-fit" style="margin-top: 20px">B</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption>A 30px tall; B 20px tall with <code>margin-top: 20px</code>, 40px outside: the line is 40px, D
+    from 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="align-items: flex-start; min-height: 50px"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption>Single-line, <code>min-height: 50px</code>: the line is clamped to the container's min cross
+    size, 50px, so D from 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Baseline-aligned items</h2>
+  <p>The largest distances above and below the baseline are summed. A has 20px of padding above its text, B 20px below; both are 40px tall.</p>
+  <figure>
+    <div class="pr-stage flex pr-measure" style="align-items: baseline"><div class="pr-a pr-fit" style="padding-top: 20px">a</div><div class="pr-b pr-fit" style="padding-bottom: 20px">b</div><div class="pr-d pr-fit end" style="align-self: flex-end">D</div></div>
+    <figcaption>"a" and "b" on one baseline: B 20px lower than A, so the line is 60px and D from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex pr-measure" style="align-items: baseline; height: 100px; flex-wrap: wrap; align-content: flex-start"><div class="pr-a pr-fit" style="padding-top: 20px">a</div><div class="pr-b pr-fit" style="padding-bottom: 20px">b</div><div class="pr-d pr-fit end" style="align-self: flex-end">D</div></div>
+    <figcaption>The same in a multi-line container 100px tall: still a 60px line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsing through a box: its position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .mark { float: left; width: 30px; height: 10px; background: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Collapsing through a box: its position</h1>
+  <p class=pr-lede><q>If the top and bottom margins of a box are adjoining, then it is possible for margins to collapse through it.</q> A dashed outline is such a box. Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Where the box is</h2>
+  <p>A box that margins collapse through still has a position, which its descendants are laid out from: here a red
+  float, which marks the box's top border edge. <q>If the element's margins are collapsed with its parent's top margin,
+  the top border edge of the box is defined to be the same as the parent's. Otherwise, either the element's parent is
+  not taking part in the margin collapsing, or only the parent's bottom margin is involved. The position of the
+  element's top border edge is the same as it would have been if the element had a non-zero bottom border.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 20px">A: mb 20</div><div class=pr-ghost style="margin: 30px 0 10px"><div class=mark></div></div><div class=pr-b style="margin-top: 40px">B: mt 40</div></div>
+    <figcaption>A's 20, the box's 30 and 10, and B's 40 collapse to 40. With a bottom border, the box's top margin
+    would collapse with A's alone: the mark is 30px below A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 10px"><div class=pr-ghost style="margin: 30px 0 0"><div class=mark></div></div><div class=pr-b style="margin-top: 20px; margin-left: 40px">child: mt 20</div></div></div>
+    <figcaption>The box collapses with its parent's top margin: its top edge is the parent's, 30px below the anchor,
+    level with the next child.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div class=pr-ghost style="margin-top: 5px"><div style="margin-top: 20px"></div><div class=mark></div></div><div class=pr-b style="margin-top: 30px">B: mt 30</div></div>
+    <figcaption>A's 10, the box's 5 and an empty child's 20: the mark is 20px below A, where a bottom border would
+    put it. B is 30px below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div class=pr-ghost style="margin-top: 5px"><div class=mark></div><div style="margin-top: 20px"></div></div><div class=pr-b style="margin-top: 30px">B: mt 30</div></div>
+    <figcaption>The empty child after the mark: its margin still joins the box's top margin, and the mark is 20px
+    below A.</figcaption>
+  </figure>
+  <p><q>Note that the positions of elements that have been collapsed through have no effect on the positions of the
+  other elements with whose margins they are being collapsed; the top border edge position is only required for
+  laying out descendants of these elements.</q></p>
+</section>
+
+</body>
+</html>

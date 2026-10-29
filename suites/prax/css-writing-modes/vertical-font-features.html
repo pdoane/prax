@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Upright and sideways typesetting</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 136px; padding: 0 6px; }
+  .lat { font-family: "PR Arimo"; }
+  .ar { font: 14px/36px "PR Noto Sans Arabic"; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1.1 Vertical Typesetting and Font Features</div>
+  <h1>Upright and sideways typesetting</h1>
+  <p class=pr-lede><q>When typesetting text in vertical-rl and vertical-lr modes, text is typeset either “upright” or
+  “sideways”</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-font-features">CSS Writing Modes 4 §5.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Vertical metrics and features, or horizontal ones</h2>
+  <p>Upright: <q>The UA must synthesize vertical font metrics for fonts that lack them.</q> <q>(E.g. the OpenType
+  vert feature must be enabled.)</q> Sideways: <q>using horizontal metrics and composition, and vertical typesetting
+  features are not used.</q> PR Noto Sans JP has vertical metrics and <code>vert</code> forms; PR Arimo has
+  neither.</p>
+  <figure class=s>
+    <div class=pr-stage>「縦書き」ー。、…</div>
+    <figcaption>Upright: <code>vert</code> forms; 。 and 、 at the top right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: sideways">「縦書き」ー。、…</div>
+    <figcaption>Sideways: horizontal forms turned; 。 and 、 at the top left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage lat" style="text-orientation: upright">ABC</div>
+    <figcaption>PR Arimo upright: synthesized metrics, no overlaps.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage lat" style="text-orientation: sideways">ABC</div>
+    <figcaption>PR Arimo sideways: as close as in horizontal text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

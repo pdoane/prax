@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 6 Page Properties</div>
+  <h1>Page properties</h1>
+  <p class=pr-lede><q>Properties that apply to the page-margin boxes can also be set within the page context: if inheritable or explicitly inherited (with the 'inherit' keyword in the margin context), they will inherit to the page-margin boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-properties">CSS Paged Media 3 §6</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Inheritance</h2>
+  <p><q>page-margin boxes inherit from the page context. The page context inherits from the root element.</q> A page context that takes initial values instead <q>is also conformant</q>.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 20px; @top-left { content: 'header' } } html { color: #c0392b }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>The root's text is red; the header, which inherits it through the page context, is red too in Chrome. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 20px; color: #2c5a8f; @top-left { content: 'blue' } @top-right { content: 'red'; color: #c0392b } } html { color: #c0392b }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>color</code> set in the page context: 'blue' inherits it, 'red' sets its own; the document's text stays red. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Units and percentages</h2>
+  <p><q>When used on the 'font-size' property in the margin context, they are relative to the font of the page context.</q> <q>For right and left values, percentages are relative to the width of the containing block; for top and bottom values, percentages are relative to the height of the containing block.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px 20px; font-size: 10px; @top-left { content: 'Abc'; font-size: 2em; background: #f9cc9d } @top-right { content: 'Abc'; background: #f9cc9d } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>font-size: 2em</code> in the margin context is twice the page context's 10px: the left 'Abc' is 20px, the right one 10px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10% 25% } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>margin: 10% 25%</code>: 16px above and below, 10% of the page's 160px height; 60px at the sides, 25% of its 240px width. The page area is 120 by 128. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Margins of 0: the percentages are not applied.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

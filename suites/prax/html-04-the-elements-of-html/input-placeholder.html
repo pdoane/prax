@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The placeholder attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.10 The placeholder attribute</div>
+  <h1>The placeholder attribute</h1>
+  <p class=pr-lede><q>The placeholder attribute represents a short hint (a word or short phrase) intended to aid the user
+  with data entry when the control has no value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-placeholder-attribute">HTML §4.10.5.3.10</a></span></p>
+</header>
+
+<section>
+  <h2>Shown while the value is empty</h2>
+  <p><q>User agents should present this hint to the user, after having stripped newlines from it, when the element's
+  value is the empty string, especially if the control is not focused.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-placeholder-attribute">§4.10.5.3.10</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input placeholder="John Ratzenberger" size=20></div>
+        <div><input placeholder="John Ratzenberger" value="Jane" size=20></div>
+        <div><input placeholder="one&#10;line" size=20></div>
+      </div>
+    </div>
+    <figcaption>The hint, in grey; then "Jane", and no hint; then "oneline", its line break stripped. Type into the
+    first: the hint goes; delete what you typed: it returns.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=email placeholder="john@example.net" size=20></div>
+        <div><input type=password placeholder="password" size=20></div>
+        <div><input type=number placeholder="how many" style="width: 140px"></div>
+      </div>
+    </div>
+    <figcaption>Email, password and number fields show their hints too. Type into each: the hint goes.
+    </figcaption>
+  </figure>
+</section>
+</body>
+</html>

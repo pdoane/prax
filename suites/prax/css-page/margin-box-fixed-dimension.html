@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Heights of the top and bottom boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.3 Page-Margin Box Fixed Dimension Computation Rules</div>
+  <h1>Heights of the top and bottom boxes</h1>
+  <p class=pr-lede><q>'margin-top' + 'border-top-width' + 'padding-top' + 'height' + 'padding-bottom' + 'border-bottom-width' + 'margin-bottom' = top page margin</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#fixed-sizing">CSS Paged Media 3 §5.3.3</a></span> The pages have 40px margins above and below.</p>
+</header>
+
+<section>
+  <h2>auto heights and margins</h2>
+  <p><q>If 'height' is set to 'height/auto', any auto margin values become &lt;safe-printable-inset&gt; and 'height' follows from the resulting equality.</q> <q>If both 'margin-top' and 'margin-bottom' are 'auto', their used values become equal.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-center { content: 'auto'; background: #4f81bd; color: white } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>height: auto</code>: the box is the margin's full 40px tall, its text centered vertically. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-center { content: '20px'; height: 20px; margin: auto 0; background: #4f81bd; color: white } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>height: 20px</code> and auto margins: 10px above and below it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over-constrained</h2>
+  <p><q>If at this point all of 'height', 'margin-top', and 'margin-bottom' have a computed value other than 'height/auto', the values are said to be "over-constrained". In this case, the specified value of 'margin-top' is treated as 'margin-top/auto'.</q> At the bottom, <q>the 'margin-bottom' is ignored rather than the 'margin-top'.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-center { content: 'top'; height: 20px; margin: 0 0 5px; background: #4f81bd; color: white } @bottom-center { content: 'bottom'; height: 20px; margin: 5px 0 0; background: #4f81bd; color: white } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Top: <code>margin-top: 0</code> is ignored, so the box sits 5px above the page area, 15px below the page's edge. Bottom: 5px below the page area, 15px above the edge. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

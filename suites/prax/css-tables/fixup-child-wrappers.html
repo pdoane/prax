@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 2: child wrappers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .cap { display: table-caption; background: #f6d7b4; font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, stage 2</div>
+  <h1>Fixup, stage 2: child wrappers</h1>
+  <p class=pr-lede><q>Generate missing child wrappers</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span>
+  Tinted, dashed boxes are tables with <code>border-spacing: 10px</code>; blue boxes are cell elements, orange ones
+  captions; plain text is in anonymous cells.</p>
+</header>
+
+<section>
+  <h2>Rows in a table and in a row group</h2>
+  <p><q>An anonymous table-row box must be generated around each sequence of consecutive children of a table-root box
+  which are not proper table child boxes.</q> <q>An anonymous table-row box must be generated around each sequence of
+  consecutive children of a table-row-group box which are not table-row boxes.</q></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent">x<div class="pr-table-cell blue">A</div>y</div></div>
+    <figcaption>Text, a cell, text: one sequence, so one row of three cells, "x", A and "y".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class="pr-table-cell blue">A</div><div class=cap>caption</div><div class="pr-table-cell blue">B</div></div></div>
+    <figcaption>A caption between two cells ends the sequence: A and B are in two rows, one above the other, under
+    the caption.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row-group><div class="pr-table-cell blue">A</div><div class=pr-table-row><div class="pr-table-cell blue">B</div></div><div class="pr-table-cell blue">C</div></div></div></div>
+    <figcaption>In a row group, a cell, a row, a cell: A's row, B's row, C's row, three rows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

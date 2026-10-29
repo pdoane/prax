@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Borders</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 5 Borders</div>
+  <h1>Borders</h1>
+  <p class=pr-lede><q>Borders fill the border area, to visually delineate the edges of the box</q>. <q>Both sets of
+  properties control the same set of borders: they are just different ways of indexing each side.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#borders">CSS Box Model 4 §5</a></span> CSS 2's chapter 8
+  pages walk the physical border properties; CSS Logical's, the flow-relative ones.</p>
+</header>
+
+<section>
+  <h2>One border, two names</h2>
+  <p>Each box declares a physical border property, then a flow-relative one, or the other way round. The later
+  declaration wins where the two name the same side.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-plain style="border-left: 20px solid #2c5a8f; border-inline-start-width: 4px"></div></div>
+    <figcaption><code>border-left: 20px solid; border-inline-start-width: 4px</code>: a 4px left border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-plain style="border-inline-start-width: 4px; border-left: 20px solid #2c5a8f"></div></div>
+    <figcaption>The other order: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-plain style="direction: rtl; border-left: 20px solid #2c5a8f; border-inline-start: 4px solid #d68a3c"></div></div>
+    <figcaption>With <code>direction: rtl</code>, <code>border-inline-start</code> is the right border: 20px blue at
+    the left, 4px orange at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-plain style="border-top: 20px solid #2c5a8f; border-block-start-color: #d68a3c"></div></div>
+    <figcaption><code>border-top: 20px solid; border-block-start-color</code> orange: a 20px orange top
+    border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

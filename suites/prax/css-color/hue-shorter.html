@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hue interpolation: shorter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.5.1 shorter</div>
+  <h1>Hue interpolation: shorter</h1>
+  <p class=pr-lede><q>Hue angles are interpolated to take the <em>shorter</em> of the two arcs between the starting and ending hues.</q> It is the default. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-shorter">CSS Color 4
+  §13.5.1</a></span> Bars are <code>linear-gradient(in oklch shorter hue to right, A, B)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+</header>
+
+<section>
+  <h2>Red to yellow, by orange</h2>
+  <p>From a red, <code>oklch(0.6 0.24 30)</code>, to a yellow, <code>oklch(0.8 0.15 90)</code>: <q>the midpoint [...] would be at a hue angle of 30 + (90 - 30) * 0.5 = 60 degrees, along the shorter arc between the two colors, giving a deep orange</q>.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch shorter hue to right, oklch(0.6 0.24 30), oklch(0.8 0.15 90))"></div></div>
+    <figcaption>Red, orange, yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch shorter hue to right, oklch(0.6 0.24 30), oklch(0.8 0.15 90))"></div><div class=sw style="background: oklch(0.7 0.195 60)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.7 0.195 60)</code>: one deep orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across 0</h2>
+  <p>From hue 350 to hue 10: <q>Angles are adjusted so that |θ₂ - θ₁| ∈ [-180, 180]</q>, so the path crosses 0, 20 degrees long.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch shorter hue to right, oklch(0.7 0.12 350), oklch(0.7 0.12 10))"></div></div>
+    <figcaption>Pinks only, from a rose to a coral.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch shorter hue to right, oklch(0.7 0.12 350), oklch(0.7 0.12 10))"></div><div class=sw style="background: oklch(0.7 0.12 0)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.7 0.12 0)</code>: one pink.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

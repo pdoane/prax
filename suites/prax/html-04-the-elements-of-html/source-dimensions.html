@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A source's width and height</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.2 The source element</div>
+  <h1>A source's width and height</h1>
+  <p class=pr-lede><q>The source element supports dimension attributes. The img element can use the width and height attributes of a source element, instead of those on the img element itself, to determine its rendered dimensions and aspect-ratio, as defined in the Rendering section.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-source-element">HTML §4.8.2</a></span> The img's <code>src</code> is a blue image 80 by 40; each source offers an orange one, 160 by 80 at <code>2x</code>.</p>
+</header>
+
+<section>
+  <h2>width and height: the chosen source's, not the img's</h2>
+  <p><q>The img element can use the width and height attributes of a source element, instead of those on the img
+  element itself, to determine its rendered dimensions and aspect-ratio</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><picture><source width="120" height="30" srcset="support/orange-160x80.png 2x"><img width="60" height="60" src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>The source has 120 by 30, the img 60 by 60: orange stretched to 120 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><picture><source media="(max-width: 1px)" width="120" height="30" srcset="support/orange-160x80.png 2x"><img width="60" height="60" src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>The same, the source not matching: blue stretched to the img's 60 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><picture><source width="120" srcset="support/orange-160x80.png 2x"><img width="60" height="60" src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>The source has only a width, 120: the img's height is not used. Orange, 120 by 60, its height
+    from the image's ratio.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendering order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.4 Rendering order</div>
+  <h1>Rendering order</h1>
+  <p class=pr-lede><q>By default, elements are painted in document order: an element that appears later in the markup is
+  painted on top of an element that appears earlier.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#RenderingOrder">SVG 2 §3.4</a></span>
+  Each stage is an SVG 160 by 60: a blue square at 20, 10, an orange one at 50, 10 and a green one at 80, 10, each
+  60 by 40.</p>
+</header>
+
+<section>
+  <h2>In tree order, groups and all</h2>
+  <p><q>Elements in a given stacking context must be stacked according to document order.</q> The back to front order
+  of a stacking context is its <q>descendants, in tree order</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="60" height="40" fill="#4f81bd" /><rect x="50" y="10" width="60" height="40" fill="#d68a3c" /><rect x="80" y="10" width="60" height="40" fill="#6aa36a" /></svg></div>
+    <figcaption>Blue, orange, green: each over the one before.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g><rect x="20" y="10" width="60" height="40" fill="#4f81bd" /><g><rect x="80" y="10" width="60" height="40" fill="#6aa36a" /></g></g><rect x="50" y="10" width="60" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption>Blue and green in nested groups, then orange: orange over both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

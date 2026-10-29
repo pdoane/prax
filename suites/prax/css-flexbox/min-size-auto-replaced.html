@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width: auto on replaced flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { display: flex; align-items: flex-start; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.5 Automatic Minimum Size of Flex Items, replaced elements</div>
+  <h1>min-width: auto on replaced flex items</h1>
+  <p class=pr-lede>For replaced elements, the content-based minimum size is <q>the smaller of the content size
+  suggestion and the transferred size suggestion (if one exists), capped by the specified size suggestion (if one
+  exists).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#min-size-auto">CSS Flexible Box Layout 2 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>The smaller of content and transferred sizes</h2>
+  <p>Each purple image is an SVG 80 by 40, so its min-content width, the content size suggestion, is 80px, and its
+  ratio 2:1. It is the only item of a dashed container 20px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>height: 20px</code>: the transferred size is 40px, smaller than 80px, so the image is 40 by
+    20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>No height, so no transferred size: the minimum is 80px, and the image is 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" style="height: 20px; min-width: 0" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>height: 20px; min-width: 0</code>: the image shrinks to 20px wide, still 20px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Capped by the specified size, clamped through the ratio</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" style="width: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>width: 30px</code>: 80px capped at 30px; the image is 30 by 15.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" style="max-height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>max-height: 20px</code>: the content size, 80px, is clamped through the ratio to 40px; the
+    image is 40 by 20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent" style="width: 20px"><img alt="" style="height: 30px; max-width: 50px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>height: 30px; max-width: 50px</code>: the transferred 60px, smaller than 80px, then clamped by
+    the maximum: 50 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

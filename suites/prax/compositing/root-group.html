@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The root group</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lime { background: #00ff00; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 8.4 The Root Group</div>
+  <h1>The root group</h1>
+  <p class=pr-lede><q>The root group encompasses the entire canvas and contains (or is below) the root element group
+  of the root element of a web page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#rootgroup">Compositing and Blending 2 §8.4</a></span>
+  A Note: <q>Browsers often use an infinite white, 100% opaque root group, for final compositing, but this is not
+  required.</q></p>
+</header>
+
+<section>
+  <h2>Under a document with no background</h2>
+  <p>Each frame, 200 by 100, sits on a lime stage; its document has no background, and a red 40px square with
+  <code>mix-blend-mode: multiply</code>.</p>
+  <figure>
+    <div class="pr-stage lime"><iframe class=pr-view srcdoc="<style>div { width: 40px; height: 40px; margin: 30px 80px; background: #ff0000 }</style><div></div>"></iframe></div>
+    <figcaption>Without the blend: the frame's root group is transparent here, so the lime shows through around the red
+    square, in each browser.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lime"><iframe class=pr-view srcdoc="<style>div { width: 40px; height: 40px; margin: 30px 80px; background: #ff0000; mix-blend-mode: multiply }</style><div></div>"></iframe></div>
+    <figcaption>With <code>multiply</code>: the square blends within the frame's document, not with the lime of the
+    page around it, and stays red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

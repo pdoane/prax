@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linearGradient: gradientUnits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="box"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="user" gradientUnits="userSpaceOnUse" x2="160"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="diagonal" x2="1" y2="1"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="diagonal-user" gradientUnits="userSpaceOnUse" x1="20" y1="10" x2="140" y2="50"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.2 Linear gradients</div>
+  <h1>linearGradient: gradientUnits</h1>
+  <p class=pr-lede><q>Linear gradients are defined by a ‘linearGradient’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#LinearGradients">SVG 2 §14.2.2</a></span>
+  Its <code>gradientUnits</code> <q>Defines the coordinate system for attributes ‘x1’, ‘y1’, ‘x2’ and ‘y2’.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#LinearGradientAttributes">§14.2.2.1</a></span>
+  Each stage is an SVG 160 by 60. Each gradient is blue to its halfway point and orange after.</p>
+</header>
+
+<section>
+  <h2>objectBoundingBox, the initial value, or userSpaceOnUse</h2>
+  <p>The box, or for <code>userSpaceOnUse</code> the element's user space, where <q>Percentages represent values
+  relative to the current SVG viewport.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="10" y="10" width="60" height="40" fill="url(#box)" /><rect x="90" y="10" width="60" height="40" fill="url(#box)" /></svg></div>
+    <figcaption>Rects 60 by 40 at 10, 10 and 90, 10, the initial 0 to 1 of each box: each rect blue on its left half, orange on its right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="10" y="10" width="60" height="40" fill="url(#user)" /><rect x="90" y="10" width="60" height="40" fill="url(#user)" /></svg></div>
+    <figcaption>The same rects, <code>userSpaceOnUse</code> from x 0 to 160: the left rect blue, the right orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><linearGradient id="percent" gradientUnits="userSpaceOnUse" x1="25%" x2="75%"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient><rect x="10" y="10" width="140" height="40" fill="url(#percent)" /></svg></div>
+    <figcaption><code>userSpaceOnUse</code>, <code>x1="25%" x2="75%"</code> of 160: from 40 to 120, so blue to x
+    80 on a rect from 10 to 150.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A box that is not square</h2>
+  <p><q>When the object's bounding box is not square, the gradient normal which is initially perpendicular to the
+  gradient vector within object bounding box space may render non-perpendicular relative to the gradient vector in
+  user space.</q> Each rect is 120 by 40 at 20, 10, from corner to corner.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#diagonal)" /></svg></div>
+    <figcaption><code>x2="1" y2="1"</code> in the box: the edge runs from corner to corner, top right to bottom
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#diagonal-user)" /></svg></div>
+    <figcaption>The same corners in <code>userSpaceOnUse</code>: the edge perpendicular to the diagonal, steep,
+    through 80, 30, from x 87 at the top to 73 at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

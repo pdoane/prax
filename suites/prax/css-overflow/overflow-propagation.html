@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow propagates to the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.4 Overflow Viewport Propagation</div>
+  <h1>Overflow propagates to the viewport</h1>
+  <p class=pr-lede><q>UAs must apply the overflow values set on the root element to the viewport when the root
+  element's display value is not display/none. However, when the root element is an [HTML] html element ... whose
+  overflow value is overflow/visible (in both axes), and that element has as a child a body element whose display
+  value is also not display/none, user agents must instead apply the overflow values of the first such child element
+  to the viewport. The element from which the value is propagated must then have a used overflow value of
+  overflow/visible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-propagation">CSS Overflow 3 §3.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>From the root, or else from the body</h2>
+  <p>Each frame is a document 200 by 100 whose body, dashed, is 30px tall at 10, 10 and holds a box 60px tall and a
+  second one 200px tall, so the canvas overflows the viewport. A script calls <code>scrollTo(0, 40)</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { overflow: hidden; background: #e7eaef } body { margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>html { overflow: hidden }</code>: the viewport takes it. It shows no scroll bar, but a script
+    scrolls it: the blue box is 40px up, its lower 30px seen.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { overflow: hidden; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>body { overflow: hidden }</code>, the root <code>visible</code>: the body's value goes to the
+    viewport, scrolled 40px, and the body's used value is <code>visible</code>: the boxes run on past its
+    bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

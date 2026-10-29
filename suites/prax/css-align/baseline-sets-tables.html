@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The baselines of tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .line { font-size: 13px; line-height: 20px; padding: 10px 0; }
+  .pr-table-cell { height: auto; line-height: 16px; }
+  .ib { display: inline-block; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.1 Determining the Baselines of a Box, tables</div>
+  <h1>The baselines of tables</h1>
+  <p class=pr-lede><q>The first/last baseline set of a table box is the first/last baseline set of its first/last
+  row (after any reordering of table row group box).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span>
+  Each stage is a line of text, its baseline dashed.</p>
+</header>
+
+<section>
+  <h2>The first row, after reordering</h2>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=pr-inline-table><span class=pr-table-row><span class=pr-table-cell>R1</span></span><span class=pr-table-row><span class=pr-table-cell>R2</span></span></span> x</div>
+    <figcaption>An inline table of rows R1 and R2: R1's text on the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=pr-inline-table><span class=pr-table-row-group><span class=pr-table-row><span class=pr-table-cell>body</span></span></span><span class=pr-table-header-group><span class=pr-table-row><span class=pr-table-cell>head</span></span></span></span> x</div>
+    <figcaption>The header group after the body in the source, first in the table: "head" on the line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows without baseline-aligned cells</h2>
+  <p>A row's first baseline set, if no cell is baseline-aligned: <q>if the row is not empty, synthesize from the lowest
+  and highest content edges of all the cells in the row.</q></p>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=pr-inline-table><span class=pr-table-row><span class=pr-table-cell style="vertical-align: top">top<br>2</span><span class=pr-table-cell style="vertical-align: top">top</span></span></span> x</div>
+    <figcaption>Both cells <code>top</code>: the lowest content edge, under "2", on the line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A table in an inline-block</h2>
+  <p><q>When finding the first/last baseline set of an inline-block, any baselines contributed by table boxes must be
+  skipped.</q></p>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=ib><span class=pr-table><span class=pr-table-row><span class=pr-table-cell>cell</span></span></span></span> x</div>
+    <figcaption>An inline-block holding only a table: no baseline, so its bottom edge on the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line"><span class=pr-baseline></span>x <span class=ib><span class=pr-table><span class=pr-table-row><span class=pr-table-cell>cell</span></span></span>after</span> x</div>
+    <figcaption>With a line "after" under the table: "after" on the line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

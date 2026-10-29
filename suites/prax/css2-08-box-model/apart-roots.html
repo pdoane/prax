@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: formatting context roots</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: formatting context roots</h1>
+  <p class=pr-lede>Margins adjoin only if no line boxes, no clearance, no padding and no border separate them, and both boxes are in flow in one block formatting context. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Block formatting context roots</h2>
+  <p><q>Margins of elements that establish new block formatting contexts (such as floats and elements with 'overflow'
+  other than 'visible') do not collapse with their in-flow children.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption>A plain parent: one 40px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; overflow: hidden"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>overflow: hidden</code>: 20 above the parent, 40 inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; display: flow-root"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>display: flow-root</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; float: left; width: 100%"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>float: left</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=pr-a style="display: block">anchor</div><div class=pr-parent style="display: inline-block; vertical-align: top; width: 100%; margin-top: 20px"><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>display: inline-block</code>: the same. <q>Margins of inline-block boxes do not collapse (not
+    even with their in-flow children).</q></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

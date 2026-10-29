@@ -1,0 +1,53 @@
+00-supports-1.html
+00-supports-2.html
+CSS2/#generated-text 12 Generated content, automatic numbering, and lists
+    mechanisms.html
+CSS2/#before-after-content 12.1 The :before and :after pseudo-elements
+    before-after.html
+    inheritance.html
+    as-if-inserted.html
+CSS2/#content① 12.2 The content property
+    content-none-normal.html
+    content-on-elements.html
+    content-string-uri.html
+    content-counter.html
+    content-attr.html
+    content-quotes.html
+    content-display-newlines.html
+CSS2/#quotes-specify 12.3.1 Specifying quotes with the quotes property
+    quotes-values.html
+    quotes-auto.html
+    quotes-languages.html
+CSS2/#quotes-insert 12.3.2 Inserting quotes with the content property
+    quote-depth.html
+    no-close-quote.html
+CSS2/#counters 12.4 Automatic counters and numbering
+    counter-values.html
+    counter-none-inherit.html
+    counter-order.html
+CSS2/#scope 12.4.1 Nested counters and scope
+    self-nesting.html
+    scope.html
+    no-scope.html
+    chapters.html
+    counters-function.html
+CSS2/#counter-styles 12.4.2 Counter styles
+    counter-styles.html
+CSS2/#undisplayed-counters 12.4.3 Counters in elements with 'display: none'
+    display-none.html
+CSS2/#lists 12.5 Lists
+    lists.html
+    marker.html
+CSS2/#list-style 12.5.1 Lists: the list-style-type, list-style-image, list-style-position, and list-style properties
+    list-style-type-glyphs.html
+    list-style-type-numeric.html
+    list-style-type-alphabetic.html
+    counter-style-ranges.html
+    list-item-counter.html
+    list-style-image.html
+    list-style-image-size.html
+    list-style-position.html
+    outside-marker.html
+    list-style.html
+    list-style-none.html
+    list-style-cascade.html

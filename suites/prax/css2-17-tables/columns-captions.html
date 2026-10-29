@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table model: columns and captions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols .pr-table-cell { width: 50px; background: none; }
+  .cap { font-size: 12px; line-height: 20px; color: #9c5f22; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2 The CSS table model</div>
+  <h1>The table model: columns and captions</h1>
+  <p class=pr-lede><code>table-column</code> (COL) <q>Specifies that an element describes a column of cells.</q>
+  <code>table-column-group</code> (COLGROUP) <q>Specifies that an element groups one or more columns.</q> Every cell
+  here is 50 by 20, and every element a <code>div</code>.</p>
+</header>
+
+<section>
+  <h2>Columns are not rendered, but style their cells</h2>
+  <p><q>Elements with 'display' set to 'table-column' or 'table-column-group' are not rendered (exactly as if they had
+  'display: none'), but they are useful, because they may have attributes which induce a certain style for the
+  columns they represent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table cols"><div class=pr-table-column></div><div class=pr-table-column style="background: #d68a3c">column text</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div><div class=pr-table-cell>3</div></div><div class=pr-table-row><div class=pr-table-cell>4</div><div class=pr-table-cell>5</div><div class=pr-table-cell>6</div></div></div></div>
+    <figcaption>The second column element is orange and holds text: the cells 2 and 5 are orange, and the text is
+    not shown anywhere.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table cols"><div class=pr-table-column-group style="background: #6aa36a"><div class=pr-table-column></div><div class=pr-table-column></div></div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div><div class=pr-table-cell>3</div></div><div class=pr-table-row><div class=pr-table-cell>4</div><div class=pr-table-cell>5</div><div class=pr-table-cell>6</div></div></div></div>
+    <figcaption>A green column group of two columns: the first two columns are green, the third is not.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Captions are rendered</h2>
+  <p><code>table-caption</code> (CAPTION): <q>Specifies a caption for the table. All elements with 'display:
+  table-caption' must be rendered</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table cols"><div class="pr-table-caption cap">caption one</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div><div class="pr-table-caption cap">caption two</div></div></div>
+    <figcaption>Two captions, one before the row and one after it in the source: both are shown, one above the
+    other, above the 100px row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

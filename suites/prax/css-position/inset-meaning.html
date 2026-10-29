@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What the insets are measured from</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pre { height: 30px; background: #b9cde6; }
+  .b { top: 20px; left: 20px; width: 60px; }
+  .scroller { overflow: hidden; }
+  .pr-stage { width: 160px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3 Positioning Coordinates</div>
+  <h1>What the insets are measured from</h1>
+  <p class=pr-lede><q>The precise location of a positioned box is controlled by the inset properties</q>. <q>The
+  interpretation of these inset properties varies by positioning scheme</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#coords">CSS Positioned Layout 3 §3</a></span>
+  In each relative stage, a light blue block 30px tall comes before orange B, which has <code>top: 20px; left:
+  20px</code>.</p>
+</header>
+
+<section>
+  <h2>Three references</h2>
+  <p><q>for absolute positioning, they represent insets from the containing block.</q> <q>for relative positioning,
+  they represent insets from the box’s original margin edge.</q> <q>for sticky positioning, they represent insets from
+  the scrollport edge.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pre></div><div class="pr-b b" style="position: absolute">B</div></div>
+    <figcaption><code>absolute</code>: 20px in from the stage's top left, over the light blue block.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pre></div><div class="pr-b b" style="position: relative">B</div></div>
+    <figcaption><code>relative</code>: 20px right and down from where it was, under the light blue block: at 20,
+    50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb scroller" id=sc><div class=pre></div><div class="pr-b b" style="position: sticky">B</div><div style="height: 200px"></div></div>
+    <figcaption><code>sticky</code>, in a stage that scrolls, scrolled 60px: 20px below the stage's top and 20px in
+    from its left, pushed in from each edge of the scrollport.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("sc").scrollTop = 60;</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1 Inline-Axis (or Main-Axis) Self-Alignment</div>
+  <h1>justify-self</h1>
+  <p class=pr-lede><q>Justifies the box (as the alignment subject) within its containing block (as the alignment
+  container) along the inline/row/main axis of the alignment container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-self-property">CSS Box Alignment 3 §6.1</a></span>
+  Each stage is a grid of one 200px column.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <p><q>It behaves as the computed 'justify-items' value of the parent box (minus any legacy keywords)</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: end"><div class=pr-a>A</div><div class=pr-b style="justify-self: start">B</div></div></div>
+    <figcaption>The grid <code>justify-items: end</code>: A, <code>auto</code>, at the right; B, <code>start</code>,
+    at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: legacy center"><div class=pr-a>A</div></div></div>
+    <figcaption><code>justify-items: legacy center</code>: A, <code>auto</code>, as <code>center</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>stretch, and the rest</h2>
+  <p><q>stretch</q> <q>sets the box’s used size to the length necessary to make its outer size as close to filling the
+  alignment container as possible while still respecting the constraints imposed by
+  'min-height'/'min-width'/'max-height'/'max-width'.</q> <q>Values other than stretch cause a 'width'/'height' of auto
+  to be treated as fit-content.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class=pr-a style="justify-self: stretch">A</div></div></div>
+    <figcaption><code>stretch</code>: 100px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class=pr-a style="justify-self: start">A</div></div></div>
+    <figcaption><code>start</code>: as wide as A.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class="pr-a pr-fit" style="justify-self: stretch; max-width: 60px">A</div></div></div>
+    <figcaption><code>stretch</code>, <code>max-width: 60px</code>: 60px, at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g><div class="pr-a pr-fit" style="justify-self: stretch; width: 40px">A</div></div></div>
+    <figcaption><code>stretch</code>, <code>width: 40px</code>: not auto, so 40px, at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto margins first</h2>
+  <p><q>auto margins, because they effectively adjust the size of the margin area, take precedence over
+  'justify-self'.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: start; margin-left: auto">A</div></div></div>
+    <figcaption><code>start</code>, <code>margin-left: auto</code>: A at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: stretch; margin: 0 auto">A</div></div></div>
+    <figcaption><code>stretch</code>, auto margins both sides: A as wide as its text, centered.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

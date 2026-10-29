@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default colors of links</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .word { font: 20px/40px "PR Arimo"; padding: 0 8px; background: Canvas; }
+  .word a { text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 18 Default Style Rules</div>
+  <h1>Default colors of links</h1>
+  <p class=pr-lede><q>The following stylesheet is informative, not normative. This style sheet could be used by an
+  implementation as part of its default styling of HTML documents.</q> <code>:link { color: LinkText; }</code>
+  <code>:visited { color: VisitedText; }</code> <code>:active { color: ActiveText; }</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#sample">CSS Color 4 §18</a></span></p>
+</header>
+
+<section>
+  <h2>A link in LinkText</h2>
+  <p>The link's address is a fragment of this page, never visited by the browsers that take the stills. Underlines
+  are turned off, to compare only the colors.</p>
+  <figure>
+    <div class="pr-stage word"><a href="#unvisited-fragment">link</a> <span style="color: LinkText">LinkText</span></div>
+    <figcaption>An unvisited link beside a span in <code>LinkText</code>: the same blue in each browser that follows
+    the sheet.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage word"><span style="color: VisitedText">Visited</span> <span style="color: ActiveText">Active</span></div>
+    <figcaption><code>VisitedText</code>, traditionally purple, and <code>ActiveText</code>, traditionally red, the
+    colors the sheet gives visited and active links.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

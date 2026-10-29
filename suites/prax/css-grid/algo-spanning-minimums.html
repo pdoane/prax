@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanning items: base sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; width: 10px; }
+  .s { grid-column: span 2; background: #b9cde6; }
+  .m1 { height: 10px; background: #d68a3c; }
+  .m2 { height: 10px; background: #6aa36a; }
+  .c { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 3, minimums</div>
+  <h1>Spanning items: base sizes</h1>
+  <p class=pr-lede><q>Increase sizes to accommodate spanning items crossing content-sized tracks: Next, consider the
+  items with a span of 2 that do not span a track with a flexible sizing function.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Blue spans two columns; empty bars under it show them. Each grid is 10px wide (dashed), so each column is its base
+  size.</p>
+</header>
+
+<section>
+  <h2>Intrinsic minimums, then content-based minimums</h2>
+  <p><q>First distribute extra space to base sizes of tracks with an intrinsic min track sizing function, to
+  accommodate these items’ minimum contributions.</q> Then to those <q>of min-content or max-content</q>, for their
+  <q>min-content contributions</q>. Blue is "abcd efgh", min-content 40px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto"><div class=s>abcd efgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>auto auto</code>: a minimum contribution of 40px: 20px each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto"><div class=s style="min-width: 20px">abcd efgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>min-width: 20px</code>: a minimum contribution of 20px, 10px each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: min-content min-content"><div class=s style="min-width: 20px">abcd efgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>min-content min-content</code>: 10px each for the 20px, then 20px each for the 40px
+    min-content contribution.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Up to the growth limit, then max-content minimums</h2>
+  <p>For base sizes, <q>the limit is its growth limit</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#extra-space">§12.5.1</a></span>. <q>In all cases, continue to distribute extra space to the base sizes of tracks with a min track sizing function of
+  max-content, to accommodate these items' max-content contributions.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto"><div class=s>abcd</div><div class=c>abc</div></div></div>
+    <figcaption>"abc" makes the first column 30px, and its growth limit; of blue's 40px, the other 10px go to the empty
+    second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: max-content min-content"><div class=s>abcd efgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>max-content min-content</code>: 20px each for the 40px, then the first grows by 50px to make
+    the 90px max-content: 70 and 20px, blue on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 30px auto"><div class=s>abcdefgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>30px auto</code>, blue "abcdefgh", 80px: the fixed column counts against it, and only the
+    <code>auto</code> one grows, to 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-box-edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .t { font: 30px/50px "PR Baseline Diagnostic"; background: rgba(214, 138, 60, 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6.3 Text Trimming Metrics: the text-box-edge property</div>
+  <h1>text-box-edge</h1>
+  <p class=pr-lede><q>This property specifies the metrics to use for text-box-trim effects. Values have the same
+  meanings as for line-fit-edge</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-box-edge">CSS Inline Layout 3 §6.3</a></span>
+  Each orange block is <code>text-box-trim: trim-both</code> and a line of 30px PR Baseline Diagnostic on 60px lines:
+  B fills its cap height down to its alphabetic baseline, x its x-height, and █ its ascent to its descent.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <p><q>the auto keyword uses the value of line-fit-edge, interpreting leading (the initial value) as text.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both">B█</div></div>
+    <figcaption><code>auto</code> with <code>line-fit-edge: leading</code>: <code>text</code>, the █.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both; line-fit-edge: cap alphabetic">B█</div></div>
+    <figcaption><code>auto</code> with <code>line-fit-edge: cap alphabetic</code>: the B. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    <code>line-fit-edge</code>: the █.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both; text-box-edge: text">B█</div></div>
+    <figcaption><code>text</code>: the █.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two edges, and one</h2>
+  <p><q>The first value specifies the text over edge; the second value specifies the text under edge. If only one
+  value is specified, both edges are assigned that same keyword if possible; else text is assumed as the missing
+  value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-edges">§5.2</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both; text-box-edge: cap alphabetic">B█</div></div>
+    <figcaption><code>cap alphabetic</code>: the B.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=t style="text-box-trim: trim-both; text-box-edge: ex text">x█</div></div>
+    <figcaption><code>ex text</code>: the top of the x to the bottom of the █.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=t id=one style="text-box-trim: trim-both; text-box-edge: cap">B█</div></div>
+    <figcaption><code>cap</code> alone, which <code>&lt;text-edge&gt;</code> does not allow, is dropped: trimmed
+    as <code>auto</code>, to the █. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Trim the
+    top to the B, as <code>cap text</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

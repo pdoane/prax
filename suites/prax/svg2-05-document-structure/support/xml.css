@@ -1,0 +1,3 @@
+/* A style sheet for the XML documents of no known namespace, so that a browser lays them out with CSS rather than
+   showing their source tree. */
+* { display: block; }

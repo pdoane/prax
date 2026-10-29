@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Commands from a button</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad button { margin: 0 0 10px; font-size: 12px; }
+  .note { padding: 6px 10px; background: #f9cc9d; border: 2px solid #d68a3c; font-size: 13px; }
+  dialog { padding: 10px; font-size: 13px; }
+  #box { display: inline-block; width: 30px; height: 30px; margin: 0 0 10px 20px; vertical-align: middle;
+         background: #4f81bd; transition: rotate 0.2s; }
+  #box.turned { rotate: 45deg; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.6 The button element</div>
+  <h1>Commands from a button</h1>
+  <p class=pr-lede>Activating a button with <code>commandfor</code> fires <code>command</code> at its target, then
+  runs the command: <q>Let continue be the result of firing an event named command at target</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">HTML §4.10.6</a></span></p>
+</header>
+
+<section>
+  <h2>A popover and a dialog</h2>
+  <p><q>Shows or hides the targeted popover element.</q> <q>Opens the targeted dialog element as modal.</q>
+  <q>Closes the targeted dialog element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">§4.10.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <button id=toggle commandfor=pop command=toggle-popover>toggle-popover</button>
+        <button id=show commandfor=pop command=show-popover>show-popover</button>
+        <button id=modal commandfor=dialog command=show-modal>show-modal</button>
+      </div>
+      <div id=pop class=note popover>Popover</div>
+      <dialog id=dialog>A modal dialog <button id=close commandfor=dialog command=close>close</button></dialog>
+      <ol class=pr-log data-log="command" data-fields="target command source" data-lines=2></ol>
+    </div>
+    <figcaption>Click toggle-popover: "Popover" in orange in the middle of the window, and <code>command</code> at
+    <code>pop</code> from <code>toggle</code>; again, and it hides. Click show-modal: a dialog over a dimmed page,
+    which its close button closes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A custom command, and a canceled one</h2>
+  <p>A custom command <q>Only dispatches the command event on the targeted element.</q> <q>If continue is false, then
+  return.</q> The page's script turns the blue square on <code>--turn</code>, and cancels each <code>command</code>
+  from the button "canceled". <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">§4.10.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <button id=turn commandfor=box command=--turn>--turn</button><span id=box></span>
+        <button id=canceled commandfor=pop2 command=show-popover>canceled</button>
+      </div>
+      <div id=pop2 class=note popover>Not shown</div>
+      <ol class=pr-log data-log="command" data-fields="target command" data-lines=1></ol>
+    </div>
+    <figcaption>Click --turn: the square turns by 45 degrees, and back on the next click. Click canceled: a
+    <code>command</code>, and no popover.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Turns the square on its custom command, and cancels the commands of the button "canceled".
+  const box = document.getElementById("box");
+  box.addEventListener("command", event => {
+      if (event.command === "--turn")
+          box.classList.toggle("turned");
+  });
+  document.getElementById("pop2").addEventListener("command", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

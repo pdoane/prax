@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The z-index property: negative and very large levels</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; width: 90px; height: 40px; }
+  .p1 { left: 20px; top: 15px; }
+  .p2 { left: 55px; top: 30px; }
+  .p3 { left: 90px; top: 45px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.9.1 Specifying the stack level: the 'z-index' property</div>
+  <h1>The z-index property: negative and very large levels</h1>
+  <p class=pr-lede><code>z-index</code> takes <code>auto | &lt;integer&gt;</code>. Initial <code>auto</code>, not
+  inherited, and it applies to positioned elements. Each figure's boxes are absolutely positioned, overlapping, and
+  in source order A, B, C.</p>
+</header>
+
+<section>
+  <h2>Negative levels</h2>
+  <p><q>Boxes may have negative stack levels.</q> They paint after the background of the element that forms the
+  stacking context, and before its in-flow content. The stage forms the stacking context here. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#z-index">CSS 2
+  §9.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class=pr-c style="margin: 30px 0 0 40px; width: 100px; height: 40px">in flow</div><div class="pr-a pr-fit p p1" style="z-index: -1">A: −1</div></div>
+    <figcaption>A with <code>z-index: -1</code>: behind the green in-flow block, in front of the stage's
+    background.</figcaption>
+  </figure>
+</section>
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-values-4/#numeric-types">CSS Values and Units 4 §5</a></div>
+  <h2>Levels past what is supported</h2>
+  <p><q>The precision and supported range of numeric values in CSS is implementation-defined</q>; <q>When a value cannot
+  be explicitly supported due to range/precision limitations, it must be converted to the closest value supported by
+  the implementation</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#numeric-types">CSS Values and Units 4 §5</a></span> Browsers keep a
+  level in 32 bits, up to 2147483647.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 80px"><div class="pr-a pr-fit p p1" style="z-index: 99999999999; width: 120px">A: 99999999999</div><div class="pr-b pr-fit p p2" style="z-index: 2147483647; width: 120px; left: 60px">B: 2147483647</div></div>
+    <figcaption>A's level is above B's as written, but both are 2147483647 as used, one level: B, later in the tree,
+    covers A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

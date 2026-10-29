@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=ja>
+<head>
+<meta charset=utf-8>
+<title>font-variant-east-asian</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Noto Sans JP'; font-size: 28px; }
+</style>
+</head>
+<body lang=en>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.10 East Asian text rendering: the 'font-variant-east-asian' property</div>
+  <h1>font-variant-east-asian</h1>
+  <p class=pr-lede>'font-variant-east-asian' selects the glyph forms of a Japanese standard (<code>jis78</code>,
+  <code>jis83</code>, <code>jis90</code>, <code>jis04</code>), <code>simplified</code> or <code>traditional</code>
+  forms, <code>full-width</code> or <code>proportional-width</code>, and <code>ruby</code> forms. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-east-asian-prop">CSS Fonts 4 §6.10</a></span></p>
+</header>
+
+<section>
+  <h2>JIS forms</h2>
+  <p>PR Noto Sans JP has JIS78, JIS83 and JIS90 forms. 唖 and 噛 differ in JIS78; 倦 and 咬 in JIS90.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja>唖噛倦咬</div>
+    <figcaption><code>normal</code>: the font's default forms, JIS2004.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-variant-east-asian: jis78">唖噛倦咬</div>
+    <figcaption><code>jis78</code>: older forms of all four.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-variant-east-asian: jis90">唖噛倦咬</div>
+    <figcaption><code>jis90</code>: 倦 and 咬 in their JIS90 forms.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Widths</h2>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-variant-east-asian: full-width">AB12</div>
+    <figcaption><code>full-width</code>: Latin and digits each a full em wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-variant-east-asian: proportional-width">ＡＢ１２</div>
+    <figcaption><code>proportional-width</code> on full-width characters: proportional, narrower forms.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

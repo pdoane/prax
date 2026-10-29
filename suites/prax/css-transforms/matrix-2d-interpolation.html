@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating decomposed 2D matrices</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 40px; }
+  .q, .h { position: absolute; left: 60px; top: 40px; width: 40px; height: 20px; }
+  .half { animation: 4s ease-in-out -2s infinite alternate both; }
+  @keyframes short { from { transform: translate(0) rotate(10deg); } to { transform: rotate(350deg) translate(0); } }
+  @keyframes flips { from { transform: scaleX(-1) translate(0); } to { transform: translate(0) scaleY(-1); } }
+  @keyframes flat { from { transform: scaleX(-1) translate(0); } to { transform: translate(0) scaleX(1); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 11.2.2 Interpolation of decomposed 2D matrix values</div>
+  <h1>Interpolating decomposed 2D matrices</h1>
+  <p class=pr-lede><q>each component of the decomposed values translation, scale, angle, m11 to m22 of the source matrix
+  get linearly interpolated with each corresponding component of the destination matrix.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#interpolation-of-decomposed-2d-matrix-values">CSS Transforms 1 §11.2.2</a></span>
+  Each pair of lists differs at once, so both are matrices, decomposed (<a href="https://drafts.csswg.org/css-transforms-1/#decomposing-a-2d-matrix">§11.2.1</a>)
+  and recomposed (<a href="https://drafts.csswg.org/css-transforms-1/#recomposing-to-a-2d-matrix">§11.2.3</a>). Each
+  box animates, and a still shows <i>p</i> = 0.5; the dashed outline is where it was laid out.</p>
+</header>
+
+<section>
+  <h2>The short way round, and flipped axes</h2>
+  <p><q>// Don't rotate the long way around.</q> <q>// If x-axis of one is flipped, and y-axis of the other, convert to
+  an unflipped rotation.</q> A 40px square, then 40 by 20 boxes, "A" at the top left.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: short">A</div></div>
+    <figcaption><code>rotate(10deg)</code> to <code>rotate(350deg)</code>: between 10deg and −10deg, upright; not
+    180deg.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost h"></div><div class="pr-a pr-fit q half" style="animation-name: flips">A</div></div>
+    <figcaption><code>scaleX(-1)</code> to <code>scaleY(-1)</code>: the first becomes a half turn with Y flipped; a
+    quarter turn, 20 by 40, "A" at the bottom. <span class=pr-flag>Chrome</span> draws nothing, <span class=pr-flag>Firefox</span> the "A" at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost h"></div><div class="pr-a pr-fit q half" style="animation-name: flat">A</div></div>
+    <figcaption>For comparison, <code>scaleX(-1)</code> to <code>scaleX(1)</code>: X scale 0, nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

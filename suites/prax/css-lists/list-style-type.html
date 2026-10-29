@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: strings and counter styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .star { list-style-type: "★ "; }
+  .note { display: list-item; list-style-type: "Note: "; list-style-position: inside; }
+  .cyc { list-style-type: symbols(cyclic "○" "●"); }
+  .unknown { list-style-type: no-such-style; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.4 Text-based Markers: the list-style-type property</div>
+  <h1>The list-style-type property: strings and counter styles</h1>
+  <p class=pr-lede><q>Specifies the marker string, which is used to fill the list item’s marker when its 'content'
+  value is 'normal' and there is no marker image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#text-markers">CSS Lists and Counters 3 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>A string</h2>
+  <p><q>The element’s marker string is the specified &lt;string&gt;.</q> No counter and no suffix are added.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=star><li>one<li>two</ul></div>
+    <figcaption><code>"★ "</code>: a star before each item, outside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><p class=note style="margin: 0">This is a very short document.</p></div>
+    <figcaption>The example's note: <code>"Note: "</code> inside, "Note: This is a very short document."</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A counter style</h2>
+  <p><q>the marker string is the result of generating a counter representation of the 'list-item' counter value using
+  the specified &lt;counter-style&gt;, prefixed by the 'prefix' of the &lt;counter-style&gt;, and followed by the
+  'suffix' of the &lt;counter-style&gt;. If the specified &lt;counter-style&gt; does not exist, 'decimal' is
+  assumed.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ul class=cyc><li>one<li>two<li>three</ul></div>
+    <figcaption><code>symbols(cyclic "○" "●")</code>: empty, filled, empty circles, each with the suffix, a
+    space; Firefox draws them larger. <span class=pr-flag>Safari</span> Has no <code>symbols()</code>: discs.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=unknown><li>one<li>two</ol></div>
+    <figcaption><code>no-such-style</code>, a name no rule defines: "1." and "2.", as <code>decimal</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

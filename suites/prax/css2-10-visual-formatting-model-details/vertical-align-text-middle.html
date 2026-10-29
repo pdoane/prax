@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: the parent's content area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 20px; line-height: 60px; white-space: nowrap; }
+  .sq { display: inline-block; width: 16px; height: 16px; background: #4f81bd; }
+  .area { background: rgba(79, 129, 189, 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: the parent's content area</h1>
+  <p class=pr-lede>Each stage's text is 20px on 60px lines, with its baseline dashed in red. Blue squares are empty 16px inline-blocks, whose baseline is their bottom edge. The parent's content area is tinted.</p>
+</header>
+
+<section>
+  <h2>text-top, text-bottom and middle</h2>
+  <p><q>Align the top of the box with the top of the parent's content area</q> (<code>text-top</code>); <q>Align the
+  bottom of the box with the bottom of the parent's content area</q> (<code>text-bottom</code>); <q>Align the vertical
+  midpoint of the box with the baseline of the parent box plus half the x-height of the parent.</q>
+  (<code>middle</code>). <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span><span class=area>Xx <span class=sq style="vertical-align: text-top"></span> x</span></div>
+    <figcaption><code>text-top</code>: the square's top is level with the top of the blue content area of the parent's 20px font.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span><span class=area>Xx <span class=sq style="vertical-align: text-bottom"></span> x</span></div>
+    <figcaption><code>text-bottom</code>: its bottom is level with the bottom of that content area, below the baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span><span class=area>Xx <span class=sq style="vertical-align: middle"></span> x</span></div>
+    <figcaption><code>middle</code>: its middle is half an x-height above the baseline, level with the middle of the letter x.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

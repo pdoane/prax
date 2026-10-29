@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ideal intrinsic sizing algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; float: left; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  figure { margin-right: 10px; }
+  .s { width: 120px; }
+  figure.pr-narrow figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.1.1 Ideal Algorithm: Max-content Size and Min-content Single-line Size</div>
+  <h1>The ideal intrinsic sizing algorithm</h1>
+  <p class=pr-lede><q>The following algorithm calculates the flex container’s ideal intrinsic main sizes.</q> It
+  <q>is not Web-compatible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-ideal">CSS Flexible Box Layout 2 §9.10.1.1</a></span>
+  A browser may follow it or the Web-compatible algorithm <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-compat">§9.10.1.2</a></span>;
+  each caption gives both.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>if a flex container has a single flex item with flex-basis: 100px; but a max-content size of 200px, then when
+  the item is flex-grow: 0, the flex container (and flex item) is 100px wide, but when the item is flex-grow: 1 or
+  higher, the flex container (and flex item) is 200px wide.</q> <q>if the item has flex-grow: .5, then the flex
+  container ends up 150px wide</q>, <q>ending up 125px wide.</q> Here at half the scale: each dashed container is a float around an item of basis 50px and text "aaaa
+  bbbbb", 100px.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure s"><div class="f pr-parent"><div class=i1 style="flex: 0 1 50px">aaaa bbbbb</div></div></div>
+    <figcaption><code>flex: 0 1 50px</code>: both algorithms give a container and item of 50px, the words on two
+    lines. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A container of 100px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure s"><div class="f pr-parent"><div class=i1 style="flex: 1 1 50px">aaaa bbbbb</div></div></div>
+    <figcaption><code>flex: 1 1 50px</code>: both give 100px, on one line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure s"><div class="f pr-parent"><div class=i1 style="flex: .5 1 50px">aaaa bbbbb</div></div></div>
+    <figcaption><code>flex: .5 1 50px</code>: ideal, a container of 75px and an item of 62.5px; Web-compatible,
+    100px and 75px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex factors keep their ratio</h2>
+  <p>The ideal size is the one at which <q>every flex item is at least the size of its max-content contribution,
+  but also has the correct ratio of its size to the size of the other items, as determined by its flexibility</q>.
+  The items are "aaaaa", 50px each, with <code>flex: 1 1 0px</code> and <code>flex: 3 1 0px</code>, a basis of 0.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: 1 1 0px">aaaaa</div><div class=i2 style="flex: 3 1 0px">aaaaa</div></div></div>
+    <figcaption>Ideal: a container of 200px, the items 50px and 150px. Web-compatible: 100px, the items 50px
+    each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

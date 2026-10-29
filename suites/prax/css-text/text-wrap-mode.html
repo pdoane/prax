@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-wrap-mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 100px; }
+  figure { margin-right: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.1 Deciding Whether to Wrap: the text-wrap-mode property</div>
+  <h1>text-wrap-mode</h1>
+  <p class=pr-lede><q>This property specifies whether inline-level content wraps at unforced soft wrap
+  opportunities.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-wrap-mode">CSS Text 4 §5.1</a></span>
+  Each stage is 100px wide, of 10px letters.</p>
+</header>
+
+<section>
+  <h2>wrap and nowrap</h2>
+  <p><code>wrap</code>: <q>Lines may wrap at allowed soft wrap opportunities, as determined by the line-breaking rules
+  in effect, in order to minimize inline-axis overflow.</q> <code>nowrap</code>: <q>Lines only break at forced line
+  breaks; content that does not fit within the block container overflows it.</q> It does not change how white space
+  collapses.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-mode: wrap">one two three</div>
+    <figcaption><code>wrap</code>: "one two", then "three".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap">one   two three</div>
+    <figcaption><code>nowrap</code>: one line past the edge, its spaces still collapsed: "one two three",
+    130px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space-collapse: preserve; text-wrap-mode: nowrap">one   two
+three</div>
+    <figcaption>With <code>white-space-collapse: preserve</code>, as <code>pre</code>: "one   two", 110px, and
+    "three" after the newline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks, even under nowrap</h2>
+  <p><q>Regardless of the 'text-wrap-mode' value, preserved segment breaks, and any Unicode character with the BK,
+  CR, LF, and NL line breaking class, must be treated as forced line breaks.</q> Each stage is
+  <code>nowrap</code>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap">one&#x2028;two three</div>
+    <figcaption>U+2028 LINE SEPARATOR, of class BK: "one", then "two three". <span class=pr-flag>Chrome</span>
+    One line, a space for it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One line,
+    "onetwo".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap">one&#x2029;two three</div>
+    <figcaption>U+2029 PARAGRAPH SEPARATOR, also BK: the same. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As at the left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap">one
+two three</div>
+    <figcaption>A newline, collapsed under <code>normal</code>: a space, not preserved, so no break: "one two three"
+    on one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

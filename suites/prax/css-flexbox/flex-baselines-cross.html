@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A flex container's baseline, across its main axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .if { display: inline-flex; flex-direction: column; align-items: flex-start; outline: 1px dashed #6b7381; }
+  .if > span { background: #b9cde6; }
+  .if > span:nth-child(2) { background: #f6d7b4; }
+  .e { width: 20px; height: 40px; }
+  .sc { display: block; height: 20px; overflow: auto; scrollbar-width: none; }
+  .cell { display: table-cell; padding: 0 4px; border: 1px solid #2c5a8f; background: #f4f5f7; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.5 Flex Container Baselines, cross-axis baseline set</div>
+  <h1>A flex container's baseline, across its main axis</h1>
+  <p class=pr-lede><q>When the inline axis of the flex container matches its cross axis</q>, <q>the flex container's
+  first/last cross-axis baseline set is generated from the alignment baseline of the startmost/endmost flex item.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-baselines">CSS Flexible Box Layout 2 §8.5</a></span>
+  In each stage a <code>column</code> <code>inline-flex</code> container, dashed, sits on a line after "ab", whose
+  baseline is red.</p>
+</header>
+
+<section>
+  <h2>The startmost or endmost item</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span>cd</span><span>ef</span></span></div>
+    <figcaption>The first item's baseline: "cd" on the red line, "ef" below.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if style="baseline-source: last"><span>cd</span><span>ef</span></span></div>
+    <figcaption><code>baseline-source: last</code>: the endmost item's, so "ef" on the red line and "cd" above. <span class=pr-flag>Safari</span> "cd" on
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span class=e></span><span>cd</span></span></div>
+    <figcaption>The first item is empty: <q>then one is first synthesized from its border edges</q>: its bottom on
+    the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if style="flex-direction: column-reverse"><span>cd</span><span>ef</span></span></div>
+    <figcaption><code>column-reverse</code>: startmost is the top, so "ef", last in the
+    document, is on the red line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scrolled boxes, and table cells</h2>
+  <p><q>if the box contributing a baseline has an overflow value that allows scrolling, the box must be treated as being
+  in its initial scroll position</q>. <q>When determining the baseline of a table cell, a flex container provides a
+  baseline just as a line box or table-row does.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if style="flex-direction: row"><span class=sc id=scrolled>cd<br>ef</span></span></div>
+    <figcaption>A <code>row</code> container whose item scrolls 20px to show "ef": its baseline is that of "cd"
+    unscrolled, so "ef", in the same place, is on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class=pr-table-row><div class=cell>ab</div><div class=cell><div style="display: flex"><span style="padding-top: 20px">cd</span></div></div></div></div></div>
+    <figcaption>Cells aligned by baseline; the second holds a flex container whose item has <code>padding-top:
+    20px</code>: "ab" moves down 20px, level with "cd".</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("scrolled").scrollTop = 20;</script>
+</body>
+</html>

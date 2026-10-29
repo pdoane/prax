@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table wrapper box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border: 3px solid #2c5a8f; }
+  .t .pr-table-cell { width: 50px; }
+  .cap { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.4 Tables in the visual formatting model</div>
+  <h1>The table wrapper box</h1>
+  <p class=pr-lede><q>In terms of the visual formatting model, a table can behave like a block-level (for 'display:
+  table') or inline-level (for 'display: inline-table') element.</q> Each table below has a 3px blue border, two 50px
+  cells and an orange caption.</p>
+</header>
+
+<section>
+  <h2>The wrapper, the table and the captions</h2>
+  <p><q>The table generates a principal block container box called the table wrapper box that contains the table box
+  itself and any caption boxes (in document order).</q> <q>The caption boxes are principal block-level boxes that
+  retain their own content, padding, margin, and border areas, and are rendered as normal block boxes inside the table
+  wrapper box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption>The caption is above the table box and outside its blue border; both are 106px wide, the table's
+    border edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table t"><div class="pr-table-caption cap" style="margin: 10px; padding: 0 4px; border: 2px solid #9c5f22">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption>The caption keeps its own 10px margin, 4px padding and 2px border: it is 10px in from the wrapper's
+    sides and 10px above the table.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its width, and percentages</h2>
+  <p><q>The width of the table wrapper box is the border-edge width of the table box inside it, as described by
+  section 17.5.2. Percentages on 'width' and 'height' on the table are relative to the table wrapper box's containing
+  block, not the table wrapper box itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="width: 75%; box-sizing: border-box"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>width: 75%</code> (border-box) is of the 200px stage: the table and its caption are 150px
+    wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-table t" style="height: 50%; box-sizing: border-box"><div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption>In an 80px tall stage, <code>height: 50%</code> makes the table box 40px tall, below its 20px
+    caption.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

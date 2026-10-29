@@ -1,0 +1,39 @@
+00-supports-1.html
+SVG2/coords.html#Introduction 8.1 Introduction
+    coordinate-systems.html
+SVG2/coords.html#ComputingAViewportsTransform 8.2 Computing the equivalent transform of an SVG viewport
+    viewport-transform.html
+SVG2/coords.html#ViewportSpace 8.3 The initial viewport
+    initial-viewport.html
+SVG2/coords.html#InitialCoordinateSystem 8.4 The initial coordinate system
+    initial-coordinate-system.html
+SVG2/coords.html#TransformProperty 8.5 The ‘transform’ property
+    transform.html
+SVG2/coords.html#ViewBoxAttribute 8.6 The ‘viewBox’ attribute
+    viewbox.html
+SVG2/coords.html#PreserveAspectRatioAttribute 8.7 The ‘preserveAspectRatio’ attribute
+    preserve-aspect-ratio.html
+    preserve-aspect-ratio-slice.html
+SVG2/coords.html#EstablishingANewSVGViewport 8.8 Establishing a new SVG viewport
+    new-viewport.html
+SVG2/coords.html#Units 8.9 Units
+    units.html
+SVG2/coords.html#BoundingBoxes 8.10 Bounding boxes
+    bounding-boxes.html
+SVG2/coords.html#ObjectBoundingBoxUnits 8.11 Object bounding box units
+    object-bounding-box-units.html
+SVG2/coords.html#SizingSVGInCSS 8.12 Intrinsic sizing properties of SVG content
+    intrinsic-sizing.html
+SVG2/coords.html#VectorEffects 8.13 Vector effects
+    vector-effect.html
+SVG2/coords.html#VectorEffectsCalculation 8.13.1 Computing the vector effects
+    vector-effects-combined.html
+SVG2/coords.html#NestedVectorEffectsCalculation 8.13.2 Computing the vector effects for nested viewport coordinate systems
+    vector-effects-nested.html
+# SVG2/coords.html#VectorEffectsExamples 8.13.3 Examples of vector effects: no page; it is examples of the values that 8.13's pages show
+# SVG2/coords.html#DOMInterfaces 8.14 DOM interfaces: no page; it is object model
+# SVG2/coords.html#InterfaceSVGTransform 8.14.1 Interface SVGTransform: no page; it is object model
+# SVG2/coords.html#InterfaceSVGTransformList 8.14.2 Interface SVGTransformList: no page; it is object model
+# SVG2/coords.html#InterfaceSVGAnimatedTransformList 8.14.3 Interface SVGAnimatedTransformList: no page; it is object model
+# SVG2/coords.html#InterfaceSVGPreserveAspectRatio 8.14.4 Interface SVGPreserveAspectRatio: no page; it is object model
+# SVG2/coords.html#InterfaceSVGAnimatedPreserveAspectRatio 8.14.5 Interface SVGAnimatedPreserveAspectRatio: no page; it is object model

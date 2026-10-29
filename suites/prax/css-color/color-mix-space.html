@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix(): the mixing space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3.1 Colorspace for mixing</div>
+  <h1>color-mix(): the mixing space</h1>
+  <p class=pr-lede><q>If no color interpolation method is specified, assume Oklab. Otherwise, use the specified colorspace for
+  mixing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix-space">CSS Color 5
+  §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Oklab when none is given</h2>
+  <p><q>these two are exactly equivalent</q>: <code>color-mix(in oklab, firebrick,
+  goldenrod)</code> and <code>color-mix(firebrick, goldenrod)</code>; the result is <code>oklab(0.6242 0.0879
+  0.1136)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in oklab, firebrick, goldenrod)"></div><div class=sw style="background: color-mix(firebrick, goldenrod)"></div><div class=sw style="background: oklab(0.6242 0.0879 0.1136)"></div></div>
+    <figcaption>The two mixes and their result: one burnt orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in srgb, firebrick, goldenrod)"></div><div class=sw style="background: color-mix(in lch, firebrick, goldenrod)"></div></div>
+    <figcaption>In <code>srgb</code> and <code>lch</code>: two more oranges, close to it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

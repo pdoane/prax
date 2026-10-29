@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows: available space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; overflow: hidden; height: 100px; }
+  .v { writing-mode: vertical-rl; background: #b9cde6; }
+  .cb { outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3.1 Available Space in Orthogonal Flows</div>
+  <h1>Orthogonal flows: available space</h1>
+  <p class=pr-lede><q>Putting a box in an orthogonal flow can result in the opposite: for the box’s available block
+  space to be definite, but its available inline space to be indefinite.</q> <q>In these cases, an additional
+  constraint is used as a fallback in place of the available inline space for calculations that require a definite
+  available inline space-- the smallest of</q> three sizes. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#orthogonal-auto">CSS Writing Modes 4 §7.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The three limits</h2>
+  <p>Each blue block is <code>vertical-rl</code> with a long run of words, in a containing block of auto height,
+  outlined in red. Its lines wrap at the fallback.</p>
+  <figure>
+    <div class=pr-stage><div class=cb style="max-height: 60px"><div class=v>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo</div></div></div>
+    <figcaption><q>the containing block’s inner max size (if that is fixed)</q>: <code>max-height: 60px</code>, so
+    60px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=cb style="height: 60px; overflow: auto"><div><div class=v>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo</div></div></div></div>
+    <figcaption><q>the nearest ancestor scrollport’s inner size if that is fixed</q>: a scroll container 60px tall,
+    so 60px. <span class=pr-flag>Chrome</span> skips the scrollport and takes the viewport's height: one line, cut
+    off.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-stage pr-view" style="height: 100px" srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><body style='margin:0;background:#e7eaef;font:13px/20px &quot;PR Arimo&quot;'><div style='writing-mode:vertical-rl;background:#b9cde6'>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo</div></body>"></iframe>
+    <figcaption><q>the initial containing block’s size</q>: in a frame 200 by 100 with nothing else, 100px tall, the
+    frame's height.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

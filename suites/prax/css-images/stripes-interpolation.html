@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating stripes()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 20px; height: 0; margin: 10px; border: 40px solid #8a93a1; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes lengths {
+    from { border-color: stripes(#4f81bd 10px, #d68a3c); }
+    to { border-color: stripes(#4f81bd 30px, #d68a3c); }
+  }
+  @keyframes flexes {
+    from { border-color: stripes(#4f81bd 1fr, #d68a3c 1fr); }
+    to { border-color: stripes(#4f81bd 30px, #d68a3c 1fr); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.5 Interpolating stripes()</div>
+  <h1>Interpolating stripes()</h1>
+  <p class=pr-lede><q>Both the starting and ending image must have the same number of &lt;color-stripe&gt;s.</q>
+  <q>for each pair of stripes, interpolate the thickness and color independently.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-stripes">CSS Images 4 §7.5</a></span>
+  Each box has a 40px border whose <code>border-color</code>, a <code>stripes()</code> of blue then orange, is
+  animated to and fro; a still shows it at 50%. CSS Borders 4 draws the stripes in bands from the padding edge out.
+  The border is grey where <code>stripes()</code> is not supported.</p>
+</header>
+
+<section>
+  <h2>Thicknesses</h2>
+  <p>A thickness left out is <code>1fr</code>, a share of what the other stripes leave of the border's 40px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box half" style="animation-name: lengths"></div></div>
+    <figcaption>Blue <code>10px</code> to <code>30px</code>: blue 20px inside, orange the 20px outside. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A grey
+    border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box half" style="animation-name: flexes"></div></div>
+    <figcaption>Blue <code>1fr</code> to <code>30px</code>, orange <code>1fr</code> throughout. As lengths, blue goes
+    from 20px to 30px and orange from 20px to 10px: blue 25px inside, orange 15px outside. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A grey
+    border.</figcaption>
+  </figure>
+  <p><q>&lt;flex&gt; values are interpolated as &lt;length-percentage&gt;s using the following formula: max(0, 100% -
+  sum-of-percents - sum-of-fixed) * flex value / max(1, sum-of-flexes)</q></p>
+</section>
+
+</body>
+</html>

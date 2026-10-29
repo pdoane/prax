@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto margins of absolutely positioned boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ab { position: absolute; width: 60px; height: 20px; background: rgba(214, 138, 60, 0.8); }
+  .imcb { position: absolute; outline: 1px dashed #6b7381; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 60px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4.2 Auto Margins of Absolutely-Positioned Boxes</div>
+  <h1>Auto margins of absolutely positioned boxes</h1>
+  <p class=pr-lede><q>If either inset property in the relevant axis is auto, then any auto margins resolve to zero.</q>
+  <q>Otherwise, the remaining space is calculated as the size of its inset-modified containing block in the relevant
+  axis minus the box's used size in the relevant axis, and this remaining space is divided among any auto margins in
+  the relevant axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-margins">CSS Positioned Layout 3 §4.2</a></span>
+  Each stage is relative, 160 by 60; the orange box is 60 by 20, and the dashed rectangle an empty box with its
+  insets.</p>
+</header>
+
+<section>
+  <h2>Sharing what is left</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; margin: auto"></div></div>
+    <figcaption><code>inset: 10px 20px; margin: auto</code>: centered in the room both ways, from 50, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; margin-left: auto"></div></div>
+    <figcaption>Only <code>margin-left: auto</code>: it takes all 60px left over across; the box at the room's right,
+    and its top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=ab style="top: 10px; left: 20px; margin: auto"></div></div>
+    <figcaption><code>top: 10px; left: 20px; margin: auto</code>, the other two insets <code>auto</code>: the margins
+    are zero, the box at 20, 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Less than nothing left</h2>
+  <p><q>if in the inline axis the remaining space is negative and both margins are auto, the start margin resolves to
+  zero and the end margin receives the remaining space.</q> In the block axis the margins share it. <q>the space
+  distributed to auto margins can be negative in absolute positioning.</q> Each box has <code>inset: 10px 20px;
+  margin: auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; margin: auto; width: 140px"></div></div>
+    <figcaption>140 wide in a room 120 wide: the box starts at the room's left, 20, and runs 20 past it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="direction: rtl"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; margin: auto; width: 140px"></div></div>
+    <figcaption>The same in an <code>rtl</code> stage, whose start is the right: it ends at the room's right, 140,
+    and runs 20 past the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; margin: auto; height: 80px"></div></div>
+    <figcaption>80 tall in a room 40 tall: each margin −20, so centered, from −10 to 70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

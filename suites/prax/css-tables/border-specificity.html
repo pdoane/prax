@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: which style is more specific</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.7.1.3 Specificity of a border style</div>
+  <h1>Collapsed borders: which style is more specific</h1>
+  <p class=pr-lede><q>Given two borders styles, the border style having the most specificity is the border style
+  which…</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-specificity">CSS Table 3 §3.7.1.3</a></span>
+  Each table is two cells side by side, blue on the left, orange on the right; the figures show the border between
+  them.</p>
+</header>
+
+<section>
+  <h2>1. hidden; 2. the wider</h2>
+  <p><q>… has the value "hidden" as 'border-style', if only one does</q>; <q>… has the biggest 'border-width', once converted into css pixels</q></p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border: 10px solid #4f81bd"><td style="border: 2px hidden #d68a3c; border-left: 2px hidden"></table></div>
+    <figcaption>Blue 10px solid against <code>hidden</code>: no border between the cells; the others, blue on the left
+    and none on the right, are drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border-right: 6px dotted #4f81bd; font-size: 16px"><td style="border-left: 0.5em solid #d68a3c; font-size: 16px"></table></div>
+    <figcaption>6px dotted blue against <code>0.5em</code> solid orange at 16px, 8px: 8px solid orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>3. The style earlier in the list</h2>
+  <p><q>… has the 'border-style' which comes first in the following list: double, solid, dashed, dotted, ridge, outset,
+  groove, inset, none</q>. <q>If none of these criteria match, then both borders share the same specificity.</q> The
+  borders are 6px.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border-right: 6px dashed #4f81bd"><td style="border-left: 6px double #d68a3c"></table></div>
+    <figcaption>Dashed blue against double orange: double orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border-right: 6px solid #4f81bd"><td style="border-left: 6px solid #d68a3c"></table></div>
+    <figcaption>Solid against solid, the same specificity: the first cell in order, blue, keeps it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="direction: rtl"><tr><td style="border-left: 6px solid #4f81bd"><td style="border-right: 6px solid #d68a3c"></table></div>
+    <figcaption>The same in <code>rtl</code>: the first cell, blue, is on the right, and wins.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

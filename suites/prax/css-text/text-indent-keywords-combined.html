@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-indent: hanging each-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 160px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 9.1 First Line Indentation: the text-indent property</div>
+  <h1>text-indent: hanging each-line</h1>
+  <p class=pr-lede><q>The indent is treated as a margin applied to the start edge of the line box. Unless otherwise
+  specified by the 'each-line' and/or 'hanging' keywords, only lines that are the first formatted line of an element
+  are affected.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-indent-property">CSS Text 4 §9.1</a></span>
+  CSS 2's pages show <a href="../css2-16-text/text-indent-keywords.html">each keyword alone</a>; here the two together,
+  and what the first formatted line is. Letters are 10px wide; each stage is 160px.</p>
+</header>
+
+<section>
+  <h2>The specification's poem</h2>
+  <p><q>giving the third line of the poem a hanging indent where it soft-wraps</q>: here <code>30px hanging
+  each-line</code>, a <code>&lt;br&gt;</code> after each line of the poem.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-indent: 30px hanging each-line">A short line<br>No wrap here<br>But on and on and on<br>A break helps</div>
+    <figcaption>The lines after each break start at 0; "and on", the soft-wrapped part of the third, at 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-indent: 30px each-line">A short line<br>No wrap here<br>But on and on and on<br>A break helps</div>
+    <figcaption><code>each-line</code> without <code>hanging</code>: each line after a break at 30px, the wrapped "and on"
+    at 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The first formatted line</h2>
+  <p><q>For example, the first line of an anonymous block box is only affected if it is the first child of its parent
+  element.</q> Each stage is <code>text-indent: 30px</code>: text, a block, then more text.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-indent: 30px"><span class=t>first</span><div class=pr-frame>block</div><span class=t>after</span></div>
+    <figcaption>"first", an anonymous block first in the stage: indented 30px. The block inherits the indent, its
+    "block" at 30 too. "after", in a later anonymous block: at 0.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="text-indent: -20px hanging"><span class=t>one two three four</span></div>
+    <figcaption><code>-20px hanging</code>: the first line at 0, the others pulled 20px out past the start
+    edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

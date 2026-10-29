@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-clip-margin on a scroll container</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .b { width: 60px; height: 30px; margin: 20px 5px; padding: 10px; border: 5px solid #8a93a1; background: #f4f5f7; background-clip: content-box; overflow: hidden; }
+  .fill { height: 110px; margin: -40px -40px 0; background: repeating-linear-gradient(45deg, #4f81bd 0 6px, #d68a3c 6px 12px); opacity: 0.85; }
+  .stage { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.2 Expanding Clipping Bounds, scroll containers</div>
+  <h1>overflow-clip-margin on a scroll container</h1>
+  <p class=pr-lede>If the box is a scroll container: <q>the overflow clip edge is clamped to stay within the element's
+  padding box.</q> <q>the border-box value ignores any specified offset (and, due to the previous bullet point,
+  effectively acts as padding-box)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-clip-margin">CSS Overflow 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>It may shrink the clip, not grow it</h2>
+  <p>Each box is <code>overflow: hidden</code>, its content 60 by 30 in 10px of padding and a 5px grey border, and
+  holds stripes that reach 40px past its content on the top, left and right, and further below.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=b><div class=fill></div></div></div>
+    <figcaption><code>0px</code>: cut at the padding edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin: 15px"><div class=fill></div></div></div>
+    <figcaption><code>15px</code>: clamped to the padding box; cut at the padding edge still.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin: content-box"><div class=fill></div></div></div>
+    <figcaption><code>content-box</code>: cut at the content edge; the padding is left bare. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> ignore it on a scroll container: cut at the padding edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin: border-box 15px"><div class=fill></div></div></div>
+    <figcaption><code>border-box 15px</code>: the offset ignored, and the edge clamped: the padding edge.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin: padding-box -5px"><div class=fill></div></div></div>
+    <figcaption><code>padding-box -5px</code>, an inset: cut 5px inside the padding edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> cut at the padding edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

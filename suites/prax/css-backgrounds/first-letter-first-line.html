@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Backgrounds on ::first-letter and ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage p { margin: 10px; }
+  .lines { width: 120px; }
+  .letter::first-letter { background-color: #b9cde6; }
+  .letter-half::first-letter { background: linear-gradient(#d68a3c, #d68a3c) bottom / 100% 50% no-repeat #b9cde6; }
+  .line::first-line { background-color: #f9cc9d; }
+  .line-half::first-line { background: linear-gradient(#d68a3c, #d68a3c) left / 50% 100% no-repeat #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 1.1 Module Interactions</div>
+  <h1>Backgrounds on ::first-letter and ::first-line</h1>
+  <p class=pr-lede><q>All properties in this module apply to the ::first-letter and ::first-line pseudo-elements.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#placement">CSS Backgrounds 4 §1.1</a></span>
+  Borders, corners and shadows on them are CSS Borders 4's, in <a href="../css-borders/first-letter-first-line.html">its
+  page</a>.</p>
+</header>
+
+<section>
+  <h2>::first-letter</h2>
+  <p>Each stage's text is "Handgloves", whose first letter is styled.</p>
+  <figure>
+    <div class=pr-stage><p class="letter pr-measure">Handgloves</p></div>
+    <figcaption><code>background-color</code>: the H, 10px wide, on light blue; the rest of the word on none.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="letter-half pr-measure">Handgloves</p></div>
+    <figcaption>An orange image sized <code>100% 50%</code> at the bottom: the lower half of the H's light blue box
+    is orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>::first-line</h2>
+  <p>Each stage holds "aaa bbb ccc ddd" in a block 120px wide, so the first line is "aaa bbb ccc", 110px.</p>
+  <figure>
+    <div class=pr-stage><p class="lines line pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption><code>background-color</code>: "aaa bbb ccc" on orange; "ddd" on none.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="lines line-half pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption>A darker orange image sized <code>50% 100%</code> at the left: the first 55px of the line is darker,
+    the last 55px light.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .example ul {
+    background: yellow;
+    margin: 12px 12px 12px 12px;
+    padding: 3px 3px 3px 3px;
+  }
+  .example li {
+    color: white;
+    background: blue;
+    margin: 12px 12px 12px 12px;
+    padding: 12px 0px 12px 12px;
+    list-style: none;
+  }
+  .example li.withborder {
+    border-style: dashed;
+    border-width: medium;
+    border-color: lime;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.2 Example of margins, padding, and borders</div>
+  <h1>The example</h1>
+  <p class=pr-lede>The specification's own example: a list whose items have margins, padding and, on the second, a
+  border. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#mpb-examples">CSS 2 §8.2</a></span></p>
+</header>
+
+<section>
+  <h2>The example</h2>
+<pre class=pr-source>UL {
+  background: yellow;
+  margin: 12px 12px 12px 12px;
+  padding: 3px 3px 3px 3px;
+}
+LI {
+  color: white;
+  background: blue;
+  margin: 12px 12px 12px 12px;
+  padding: 12px 0px 12px 12px;
+  list-style: none
+}
+LI.withborder {
+  border-style: dashed;
+  border-width: medium;
+  border-color: lime;
+}</pre>
+  <figure>
+    <div class="pr-stage pr-wide example">
+      <ul>
+        <li>First element of list
+        <li class=withborder>Second element of list is a bit longer to illustrate wrapping.
+      </ul>
+    </div>
+    <figcaption>In a 300px wide containing block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

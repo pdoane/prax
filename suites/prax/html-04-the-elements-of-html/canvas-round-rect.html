@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>roundRect</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.6 Building paths</div>
+  <h1>roundRect</h1>
+  <p class=pr-lede>roundRect <q>Adds a new closed subpath to the path representing the given rounded rectangle.</q> <q>If a
+  list is provided, the number and order of these radii function in the same way as the CSS 'border-radius'
+  property.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#building-paths">HTML §4.12.5.1.6</a></span>
+  Each shape is filled blue; its rectangle without corners is outlined in red.</p>
+</header>
+<section>
+  <h2>One radius, several, and elliptical corners</h2>
+  <p>Four radii go to <q>upperLeft</q>, <q>upperRight</q>, <q>lowerRight</q> and <q>lowerLeft</q>. <q>When a value r in
+  radii is an object with { x, y } properties, the corresponding corner(s) are drawn as elliptical arcs</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=shapes data-shapes="20; 0 10 20 30"></canvas></div>
+    <figcaption>Left, 20: every corner a quarter circle of 20. Right, <code>[0, 10, 20, 30]</code>: square at the top
+    left, then 10, 20 and 30 clockwise.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=shapes data-shapes="xy; 10 0"></canvas></div>
+    <figcaption>Left, <code>{x: 30, y: 10}</code>: flat elliptical corners, 30 across, 10 down. Right, <code>[10,
+    0]</code>: 10 at the top left and bottom right, square at the other two.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Corners scaled to fit, and flipped</h2>
+  <p><q>Corner curves must not overlap. Scale all radii to prevent this</q>. <q>When w is negative, the rounded
+  rectangle is flipped horizontally, which means that the radius values that normally apply to the left corners are used
+  on the right and vice versa.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=80 data-draw=shapes data-shapes="100; flip"></canvas></div>
+    <figcaption>Left, 100 on 60 by 60: scaled to 30, a circle. Right, <code>[30, 0, 0, 0]</code> with a negative width:
+    the round corner at the top right instead.</figcaption>
+  </figure>
+</section>
+<script>
+  function shape(context, x, spec) {
+    let w = 60, radii;
+    if (spec === "xy") radii = [{x: 30, y: 10}];
+    else if (spec === "flip") radii = [30, 0, 0, 0];
+    else radii = spec.split(" ").map(Number);
+    context.fillStyle = "#4f81bd";
+    context.beginPath();
+    if (spec === "flip")
+      context.roundRect(x + w, 10, -w, 60, radii);
+    else
+      context.roundRect(x, 10, w, 60, radii);
+    context.fill();
+    context.strokeStyle = "#c0392b";
+    context.lineWidth = 1;
+    context.strokeRect(x + 0.5, 10.5, w - 1, 59);
+  }
+  const draw = {
+    shapes(context, canvas) {
+      const [left, right] = canvas.dataset.shapes.split(";").map(s => s.trim());
+      shape(context, 20, left);
+      shape(context, 120, right);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

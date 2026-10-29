@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Patching content with template</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .box { border: 1px dashed var(--pr-line); min-height: 20px; }
+  .placeholder { color: #9c5f22; }
+  .stage ul { margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.3 The template element</div>
+  <h1>Patching content with template</h1>
+  <p class=pr-lede><q>The for content attribute identifies the ProcessingInstruction that marks the location at which to
+  insert content (&lt;?marker&gt;) or the start of the range to replace (&lt;?start&gt;).</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-template-element">HTML §4.12.3</a></span>
+  In each figure the template comes after the dashed box, later in the stage.</p>
+</header>
+<section>
+  <h2>Content inserted at a marker</h2>
+  <p>When the parser meets a template with <code>for</code>, it prepares content patching, and the template's content
+  goes to the marker's place instead of into the template. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inhead">§13.2.6.4.4</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage pr-text">
+      <div class=box>Fruit: <?marker name="fruit"?></div>
+      <template for="fruit"><b>apples</b>, <b>pears</b></template>
+    </div>
+    <figcaption>The dashed box reads "Fruit: <b>apples</b>, <b>pears</b>", on one line; nothing below it.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "Fruit:"
+    alone.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A range replaced</h2>
+  <p><q>The content between &lt;?start name="recommended"&gt; and &lt;?end&gt; is replaced with the template
+  contents.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage pr-text">
+      <div class=box><?start name="list"?><span class=placeholder>Loading…</span><?end?></div>
+      <template for="list"><ul><li>Cat</li><li>Butler</li></ul></template>
+    </div>
+    <figcaption>The dashed box holds a two-item list, "Cat" and "Butler"; the orange "Loading…" is gone.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "Loading…"
+    stays, and no list.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Element-backed pseudo-elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  x-card { display: block; margin: 10px; color: #2c5a8f; }
+  .before::part(label)::before { content: "+ "; color: #d68a3c; }
+  .structural::part(label):first-child { color: #c0392b; }
+  .plain::part(label) { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 5 Element-backed Pseudo-Elements</div>
+  <h1>Element-backed pseudo-elements</h1>
+  <p class=pr-lede><q>The element-backed pseudo-elements, interact with most CSS and other platform features as if
+  they were real elements</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#element-like">CSS Pseudo-Elements 4 §5</a></span>
+  Each <code>x-card</code> is blue text with a shadow tree: a green <code>div</code> around a <code>span</code>
+  that is <code>part="label"</code>, reading "label", the div's first child.</p>
+</header>
+
+<section>
+  <h2>Selected as if a type selector</h2>
+  <p><q>All pseudo-classes and pseudo-elements are syntactically allowed after an element-backed pseudo-element</q>
+  <q>but some are disallowed from matching: The structural pseudo-classes, :has() pseudo-class, :scope pseudo-class,
+  and :host/:host()/:host-context() pseudo-classes never match.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><x-card class=before><template shadowrootmode=open><div style="color: #3f7a3f"><span part=label>label</span></div></template></x-card></div>
+    <figcaption><code>::part(label)::before</code>: an orange "+ " before "label".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><x-card class=structural><template shadowrootmode=open><div style="color: #3f7a3f"><span part=label>label</span></div></template></x-card></div>
+    <figcaption><code>::part(label):first-child</code> in red: never matches, though the span is a first child, so
+    "label" stays green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inheriting from another element</h2>
+  <p><q>they can be defined to inherit from another element instead. (For example, ::part() inherits from the parent
+  of the element it represents in the shadow tree.)</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><x-card class=plain><template shadowrootmode=open><div style="color: #3f7a3f"><span part=label>label</span></div></template></x-card></div>
+    <figcaption>"label" on light orange from <code>::part(label)</code>, in green: its color comes from the shadow
+    tree's div, not from the blue <code>x-card</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

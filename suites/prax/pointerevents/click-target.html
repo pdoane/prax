@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The target of a click</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .parent { margin: 10px 20px; padding: 10px; background: rgba(79, 129, 189, 0.16); outline: 1px dashed var(--pr-line);
+            touch-action: none; font-size: 0; }
+  .parent .pr-target { display: inline-block; width: 100px; margin: 0 20px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.12.3 Event dispatch</div>
+  <h1>The target of a click</h1>
+  <p class=pr-lede><q>A click, auxclick or contextmenu event MUST follow the standard dispatch process, except that the
+  event target is overridden using the algorithm below</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-dispatch">Pointer Events §3.3.12.3</a></span></p>
+</header>
+<section>
+  <h2>Pressed on one, released on another</h2>
+  <p><q>Otherwise (event is a click or auxclick event for which userEvent is a pointerup event that was dispatched
+  uncaptured) let target be the nearest common inclusive ancestor of the corresponding pointerdown and pointerup targets
+  in the DOM at the moment event is being dispatched.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-dispatch">§3.3.12.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=parent id=parent><div class=pr-target id=a>a</div><div class=pr-target id=b>b</div></div>
+      <ol class=pr-log data-log="pointerdown pointerup click" data-fields="target" data-on="#parent" data-lines=3></ol>
+    </div>
+    <figcaption>Press on <code>a</code>, drag to <code>b</code> and release: <code>pointerdown</code> at
+    <code>a</code>, <code>pointerup</code> at <code>b</code>, and <code>click</code> at <code>parent</code>, the
+    dashed box that holds both.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Captured</h2>
+  <p><q>If event is a contextmenu event, or userEvent was dispatched while the corresponding pointer was captured, then
+  let target be the target of userEvent.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-dispatch">§3.3.12.3</a></span>
+  A <code>pointerdown</code> listener captures the pointer to <code>c</code>.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=parent id=holder><div class=pr-target id=c>c</div><div class=pr-target id=d>d</div></div>
+      <ol class=pr-log data-log="lostpointercapture pointerup click" data-fields="target" data-on="#holder" data-lines=3></ol>
+    </div>
+    <figcaption>Press on <code>c</code>, drag to <code>d</code> and release: <code>pointerup</code> at
+    <code>c</code>, then <code>lostpointercapture</code> at <code>c</code>, then <code>click</code> at
+    <code>c</code> still.</figcaption>
+  </figure>
+</section>
+<script>
+  // Captures the pointer to c when it is pressed.
+  const c = document.getElementById("c");
+  c.addEventListener("pointerdown", event => c.setPointerCapture(event.pointerId));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

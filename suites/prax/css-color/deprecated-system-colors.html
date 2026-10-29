@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Deprecated system colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { width: auto; padding: 6px 8px 6px 0; background: #ffffff; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 8px; }
+  .sys { outline: 2px solid #1f2430; outline-offset: 2px; margin-right: 8px; }
+  section figure { display: block; margin-bottom: 8px; }
+  section figcaption { max-width: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · A Deprecated CSS System Colors</div>
+  <h1>Deprecated system colors</h1>
+  <p class=pr-lede><q>User agents must support these keywords, and to mitigate fingerprinting must map them to the
+  (undeprecated) system colors as listed below.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#deprecated-system-colors">CSS Color 4 §A</a></span></p>
+</header>
+
+<section>
+  <h2>Each the color of its system color</h2>
+  <p>Each row is a system color, then the deprecated keywords that <q>Computes to the color of</q> it, on white.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row row"><div class="sw sys" style="background: Canvas"></div><div class=sw style="background: ActiveCaption"></div><div class=sw style="background: AppWorkspace"></div><div class=sw style="background: Background"></div><div class=sw style="background: InactiveCaption"></div><div class=sw style="background: InfoBackground"></div><div class=sw style="background: Menu"></div><div class=sw style="background: Scrollbar"></div><div class=sw style="background: Window"></div></div>
+    <figcaption><code>Canvas</code>, outlined, then <code>ActiveCaption</code>, <code>AppWorkspace</code>, <code>Background</code>, <code>InactiveCaption</code>, <code>InfoBackground</code>, <code>Menu</code>, <code>Scrollbar</code>, <code>Window</code>: one color. <span class=pr-flag>Safari</span> Not all one color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row row"><div class="sw sys" style="background: ButtonBorder"></div><div class=sw style="background: ActiveBorder"></div><div class=sw style="background: InactiveBorder"></div><div class=sw style="background: ThreeDDarkShadow"></div><div class=sw style="background: ThreeDHighlight"></div><div class=sw style="background: ThreeDLightShadow"></div><div class=sw style="background: ThreeDShadow"></div><div class=sw style="background: WindowFrame"></div></div>
+    <figcaption><code>ButtonBorder</code>, outlined, then <code>ActiveBorder</code>, <code>InactiveBorder</code>, <code>ThreeDDarkShadow</code>, <code>ThreeDHighlight</code>, <code>ThreeDLightShadow</code>, <code>ThreeDShadow</code>, <code>WindowFrame</code>: one color. <span class=pr-flag>Safari</span> Not all one color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row row"><div class="sw sys" style="background: CanvasText"></div><div class=sw style="background: CaptionText"></div><div class=sw style="background: InfoText"></div><div class=sw style="background: MenuText"></div><div class=sw style="background: WindowText"></div></div>
+    <figcaption><code>CanvasText</code>, outlined, then <code>CaptionText</code>, <code>InfoText</code>, <code>MenuText</code>, <code>WindowText</code>: one color. <span class=pr-flag>Safari</span> Not all one color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row row"><div class="sw sys" style="background: ButtonFace"></div><div class=sw style="background: ButtonHighlight"></div><div class=sw style="background: ButtonShadow"></div><div class=sw style="background: ThreeDFace"></div></div>
+    <figcaption><code>ButtonFace</code>, outlined, then <code>ButtonHighlight</code>, <code>ButtonShadow</code>, <code>ThreeDFace</code>: one color. <span class=pr-flag>Safari</span> Not all one color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row row"><div class="sw sys" style="background: GrayText"></div><div class=sw style="background: InactiveCaptionText"></div></div>
+    <figcaption><code>GrayText</code>, outlined, then <code>InactiveCaptionText</code>: one color. <span class=pr-flag>Safari</span> Not all one color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

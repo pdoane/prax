@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D rendering contexts: who shares a 3D space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 200px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .ctx { position: absolute; inset: 0; }
+  .b { position: absolute; left: 40px; top: 10px; width: 80px; height: 60px; }
+  .a { position: absolute; left: 30px; top: 20px; width: 100px; height: 40px; transform: rotateY(50deg); }
+  .mid { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.2 3D Rendering Contexts</div>
+  <h1>3D rendering contexts: who shares a 3D space</h1>
+  <p class=pr-lede><q>A 3D rendering context is a set of elements rooted in a common ancestor that, for the purposes of
+  3D-transform rendering, are considered to share a common three-dimensional coordinate system.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#3d-rendering-contexts">CSS Transforms 2 §4.1.2</a></span>
+  Each stage has <code>perspective: 200px</code> and holds a box that fills it, holding orange B, 80 by 60, then blue
+  A, 100 by 40, with <code>rotateY(50deg)</code>: A's left half comes toward the viewer, its right half goes away, and
+  it crosses B's plane at 80 across. <a href="grouping.html">Grouping properties</a> flatten such a box.</p>
+</header>
+
+<section>
+  <h2>Establishing a context, and intersecting in it</h2>
+  <p>It <q>is established by a transformable element whose used value for transform-style is preserve-3d and which
+  itself is not part of a 3D rendering context.</q> Its elements, if they <q>intersect, then they are rendered with
+  intersection.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx><div class="pr-b pr-fit b">B</div><div class="pr-a pr-fit a">A</div></div></div>
+    <figcaption>The box flat: A, later, covers B wherever they overlap.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx style="transform-style: preserve-3d"><div class="pr-b pr-fit b">B</div><div class="pr-a pr-fit a">A</div></div></div>
+    <figcaption><code>preserve-3d</code>: A's left half in front of B, its right half behind. <span class=pr-flag>Firefox</span>
+    draws all of A over B.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Extending, and participating</h2>
+  <p>A <code>preserve-3d</code> element in a context <q>extends that 3D rendering context</q>, and <q>An element
+  participates in a 3D rendering context if its parent establishes or extends</q> it. Here A is inside a further box
+  in the <code>preserve-3d</code> one.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx style="transform-style: preserve-3d"><div class="pr-b pr-fit b">B</div><div class=mid style="transform-style: preserve-3d"><div class="pr-a pr-fit a">A</div></div></div></div>
+    <figcaption>The further box <code>preserve-3d</code> too: A intersects B. <span class=pr-flag>Firefox</span> draws all
+    of A over B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class=ctx style="transform-style: preserve-3d"><div class="pr-b pr-fit b">B</div><div class=mid><div class="pr-a pr-fit a">A</div></div></div></div>
+    <figcaption>The further box flat: A is in its plane, and covers B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The insertion caret</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 20px; }
+  .edit { padding: 0 10px; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f; font-size: 30px; line-height: 40px; }
+  .mono { font-family: "PR Cousine"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 5.2 Insertion caret</div>
+  <h1>The insertion caret</h1>
+  <p class=pr-lede><q>The insertion caret (or “caret” for short) is a visible indicator of the insertion point in an element that accepts text input, where text (and potentially other content) can be inserted by the user.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#the-insertion-caret">CSS Basic User Interface 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>In an editable element</h2>
+  <p>The box has <code>contenteditable</code>, so it accepts text input. Its text is dark blue, and its caret has every property at its initial value: <code>caret-color: auto</code>, where <q>User agents should use currentColor</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#caret-color">§5.2.1</a></span>, and <code>caret-shape: auto</code>.</p>
+  <p class=pr-note>A script gives the focus to the editable box and puts the insertion point in it. Safari and Firefox draw no caret in these stills.</p>
+  <figure>
+    <div class="pr-stage pr-wide stage"><div id=edit class="edit" contenteditable style="color: #2c5a8f">Lorem ipsum</div></div>
+    <figcaption>The insertion point is between “u” and “m”: a thin dark blue caret there, between the letters, as tall as the line’s text.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // The focus goes to the editable box, and the insertion point after its 10 character.
+  const box = document.getElementById("edit");
+  box.focus();
+  const range = document.createRange();
+  range.setStart(box.firstChild, 10);
+  range.collapse(true);
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+</script>
+</body>
+</html>

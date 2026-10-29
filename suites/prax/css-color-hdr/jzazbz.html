@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>jzazbz()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 6.4 Jzazbz</div>
+  <h1>jzazbz()</h1>
+  <p class=pr-lede><q>J<sub>z</sub> representing the Lightness (similar to L in Lab) while a<sub>z</sub> and b<sub>z</sub> represent the redness-greenness and yellowness-blueness opponent-color axes</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#Jzazbz">CSS Color HDR 1
+  §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>White and lime</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: jzazbz(0.22207 -0.00016 -0.00012)"></div><div class=sw style="background: white"></div></div>
+    <figcaption><code>jzazbz(0.22207 -0.00016 -0.00012)</code> beside <code>white</code>: one white.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>jzazbz()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: jzazbz(0.17542 -0.1179 0.1092)"></div><div class=sw style="background: lime"></div></div>
+    <figcaption><code>jzazbz(0.17542 -0.1179 0.1092)</code> beside <code>lime</code>: one green.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>jzazbz()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

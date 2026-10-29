@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The static-position rectangle</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .pr-stage.pr-cb { height: 60px; }
+  .ab { position: absolute; }
+  .half { margin-left: 100px; height: 40px; }
+  .tall { font-size: 13px; line-height: 40px; }
+  .f { display: flex; height: 60px; }
+  .gr { display: grid; grid-template-columns: 100px 100px; height: 60px; position: relative; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · A Static Position Terminology</div>
+  <h1>The static-position rectangle</h1>
+  <p class=pr-lede>When both insets in an axis are <code>auto</code>, the box aligns in its <q>static-position
+  rectangle, whose edges represent the static position of the box from each side of its containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#staticpos-rect">CSS Box Alignment 3 §A</a></span>
+  Each stage is the containing block; A has all its insets <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>Block and inline layout</h2>
+  <p>For a block-level box, <q>a zero-thickness rectangle spanning between the inline-axis sides of the box’s
+  static-position containing block</q>; for an inline-level box, <q>spanning between the line-over/line-under sides
+  of the line box</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class="half pr-parent"><div class="ab pr-a" style="justify-self: center">A</div></div></div>
+    <figcaption>Block A in the tinted block, 100px from the left: <code>justify-self: center</code>: centered in the
+    tint, on 150px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the tint's left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb tall">text <span class="ab pr-a" style="align-self: end">A</span></div>
+    <figcaption>Inline A on a line 40px tall, <code>align-self: end</code>: at the bottom of the line, from 20 to
+    40px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex and grid layout</h2>
+  <p>In a flex container it <q>corresponds to the content edges of the flex container</q>; in a grid container that is
+  also the containing block, <q>the grid area specified by the grid-placement properties establishes its
+  static-position rectangle instead.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class=f><div class="ab pr-a" style="justify-self: end; align-self: center">A</div></div></div>
+    <figcaption>A flexbox: <code>justify-self: end; align-self: center</code>: A at the right, 20px down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> At the left, by the container's <code>justify-content</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=gr><div class="ab pr-a" style="grid-column: 2; justify-self: center; align-self: end">A</div></div></div>
+    <figcaption>A grid of two 100px columns, the containing block; A in column 2, <code>center</code> and
+    <code>end</code>: on 150px, at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

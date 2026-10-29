@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:in-range and :out-of-range</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows label { display: block; margin: 0 0 8px; }
+  .rows input { box-sizing: border-box; width: 120px; font-size: 12px; border: 3px solid #b5bcc7; }
+  .rows :in-range { border-color: #3f9a3f; }
+  .rows :out-of-range { border-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:in-range and :out-of-range</h1>
+  <p class=pr-lede><code>:in-range</code> matches <q>all elements that are candidates for constraint validation, have
+  range limitations, and that are neither suffering from an underflow nor suffering from an overflow</q>, and
+  <code>:out-of-range</code> those with range limitations that are suffering from either. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Within min and max, or not</h2>
+  <p>Borders: green <code>:in-range</code>, orange <code>:out-of-range</code>, grey neither. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <label><input type=number min=1 max=10 value=5> min=1 max=10</label>
+        <label><input type=number min=1 max=10 value=20> value=20</label>
+        <label><input type=number value=20> no min or max</label>
+        <label><input type=date min=2026-01-01 max=2026-12-31 value=2027-03-01> a date in 2027</label>
+        <label><input type=number min=1 max=10 value=20 readonly> value=20, readonly</label>
+      </div>
+    </div>
+    <figcaption>Green, orange, grey, orange, grey: the third has no range limitations, and the last, readonly, is no
+    candidate for constraint validation. Type 12 into the first: orange; 0: orange; 3: green again.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

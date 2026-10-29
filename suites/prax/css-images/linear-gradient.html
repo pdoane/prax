@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient(): lines perpendicular to the gradient line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 140px; height: 40px; margin: 10px; }
+  .square { width: 80px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.1 Linear Gradients: the linear-gradient() notation</div>
+  <h1>linear-gradient(): lines perpendicular to the gradient line</h1>
+  <p class=pr-lede><q>The image is constructed by creating an infinite canvas and painting it with lines
+  perpendicular to the gradient line, with the color of the painted line being the color of the gradient line where
+  the two intersect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#linear-gradients">CSS Images 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The color is constant across the gradient line</h2>
+  <p>Each gradient is blue to 50% of its gradient line, then orange, so the edge between them is one of the painted
+  lines: it runs through the center of the box, at a right angle to the gradient's direction.</p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background: linear-gradient(90deg, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>90deg</code>, pointing right, in 140 by 40: a vertical edge 70px in, at 80px on the
+    guides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box square pr-ghost" style="background: linear-gradient(45deg, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>45deg</code>, pointing up and right, in an 80px square: the edge from the top left corner to
+    the bottom right one.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background: linear-gradient(45deg, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>45deg</code> in 140 by 40: the edge still at 45°, through the center, so it meets the top 50px
+    in and the bottom 90px in, at 60 and 100 on the guides.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

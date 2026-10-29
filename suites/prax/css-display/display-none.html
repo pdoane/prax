@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: none, and boxes that are not there</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .cell { display: table-cell; padding: 0 6px; background: #b9cde6; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.5 Box Generation, none</div>
+  <h1>display: none, and boxes that are not there</h1>
+  <p class=pr-lede><q>The element and its descendants generate no boxes or text sequences.</q> CSS 2's pages show the element and its descendants gone; here, what that does to the boxes around them. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#box-generation">CSS Display 4 §2.5</a></span></p>
+</header>
+
+<section>
+  <h2>Anonymous boxes ignore what has no box</h2>
+  <p><q>As these values cause affected elements to not generate a box, anonymous box generation rules will ignore the
+  elided elements entirely, as if they did not exist in the box tree.</q> Each stage is a block holding two cells with
+  an element between them.</p>
+  <figure>
+    <div class=pr-stage><div class=cell>one</div><div class=pr-c>block</div><div class=cell>two</div></div>
+    <figcaption>A block between them: two anonymous tables, "one" and "two" on lines of their own, the block
+    between.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cell>one</div><div class=pr-c style="display: none">block</div><div class=cell>two</div></div>
+    <figcaption>The block with <code>display: none</code>: the cells are siblings in one anonymous row, side by
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=cell>one</div><div style="display: contents"><div class=cell>two</div></div></div>
+    <figcaption>"two" inside an element with <code>display: contents</code>: also one row, side by side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Which cell appears in a column</h2>
+  <p><q>Markup-based relationships, however, are not affected by these values, as they are solely rendering-time
+  effects.</q> <q>they may affect which table cell <em>appears</em> in a column</q>. The table's
+  first <code>col</code> is orange.</p>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 2px"><col style="background: #d68a3c"><col><tr><td class=cell style="display: none">one</td><td class=cell style="background: transparent">two</td></tr></table></div>
+    <figcaption>The first cell has <code>display: none</code>: "two" now <em>appears</em> in the first column, and is
+    drawn on the orange of that column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

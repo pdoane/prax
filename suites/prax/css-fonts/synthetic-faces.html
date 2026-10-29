@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Synthetic faces</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8 Controlling synthetic faces</div>
+  <h1>Synthetic faces</h1>
+  <p class=pr-lede><q>Synthetic font faces are a fallback strategy to provide an approximation to the requested font
+  when a font family lacks a suitable face.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis-intro">CSS Fonts 4 §2.8</a></span></p>
+</header>
+
+<section>
+  <h2>What a user agent synthesizes</h2>
+  <p>A bold face <q>by drawing a thin stroke around each glyph</q>, an oblique <q>by geometrical shearing</q>, and small
+  capitals, superscripts and subscripts <q>by rendering regular glyphs at a smaller size and positioning them
+  appropriately</q>. PR Cousine has only a regular face.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-weight: bold">Handgloves</div>
+    <figcaption>Bold: thickened strokes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: oblique">Handgloves</div>
+    <figcaption>Oblique: the regular glyphs sheared.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-variant-caps: small-caps">Handgloves</div>
+    <figcaption>Small capitals: capitals reduced for the lowercase letters.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'">H<span style="font-variant-position: super">2</span>O<span style="font-variant-position: sub">2</span></div>
+    <figcaption>Superscript and subscript: smaller 2s, raised and lowered. <span class=pr-flag>Safari</span> draws the 2s unchanged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A variation axis is not synthesis</h2>
+  <p><q>Variable fonts, where the font designer has provided one or more axes of variation do not count as font
+  synthesis and their use is not affected by the 'font-synthesis' property.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Roboto Flex'; font-weight: 900; font-synthesis: none">Handgloves</div>
+    <figcaption><code>font-weight: 900; font-synthesis: none</code>: the <code>wght</code> axis still makes it
+    heavy.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

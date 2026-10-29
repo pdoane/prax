@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border width: no style, and the initial value</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.1 Border width</div>
+  <h1>Border width: no style, and the initial value</h1>
+  <p class=pr-lede><code>border-*-width</code> and <code>border-width</code> take <code>thin | medium | thick | &lt;length&gt;</code>. Every figure's border is solid unless it says otherwise.</p>
+</header>
+
+<section>
+  <h2>A border with no style has no width</h2>
+  <p>The computed width is <code>0</code> if the border style is <code>none</code> or <code>hidden</code>, so the
+  border takes no room. Each box below has <code>border-width: 20px</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-width-properties">CSS 2 §8.5.1</a>,
+  <a href="https://drafts.csswg.org/css2/#border-style-properties">§8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 20px; border-style: solid"></div></div>
+    <figcaption><code>solid</code>: 20px a side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 20px; border-style: none"></div></div>
+    <figcaption><code>none</code>: no border, and the box is 20px tall. <span class="pr-flag pr-since">Since CSS 2</span> The used width is 0; the computed width stays 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 20px; border-style: hidden"></div></div>
+    <figcaption><code>hidden</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 20px; border-style: none solid"></div></div>
+    <figcaption><code>border-style: none solid</code>: only the left and right take their 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The initial value</h2>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div style="height: 20px; background: #f4f5f7; border-style: solid; border-color: #2c5a8f"></div><div class=pr-plain style="border-style: solid; border-width: medium; margin-top: 10px"></div></div>
+    <figcaption>Above, <code>border-style: solid</code> and no width: the initial <code>medium</code>, as thick as
+    the <code>border-width: medium</code> below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

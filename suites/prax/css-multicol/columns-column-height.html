@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The columns shorthand and column-height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; column-fill: auto; gap: 10px; column-rule: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.5 The column-width, column-count, and column-height Shorthand</div>
+  <h1>The columns shorthand and column-height</h1>
+  <p class=pr-lede><q>This is a shorthand property for setting column-width, column-count, and column-height. Omitted
+  values are set to their initial values. This property also resets the column-wrap property to its initial
+  value.</q> The column-height comes after a slash: <code>columns: 12em / 14em</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#columns">CSS Multi-column Layout 2 §4.5</a></span>
+  Each stage has <code>gap: 10px</code> and eight words, one to a line in 60px columns.</p>
+</header>
+
+<section>
+  <h2>A height after the slash</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="columns: 60px / 40px">one two six ten red big fat sun</div>
+    <figcaption><code>columns: 60px / 40px</code>: rows of three 60px columns, 40px tall, "fat" and "sun" in the
+    second row. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No columns: the words in a
+    block.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="columns: 3 / 40px">one two six ten red big fat sun</div>
+    <figcaption><code>columns: 3 / 40px</code>: the same rows. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>It resets column-wrap</h2>
+  <p>Each stage first declares <code>column-wrap: nowrap</code>, then the shorthand.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-wrap: nowrap; columns: 3 / 40px">one two six ten red big fat sun</div>
+    <figcaption>column-wrap back to <code>auto</code>, so wrap: two rows, as above. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No columns.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-wrap: nowrap; column-count: 3; column-height: 40px">one two six ten red big fat sun</div>
+    <figcaption>The longhands leave <code>nowrap</code>: one row, "fat" and "sun" in a fourth column past the
+    stage. <span class=pr-flag>Safari</span> Three columns, balanced. <span class=pr-flag>Firefox</span> One
+    column of eight lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

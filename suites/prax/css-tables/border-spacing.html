@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-spacing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { background: #e0e3e8; }
+  td { padding: 0; width: 40px; height: 20px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.5.2.1 The Border-Spacing property</div>
+  <h1>border-spacing</h1>
+  <p class=pr-lede><q>The lengths specify the distance that separates adjoining cell borders in separated-borders
+  mode</q>. <q>If one length is specified, it gives both the horizontal and vertical spacing. If two are specified, the
+  first gives the horizontal spacing and the second the vertical spacing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-spacing-property">CSS Table 3 §3.5.2.1</a></span>
+  Tables are grey, two rows of two 40 by 20 cells.</p>
+</header>
+
+<section>
+  <h2>Horizontal, then vertical</h2>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 20px 5px"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>20px 5px</code>: 20px between and beside the columns, 5px between and above and below the
+    rows; the table is 140 by 55.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 0 10px"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>0 10px</code>: the columns touch, and the rows are 10px apart: 80 by 70.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only in separated-borders mode</h2>
+  <p>The property applies to <q>table grid boxes when 'border-collapse' is separate</q>.</p>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 20px; border-collapse: collapse"><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>20px</code> with <code>border-collapse: collapse</code>: no spacing, and the table is 80 by
+    40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>page-break-before and page-break-after</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.3.1 Page break properties: page-break-before, page-break-after, page-break-inside</div>
+  <h1>page-break-before and page-break-after</h1>
+  <p class=pr-lede><q>always: Always force a page break before (after) the generated box.</q> <q>avoid: Avoid a page break before (after, inside) the generated box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#page-break-props">CSS 2 §13.3.1</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>always and avoid</h2>
+  <p>In the second figure a 120px green block and a heading fill page 1's 140px page area, so the page would break between the heading and its paragraph.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } .b { page-break-before: always } .a { page-break-after: always }</style><div>line 1</div><div class=b><div>line 2</div></div><div class=a><div>line 3</div></div><div>line 4</div>"></iframe>
+    <figcaption><code>page-break-before: always</code> on line 2, <code>page-break-after: always</code> on line 3: three pages, line 1, lines 2 and 3, line 4.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } h1 { margin: 0; font: inherit; font-weight: bold; page-break-after: avoid }</style><div style='height: 120px; background: #c3d08b'></div><h1>Heading</h1><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>page-break-after: avoid</code> on the heading: it moves to page 2 with its paragraph, and page 1 holds only the block. <span class=pr-flag>Firefox</span> The heading stays at the bottom of page 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

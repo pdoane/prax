@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Short paragraphs with initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .s { color: #c0392b; }
+  .s::first-letter, .i::first-letter { initial-letter: 3; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.9.2 Short paragraphs with initial letters</div>
+  <h1>Short paragraphs with initial letters</h1>
+  <p class=pr-lede><q>A paragraph with an initial letter can have fewer lines of text than the initial letter occupies.
+  In this case, the initial letter’s top alignment is still honored, and its exclusion area continues into any
+  subsequent blocks.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#short-para-initial-letter">CSS Inline Layout 3 §7.9.2</a></span>
+  Each red paragraph is one line of 13px PR Literata on 20px lines with <code>initial-letter: 3</code>. <span
+  class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code> and <span
+  class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>The next paragraph wraps around it</h2>
+  <p>The next paragraph's text wraps <q>exactly as if that block's text were part of its own containing block.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p s">Short one.</p><p class=p>The next paragraph wraps around the letter like the first.</p></div>
+    <figcaption>The black paragraph's first two lines start after the S, as the red line does.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clearing it</h2>
+  <p><q>If the subsequent block starts with an initial letter, establishes an independent formatting context, or
+  specifies clear in the initial letter’s containing block’s start direction, then it must clear the previous block’s
+  initial letter.</q></p>
+  <figure class="pr-erratum pr-narrow">
+    <div class="pr-stage pr-narrow"><p class="p s">Short one.</p><p class="p i">Its own initial letter: this one starts below.</p></div>
+    <figcaption>The next paragraph has an initial letter: it starts below the S.</figcaption>
+  </figure>
+  <figure class="pr-erratum pr-narrow">
+    <div class="pr-stage pr-narrow"><p class="p s">Short one.</p><p class=p style="clear: left">Clear left: this starts below.</p></div>
+    <figcaption><code>clear: left</code>: below the S.</figcaption>
+  </figure>
+  <figure class="pr-erratum pr-narrow">
+    <div class="pr-stage pr-narrow"><p class="p s">Short one.</p><p class=p style="display: flow-root">A flow root starts below.</p></div>
+    <figcaption>An independent formatting context: below the S.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The width property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.2 Content width: the 'width' property</div>
+  <h1>The width property: values</h1>
+  <p class=pr-lede><code>width</code> takes <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. Initial
+  <code>auto</code>, not inherited. <q>This property specifies the content width of boxes.</q> Teal is a box's content
+  area, green its 10px of padding each side.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt; and &lt;percentage&gt;</h2>
+  <p><q>Specifies the width of the content area using a length unit.</q> <q>The percentage is calculated with respect
+  to the width of the generated box's containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2 §10.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="width: 100px; padding: 0 10px"><div class=pr-content-area></div></div></div>
+    <figcaption>The specification's <code>p { width: 100px }</code>: the content area is 100px, and the padding makes
+    the box 120.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="width: 25%; padding: 0 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>width: 25%</code> of the 200px stage: a 50px content area.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto, the initial value, and no inheritance</h2>
+  <p><q>The width depends on the values of other properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2 §10.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 0 10px"><div class=pr-content-area></div></div></div>
+    <figcaption>A block with <code>width: auto</code> fills the stage: 180px of content in 200.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="display: flow-root; width: 150px"><div class=pr-a style="float: left">box</div></div></div>
+    <figcaption>The dashed parent is 150px wide; its floated child has <code>width: auto</code>, not 150px, so it is
+    as narrow as its text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

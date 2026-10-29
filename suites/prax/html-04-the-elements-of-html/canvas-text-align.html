@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text alignment in a canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.5 Text styles</div>
+  <h1>Text alignment in a canvas</h1>
+  <p class=pr-lede>Text is drawn with its <q>anchor point</q> at the (x, y) given; the anchor is <q>determined by the
+  textAlign and textBaseline values</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#text-styles">HTML §4.12.5.1.5</a></span>
+  The text is 16px PR Noto Sans; each red line is the x or y given.</p>
+</header>
+<section>
+  <h2>textAlign, and the direction</h2>
+  <p><q>If textAlign is start and direction is 'ltr'</q> the anchor is <q>the left edge of the inline box</q>; direction
+  <q>inherit</q> takes the canvas element's.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=110 data-draw=align></canvas></div>
+    <figcaption>Each keyword at x 100: <code>start</code> and <code>left</code> begin at the line, <code>end</code> and
+    <code>right</code> end at it, <code>center</code> straddles it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=110 data-draw=align dir=rtl></canvas></div>
+    <figcaption>The same on a canvas with <code>dir=rtl</code>: <code>start</code> now ends at the line and
+    <code>end</code> begins at it; the others are as before.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>textBaseline</h2>
+  <p><q>top: The em-over baseline</q>, <q>hanging: The hanging baseline</q>, <q>middle: Halfway between the em-over
+  baseline and the em-under baseline</q>, <q>alphabetic: The alphabetic baseline</q>, <q>ideographic: The
+  ideographic-under baseline</q>, <q>bottom: The em-under baseline</q>.</p>
+  <figure>
+    <div class="pr-stage pr-wide"><canvas width=300 height=100 data-draw=baselines></canvas></div>
+    <figcaption>"Hg" at y 55, 28px, for each keyword: <code>top</code> hangs from the line, <code>hanging</code> a little
+    higher, <code>middle</code> centered on it, <code>alphabetic</code> sits on it, <code>ideographic</code> and
+    <code>bottom</code> with their descenders above it.</figcaption>
+  </figure>
+</section>
+<script>
+  function guide(context, x0, y0, x1, y1) {
+    context.save();
+    context.strokeStyle = "#c0392b";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x0, y0);
+    context.lineTo(x1, y1);
+    context.stroke();
+    context.restore();
+  }
+  const draw = {
+    align(context) {
+      context.font = "16px 'PR Noto Sans'";
+      context.fillStyle = "#1f2430";
+      ["start", "end", "left", "right", "center"].forEach((align, i) => {
+        context.textAlign = align;
+        context.fillText(align, 100, 20 + i * 20);
+      });
+      guide(context, 100.5, 0, 100.5, 110);
+    },
+    baselines(context) {
+      context.font = "10px 'PR Noto Sans'";
+      context.fillStyle = "#6b7381";
+      ["top", "hanging", "middle", "alphabetic", "ideographic", "bottom"].forEach((baseline, i) =>
+        context.fillText(baseline, 5 + i * 50, 12));
+      context.font = "28px 'PR Noto Sans'";
+      context.fillStyle = "#1f2430";
+      ["top", "hanging", "middle", "alphabetic", "ideographic", "bottom"].forEach((baseline, i) => {
+        context.textBaseline = baseline;
+        context.fillText("Hg", 5 + i * 50, 55);
+      });
+      guide(context, 0, 55.5, 300, 55.5);
+    },
+  };
+  document.fonts.load("16px 'PR Noto Sans'").then(() => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

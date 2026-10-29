@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Feature and variation resolution</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 7 Font feature and variation resolution</div>
+  <h1>Feature and variation resolution</h1>
+  <p class=pr-lede>Features come from 'font-variant', 'font-feature-settings' and 'font-variation-settings', in a style
+  rule or an @font-face rule. <q>Features defined via CSS properties are applied on top of layout engine default
+  features.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-feature-variation-resolution">CSS Fonts 4 §7</a></span></p>
+</header>
+
+<section>
+  <h2>Defaults, then properties</h2>
+  <figure>
+    <div class="pr-stage pr-sample">The fist</div>
+    <figcaption>No properties: the default features, Th and fi joined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-caps: small-caps">The fist</div>
+    <figcaption>'font-variant-caps' on top of the defaults: small capitals, and Th still joined where the font joins
+    its small capitals.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

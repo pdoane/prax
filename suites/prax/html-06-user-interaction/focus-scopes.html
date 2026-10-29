@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus navigation scope owners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0; border: 2px solid #2c5a8f }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Focus navigation scope owners</h1>
+  <p class=pr-lede><q>A node is a focus navigation scope owner if it is a Document, a shadow host, a slot, or an element which is
+  the popover trigger of an element in the popover showing state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>A slot</h2>
+  <p><q>If element's parent is a shadow host, then return element's assigned slot.</q> The host's children are
+  <code>x</code> then <code>y</code>; its shadow tree has the slot for <code>y</code> before the slot for
+  <code>x</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=a>a</button>
+        <div id=host><button class=pr-target id=x slot=x>x, the host's first child</button><button class=pr-target id=y slot=y>y, the host's second child</button></div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption><code>y</code> is drawn above <code>x</code>. Click <code>a</code> and press Tab twice: <code>y</code>,
+    then <code>x</code>, in the order of their slots, not of the host's children.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A popover's trigger</h2>
+  <p><q>If element is in the popover showing state and has a popover trigger set, then return element's popover
+  trigger.</q> The popover is the last element of the page. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=trigger popovertarget=pop>trigger: show the popover</button>
+        <button class=pr-target id=next>next</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2 data-on=document></ol>
+    </div>
+    <figcaption>Click the trigger: the popover shows, centered in the window. Press Tab: focus at <code>p1</code> in
+    the popover, then <code>p2</code>, then back out to <code>next</code>, as if the popover followed its trigger in
+    the tree.</figcaption>
+  </figure>
+</section>
+<div popover id=pop>
+  <button class=pr-target id=p1>p1, in the popover</button>
+  <button class=pr-target id=p2>p2</button>
+</div>
+<script>
+  // The host's shadow tree slots y before x.
+  document.getElementById("host").attachShadow({mode: "open"}).innerHTML = '<slot name=y></slot><slot name=x></slot>';
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

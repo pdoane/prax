@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The page color scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.pr-medium { width: 150px; }
+  .pr-medium + figcaption { max-width: 150px; }
+  iframe.pr-view { width: 150px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color Adjustment 1 · 2.1 Opting Into a Preferred Color Scheme</div>
+  <h1>The page color scheme</h1>
+  <p class=pr-lede><q>The page color scheme represents the color scheme that will be used for the page overall
+  (queryable with the prefers-color-scheme media feature) and for all elements that don't specifically override the
+  page color scheme with the 'color-scheme' property.</q> In HTML, <code>&lt;meta name=color-scheme&gt;</code> gives
+  the page's supported color schemes. <span class=pr-cite>
+  <a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-page">CSS Color Adjustment 1 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The meta element names the page's schemes</h2>
+  <p><q>The page color scheme is determined by finding the used color scheme, given the preferred color scheme and the
+  page's supported color schemes</q>. Each frame's document holds text and a link, and the frame has
+  <code>color-scheme: light</code>, which its document takes as the preference.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text and <a href=#>a link</a>"></iframe></div>
+    <figcaption>No meta element: light, the default, over the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="color-scheme: light" srcdoc="<meta name=color-scheme content=dark><link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text and <a href=#>a link</a>"></iframe></div>
+    <figcaption><code>content=dark</code>: dark, on an opaque dark canvas.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="color-scheme: light" srcdoc="<meta name=color-scheme content='dark light'><link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text and <a href=#>a link</a>"></iframe></div>
+    <figcaption><code>content="dark light"</code>: light, the preference, is among them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An embedded document prefers its frame's scheme</h2>
+  <p><q>In embedded documents (such as an iframe or an SVG img), the embedding element's element color scheme is used
+  as the embedded document's preferred color scheme</q>. These stages have <code>color-scheme: dark</code> and a
+  <code>Canvas</code> background, and their frames inherit the scheme.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="color-scheme: dark; background: Canvas"><iframe class=pr-view srcdoc="<meta name=color-scheme content='light dark'><link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text and <a href=#>a link</a>"></iframe></div>
+    <figcaption><code>content="light dark"</code>: dark, the frame's. <span class=pr-flag>Safari</span> Light, on an
+    opaque light canvas.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="color-scheme: dark; background: Canvas"><iframe class=pr-view srcdoc="<meta name=color-scheme content='light dark'><link rel=stylesheet href=../shared/fonts.css><style>body { margin: 10px; font: 15px/20px 'PR Arimo' } @media (prefers-color-scheme: dark) { b { color: #d68a3c } }</style><b>prefers dark</b>"></iframe></div>
+    <figcaption><code>(prefers-color-scheme: dark)</code> matches: orange. <span class=pr-flag>Safari</span> It does
+    not: dark text on light.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

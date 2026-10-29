@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radialGradient: gradientUnits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <radialGradient id="box"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /><stop offset="1" stop-color="#d68a3c" /><stop offset="1" stop-color="#6aa36a" /></radialGradient>
+  <radialGradient id="user" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="20"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /><stop offset="1" stop-color="#d68a3c" /><stop offset="1" stop-color="#6aa36a" /></radialGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.3 Radial gradients</div>
+  <h1>radialGradient: gradientUnits</h1>
+  <p class=pr-lede><q>Radial gradients are defined by a ‘radialGradient’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#RadialGradients">SVG 2 §14.2.3</a></span>
+  Its <code>gradientUnits</code> <q>Defines the coordinate system for attributes ‘cx’, ‘cy’, ‘r’, ‘fx’, ‘fy’, and
+  ‘fr’.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#RadialGradientAttributes">§14.2.3.1</a></span>
+  Each stage is an SVG 160 by 60. Each gradient is blue to half its radius, orange to its radius, and green
+  beyond.</p>
+</header>
+
+<section>
+  <h2>objectBoundingBox, the initial value</h2>
+  <p><q>When the object's bounding box is not square, the rings that are conceptually circular within object
+  bounding box space will render as elliptical due to application of the non-uniform scaling transformation from
+  bounding box space to user coordinate system.</q> The initial <code>cx</code>, <code>cy</code> and <code>r</code>
+  are 50%.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#box)" /></svg></div>
+    <figcaption>A square 40 by 40 about 80, 30: a blue disc of radius 10, an orange ring out to 20, the corners
+    green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#box)" /></svg></div>
+    <figcaption>A rect 120 by 40 at 20, 10: an ellipse 60 by 20 in blue, an orange one 120 by 40, the corners
+    green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>userSpaceOnUse</h2>
+  <p>The values are in the user coordinate system of the element painted, and <q>Percentages represent values
+  relative to the current SVG viewport.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#user)" /></svg></div>
+    <figcaption><code>cx="80" cy="30" r="20"</code> on the rect 120 by 40: circles, blue of radius 10, orange of
+    20; green beyond.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><radialGradient id="percent" gradientUnits="userSpaceOnUse" cx="25%" cy="50%" r="20"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /><stop offset="1" stop-color="#d68a3c" /><stop offset="1" stop-color="#6aa36a" /></radialGradient><rect x="20" y="10" width="120" height="40" fill="url(#percent)" /></svg></div>
+    <figcaption><code>cx="25%" cy="50%"</code> of 160 by 60: the circles about 40, 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cascading in the page context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.4 Cascading in the page context</div>
+  <h1>Cascading in the page context</h1>
+  <p class=pr-lede><q>Declarations in the page context obey the cascade just like normal CSS declarations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#page-cascade">CSS 2 §13.4</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>Due to the higher specificity of the pseudo-class selector, the left margin on left pages will be '4cm' and all other pages (i.e., the right pages) will have a left margin of '3cm'.</q> Here 40px and 30px.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px; margin-left: 30px } @page :left { margin-left: 40px } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption>Pages 1 and 3: 30px from the left; page 2, a left page: 40px. Safari gives every page page 1's width, which CSS 2 allows. <span class=pr-flag>Firefox</span> 30px on every page: <code>:left</code> matches none.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page :left { margin-left: 40px } @page { size: 240px 160px; margin: 10px; margin-left: 30px } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption>The rules the other way round: specificity, not order, decides; the same margins. Safari keeps page 1's width. <span class=pr-flag>Firefox</span> 30px on every page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

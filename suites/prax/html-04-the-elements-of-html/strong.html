@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The strong element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 13px/20px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.3 The strong element</div>
+  <h1>The strong element</h1>
+  <p class=pr-lede><q>The strong element represents strong importance, seriousness, or urgency for its contents.</q> <q>The relative level of importance of a piece of content is given by its number of ancestor strong elements; each strong element increases the importance of its contents.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-strong-element">HTML §4.5.3</a></span></p>
+</header>
+<section>
+  <h2>Bolder than its parent</h2>
+  <p><q>b, strong { font-weight: bolder; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> Bolder is relative: from 400, 700; from 700, 900; from 300, 400. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#relative-weights">CSS Fonts 4 §2.2.1</a></span>
+  The text is Noto Sans, which has every weight.</p>
+  <figure>
+    <div class="pr-stage t">Plain, <strong>strong, <strong>stronger</strong></strong></div>
+    <figcaption>Weights 400, 700 and 900: "stronger" heavier than "strong".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="font-weight: 300">Light, <strong>strong</strong></div>
+    <figcaption>Text of weight 300: "strong" at 400, the plain text's usual weight.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

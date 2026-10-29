@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: top and bottom</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .tall { display: inline-block; width: 20px; height: 60px; background: #8a93a1; }
+  .chip { background: rgba(214, 138, 60, 0.6); }
+  .kid { background: rgba(79, 129, 189, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: top and bottom</h1>
+  <p class=pr-lede>Each stage's text is 13px on 20px lines, with the line's baseline dashed in red. A grey 60px inline-block makes each line 60px tall.</p>
+</header>
+
+<section>
+  <h2>Relative to the line box</h2>
+  <p><q>Align the top of the aligned subtree with the top of the line box.</q> (<code>top</code>) <q>Align the bottom of
+  the aligned subtree with the bottom of the line box.</q> (<code>bottom</code>) <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2
+  §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=tall></span> <span class=chip style="vertical-align: top">top</span></div>
+    <figcaption>The orange span is at the top of the 60px line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=tall></span> <span class=chip style="vertical-align: bottom">bottom</span></div>
+    <figcaption>Here it is at the bottom of the line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The aligned subtree</h2>
+  <p><q>The aligned subtree of an inline element contains that element and the aligned subtrees of all children inline
+  elements whose computed 'vertical-align' value is not 'top' or 'bottom'. The top of the aligned subtree is the
+  highest of the tops of the boxes in the subtree, and the bottom is analogous.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2
+  §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=tall></span> <span class=chip style="vertical-align: top">top <span class=kid style="vertical-align: 10px">+10</span></span></div>
+    <figcaption>An orange span aligned <code>top</code>, with a blue child raised 10px: the child's top meets the line's top, and the span is 10px lower.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=tall></span> <span class=chip style="vertical-align: top">top <span class=kid style="vertical-align: bottom">bottom</span></span></div>
+    <figcaption>The blue child is aligned <code>bottom</code> itself, so it is not in the span's subtree: the span is at the top, the child at the bottom. <span class=pr-flag>Chrome</span> draws the child at the top, beside the span.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

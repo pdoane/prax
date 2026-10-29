@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: an image of itself</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe { display: block; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: an image of itself</h1>
+  <p class=pr-lede><q>Since image references always refer to a complete document, a target-only URL is treated as a
+  link to the same file, which is rendered again as an independent embedded image.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  The stage is a frame 160 by 60 showing an SVG document of the same size: a blue ring round 80, 30, radius 24 and 6
+  wide, and two images of the document itself.</p>
+</header>
+
+<section>
+  <h2>Rendered once more, and no further</h2>
+  <p><q>Since the embedded image is processed in a secure mode, its own embedded references are not processed,
+  preventing infinite recursion.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/recursive-image.svg" width="160" height="60"></iframe></div>
+    <figcaption>By its name, at half size: a ring of radius 12, 3 wide, whose own images are not drawn. By
+    <code>#target</code>, at a fifth: the ring again, filled orange by <code>:target</code>, a disc about 10 across
+    at the center.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

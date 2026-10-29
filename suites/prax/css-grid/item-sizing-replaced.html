@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid item sizing: replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { display: grid; grid-template: 60px / 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.2 Grid Item Sizing, replaced elements</div>
+  <h1>Grid item sizing: replaced elements</h1>
+  <p class=pr-lede>For <code>normal</code>: <q>If the grid item has no preferred aspect ratio, and no natural size in
+  the relevant axis (if it is a replaced element), the grid item is sized as for align-self: stretch. Otherwise, the
+  grid item is sized consistent with the size calculation rules for block-level elements for the corresponding
+  axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-item-sizing">CSS Grid Layout 2 §6.2</a></span></p>
+</header>
+
+<section>
+  <h2>A natural size</h2>
+  <p>Each purple item is an <code>img</code> of an SVG image 40 by 20px, in a grid area 120 by 60px.</p>
+  <figure>
+    <div class=pr-stage><div class=g><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>normal</code>: its natural size, 40 by 20px, at the top left of the area.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><img alt="" style="justify-self: stretch; align-self: stretch" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none' viewBox='0 0 40 20'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>stretch</code> in both axes: <q>Fill grid area</q>, 120 by 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><img alt="" style="justify-self: center; align-self: center" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>center</code> in both axes: its natural size, 40 by 20px, at the middle of the
+    area.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A ratio and no natural size</h2>
+  <p>Each item is an <code>img</code> of an SVG image with a 4:1 ratio and no natural size, in the same area.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>normal</code>: as a block-level image, 120px wide, and 30px tall from the ratio, at the top of
+    the area. <span class=pr-flag>Safari</span> makes it 200 by 50px, as wide as the grid, not the
+    area.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><img alt="" style="place-self: stretch" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1' preserveAspectRatio='none'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>place-self: stretch</code>: 120 by 60px, the ratio given up.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

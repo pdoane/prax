@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating images by cross-fading</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 100px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  .quarter { animation-duration: 100s; animation-timing-function: linear; animation-delay: -25s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes colors {
+    from { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%234f81bd'/></svg>"); }
+    to { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%23d68a3c'/></svg>"); }
+  }
+  @keyframes sizes {
+    from { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"); }
+    to { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%23d68a3c'/></svg>"); }
+  }
+  @keyframes to-none {
+    from { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%234f81bd'/></svg>"); }
+    to { background-image: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.1 Interpolating &lt;image&gt;</div>
+  <h1>Interpolating images by cross-fading</h1>
+  <p class=pr-lede><q>All images can be interpolated</q>: <q>images are interpolated by scaling them to the size of the
+  start image and cross-fading the two while they transition to the size of the end image.</q> <q>at each point in the
+  interpolation the image is equal to cross-fade( (100% - t) start image, end image).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-images">CSS Images 4 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>A cross-fade, frame by frame</h2>
+  <p>Each dashed box is 100 by 40, its <code>background-image</code> animated to and fro (a still shows the frame the
+  caption gives) from a blue image to an orange one, drawn once at the top left.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: colors"></div></div>
+    <figcaption>Two images 100 by 40, at 50%: the box filled with the color halfway between blue and orange, a greyish
+    brown, <code>#93867d</code>. <span class=pr-flag>Firefox</span> The orange image: it does not interpolate
+    images, and switches at 50%.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: sizes"></div></div>
+    <figcaption>From 20 by 20 to 40 by 20, at 50%: the same brown, 30 by 20, the size halfway between. <span class=pr-flag>Firefox</span> The orange image, 40 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>To no image</h2>
+  <p>The section leaves this open: <q>Special-case interpolating to/from no image, like "background-image: url(foo);"
+  to "background-image: none;".</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-images">§7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost quarter" style="animation-name: to-none"></div></div>
+    <figcaption>A blue image to <code>none</code>, at 25%: the section leaves it open. Chrome, Safari and Firefox keep
+    the blue until 50%.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

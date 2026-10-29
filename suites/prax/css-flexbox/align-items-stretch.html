@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-items: stretch</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; height: 60px; }
+  .pr-stage > div { width: 40px; }
+  .t { background: #b9cde6; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.3 Cross-axis Alignment: the align-items and align-self properties, stretch</div>
+  <h1>align-items: stretch</h1>
+  <p class=pr-lede><q>If the cross size property of the flex item computes to auto, and neither of the cross-axis
+  margins are auto, the flex item is stretched. Its used value is the length necessary to make the cross size of the
+  item's margin box as close to the same size as the line as possible, while still respecting the constraints imposed
+  by min-height/min-width/max-height/max-width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">CSS Flexible Box Layout 2 §8.3</a></span></p>
+</header>
+
+<section>
+  <h2>Which items stretch</h2>
+  <p><code>stretch</code> is the initial value. Each stage is 60px tall.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="height: 30px">B</div><div class="pr-c pr-fit" style="margin-top: auto">C</div></div>
+    <figcaption>A, <code>height: auto</code>: 60px. B, <code>height: 30px</code>: not stretched. C,
+    <code>margin-top: auto</code>: not stretched, at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="margin-bottom: 20px"><div class="pr-a pr-fit" style="margin-top: 10px">A</div><div class="pr-b pr-fit" style="max-height: 40px">B</div><div class="pr-c pr-fit" style="min-height: 80px">C</div></div>
+    <figcaption>A, <code>margin-top: 10px</code>: its margin box fills the line, 10 to 60px. B,
+    <code>max-height: 40px</code>: 40px. C, <code>min-height: 80px</code>: 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cross-start edge, and contents that overflow</h2>
+  <p><q>The cross-start margin edge of the flex item is placed flush with the cross-start edge of the line.</q> <q>If
+  the flex container's height is constrained this value may cause the contents of the flex item to overflow the
+  item.</q></p>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap-reverse; height: 60px; align-content: flex-start"><div class="pr-a pr-fit" style="height: 40px">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>wrap-reverse</code>: one line 40px tall at the bottom, where cross-start is; B is stretched
+    to it, 20 to 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 40px; margin-bottom: 20px"><div class=t style="width: 20px">a b c</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption>A stage 40px tall: "a b c", three lines in a box 20px wide, is stretched to 40px; "c"
+    overflows.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-direction: column; height: auto"><div class="pr-a pr-fit" style="width: auto">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>column</code>: A, <code>width: auto</code>, is stretched to 200px; B is 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ul element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 160px; }
+  iframe.pr-view.short { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.6 The ul element</div>
+  <h1>The ul element</h1>
+  <p class=pr-lede><q>The ul element represents a list of items, where the order of the items is not important — that is, where changing the order would not materially change the meaning of the document.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-ul-element">HTML §4.4.6</a></span></p>
+</header>
+<section>
+  <h2>Discs, then circles, then squares</h2>
+  <p><q>dir, dl, menu, ol, ul { margin-block: 1em; }</q> <q>dir, menu, ol, ul { padding-inline-start: 40px; }</q> A
+  list in a list has no margins; a ul's items have discs, a ul in a list circles, and a ul two lists deep squares.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span> Each frame's text is 10px on 20px lines; the lists are tinted orange, their items blue.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 0 10px; font: 10px/20px &quot;PR Noto Sans&quot; } li { background: rgba(79, 129, 189, 0.16) } :is(ul, menu, ol) { background: rgba(214, 138, 60, 0.12) }</style><ul><li>one<ul><li>two<ul><li>three</ul></ul></ul>"></iframe></div>
+    <figcaption>The outer list 10px below the frame's top; each list set in 40px; a disc, a circle and a square
+    before the items.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>type</h2>
+  <p>As presentational hints, <q>ul[type=none i], li[type=none i] { list-style-type: none; }</q>, and so on for
+  disc, circle and square. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class="pr-view short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 0 10px; font: 10px/20px &quot;PR Noto Sans&quot; } li { background: rgba(79, 129, 189, 0.16) } :is(ul, menu, ol) { background: rgba(214, 138, 60, 0.12) }</style><ul type=square><li>square<li type=circle>circle<li type=none>none</ul>"></iframe></div>
+    <figcaption>A square, a circle, and no marker.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

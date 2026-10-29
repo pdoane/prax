@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .swatched { height: 40px; margin: 10px; }
+  .striped { margin: 10px; padding: 10px; background: #d68a3c url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='4' fill='%239c5f22'/></svg>"); }
+  .child { height: 20px; border: 1px solid #2c5a8f; }
+  h1.example { margin: 10px; font-size: 20px; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background color</h1>
+  <p class=pr-lede><code>background-color</code> takes <code>&lt;color&gt; | transparent | inherit</code>. Initial
+  <code>transparent</code>, applies to all elements, not inherited.</p>
+</header>
+
+<section>
+  <h2>A color, or transparent</h2>
+  <p><q>This property sets the background color of an element, either a &lt;color&gt; value or the keyword
+  'transparent', to make the underlying colors shine through.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><h1 class=example style="background-color: #F00">Heading</h1></div>
+    <figcaption>The specification's <code>h1 { background-color: #F00 }</code>: a red band 40px tall, 10px in from
+    the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-plain swatched" style="background-color: transparent; border-width: 1px"></div></div>
+    <figcaption><code>transparent</code>, inside a blue outline: the stage's guides shine through.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Initial value and inheritance</h2>
+  <p>Initial: transparent. Inherited: no. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>Each stage holds an orange parent striped by a background image, with 10px padding, and in it a child outlined
+  in blue.</p>
+  <figure>
+    <div class=pr-stage><div class=striped><div class=child></div></div></div>
+    <figcaption>The child has no <code>background-color</code> given: it is transparent, and the stripes show through
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=striped><div class=child style="background-color: inherit"></div></div></div>
+    <figcaption><code>background-color: inherit</code> takes the parent's orange, and not its image: the child is plain
+    orange over the stripes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

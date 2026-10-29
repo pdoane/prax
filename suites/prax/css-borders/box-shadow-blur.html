@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow-blur</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.3 Blurring shadows: the box-shadow-blur property</div>
+  <h1>box-shadow-blur</h1>
+  <p class=pr-lede><q>The 'box-shadow-blur' property defines one or more blur radii for drop shadows.</q> <q>If the blur value is zero, the shadow’s edge is sharp. Otherwise, the larger the value, the more the shadow’s edge is blurred.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-blur">CSS Borders and Box Decorations 4 §6.3</a></span> Each box is 104 by 44, with an orange shadow offset 0.</p>
+</header>
+
+<section>
+  <h2>Blur radii</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 0; box-shadow-color: #d68a3c; box-shadow-blur: 10px"></div></div>
+    <figcaption><code>10px</code>: a soft orange glow, 20px across the edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 0; box-shadow-color: #d68a3c; box-shadow-spread: 6px; box-shadow-blur: 0"></div></div>
+    <figcaption><code>0</code>, spread 6px: a sharp band. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

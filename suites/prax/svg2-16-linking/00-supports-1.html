@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Linking declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16 Linking · Support</div>
+  <h1>Linking declaration support</h1>
+  <p class=pr-lede>One declaration for each property the chapter's pages set from CSS, and the interfaces their scripts
+  use. This checks that they parse or exist, not what they do; the chapter's other pages show that.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>fill: #4f81bd</code>
+  <code class=pr-decl>fill: none</code>
+  <code class=pr-decl>display: none</code>
+  <code class=pr-decl>width: 120px</code>
+  <code class=pr-decl>height: 40px</code>
+  <code class=pr-decl>background: #4f81bd</code>
+  <code class=pr-decl>position: absolute</code>
+  <code class=pr-decl>margin: -50px 0 0 210px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<section>
+  <h2>Interface support</h2>
+  <code class=pr-api>SVGAElement</code>
+  <code class=pr-api>SVGViewElement</code>
+  <code class=pr-api>Document.prototype.createElementNS</code>
+  <code class=pr-api>Element.prototype.remove</code>
+  <p class=pr-note>green is an interface or member this engine exposes, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

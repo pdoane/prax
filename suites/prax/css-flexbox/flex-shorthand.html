@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex: the shorthand's components</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.f { display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.1 The flex Shorthand</div>
+  <h1>flex: the shorthand's components</h1>
+  <p class=pr-lede><q>When a box is a flex item, flex is consulted instead of the main size property to determine the
+  main size of the box. If a box is not a flex item, flex has no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-property">CSS Flexible Box Layout 2 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>Instead of width, and only on flex items</h2>
+  <p>Each orange box has <code>width: 150px; flex: 0 0 50px</code>.</p>
+  <figure>
+    <div class="pr-stage f"><div class="pr-b pr-fit" style="width: 150px; flex: 0 0 50px">B</div></div>
+    <figcaption>A flex item: 50px wide, its width set aside.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-b pr-fit" style="width: 150px; flex: 0 0 50px">B</div></div>
+    <figcaption>A block in a block container: 150px wide; flex has no effect.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What an omitted component becomes</h2>
+  <p>The flex grow and shrink factors: <q>When omitted, it is set to 1.</q> The flex basis: <q>When omitted from the
+  flex shorthand, its specified value is 0.</q> The CSSWG has since resolved to return to <code>0%</code>, which
+  every browser kept, for compatibility (<a href="https://github.com/w3c/csswg-drafts/issues/5742">csswg-drafts#5742</a>); in a definite container the two lay out the
+  same. <q>The keyword none expands to 0 0 auto.</q> <q>A unitless zero that
+  is not already preceded by two flex factors must be interpreted as a flex factor.</q></p>
+  <figure>
+    <div class="pr-stage f"><div class="pr-a pr-fit" id=s1 style="flex: 3">A</div><div class="pr-b pr-fit" style="flex: 1">B</div></div>
+    <figcaption><code>flex: 3</code>, then <code>1</code>: 3 1 0%, 150px and 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage f"><div class="pr-a pr-fit" id=s2 style="flex: 30px">A</div><div class="pr-b pr-fit" style="flex: 0 0 110px">B</div></div>
+    <figcaption><code>flex: 30px</code>: 1 1 30px, A grows by 60px: 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage f"><div class="pr-a pr-fit" id=s3 style="flex: none; width: 60px">A</div><div class="pr-b pr-fit" style="flex: 0 0 40px">B</div></div>
+    <figcaption><code>flex: none; width: 60px</code>: 0 0 auto, 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage f"><div class="pr-a pr-fit" id=s4 style="flex: 0; width: 60px">A</div><div class="pr-b pr-fit" style="flex: 1">B</div></div>
+    <figcaption><code>flex: 0; width: 60px</code>: the zero is the grow factor, 0 1 0%: A as narrow as its "A".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage f"><div class="pr-a pr-fit" id=s5 style="flex: 2 2 0; width: 60px">A</div><div class="pr-b pr-fit" style="flex: 2 2 0">B</div></div>
+    <figcaption><code>flex: 2 2 0</code>: after two factors the zero is the basis: 100px each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.3 Stroke width: the ‘stroke-width’ property</div>
+  <h1>stroke-width</h1>
+  <p class=pr-lede><q>This property specifies the width of the stroke on the current object. A zero value causes no
+  stroke to be painted.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeWidth">SVG 2 §13.5.3</a></span>
+  Each stage is an SVG 160 by 60; the lines run from x 20 to 140 along y 30, stroked dark blue.</p>
+</header>
+
+<section>
+  <h2>Numbers, in user units</h2>
+  <p><q>A &lt;number&gt; value represents a value in user units.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>stroke-width="10"</code>: from y 25 to 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 30"><path d="M 10 15 H 70" stroke="#2c5a8f" stroke-width="5" /></svg></div>
+    <figcaption>In a <code>viewBox</code> of 80 by 30, user units of 2px: <code>stroke-width="5"</code> is 10
+    across, from y 25 to 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="0" /></svg></div>
+    <figcaption>A blue rectangle stroked orange, <code>stroke-width="0"</code>: no orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <p>Percentages <q>refer to the normalized diagonal of the current SVG viewport</q>, √((<i>w</i>² + <i>h</i>²) / 2)
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#Units">§8.9</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" style="font-size: 20px; stroke-width: 0.5em" /></svg></div>
+    <figcaption><code>stroke-width: 0.5em</code>, with a <code>font-size</code> of 20px: 10, from y 25 to
+    35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg x="10" y="20" width="140" height="20" overflow="visible"><path d="M 10 10 H 130" stroke="#2c5a8f" stroke-width="10%" /></svg></svg></div>
+    <figcaption>In an <code>svg</code> 140 by 20, whose normalized diagonal is √((140² + 20²) / 2) = 100:
+    <code>stroke-width="10%"</code> is 10, from y 25 to 35.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

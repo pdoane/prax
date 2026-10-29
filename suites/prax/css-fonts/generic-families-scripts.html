@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generic families of one writing system</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-sample { font-size: 22px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1.5 Generic font families</div>
+  <h1>Generic families of one writing system</h1>
+  <p class=pr-lede>'generic(fangsong)', 'generic(kai)', 'generic(khmer-mul)' and 'generic(nastaliq)' are styles of
+  one writing system. Each <q>might not map to any locally installed font, but if it does, that font will be in</q>
+  that style. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#generic-font-families">CSS Fonts 4 §2.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>Chinese: Fang Song and Kai</h2>
+  <p class=pr-note>Safari draws each stage that names a <code>generic()</code> family in the family it
+  inherits: it has none of them.</p>
+  <p>Fang Song is <q>a relaxed, intermediate form between Song ('serif') and Kai</q>; Kai <q>shows notable handwriting
+  features.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=zh-Hans style="font-family: serif">永和九年</div>
+    <figcaption><code>serif</code>: Song, thin horizontals ending in triangles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=zh-Hans style="font-family: generic(fangsong), serif">永和九年</div>
+    <figcaption><code>generic(fangsong)</code>: tilted horizontals, even strokes; or Song where none is
+    installed.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=zh-Hans style="font-family: generic(kai), serif">永和九年</div>
+    <figcaption><code>generic(kai)</code>: brush-written strokes; or Song where none is installed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Khmer âksâr mul, and Urdu Nastaliq</h2>
+  <p>Nastaliq has <q>a sloping baseline for joined letters</q>; <q>It is important not to fall back to a naskh style
+  for languages such as Urdu and Kashmiri.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=km style="font-family: generic(khmer-mul), serif">កម្ពុជា</div>
+    <figcaption><code>generic(khmer-mul)</code>: heavier, rounder letters for titles; or the regular
+    style.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ur dir=rtl style="font-family: generic(nastaliq), serif; line-height: 80px">السلام علیکم</div>
+    <figcaption><code>generic(nastaliq)</code>: each joined word descends to the left; with none installed, a font
+    the language prefers.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

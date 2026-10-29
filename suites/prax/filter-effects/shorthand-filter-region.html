@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The filter region of the filter functions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 20px 0; }
+  .box { width: 60px; height: 30px; margin: 0 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.2 Filter region for shorthands</div>
+  <h1>The filter region of the filter functions</h1>
+  <p class=pr-lede><q>The filter region must cover the visual content of an element including overflowing content,
+  graphical control elements such as scrollbars, border/border-image, box-shadow, text-shadow and outline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#filter-region-for-shorthands">Filter Effects 1 §13.2</a></span>
+  Each blue box is 60 by 30, 20px in, with <code>grayscale(1)</code>: whatever the region covers is gray.</p>
+</header>
+
+<section>
+  <h2>Everything the box draws</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="box-shadow: 15px 15px #d68a3c; filter: grayscale(1)"></div></div>
+    <figcaption>An orange <code>box-shadow</code> 15px out: all of it gray.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="outline: 8px solid #d68a3c; outline-offset: 4px; filter: grayscale(1)"></div></div>
+    <figcaption>An orange outline 4px off: gray all round.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="height: 10px; filter: grayscale(1)"><div style="width: 30px; height: 40px; margin-left: 40px; background: #d68a3c"></div></div></div>
+    <figcaption>A child overflowing 10px right and 30px down: gray too.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="background: none; color: #4f81bd; font: bold 24px/30px 'PR Arimo'; text-shadow: 12px 12px #d68a3c; filter: grayscale(1)">Ag</div></div>
+    <figcaption>Text with an orange <code>text-shadow</code> 12px off: letters and shadow gray.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>And what the function adds</h2>
+  <p><q>Furthermore, if a shorthand filter expands this visible area like it is the case for blur() or drop-shadow()
+  the filter region must cover this area as well.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: drop-shadow(30px 25px #8e44ad)"></div></div>
+    <figcaption>A purple shadow 30px right and 25px down, far past the box: drawn whole.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: blur(6px)"></div></div>
+    <figcaption><code>blur(6px)</code>: fading out with no hard edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

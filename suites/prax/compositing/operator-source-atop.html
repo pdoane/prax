@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The source-atop operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.10 Source Atop</div>
+  <h1>The source-atop operator</h1>
+  <p class=pr-lede><q>With the source-atop compositing operator, the parts of the source which overlap the destination replace the destination. The destination is placed everywhere else.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_srcatop">Compositing and Blending 2 §9.1.10</a></span>
+  On white, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code> at (10, 10), then the source, orange
+  <code>rgb(100% 60% 0% / 0.6)</code> at (60, 30), each 90 by 60, the source with <code>"source-atop"</code>.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = αb; Fb = 1 – αs
+co = αs x Cs x αb + αb x Cb x (1 – αs)
+αo = αs x αb + αb x (1 – αs)</pre>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op="source-atop"></canvas></div>
+    <figcaption>Source only: nothing. Both, (60, 30) to (100, 70): <code>rgb(60% 52% 32% / 0.8)</code>. Destination only: <code>rgb(0% 40% 80% / 0.8)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: transparent">source</div><div class=pd-swatch style="background: rgb(60% 52% 32% / 0.8)">both</div><div class=pd-swatch style="background: rgb(0% 40% 80% / 0.8)">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

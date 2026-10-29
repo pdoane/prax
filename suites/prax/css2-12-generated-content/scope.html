@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: scope</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .show::before { content: counter(n) " "; font-weight: 600; color: #2c5a8f; }
+  .rs { counter-reset: n; color: #7b8494; }
+  .rs5 { counter-reset: n 5; color: #7b8494; }
+  .inc { counter-increment: n; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.1 Nested counters and scope</div>
+  <h1>Nested counters: scope</h1>
+  <p class=pr-lede>Grey lines reset <code>n</code>; the others increment it and show it in blue.</p>
+</header>
+
+<section>
+  <h2>Following siblings are in scope</h2>
+  <p><q>The scope of a counter starts at the first element in the document that has a 'counter-reset' for that counter
+  and includes the element's descendants and its following siblings with their descendants. However, it does not
+  include any elements in the scope of a counter with the same name created by a 'counter-reset' on a later sibling of
+  the element or by a later 'counter-reset' on the same element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=rs>reset</div><div class="inc show">sibling</div><div><div class="inc show">nephew</div></div></div>
+    <figcaption>A sibling after the reset shows 1, and a child of the next sibling 2: both are in its
+    scope.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=rs>reset</div><div class="inc show">a</div><div class=rs5>reset to 5</div><div class="inc show">b</div></div>
+    <figcaption>A later sibling resets <code>n</code> again: "a" shows 1 and "b" 6, in the second counter's
+    scope.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

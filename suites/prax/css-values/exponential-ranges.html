@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Exponential functions at their limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+  .pr-a { min-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.5.1 Argument Ranges</div>
+  <h1>Exponential functions at their limits</h1>
+  <p class=pr-lede><q>In pow(A, B), if A is negative and finite, and B is finite, B must be an integer, or else the
+  result is NaN.</q> <q>In sqrt(A)</q> <q>If A is less than 0, the result is NaN.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#exponent-infinities">CSS Values and Units 4 §10.5.1</a></span>
+  A NaN is censored to zero and an infinity clamped (<a href="https://drafts.csswg.org/css-values-4/#calc-ieee">§10.9.2</a>).
+  Each bar's <code>width</code> is under it.</p>
+</header>
+
+<section>
+  <h2>NaN</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px * sqrt(-1) + 100px)"></div></div>
+    <figcaption><code>100px * sqrt(-1) + 100px</code>: NaN, no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px * pow(-8, 1 / 3) + 100px)"></div></div>
+    <figcaption><code>pow(-8, 1 / 3)</code>, a negative to a fraction: NaN, no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(10px * pow(-2, 3) + 100px)">A</div></div>
+    <figcaption><code>pow(-2, 3)</code>, an integer power: −8, so 20px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, 10px * log(10, 1) + 100px)"></div></div>
+    <figcaption><code>min(150px, 10px * log(10, 1) + 100px)</code>: <q>if B is 1 or negative</q>, NaN, no bar.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each divides
+    by log(1), 0, for +∞: a 150px bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Infinities and zeros</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, 1px * pow(0, -1))">A</div></div>
+    <figcaption><code>min(150px, 1px * pow(0, -1))</code>: +∞, so 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: max(30px, 1px * log(0))">A</div></div>
+    <figcaption><code>max(30px, 1px * log(0))</code>: −∞, so 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, hypot(infinity * 1px, 10px))">A</div></div>
+    <figcaption><code>hypot(∞, 10px)</code> in a <code>min()</code> with 150px: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + 1px * exp(-infinity))">A</div></div>
+    <figcaption><code>100px + 1px * exp(-infinity)</code>: 0⁺, so 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

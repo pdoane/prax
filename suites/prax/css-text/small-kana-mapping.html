@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Small kana mappings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 300px; padding: 0 10px; font: 20px/30px "PR Noto Sans JP"; }
+  .ja + .ja { border-top: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · G Small Kana Mappings</div>
+  <h1>Small kana mappings</h1>
+  <p class=pr-lede><code>full-size-kana</code> <q>Converts all small Kana characters to the equivalent full-size
+  Kana.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-property">CSS Text 4 §2.1</a></span>
+  The appendix maps each. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#small-kana">CSS Text 4 §G</a></span>
+  Each figure is the small kana as they are, then with <code>full-size-kana</code>. The Small Kana Extension block's
+  have no glyphs in the checkout's fonts, so are left out.</p>
+</header>
+
+<section>
+  <h2>Hiragana and half-width katakana</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja">ぁぃぅぇぉゕゖっゃゅょゎ</div>
+    <div class="pr-stage ja" style="text-transform: full-size-kana">ぁぃぅぇぉゕゖっゃゅょゎ</div>
+    <figcaption>Below: "あいうえおかけつやゆよわ", every character as large as an ideograph. <span
+    class=pr-flag>Chrome</span> leaves them small.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="width: 200px">ｧｨｩｪｫｯｬｭｮ</div>
+    <div class="pr-stage ja" style="width: 200px; text-transform: full-size-kana">ｧｨｩｪｫｯｬｭｮ</div>
+    <figcaption>Below: "ｱｲｳｴｵﾂﾔﾕﾖ", full size, still half-width. <span class=pr-flag>Chrome</span> leaves them
+    small.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Katakana</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja">ァィゥェォヵㇰヶㇱㇲッㇳㇴㇵ<br>ㇶㇷㇸㇹㇺャュョㇻㇼㇽㇾㇿヮ</div>
+    <div class="pr-stage ja" style="text-transform: full-size-kana">ァィゥェォヵㇰヶㇱㇲッㇳㇴㇵ<br>ㇶㇷㇸㇹㇺャュョㇻㇼㇽㇾㇿヮ</div>
+    <figcaption>Below: "アイウエオカクケシスツトヌハ", "ヒフヘホムヤユヨラリルレロワ", all full size. <span
+    class=pr-flag>Chrome</span> leaves them small.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

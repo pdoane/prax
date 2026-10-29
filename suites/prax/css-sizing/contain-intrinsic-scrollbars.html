@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>contain-intrinsic-size and scrollbars</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 150px; height: 120px; }
+  figure.f figcaption { max-width: 152px; }
+  .c { contain: size; width: max-content; contain-intrinsic-size: 100px 100px; overflow: auto; background: #b9cde6; outline: 1px solid #2c5a8f; font: 13px/20px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.2.2 Interaction With overflow: auto</div>
+  <h1>contain-intrinsic-size and scrollbars</h1>
+  <p class=pr-lede><q>an element with overflow: auto must not generate scrollbars as a consequence of
+  contain-intrinsic-size. However, if contain-intrinsic-size indicates a size large enough that the element would
+  generate scrollbars if it contained actual content of that size, then the element must be sized as if it generated
+  those scrollbar(s) in accordance with such hypothetical content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#cis-scrollbars">CSS Box Sizing 4 §5.2.2</a></span>
+  Each blue box is the spec's: <code>contain: size; width: max-content; contain-intrinsic-size: 100px 100px;
+  overflow: auto</code>, with one word of content. Widths read back below.</p>
+</header>
+
+<section>
+  <h2>The spec's two examples</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div id=k1 class=c>word</div></div>
+    <figcaption>100 by 100, with no scrollbar. Reads <code class=pr-computed data-of=k1 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=k2 class=c style="height: 50px">word</div></div>
+    <figcaption><code>height: 50px</code>: 100px of estimated content would overflow it, so the box is a scrollbar
+    wider than 100px where scrollbars take room, but shows none. Reads <code class=pr-computed data-of=k2 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=k3 class=c style="height: 50px; scrollbar-gutter: stable">word</div></div>
+    <figcaption>The same with <code>scrollbar-gutter: stable</code>, which reserves the scrollbar's room in any case,
+    for comparison. Reads <code class=pr-computed data-of=k3 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

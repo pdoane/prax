@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: start and end</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .l { float: left; width: 60px; height: 60px; }
+  .r { float: right; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: start and end</h1>
+  <p class=pr-lede>CSS 2's <code>clear</code> names physical sides: <code>left</code>, <code>right</code> or
+  <code>both</code>. A later specification adds values that name the start or the end of the line. In each figure, a
+  left float 60px tall and a right float 40px tall come before the orange block.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-logical-1/#float-clear">CSS Logical Properties and Values 1 §2.2</a></div>
+  <h2>inline-start and inline-end</h2>
+  <p>The values <code>inline-start | inline-end</code> are new for <code>clear</code>. <q>The mapping on these
+  properties uses the writing mode of the element’s containing block.</q></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: inline-start">inline-start</div></div>
+    <figcaption><code>clear: inline-start</code> in a left-to-right block clears the left float: at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px; direction: rtl"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: inline-start">inline-start</div></div>
+    <figcaption>With <code>direction: rtl</code>, the line starts at the right: it clears the right float, at
+    40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px; direction: rtl"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: inline-end">inline-end</div></div>
+    <figcaption><code>clear: inline-end</code> with <code>direction: rtl</code> clears the left float: at
+    60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

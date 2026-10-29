@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-weight: numbers from 1 to 1000</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ladder { padding: 0 6px; font-family: 'PR Roboto Flex'; font-size: 18px; line-height: 24px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.2 Font weight: the 'font-weight' property</div>
+  <h1>font-weight: numbers from 1 to 1000</h1>
+  <p class=pr-lede><q>Each number indicates a weight that is at least as dark as its predecessor.</q> <q>Fractional weights are valid.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-weight-prop">CSS Fonts 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Any weight a variable face supports</h2>
+  <p>PR Roboto Flex has a <code>wght</code> axis from 100 to 1000, so <q>a user agent using a font which supports a
+  range of weights should behave the same as if a font is present at each individual weight in the range.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#missing-weights">§2.2.2</a></span></p>
+  <figure>
+    <div class="pr-stage ladder">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 250">250 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 550.5">550.5 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 850">850 Handgloves</div>
+      <div style="font-weight: 1000">1000 Handgloves</div>
+    </div>
+    <figcaption>Each line darker than the one above it, in even steps, with no two alike.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ladder">
+      <div style="font-weight: normal">normal</div>
+      <div style="font-weight: 400">400</div>
+      <div style="font-weight: bold">bold</div>
+      <div style="font-weight: 700">700</div>
+    </div>
+    <figcaption><code>normal</code> is the same as 400 and <code>bold</code> the same as 700.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

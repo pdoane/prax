@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-linecap</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.4 Drawing caps at the ends of strokes: the ‘stroke-linecap’ property</div>
+  <h1>stroke-linecap</h1>
+  <p class=pr-lede><q>'stroke-linecap' specifies the shape to be used at the end of open subpaths when they are
+  stroked</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#LineCaps">SVG 2 §13.5.4</a></span>
+  Each stage is an SVG 160 by 60; a white line 1 wide over each stroke is the path itself. Caps on zero-length
+  subpaths are on <a href="../svg2-09-paths/zero-length-segments.html">9.5.3's page</a>.</p>
+</header>
+
+<section>
+  <h2>butt, round and square</h2>
+  <p>The path runs from x 40 to 120 along y 30, stroked blue 20 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 H 120" stroke="#4f81bd" stroke-width="20" /><path d="M 40 30 H 120" stroke="white" /></svg></div>
+    <figcaption><code>butt</code>, the initial value: <q>the stroke for each subpath does not extend beyond its two
+    endpoints</q>; square ends at x 40 and 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 H 120" stroke="#4f81bd" stroke-width="20" stroke-linecap="round" /><path d="M 40 30 H 120" stroke="white" /></svg></div>
+    <figcaption><code>round</code>: <q>extended by a half circle with a diameter equal to the stroke width</q>,
+    round ends out to x 30 and 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 30 H 120" stroke="#4f81bd" stroke-width="20" stroke-linecap="square" /><path d="M 40 30 H 120" stroke="white" /></svg></div>
+    <figcaption><code>square</code>: <q>extended by a rectangle with the same width as the stroke width and whose
+    length is half of the stroke width</q>, square ends at x 30 and 130.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At the ends of open subpaths only</h2>
+  <p><q>at each end of each subpath</q>, in the direction of the path there. The strokes are 10 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 20 H 70 M 90 40 H 130" stroke="#4f81bd" stroke-width="10" stroke-linecap="round" /><path d="M 30 20 H 70 M 90 40 H 130" stroke="white" /></svg></div>
+    <figcaption>Two subpaths, <code>round</code>: four round ends, out to x 25 and 75, 85 and 135.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 50 L 80 10 L 130 50 Z" fill="none" stroke="#4f81bd" stroke-width="10" stroke-linecap="square" /><path d="M 30 50 L 80 10 L 130 50 Z" fill="none" stroke="white" /></svg></div>
+    <figcaption>A closed triangle, <code>square</code>: no ends, so no caps; mitered corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 50 Q 80 0 130 50" fill="none" stroke="#4f81bd" stroke-width="10" stroke-linecap="square" /><path d="M 30 50 Q 80 0 130 50" fill="none" stroke="white" /></svg></div>
+    <figcaption>A curve leaving 30, 50 and reaching 130, 50 at 45°, <code>square</code>: each cap squared across
+    the curve's direction, tilted 45°.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

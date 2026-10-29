@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: an inline box's text</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 20px; line-height: 60px; white-space: nowrap; }
+  .sq { display: inline-block; width: 16px; height: 16px; background: #4f81bd; }
+  .area { background: rgba(79, 129, 189, 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: an inline box's text</h1>
+  <p class=pr-lede>CSS 2 aligns a box by its own edges: an inline box's are those of its line height, whatever its
+  text. Each stage's text is 20px on 60px lines, with its baseline dashed in red, and the parent's content area tinted
+  blue.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a></div>
+  <h2>By the box's own text</h2>
+  <p><q>these values specify which baseline of the box is aligned to the corresponding baseline of its alignment
+  context.</q> <code>text-top</code> is <q>the metric used as the line-over edge of an inline’s content box</q>,
+  <code>text-bottom</code> its line-under edge, and <code>middle</code> <q>halfway between the alphabetic and x-height
+  baselines</q>, so an inline box is aligned by its content area, not by its line height. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a>,
+  <a href="https://drafts.csswg.org/css-inline-3/#baseline-types">§3.2</a></span> Each orange span is 10px text on
+  40px lines.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage va"><span class=pr-baseline></span><span class=area>Xx <span class=pr-hl style="vertical-align: text-top; font-size: 10px; line-height: 40px">text-top</span> x</span></div>
+    <figcaption>The orange content area's top is level with the top of the blue one. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> CSS 2's: the top of the span's 40px box is
+    there, and the orange is about 14px lower.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va"><span class=pr-baseline></span><span class=area>Xx <span class=pr-hl style="vertical-align: text-bottom; font-size: 10px; line-height: 40px">text-bottom</span> x</span></div>
+    <figcaption>The orange content area's bottom is level with the bottom of the blue one. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The bottom of its 40px box is there, and
+    the orange is about 14px higher.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

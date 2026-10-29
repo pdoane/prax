@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus navigation scopes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.5 Sequential focus navigation</div>
+  <h1>Focus navigation scopes</h1>
+  <p class=pr-lede><q>Per the rules defining the flattened tabindex-ordered focus navigation scope, the ordering is not necessarily related to the tree order of the Document.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">HTML §6.6.5</a></span></p>
+</header>
+<section>
+  <h2>Into shadow trees and frames</h2>
+  <p>The order is <q>given by the flattened tabindex-ordered focus navigation scope of the Document.</q> A shadow host
+  and a navigable container own scopes of their own, which take their places in it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">§6.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=a>a</button>
+        <div id=host></div>
+        <iframe id=frame style="display: block; width: 100%; height: 30px; margin: 0 0 10px; border: 0"
+                srcdoc="<button id=e style='width: 100%; height: 20px'>e, in the frame</button>"></iframe>
+        <button class=pr-target id=f>f</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>a</code> and press Tab repeatedly: <code>b</code> and <code>c</code> in the shadow tree,
+    then <code>e</code> in the frame (logged as the <code>iframe</code>), then <code>f</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // A shadow tree of two buttons, b and c.
+  const shadow = document.getElementById("host").attachShadow({mode: "open"});
+  shadow.innerHTML = '<link rel=stylesheet href=../shared/page.css>'
+                   + '<button class=pr-target id=b>b, in a shadow tree</button><button class=pr-target id=c>c</button>';
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

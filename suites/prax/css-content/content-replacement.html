@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: replacing a box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%234f81bd'/></svg>"); }
+  .grad { content: linear-gradient(to right, #4f81bd, #d68a3c); width: 120px; height: 20px; }
+  .sized { width: 80px; height: 40px; }
+  .pimg::before { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%234f81bd'/></svg>"); width: 80px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 1 Inserting and Replacing Content: the content property</div>
+  <h1>The content property: replacing a box</h1>
+  <p class=pr-lede><q>The 'content' property specifies the box’s contents for stylistic purposes. It can replace the box
+  with an image (turning it into a replaced element), or provide it with arbitrary inline-level content (text and
+  images).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-property">CSS Generated Content 3 §1</a></span></p>
+</header>
+
+<section>
+  <h2>An image makes the element a replaced element</h2>
+  <p><q>Makes the element or pseudo-element a replaced element, filled with the specified &lt;image&gt;.</q> <q>Its
+  normal contents are suppressed and do not generate boxes</q>. Each <code>div</code> holds the text "hidden text".</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="img sized">hidden text</div></div>
+    <figcaption>A 40 by 20 image with <code>width: 80px; height: 40px</code>: as a replaced element it is stretched to
+    80 by 40, and the text is gone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=grad>hidden text</div></div>
+    <figcaption>A gradient, which has no natural size, fills the 120 by 20 the element is given, left blue to right
+    orange. <span class=pr-flag>Safari</span> Draws no gradient: the element is empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image on ::before</h2>
+  <p>The value makes <code>::before</code> a replaced element too, sized by <code>width</code> and <code>height</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=pimg> text</div></div>
+    <figcaption><code>::before</code> with the 40 by 20 image and <code>width: 80px; height: 40px</code>: an 80 by 40
+    image. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    treat the value as a content list: an inline box that ignores the sizes, holding a 40 by 20 image.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

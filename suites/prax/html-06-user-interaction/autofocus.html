@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The autofocus attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  dialog, [popover] { width: 200px; padding: 10px 20px 0; border: 2px solid #2c5a8f }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.7 The autofocus attribute</div>
+  <h1>The autofocus attribute</h1>
+  <p class=pr-lede><q>The autofocus content attribute allows the author to indicate that an element is to be focused as soon as
+  the page is loaded, allowing the user to just start typing without having to manually focus the main element.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-autofocus-attribute">HTML §6.6.7</a></span></p>
+</header>
+<section>
+  <h2>Once, as the page loads</h2>
+  <p>Flushing the candidates focuses the first that can be, then will <q>Set topDocument's autofocus processed flag to
+  true.</q> Later candidates are not added: <q>If topDocument's autofocus processed flag is false, then remove the
+  element from topDocument's autofocus candidates, and append the element</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-autofocus-attribute">§6.6.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <input class=pr-target id=first autofocus value="first, autofocus">
+      <input class=pr-target id=second autofocus value="second, autofocus">
+    </div>
+    <figcaption>Load the page without clicking: <code>first</code> has the focus, with a caret; typing goes into it.
+    <code>second</code> does not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0" id=later>
+      <button class=pr-target id=insert>insert a field with autofocus</button>
+    </div>
+    <figcaption>Click the button: a field with <code>autofocus</code> appears below it, without the focus.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>When a dialog or popover shows</h2>
+  <p><q>When the autofocus attribute is specified on an element inside dialog elements or HTML elements whose popover
+  attribute is set, then it will be focused when the dialog or popover becomes shown.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-autofocus-attribute">§6.6.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=pr-target id=open>showModal()</button>
+      <dialog id=dialog>
+        <input class=pr-target value="a field">
+        <input class=pr-target value="a field, autofocus" autofocus>
+        <button class=pr-target id=close>close</button>
+      </dialog>
+    </div>
+    <figcaption>Click the button: the dialog shows, and its second field, with <code>autofocus</code>, has the focus,
+    not the first.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=pr-target popovertarget=pop>show the popover</button>
+    </div>
+    <figcaption>Click the button: the popover shows, and its field with <code>autofocus</code> has the focus. Click
+    outside it to close it.</figcaption>
+  </figure>
+</section>
+<div popover id=pop>
+  <button class=pr-target>a button</button>
+  <input class=pr-target value="a field, autofocus" autofocus>
+</div>
+<script>
+  // Inserts a field with autofocus after load; opens and closes the dialog.
+  document.getElementById("insert").addEventListener("click", () => {
+      const field = document.createElement("input");
+      field.className = "pr-target";
+      field.value = "inserted, autofocus";
+      field.autofocus = true;
+      document.getElementById("later").append(field);
+  });
+  const dialog = document.getElementById("dialog");
+  document.getElementById("open").addEventListener("click", () => dialog.showModal());
+  document.getElementById("close").addEventListener("click", () => dialog.close());
+</script>
+</body>
+</html>

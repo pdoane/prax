@@ -1,0 +1,19 @@
+# The CMake package of Prax, which find_package(prax) reads. Each library is the target prax::<name>, and a component
+# of the package by its name: find_package(prax REQUIRED COMPONENTS draw layout) fails unless both were installed.
+# pr_font_bundle_fetch (font_bundle.cmake) fetches the files of the font bundles that prax::font_bundle installs.
+
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+@PR_PACKAGE_DEPENDENCIES@
+include(${CMAKE_CURRENT_LIST_DIR}/prax-targets.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/font_bundle.cmake)
+
+foreach (_prax_component IN LISTS prax_FIND_COMPONENTS)
+    if (TARGET prax::${_prax_component})
+        set(prax_${_prax_component}_FOUND TRUE)
+    else()
+        set(prax_${_prax_component}_FOUND FALSE)
+    endif()
+endforeach()
+check_required_components(prax)

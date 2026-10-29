@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background position: keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { height: 100px; background-repeat: no-repeat; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='30'><rect width='50' height='30' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background position: keywords</h1>
+  <p class=pr-lede>The image is a blue banner, 50 by 30, drawn once in a box 200 by 100.</p>
+</header>
+
+<section>
+  <h2>Keywords are percentages</h2>
+  <p><q>top</q>: <q>Equivalent to '0%' for the vertical position.</q> <q>right</q>: <q>Equivalent to '100%' for the
+  horizontal position.</q> <q>bottom</q>: <q>Equivalent to '100%' for the vertical position.</q> <q>left</q>:
+  <q>Equivalent to '0%' for the horizontal position.</q> <q>center</q>: <q>Equivalent to '50%' for the horizontal
+  position if it is not otherwise given, or '50%' for the vertical position if it is.</q> The specification's examples
+  follow. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=p1 class=area style="background-position: right top"></div></div>
+    <figcaption><code>right top</code>, <code>100% 0%</code>: in the top right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=p2 class=area style="background-position: top center"></div></div>
+    <figcaption><code>top center</code>, <code>50% 0%</code>: centered along the top, 75px from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=p3 class=area style="background-position: center"></div></div>
+    <figcaption><code>center</code>, <code>50% 50%</code>: in the middle, 75px from the left and 35px from the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=p4 class=area style="background-position: bottom"></div></div>
+    <figcaption><code>bottom</code>, <code>50% 100%</code>: centered along the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Functional keys</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.1.2 Functional Keys</div>
+  <h1>Functional keys</h1>
+  <p class=pr-lede><q>The functional keys (not to be confused with the function keys described later) are those keys in the alphanumeric section that provide general editing functions that are common to all locales (like Shift, Tab, Enter and Backspace).</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-alphanumeric-functional">UI Events KeyboardEvent code Values §3.1.2</a></span></p>
+</header>
+<section>
+  <h2>Left and right, and the input mode keys</h2>
+  <p>Each functional key has a code of its own: <code>"ShiftLeft"</code> and <code>"ShiftRight"</code>, <code>"MetaLeft"</code> for <q>The Windows, ⌘, Command or other OS symbol key</q>, <code>"Backspace"</code> <q>Labelled Delete on Apple keyboards</q>. <q>even though some of these Japanese and Korean keys occupy the same physical location on the keyboard, they use different code values.</q> The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-alphanumeric-functional">§3.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="alphanumeric" data-mark="functional" data-unit=34></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=3></ol>
+    </div>
+    <figcaption>Click the keyboard and press Tab, Caps Lock, both Shifts, both Controls, both Alts (Options), the Windows or Command keys, Space, Enter and Backspace: each lights at its place, with its own <code>code</code>. On a Japanese keyboard 無変換, 変換 and かな light <code>NonConvert</code>, <code>Convert</code> and <code>KanaMode</code>; on a Korean one 한/영 and 한자 give <code>"Lang1"</code> and <code>"Lang2"</code>, which the map does not draw.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

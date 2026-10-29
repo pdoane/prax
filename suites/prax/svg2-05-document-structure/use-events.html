@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>use: events in the shadow tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  #button:hover { fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <rect id="button" width="60" height="40" fill="#4f81bd" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5.5 Event handling in use-element shadow trees</div>
+  <h1>use: events in the shadow tree</h1>
+  <p class=pr-lede><q>Any event listeners defined on an element in the referenced graphics must also listen for the
+  same event, at the same capture phase, on each instance of that element in a use-element shadow tree.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseEventHandling">SVG 2 §5.5.5</a></span></p>
+</header>
+
+<section>
+  <h2>Listeners copied, targets retargeted</h2>
+  <p><q>The event retargeting algorithm ensures that from the perspective of event listeners on the ‘use’ element or
+  its ancestors, all events targetted to element instances in the shadow tree instead have a target of the ‘use’
+  element itself.</q> The page's script listens for clicks on the original rect, logging <q>rect</q> with its target;
+  the log shows clicks as the stage sees them. Two <code>use</code>, <code>#left</code> and <code>#right</code>, each a
+  blue rect 60 by 40, darker under the pointer.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><use id=left href="#button" x="60" y="10" /><use id=right href="#button" x="180" y="10" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=4></ol>
+      <ol class=pr-log id=listener data-lines=4></ol>
+    </div>
+    <figcaption>Click each rect: the upper log, the stage's, shows <code>target=left</code> or
+    <code>target=right</code>, the <code>use</code>; the lower, the original rect's own listener, logs each click
+    too, its target the instance in the shadow tree. Each darkens under the pointer, its own
+    <code>:hover</code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+<script>
+  const listener = document.getElementById("listener");
+  document.getElementById("button").addEventListener("click", event => {
+    const item = document.createElement("li");
+    item.textContent = "rect target=" + event.target.localName + (event.target.id ? " " + event.target.id : "") +
+        " in " + (event.target.getRootNode() === document ? "document" : "shadow tree");
+    listener.append(item);
+    while (listener.children.length > 4)
+      listener.firstElementChild.remove();
+  });
+</script>
+</body>
+</html>

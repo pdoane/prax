@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The keywords as minimums and maximums</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; }
+  .h { height: 110px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2 Sizing Values, as limits</div>
+  <h1>The keywords as minimums and maximums</h1>
+  <p class=pr-lede>The keywords are values of the minimum and maximum size properties as well. <q>Using the min-width
+  or max-width property in place of width here would apply these same sizes as the minimum width or maximum width
+  (respectively), constraining the preferred width to find the used width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#auto-box-sizes">CSS Box Sizing 3 §2.1</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">§3.2</a></span></p>
+</header>
+
+<section>
+  <h2>In the inline axis</h2>
+  <p>Text is PR Cousine, 9px a character: "abc def ehg" is 99px, its widest word 27px.</p>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: 40px; min-width: max-content">abc def ehg</div></div>
+    <figcaption><code>width: 40px; min-width: max-content</code>: 99px, one line.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="max-width: min-content">abc def ehg</div></div>
+    <figcaption><code>max-width: min-content</code> on a block: 27px, three lines.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: 140px; max-width: fit-content">abc def</div></div>
+    <figcaption><code>width: 140px; max-width: fit-content</code>: held to 63px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the block axis</h2>
+  <p>Each orange block holds two 20px lines of text, 40px.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t h"><div class=box style="height: 10px; min-height: min-content">abc def ehg ijk lmn opq</div></div>
+    <figcaption><code>height: 10px; min-height: min-content</code>: 40px, around its text. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> keep it 10px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t h"><div class=box style="height: 100px; max-height: max-content">abc def ehg ijk lmn opq</div></div>
+    <figcaption><code>height: 100px; max-height: max-content</code>: 40px. <span
+    class=pr-flag>Firefox</span> keeps it 100px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t h"><div class=pr-parent><div class=box style="height: 100px; max-height: stretch">abc def</div></div></div>
+    <figcaption><code>height: 100px; max-height: stretch</code> in a dashed parent of auto height: the stretch fit is
+    indefinite, so it acts as <code>none</code>: 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,1234 @@
+# These rulings are tentative. They are a first classification that has not had careful review,
+# and a ruling is a starting point for a decision, not the decision.
+#
+# The engine's ruling on each feature that web-features names
+# (https://github.com/web-platform-dx/web-features), as of the version below. Each line holds the
+# feature's identifier, its ruling, and the reason for the ruling where one is recorded.
+#
+#   build     the engine implements it, when the work of its phase reaches it
+#   cut       the engine does not implement it
+#   open      undecided, and not built until it is decided
+#   quickjs   a feature of the JavaScript language, which the script engine provides
+#
+# A feature that web-features does not name, often because no engine ships it, is ruled in the
+# last section once it is decided. It is named by the anchor of its definition. The rulings are a
+# guide, and they change when what a feature costs or what it serves changes.
+#
+# Each feature is judged as docs/behavior.md describes. The engine is not a browser: its technology
+# is inspired by the web and proven by running the web, and what it builds competes with a full
+# browser's implementation. A feature is in scope for what it serves, the content and the native
+# apps that would use it, weighed against what it costs. A Baseline feature is built unless it
+# serves too little for what it costs or it is a browser product's own (automation, form filling,
+# installing web apps). A feature that is useful and cheap is built though no engine ships it yet. The platform's
+# integrations (payments and credentials, devices, protected media, capture, the system's
+# services) are open until an embedder's need decides them.
+#
+# web-features 3.39.0
+
+a                                                build
+abbr                                             build
+abortable-fetch                                  build
+aborting                                         build
+abortsignal-any                                  build
+abortsignal-timeout                              build
+abs-sign                                         build
+absolute-positioning                             build
+accelerometer                                    open    # a device the platform exposes, a platform integration; undecided
+accent-color                                     build   # shipped by Blink and Gecko and WebKit
+accesskey                                        build
+accessor-methods                                 quickjs
+active-view-transition                           build
+ad-selection                                     cut     # deprecated, and never interoperable
+address                                          build
+alerts                                           build
+align-content-block                              build
+alignment-baseline                               build   # shipped by Blink and WebKit
+all                                              build
+alpha                                            build
+alt-text-generated-content                       build
+alternative-style-sheets                         open    # the choice of a sheet is the host's interface
+ambient-light                                    open    # a device the platform exposes, a platform integration; undecided
+anchor-positioning                               build   # Blink and WebKit ship it and Gecko is shipping; the data lists only WebKit as supporting every part
+anchor-positioning-animations                    build   # shipped by Blink and WebKit
+anchor-positioning-position-visibility-plurals   cut     # deprecated, and never interoperable
+anchor-positioning-transforms                    build   # anchor positioning follows a transformed anchor
+angle-instanced-arrays                           cut     # GPU APIs are out of scope for the engine
+animation-composition                            build
+animations-css                                   build
+app-file-handlers                                cut     # installing web apps, a browser product's
+app-launch-handler                               cut     # installing web apps, a browser product's
+app-migration                                    cut     # installing web apps, a browser product's
+app-protocol-handlers                            cut     # installing web apps, a browser product's
+app-share-targets                                cut     # installing web apps, a browser product's
+app-shortcuts                                    cut     # installing a web app is a browser product's
+appearance                                       build
+arguments-callee                                 quickjs
+aria-attribute-reflection                        build
+arianotify                                       build   # shipped by Gecko and WebKit
+array                                            quickjs
+array-at                                         quickjs
+array-by-copy                                    quickjs
+array-copywithin                                 quickjs
+array-fill                                       quickjs
+array-find                                       quickjs
+array-findlast                                   quickjs
+array-flat                                       quickjs
+array-from                                       quickjs
+array-fromasync                                  quickjs
+array-group                                      quickjs
+array-includes                                   quickjs
+array-isarray                                    quickjs
+array-iteration-methods                          quickjs
+array-iterators                                  quickjs
+array-of                                         quickjs
+array-splice                                     quickjs
+article                                          build
+aside                                            build
+aspect-ratio                                     build
+async-await                                      quickjs
+async-clipboard                                  build
+async-generators                                 quickjs
+async-iterable-streams                           build
+async-iterators                                  quickjs
+atomics-pause                                    quickjs
+atomics-wait-async                               quickjs
+attr                                             build   # shipped by Blink and Gecko
+attr-contents                                    build
+attribution-reporting                            cut     # deprecated, and never interoperable
+audio                                            build
+audio-session                                    open    # the operating system's own service, a platform integration; undecided
+audio-video-tracks                               open    # decided with media playback
+audio-worklet                                    build
+audiolistener                                    build   # shipped by Blink and WebKit
+audiolistener-setposition-setorientation         build   # deprecated, and interoperable content depends on it
+autocapitalize                                   build   # shipped by Blink and Gecko and WebKit
+autocorrect                                      build
+autofill                                         cut     # a browser's form filling, a browser product's, not the engine's
+autofocus                                        build
+autonomous-custom-elements                       build
+avif                                             build
+b                                                build
+backdrop                                         build
+backdrop-filter                                  build
+background                                       build
+background-attachment                            build   # shipped by Blink and Gecko and WebKit
+background-blend-mode                            build
+background-clip                                  build
+background-clip-border-area                      build   # shipped by Blink and WebKit
+background-clip-text                             build   # shipped by Blink and WebKit
+background-color                                 build
+background-fetch                                 open    # work for a page that is closed, decided with service workers
+background-image                                 build
+background-origin                                build
+background-position                              build
+background-repeat                                build
+background-size                                  build
+background-sync                                  open    # work for a page that is closed, decided with service workers
+badging                                          cut     # installing a web app is a browser product's
+barcode                                          open    # the operating system's own service, a platform integration; undecided
+barprop                                          build
+base                                             build
+base64encodedecode                               build
+baseline-shift                                   build
+baseline-source                                  build   # shipped by Blink and Gecko
+battery                                          cut     # Blink only, and the other engines object to it in principle
+bdi                                              build
+bdo                                              build
+beacons                                          build
+before-after                                     build
+beforeinstallprompt                              cut     # installing web apps, a browser product's
+beforeunload                                     build   # shipped by Blink and Gecko and WebKit
+bfcache-blocking-reasons                         open    # a performance measurement, decided with the performance timeline
+bigint                                           quickjs
+bigint64array                                    quickjs
+blocking-render                                  build   # shipped by Blink and WebKit
+blockquote                                       build
+bmp                                              build
+body                                             build
+border-image                                     build
+border-radius                                    build
+border-shape                                     build   # shapes of the border box and its corners, which draw's paths serve
+borders                                          build
+box-decoration-break                             build   # shipped by Blink and Gecko
+box-shadow                                       build
+box-sizing                                       build
+br                                               build
+broadcast-channel                                build
+brotli                                           build
+button                                           build
+calc                                             build
+calc-constants                                   build
+calc-size                                        build   # sizes and animations to and from intrinsic sizes, which content asks for
+canvas                                           build
+canvas-2d                                        build
+canvas-2d-alpha                                  build   # shipped by Blink and Gecko
+canvas-2d-color-management                       build   # shipped by Blink and WebKit
+canvas-2d-desynchronized                         build   # shipped by Blink and WebKit
+canvas-2d-willreadfrequently                     build
+canvas-context-lost                              build   # shipped by Blink and Gecko
+canvas-createconicgradient                       build
+canvas-html                                      open    # a WICG proposal; recordings of a subtree suit it, and it waits for a specification
+canvas-reset                                     build
+canvas-roundrect                                 build
+cap                                              build
+capture-handle                                   open    # capture and recording of media, a platform integration; undecided
+capture-stream-audio-video                       open    # capture and recording of media, a platform integration; undecided
+capture-stream-canvas                            open    # capture and recording of media, a platform integration; undecided
+caret-color                                      build
+caret-shape                                      build   # cheap: a shape of the caret that text editing draws
+cascade-layers                                   build
+case-insensitive-attributes                      build
+case-sensitive-attributes                        cut     # Gecko only, and of little value; revisited if other engines ship it
+ch                                               build
+change-event                                     build
+channel-messaging                                build
+charset                                          build
+check-visibility                                 build
+cite                                             build
+class-syntax                                     quickjs
+clear-site-data                                  build   # shipped by Gecko and WebKit
+clip                                             build   # deprecated, and interoperable content depends on it
+clip-path                                        build
+clip-path-animatable                             build
+clip-path-boxes                                  build
+clipboard-custom-format                          build   # a native app's clipboard needs its own formats, through the host's clipboard
+clipboard-events                                 build
+clipboard-supports                               build
+clipboard-svg                                    build   # a native app's clipboard needs its own formats, through the host's clipboard
+clipboard-unsanitized-formats                    build   # a native app's clipboard needs its own formats, through the host's clipboard
+clipboardchange                                  build   # a native app's clipboard needs its own formats, through the host's clipboard
+closewatcher                                     build   # shipped by Blink and Gecko
+code                                             build
+color                                            build
+color-adjust                                     cut     # deprecated, and never interoperable
+color-contrast                                   cut     # deprecated, and never interoperable
+color-function                                   build
+color-gamut                                      build
+color-mix                                        build
+color-mix-variadic                               build   # Gecko only; it costs nothing outside color-mix()
+color-scheme                                     build
+colrv0                                           build
+colrv1                                           build   # shipped by Blink and Gecko
+column-breaks                                    build   # multicol's breaks
+column-fill                                      build
+column-pseudo                                    open    # carousels from generated pseudo-elements, which no work plans yet
+column-span                                      build
+composed-ranges                                  build
+composition-events                               build
+compression-dictionary-transport                 open    # a choice of the network stack's, decided with networking
+compression-streams                              build
+compute-pressure                                 open    # a device the platform exposes, a platform integration; undecided
+conic-gradients                                  build
+connection-allowlists                            open    # a policy of loading, decided with loading's security model
+console                                          build
+constraint-validation                            build
+constructed-stylesheets                          build
+contact-picker                                   open    # the operating system's own service, a platform integration; undecided
+contain                                          build
+contain-inline-size                              build
+contain-intrinsic-size                           build
+contain-layout                                   build
+contain-paint                                    build
+contain-size                                     build
+contain-style                                    build
+container-anchor-position-queries                build   # container queries' further conditions
+container-queries                                build
+container-scroll-state-queries                   build   # container queries' further conditions
+container-style-queries                          build
+container-timing                                 open    # a performance measurement, decided with the performance timeline
+content                                          build
+content-index                                    open    # work for a page that is closed, decided with service workers
+content-visibility                               build
+contenteditable                                  build
+contenteditable-plaintextonly                    build
+context-fill-stroke                              build   # shipped by Blink and Gecko
+contrast-color                                   build
+controls-list                                    build   # cheap: it hides parts of the media controls that the engine draws
+cookie-enabled                                   build
+cookie-store                                     build   # shipped by Blink and Gecko
+cookie-store-get-metadata                        cut     # deprecated, and never interoperable
+cookies                                          build
+corner-shape                                     build   # shapes of the border box and its corners, which draw's paths serve
+cors                                             build
+counter-reset-reversed                           build   # the counters already instantiate reversed counters
+counter-set                                      build
+counter-style                                    build
+counters                                         build
+createimagebitmap                                build
+credential-management                            open    # the platform's payment and account integration, a platform integration; undecided
+crisp-edges                                      build
+cross-document-view-transitions                  build   # shipped by Blink and WebKit
+cross-fade                                       build   # images computed from images, which css-images defines
+csp                                              build
+css-escape                                       build
+css-modules                                      build   # shipped by Blink and Gecko
+css-object-model                                 build
+css-object-model-discouraged                     cut     # deprecated, and never interoperable
+css-supports                                     build
+css-typed-om                                     build   # Blink and WebKit ship it, and the engine has it
+cubic-bezier-easing                              build
+currentcolor                                     build
+cursor                                           build   # shipped by Blink and Gecko and WebKit
+custom-ellipses                                  build   # cheap: a string as text-overflow's ellipsis
+custom-media-queries                             build   # cheap: named media queries, resolved where sheets are read
+custom-properties                                build
+customizable-select                              build   # shipped by Blink and WebKit
+customized-built-in-elements                     cut     # WebKit declines it, and it would thread is values through element creation, the parser and the element constructors
+data                                             build
+data-urls                                        build
+datalist                                         build   # shipped by Blink and Gecko and WebKit
+dataset                                          build
+date                                             quickjs
+date-get-year-set-year                           quickjs
+date-to-gmt-string                               quickjs
+declarative-shadow-dom                           build
+declarative-webmcp                               open    # an agent's access to the page, which waits for the agents' protocols to settle; undecided
+dedicated-workers                                build
+default                                          build
+del                                              build
+description-list                                 build
+destructuring                                    quickjs
+details                                          build
+details-content                                  build
+details-name                                     build
+device-bound-session-credentials                 open    # the platform's payment and account integration, a platform integration; undecided
+device-memory                                    cut     # Blink only, and the other engines object to it in principle
+device-orientation-events                        open    # a device the platform exposes, a platform integration; undecided
+device-posture                                   open    # a device the platform exposes, a platform integration; undecided
+device-queries                                   build   # deprecated, and interoperable content depends on it
+devicepixelratio                                 build   # shipped by Blink and Gecko
+dfn                                              build
+dialog                                           build
+dialog-closedby                                  build   # shipped by Blink and Gecko
+digital-credentials                              open    # the platform's payment and account integration, a platform integration; undecided
+digital-goods                                    open    # the platform's payment and account integration, a platform integration; undecided
+dir-pseudo                                       build
+dirname                                          build
+display                                          build
+display-animation                                build   # shipped by Blink and WebKit
+display-contents                                 build   # every engine ships it; the data lists none for accessibility bugs
+display-flow-root                                build
+display-list-item                                build
+display-mode                                     build   # shipped by Blink and Gecko
+display-ruby                                     build   # ruby's layout for any element
+display-table                                    build
+div                                              build
+document-caretpositionfrompoint                  build
+document-colors                                  build   # deprecated, and interoperable content depends on it
+document-modelcontext                            open    # an agent's access to the page, which waits for the agents' protocols to settle; undecided
+document-picture-in-picture                      open    # the operating system's own service, a platform integration; undecided
+document-write                                   build   # deprecated, and interoperable content depends on it
+dom                                              build
+dom-geometry                                     build
+dominant-baseline                                build
+domparser                                        build
+download                                         build
+draganddrop                                      build
+dynamic-range                                    build
+dynamic-range-limit                              build   # Blink only; it caps the HDR colors and images the engine renders
+early-data                                       open    # a choice of the network stack's, decided with networking
+edit-context                                     build   # the text input that a custom editor needs, over the text editing core
+element                                          open    # a live image of an element makes a box's painting depend on another's
+element-capture                                  open    # capture and recording of media, a platform integration; undecided
+element-from-point                               build
+element-timing                                   open    # a performance measurement, decided with the performance timeline
+em                                               build
+em-unit                                          build
+embed                                            build
+empty                                            build
+encrypted-media-extensions                       open    # protected and streamed media, a platform integration; undecided
+enterkeyhint                                     build
+error-cause                                      quickjs
+escape-unescape                                  quickjs
+event-timing                                     build
+events                                           build
+ex                                               build
+execcommand                                      build   # deprecated, and interoperable content depends on it
+exp-functions                                    build
+explicit-resource-management                     quickjs
+exponentiation                                   quickjs
+ext-blend-minmax                                 cut     # GPU APIs are out of scope for the engine
+ext-color-buffer-float                           cut     # GPU APIs are out of scope for the engine
+ext-color-buffer-half-float                      cut     # GPU APIs are out of scope for the engine
+ext-disjoint-timer-query                         cut     # GPU APIs are out of scope for the engine
+ext-float-blend                                  cut     # GPU APIs are out of scope for the engine
+ext-frag-depth                                   cut     # GPU APIs are out of scope for the engine
+ext-shader-texture-lod                           cut     # GPU APIs are out of scope for the engine
+ext-srgb                                         cut     # GPU APIs are out of scope for the engine
+ext-texture-compression-bptc                     cut     # GPU APIs are out of scope for the engine
+ext-texture-compression-rgtc                     cut     # GPU APIs are out of scope for the engine
+ext-texture-filter-anisotropic                   cut     # GPU APIs are out of scope for the engine
+ext-texture-norm16                               cut     # GPU APIs are out of scope for the engine
+external                                         build   # window.external, which HTML keeps as a no-op for content that calls it
+eyedropper                                       open    # the operating system's own service, a platform integration; undecided
+fast-seek                                        build   # shipped by Gecko and WebKit
+feature-policy                                   cut     # deprecated, and never interoperable
+fedcm                                            open    # the platform's payment and account integration, a platform integration; undecided
+federated-credentials                            open    # the platform's payment and account integration, a platform integration; undecided
+fencedframe                                      cut     # deprecated, and never interoperable
+fetch                                            build
+fetch-formdata                                   build   # shipped by Gecko and WebKit
+fetch-metadata                                   build   # shipped by Blink and Gecko
+fetch-priority                                   build
+fetch-request-streams                            build   # streaming an upload is part of what fetch() serves, at the cost of the request body only
+fetchlater                                       open    # a choice of the network stack's, decided with networking
+field-sizing                                     build
+fieldset                                         build
+figure                                           build
+file                                             build
+file-selector-button                             build
+file-system-access                               open    # the operating system's own service, a platform integration; undecided
+filter                                           build
+filter-function                                  build   # images computed from images, which css-images defines
+first-letter                                     build
+first-line                                       build
+fit-content                                      build
+fit-content-function                             build   # every engine ships it for grid tracks; the data lists none for its other uses
+fixed-positioning                                build
+flexbox                                          build
+flexbox-flex-wrap-balance                        open    # balancing tries line lengths through flex layout, for content that rarely asks; undecided
+flexbox-gap                                      build
+float-clear                                      build
+float16array                                     quickjs
+focus-events                                     build
+focus-visible                                    build
+focus-within                                     build
+focusgroup                                       build   # arrow-key navigation within a group, which controls and an app's interface need
+font-display                                     build
+font-face                                        build
+font-family                                      build
+font-family-math                                 build
+font-family-system                               build
+font-family-ui                                   build   # the system's interface fonts, which a native app needs
+font-feature-settings                            build
+font-kerning                                     build
+font-language-override                           build   # shipped by Blink and Gecko
+font-loading                                     build
+font-metric-overrides                            build   # shipped by Blink and Gecko
+font-optical-sizing                              build
+font-palette                                     build
+font-palette-animation                           build   # cheap: font features and synthesis that text already has
+font-shorthand                                   build
+font-size                                        build
+font-size-adjust                                 build
+font-stretch                                     build
+font-style                                       build
+font-synthesis                                   build
+font-synthesis-position                          build   # cheap: font features and synthesis that text already has
+font-synthesis-small-caps                        build
+font-synthesis-style                             build
+font-synthesis-weight                            build
+font-variant                                     build
+font-variant-alternates                          build
+font-variant-caps                                build
+font-variant-east-asian                          build
+font-variant-emoji                               build   # shipped by Blink and Gecko
+font-variant-ligatures                           build
+font-variant-numeric                             build
+font-variant-position                            build   # cheap: font features and synthesis that text already has
+font-variation-settings                          build
+font-weight                                      build
+font-width                                       build   # cheap: font features and synthesis that text already has
+forced-colors                                    build
+form                                             build
+form-associated-custom-elements                  build
+form-validity-pseudos                            build
+frame-sizing                                     open    # an iframe sized by its content makes the parent's layout wait on the child's
+fullscreen                                       build   # shipped by Blink and Gecko and WebKit
+function                                         build   # CSS's own language, resolved with computed values
+functions                                        quickjs
+functions-caller-arguments                       quickjs
+gamepad                                          open    # a device the platform exposes, a platform integration; undecided
+gamepad-haptics                                  open    # a device the platform exposes, a platform integration; undecided
+gamepad-touch                                    open    # a device the platform exposes, a platform integration; undecided
+gamepad-vr                                       open    # a device the platform exposes, a platform integration; undecided
+gap-decorations                                  build   # rules between grid, flex and multicol tracks
+generators                                       quickjs
+geolocation                                      open    # a device the platform exposes, a platform integration; undecided
+geolocation-element                              open    # the operating system's own service, a platform integration; undecided
+geolocation-element-initialpermissionstatus      cut     # deprecated, and never interoperable
+get-computed-style                               build
+getallrecords                                    build   # shipped by Blink and Gecko
+getboxquads                                      build   # box geometry that layout already has
+gethtml                                          build
+getorinsert                                      quickjs
+gif                                              build
+globalthis                                       quickjs
+glyph-orientation-vertical                       cut     # deprecated, and never interoperable
+gpc                                              open    # a policy of loading, decided with loading's security model
+gradient-interpolation                           build
+gradients                                        build
+grid                                             build
+grid-animation                                   build
+grid-lanes                                       cut     # a layout of its own, complex, that little content uses
+gyroscope                                        open    # a device the platform exposes, a platform integration; undecided
+hanging-punctuation                              build   # typography that text layout can give
+hardware-concurrency                             build
+has                                              build
+has-slotted                                      build   # built with slot assignment, which it is a few lines of
+hashbang-comments                                quickjs
+hashchange                                       build
+head                                             build
+header-footer                                    build
+heading-offset                                   build   # cheap: heading levels from the tree
+heading-selectors                                build   # cheap: heading levels from the tree
+headings                                         build
+hgroup                                           build
+hidden-until-found                               build   # shipped by Blink and Gecko
+highlight                                        build
+highlightsfrompoint                              build   # shipped by Blink and Gecko
+history                                          build
+host                                             build
+host-context                                     cut     # deprecated, and never interoperable
+hr                                               build
+hsl                                              build
+hsts                                             build
+html                                             build
+html-media-capture                               open    # capture and recording of media, a platform integration; undecided
+html-processing-instructions                     open    # a proposal for partial updates, which waits for a specification
+html-setters                                     build   # inserting sanitized HTML, which the Sanitizer API exists for
+html-streaming-setters                           build   # the parser already takes input in pieces
+html-wrapper-methods                             quickjs
+http-authentication                              build
+http11                                           build
+http2                                            build
+http3                                            build
+hwb                                              build
+hyphenate-character                              build
+hyphenate-limit-chars                            build   # shipped by Blink and Gecko
+hyphens                                          build
+i                                                build
+ic                                               build
+idle-detection                                   cut     # Blink only, and the other engines object to it in principle
+if                                               build   # CSS's own language, resolved with computed values
+iframe                                           build
+iframe-credentialless                            open    # a policy of loading, decided with loading's security model
+iframe-sandbox                                   build
+iframe-srcdoc                                    build
+image-function                                   build   # images computed from images, which css-images defines
+image-maps                                       build
+image-orientation                                build
+image-rendering                                  build
+image-set                                        build
+imagebitmaprenderingcontext                      build
+ime-mode                                         cut     # deprecated, and never interoperable
+img                                              build
+import                                           build
+import-assertions                                quickjs
+import-defer                                     quickjs
+import-maps                                      build
+import-maps-multiple                             build   # shipped by Blink and WebKit
+indeterminate                                    build
+indexeddb                                        build
+individual-transforms                            build
+inert                                            build
+inherit-value                                    build
+initial-letter                                   build   # typography that text layout can give
+initial-value                                    build
+ink                                              open    # a device the platform exposes, a platform integration; undecided
+input                                            build
+input-button                                     build
+input-checkbox                                   build
+input-color                                      build   # shipped by Blink and Gecko and WebKit
+input-color-alpha                                build   # a color input's alpha and color space, with the color picker
+input-date-time                                  build
+input-date-time-month                            build   # shipped by Blink and Gecko and WebKit
+input-date-time-week                             build   # shipped by Blink and Gecko and WebKit
+input-email-tel-url                              build
+input-event                                      build
+input-file                                       build
+input-file-multiple                              build
+input-file-webkitdirectory                       build
+input-hidden                                     build
+input-image                                      build
+input-number                                     build
+input-password                                   build
+input-radio                                      build
+input-range                                      build
+input-reset                                      build
+input-selectors                                  build
+input-submit                                     build
+inputmode                                        build
+ins                                              build
+insertable-streams                               open    # capture and recording of media, a platform integration; undecided
+install                                          cut     # installing web apps, a browser product's
+interaction                                      build
+interaction-contentful-paint                     open    # a performance measurement, decided with the performance timeline
+interactivity                                    build   # cheap: inert by a property
+interest-invokers                                build   # popups on hover and focus, which an app's interface needs and which the top layer serves
+interpolate-size                                 build   # sizes and animations to and from intrinsic sizes, which content asks for
+intersection-observer                            build
+intersection-observer-v2                         open    # visibility needs occlusion from painting; decided with intersection observers
+intl                                             quickjs
+intl-display-names                               quickjs
+intl-duration-format                             quickjs
+intl-list-format                                 quickjs
+intl-locale                                      quickjs
+intl-locale-info                                 quickjs
+intl-plural-rules                                quickjs
+intl-relative-time-format                        quickjs
+intl-segmenter                                   quickjs
+inverted-colors                                  build   # cheap: user preferences that the host reports
+invoker-commands                                 build
+is                                               build
+is-error                                         quickjs
+is-input-pending                                 cut     # deprecated, and never interoperable
+is-secure-context                                build
+isolation                                        build
+iterator-concat                                  quickjs
+iterator-methods                                 quickjs
+iterators                                        quickjs
+javascript                                       quickjs
+jpeg                                             build
+jpegxl                                           open    # a codec, decided with the image codecs that the host configures
+js-modules                                       quickjs
+js-modules-service-workers                       open    # depends on service workers, which are undecided
+js-modules-shared-workers                        quickjs
+js-modules-workers                               quickjs
+json                                             quickjs
+json-modules                                     quickjs
+json-raw                                         quickjs
+justify-self-block                               build   # layouts that grid's and flex's content asks for
+kbd                                              build
+keyboard-events                                  build
+keyboard-lock                                    open    # a device the platform exposes, a platform integration; undecided
+keyboard-map                                     open    # a device the platform exposes, a platform integration; undecided
+khr-parallel-shader-compile                      cut     # GPU APIs are out of scope for the engine
+lab                                              build
+label                                            build
+lang                                             build
+lang-attr                                        build
+language                                         build
+languagedetector                                 cut     # on-device AI in Blink alone
+languagemodel                                    cut     # on-device AI in Blink alone
+largest-contentful-paint                         build
+layout-direction-override                        build
+layout-instability                               open    # a performance measurement, decided with the performance timeline
+let-const                                        quickjs
+letter-spacing                                   build
+lh                                               build
+light-dark                                       build
+light-dark-image                                 build
+line-break                                       build
+line-clamp                                       build   # typography that text layout can give
+line-height                                      build
+linear-easing                                    build
+link                                             build
+link-parameters                                  open    # an external resource's parameters, which the cache of resources would key by
+link-rel-dns-prefetch                            build
+link-rel-expect                                  build   # cheap: render blocking that the document already has
+link-rel-preconnect                              build
+link-rel-prefetch                                build   # shipped by Blink and Gecko
+link-rel-preload                                 build
+link-selectors                                   build
+list-elements                                    build
+list-style                                       build
+loading-lazy                                     build
+loading-lazy-media                               build   # cheap: media loads as images already defer
+local-fonts                                      cut     # Blink only, and the other engines object to it in principle
+local-network-access                             open    # a policy of loading, decided with loading's security model
+localstorage                                     build
+location                                         build
+logical-assignments                              quickjs
+logical-properties                               build
+long-animation-frames                            open    # a performance measurement, decided with the performance timeline
+longtasks                                        open    # a performance measurement, decided with the performance timeline
+magnetometer                                     open    # a device the platform exposes, a platform integration; undecided
+main                                             build
+managed-media-source                             open    # decided with media playback
+manifest                                         cut     # installing a web app is a browser product's
+manifest-localization                            cut     # installing web apps, a browser product's
+map                                              quickjs
+margin                                           build
+margin-trim                                      build   # typography that text layout can give
+mark                                             build
+marker                                           build   # shipped by Blink and Gecko
+mask-border                                      build   # masking's border, which draw's masks serve
+mask-type                                        build
+masks                                            build
+matchmedia                                       build
+math-sum-precise                                 quickjs
+mathml                                           build
+mathml-full                                      cut     # deprecated; MathML Core is what the engines implement
+measure-memory                                   open    # a performance measurement, decided with the performance timeline
+media-capabilities                               build
+media-capture                                    open    # capture and recording of media, a platform integration; undecided
+media-playback-quality                           build
+media-pseudos                                    build   # shipped by Gecko and WebKit
+media-queries                                    build
+media-query-range-syntax                         build
+media-session                                    build   # shipped by Blink and Gecko and WebKit
+media-source                                     open    # protected and streamed media, a platform integration; undecided
+mediacontroller                                  cut     # deprecated, and never interoperable
+mediastream-recording                            open    # capture and recording of media, a platform integration; undecided
+menu                                             build
+messageerror                                     build
+meta                                             build
+meta-application-title                           cut     # installing web apps, a browser product's
+meta-refresh                                     build
+meta-text-scale                                  build   # cheap: user preferences that the host reports
+meta-theme-color                                 cut     # colors a browser's own interface, a browser product's, not the engine's
+meter                                            build
+min-max-clamp                                    build
+min-max-content                                  build
+min-max-width-height                             build
+mix-blend-mode                                   build
+mixed-content                                    build
+mixin                                            build   # CSS's own language, resolved with computed values
+modal                                            build
+modulepreload                                    build
+motion-path                                      build
+mouse-events                                     build
+move-before                                      build   # shipped by Blink and Gecko
+multi-column                                     build
+mutation-events                                  cut     # deprecated and removed from Blink; mutation observers replace them
+mutationobserver                                 build
+named-color                                      build
+namespace                                        build
+nav                                              build
+navigation                                       build
+navigation-precommit-handlers                    build   # shipped by Blink and Gecko
+navigation-timing                                build
+navigation-timing-confidence                     open    # a performance measurement, decided with the performance timeline
+navigator                                        build
+navigator-install                                cut     # installing web apps, a browser product's
+nesting                                          build
+network-information                              cut     # Blink only, and the other engines object to it in principle
+non-cookie-storage-access                        open    # a policy of loading, decided with loading's security model
+not                                              build
+notifications                                    open    # the operating system's own service, a platform integration; undecided
+notifications-apps                               open    # depends on service workers, which are undecided
+nth-child                                        build
+nth-child-of                                     build
+nth-of-type                                      build
+nullish-coalescing                               quickjs
+number                                           quickjs
+numeric-factory-functions                        build   # shipped by Blink and WebKit
+numeric-separators                               quickjs
+object                                           build
+object-fit                                       build
+object-hasown                                    quickjs
+object-object                                    quickjs
+object-position                                  build
+object-view-box                                  build   # cheap: a crop of the replaced content
+observable                                       open    # a proposal of the DOM's that waits for its specification
+oes-element-index-uint                           cut     # GPU APIs are out of scope for the engine
+oes-fbo-render-mipmap                            cut     # GPU APIs are out of scope for the engine
+oes-standard-derivatives                         cut     # GPU APIs are out of scope for the engine
+oes-texture-float                                cut     # GPU APIs are out of scope for the engine
+oes-texture-float-linear                         cut     # GPU APIs are out of scope for the engine
+oes-texture-half-float                           cut     # GPU APIs are out of scope for the engine
+oes-texture-half-float-linear                    cut     # GPU APIs are out of scope for the engine
+oes-vertex-array-object                          cut     # GPU APIs are out of scope for the engine
+offline-audio-context                            build
+offscreen-canvas                                 build
+oklab                                            build
+online                                           build
+opacity                                          build
+opacity-svg                                      build
+opaquerange                                      build   # the geometry of a text control's ranges, which an editor needs
+open-pseudo                                      build
+optional-catch-binding                           quickjs
+orientation-sensor                               open    # a device the platform exposes, a platform integration; undecided
+origin                                           build   # shipped by Blink and WebKit
+origin-private-file-system                       build
+outline                                          build
+outlines                                         build
+output                                           build
+overflow                                         build
+overflow-anchor                                  build
+overflow-clip                                    build
+overflow-clip-margin                             build   # cheap: how far clip extends
+overflow-overlay                                 build   # deprecated, and interoperable content depends on it
+overflow-shorthand                               build
+overflow-wrap                                    build
+overlay                                          build   # the top layer's transitions, with popovers and dialogs
+overscroll-behavior                              build   # shipped by Blink and Gecko
+ovr-multiview2                                   cut     # GPU APIs are out of scope for the engine
+p                                                build
+padding                                          build
+page-break-aliases                               build   # the legacy page-break properties, which content depends on (css-break-3/#page-break-properties)
+page-breaks                                      build
+page-lifecycle                                   open    # freezing and discarding a page is the host's; undecided
+page-orientation                                 build   # shipped by Blink and Gecko
+page-selectors                                   build   # shipped by Blink and WebKit
+page-setup                                       build
+page-transition-events                           build
+page-visibility                                  build
+page-visibility-state                            open    # a performance measurement, decided with the performance timeline
+paint                                            open    # a paint worklet runs script while painting
+paint-order                                      build
+paint-timing                                     build
+parse-html-unsafe                                build
+partitioned-cookies                              open    # a policy of loading, decided with loading's security model
+password-credentials                             open    # the platform's payment and account integration, a platform integration; undecided
+path-shape                                       build   # shipped by Blink and Gecko
+payment-handler                                  open    # the platform's payment and account integration, a platform integration; undecided
+payment-request                                  open    # the platform's payment and account integration, a platform integration; undecided
+pdf-viewer                                       open    # viewing PDF documents, which the engine may well do; undecided
+performance                                      build
+performancetiming                                build   # deprecated, and interoperable content depends on it
+periodic-background-sync                         open    # work for a page that is closed, decided with service workers
+permissions                                      build
+permissions-policy                               open    # a policy of loading, decided with loading's security model
+physical-properties                              build
+picture                                          build
+picture-in-picture                               open    # the operating system's own service, a platform integration; undecided
+ping                                             build   # shipped by Blink and WebKit
+placeholder                                      build
+placeholder-shown                                build
+png                                              build
+pointer-events                                   build
+pointer-events-api                               build
+pointer-lock                                     build   # shipped by Blink and Gecko and WebKit
+popover                                          build
+popover-hint                                     build   # shipped by Blink and Gecko
+portal                                           cut     # deprecated, and never interoperable
+position                                         build
+postmessage                                      build
+pre                                              build
+prefers-color-scheme                             build
+prefers-contrast                                 build
+prefers-reduced-data                             build   # cheap: user preferences that the host reports
+prefers-reduced-motion                           build
+prefers-reduced-transparency                     build   # cheap: user preferences that the host reports
+preloading-responsive-images                     build
+presentation-api                                 open    # a device the platform exposes, a platform integration; undecided
+preserves-pitch                                  build
+print                                            build
+print-color-adjust                               build
+print-events                                     build
+private-click-measurement                        open    # a policy of loading, decided with loading's security model
+private-network-access                           cut     # deprecated, and never interoperable
+profiler                                         open    # a performance measurement, decided with the performance timeline
+progress                                         build
+progress-function                                build
+promise                                          quickjs
+promise-allsettled                               quickjs
+promise-any                                      quickjs
+promise-finally                                  quickjs
+promise-try                                      quickjs
+promise-withresolvers                            quickjs
+protected-audience                               cut     # deprecated, and never interoperable
+proto                                            quickjs
+proxy-reflect                                    quickjs
+push                                             open    # depends on service workers, which are undecided
+q                                                build
+q-unit                                           build
+queuemicrotask                                   build
+quotes                                           build
+random-function                                  build   # CSS's own language, resolved with computed values
+rcap                                             build
+rch                                              build
+read-write-pseudos                               build
+readable-byte-streams                            build
+readablestream-from                              build   # shipped by Gecko and WebKit
+reading-flow                                     build   # the visual order of focus navigation, which flex and grid reorder
+rect-xywh                                        build
+referencetarget                                  build   # cheap: it forwards a shadow host's references, such as a label's, to its shadow tree
+referrer-policy                                  build
+regexp                                           quickjs
+regexp-compile                                   quickjs
+regexp-escape                                    quickjs
+regexp-static-properties                         quickjs
+region-capture                                   open    # capture and recording of media, a platform integration; undecided
+registered-custom-properties                     build
+registerprotocolhandler                          cut     # registering handlers with the system, a browser product's, not the engine's
+related-apps                                     cut     # installing web apps, a browser product's
+related-website-sets                             cut     # deprecated, and never interoperable
+relative-color                                   build
+relative-positioning                             build
+rem                                              build
+remote-playback                                  open    # protected and streamed media, a platform integration; undecided
+reporting                                        build
+reporting-coep-violations                        open    # a report of the Reporting API, decided with it
+reporting-crashes                                build   # shipped by Blink and Gecko
+reporting-crashes-storage                        open    # a report of the Reporting API, decided with it
+reporting-csp-violations                         build
+reporting-deprecation                            open    # a report of the Reporting API, decided with it
+reporting-integrity-violations                   open    # a report of the Reporting API, decided with it
+reporting-interventions                          cut     # deprecated, and never interoperable
+reporting-permissions-policy-violations          open    # a report of the Reporting API, decided with it
+request-animation-frame                          build
+request-animation-frame-workers                  build
+request-video-frame-callback                     build
+requestclose                                     build
+requestidlecallback                              build   # shipped by Blink and Gecko
+resizable-buffers                                quickjs
+resize                                           build   # shipped by Blink and Gecko and WebKit
+resize-observer                                  build
+resolution                                       build
+resolution-compat                                build
+resource-size                                    build
+resource-timing                                  build
+revert-value                                     build
+rex                                              build
+rgb                                              build
+rhythmic-sizing                                  open    # line heights stepped to a rhythm, which line layout would round to; undecided
+ric                                              build
+rlh                                              build
+root                                             build
+round-mod-rem                                    build
+ruby                                             build
+ruby-align                                       build
+ruby-overhang                                    build   # ruby's layout for any element
+ruby-position                                    build
+s                                                build
+safe-area-inset                                  build
+samp                                             build
+sanitizer                                        build   # shipped by Blink and Gecko
+savedata                                         open    # a choice of the network stack's, decided with networking
+scheduler                                        build   # shipped by Blink and Gecko
+scope                                            build
+scope-pseudo                                     build
+scoped-custom-element-registries                 build   # shipped by Blink and WebKit
+screen                                           build
+screen-capture                                   open    # capture and recording of media, a platform integration; undecided
+screen-orientation                               build
+screen-orientation-lock                          build   # shipped by Blink and Gecko
+screen-wake-lock                                 open    # a device the platform exposes, a platform integration; undecided
+script                                           build
+scripting                                        build
+scroll-behavior                                  build
+scroll-buttons                                   open    # carousels from generated pseudo-elements, which no work plans yet
+scroll-driven-animations                         build   # shipped by Blink and WebKit
+scroll-elements                                  build
+scroll-initial-target                            build   # scrolling's options, events and promises
+scroll-into-view                                 build
+scroll-into-view-container                       build   # scrolling's options, events and promises
+scroll-marker-targets                            open    # carousels from generated pseudo-elements, which no work plans yet
+scroll-markers                                   open    # carousels from generated pseudo-elements, which no work plans yet
+scroll-promises                                  build   # scrolling's options, events and promises
+scroll-snap                                      build
+scroll-snap-events                               build   # scrolling's options, events and promises
+scroll-target-group                              open    # carousels from generated pseudo-elements, which no work plans yet
+scroll-to-text-fragment                          build
+scrollbar-color                                  build
+scrollbar-gutter                                 build
+scrollbar-width                                  build
+scrollend                                        build
+search                                           build
+search-input-type                                build
+section                                          build
+secure-payment-confirmation                      open    # the platform's payment and account integration, a platform integration; undecided
+select                                           build
+selection                                        build   # shipped by Blink and Gecko and WebKit
+selection-api                                    build
+selectors                                        build
+serial                                           open    # a device the platform exposes, a platform integration; undecided
+serializable-errors                              quickjs
+server-sent-events                               build
+server-timing                                    build
+service-workers                                  open    # service workers are undecided
+service-workers-static-routes                    open    # depends on service workers, which are undecided
+set                                              quickjs
+set-methods                                      quickjs
+setinterval                                      build
+settimeout                                       build
+shadow-dom                                       build
+shadow-parts                                     build
+shape-function                                   build
+shape-outside                                    build
+shapes                                           build
+share                                            open    # the operating system's own service, a platform integration; undecided
+shared-memory                                    quickjs
+shared-storage                                   cut     # deprecated, and never interoperable
+shared-storage-locks                             cut     # deprecated, and never interoperable
+shared-workers                                   build
+shared-workers-extended-lifetime                 open    # work for a page that is closed, decided with service workers
+show-picker-input                                build   # shipped by Blink and Gecko and WebKit
+show-picker-select                               build   # shipped by Blink and Gecko
+sibling-count                                    build
+signature-based-resource-integrity               open    # a policy of loading, decided with loading's security model
+sizes-auto                                       build   # shipped by Blink and Gecko
+slot                                             build
+slot-assign                                      build
+small                                            build
+smil-svg-animations                              build
+smooth                                           build   # cheap: a scaling filter
+soft-navigations                                 open    # a performance measurement, decided with the performance timeline
+source                                           build
+sourcemap-header                                 build
+span                                             build
+speak                                            open    # speech, which the engine does not produce
+speak-as                                         open    # speech, which the engine does not produce
+speculation-rules                                open    # a choice of the network stack's, decided with networking
+speech-recognition                               open    # the operating system's own service, a platform integration; undecided
+speech-recognition-grammar                       cut     # deprecated, and never interoperable
+speech-synthesis                                 open    # the operating system's own service, a platform integration; undecided
+spellcheck                                       build
+spelling-grammar-error                           build   # shipped by Blink and WebKit
+spread                                           quickjs
+srcset                                           build
+stable-array-sort                                quickjs
+starting-style                                   build
+state                                            build
+static-positioning                               build
+steps-easing                                     build
+sticky-positioning                               build
+storage-access                                   build
+storage-buckets                                  open    # a choice of the storage stack's, decided with storage
+storage-manager                                  build
+streams                                          build
+stretch                                          build   # shipped by Blink and WebKit
+string-at                                        quickjs
+string-codepoint                                 quickjs
+string-includes                                  quickjs
+string-matchall                                  quickjs
+string-normalize                                 quickjs
+string-pad                                       quickjs
+string-raw                                       quickjs
+string-repeat                                    quickjs
+string-replaceall                                quickjs
+string-startsends-with                           quickjs
+string-trim-startend                             quickjs
+string-wellformed                                quickjs
+strings                                          quickjs
+strong                                           build
+structured-clone                                 build
+style                                            build
+style-attr                                       build
+style-query-range-syntax                         build   # container queries' further conditions
+sub-sup                                          build
+subgrid                                          build
+subresource-integrity                            build
+summarizer                                       cut     # on-device AI in Blink alone
+supports                                         build
+supports-at-rule                                 build   # cheap: a condition of @supports
+supports-compat                                  build
+svg                                              build
+svg-discouraged                                  cut     # deprecated, and never interoperable
+svg-filters                                      build
+switch-control                                   build   # a checkbox drawn as a switch, one more look of step 3's controls
+symbol                                           quickjs
+system-color                                     build
+tab-size                                         build
+tabindex                                         build
+table                                            build
+table-discouraged                                build   # the legacy table attributes, which the HTML parser maps and content depends on
+target                                           build
+target-text                                      build
+target-within                                    cut     # deprecated, and never interoperable
+template                                         build
+template-for                                     open    # a proposal for partial updates, which waits for a specification
+template-literals                                quickjs
+temporal                                         quickjs
+text-align                                       build
+text-align-last                                  build
+text-autospace                                   build   # shipped by Gecko and WebKit
+text-box                                         build   # shipped by Blink and WebKit
+text-combine-upright                             build
+text-decoration                                  build
+text-decoration-line-blink                       build   # deprecated, and interoperable content depends on it
+text-decoration-selection                        build   # decorations in highlights, with text controls
+text-decoration-skip-ink                         build
+text-decoration-skip-ink-all                     build
+text-decoration-spelling-grammar                 build
+text-emphasis                                    build
+text-encoding                                    build
+text-fit                                         open    # text scaled to fit, which makes a line's font depend on its layout
+text-indent                                      build
+text-indent-each-line                            build
+text-indent-hanging                              build
+text-justify                                     build   # shipped by Blink and Gecko
+text-modules                                     quickjs
+text-orientation                                 build
+text-overflow                                    build
+text-shadow                                      build
+text-size-adjust                                 build   # cheap: the engine adjusts no text size, so the property has nothing to undo
+text-spacing-trim                                build   # typography that text layout can give
+text-stroke-fill                                 build
+text-tracks                                      build
+text-transform                                   build
+text-underline-offset                            build
+text-underline-position                          build
+text-wrap                                        build
+text-wrap-balance                                build
+text-wrap-pretty                                 build   # shipped by Blink and WebKit
+textarea                                         build
+time                                             build
+time-relative-selectors                          build   # shipped by Blink and WebKit
+title                                            build
+title-attr                                       build
+toggleevent-source                               build
+top-level-await                                  quickjs
+topics                                           cut     # deprecated, and never interoperable
+touch-action                                     build
+touch-events                                     build   # shipped by Blink and Gecko and WebKit
+transferable-arraybuffer                         quickjs
+transferable-streams                             build   # shipped by Blink and Gecko
+transform-box                                    build
+transforms2d                                     build
+transforms3d                                     build
+transformstream-transformer-cancel               build   # the cancel step of the Streams standard
+transition-behavior                              build
+transitions                                      build
+translate                                        build
+translator                                       cut     # on-device AI in Blink alone
+trig-functions                                   build
+trusted-types                                    build
+two-value-display                                build
+typed-array-iteration-methods                    quickjs
+typed-array-iterators                            quickjs
+typed-arrays                                     quickjs
+u                                                build
+ua-client-hints                                  open    # a choice of the network stack's, decided with networking
+uint8array-base64-hex                            quickjs
+unicode-point-escapes                            quickjs
+unset-value                                      build
+update                                           build
+upgrade-insecure-requests                        build
+url                                              build
+url-canparse                                     build
+url-cross-origin                                 build   # shipped by Blink and WebKit
+url-integrity                                    open    # a policy of loading, decided with loading's security model
+url-referrer-policy                              build   # shipped by Blink and WebKit
+urlpattern                                       build
+user-action-pseudos                              build
+user-activation                                  build
+user-agent-sniffing                              build
+user-pseudos                                     build
+user-select                                      build   # shipped by Blink and Gecko
+usermedia                                        open    # the operating system's own service, a platform integration; undecided
+var                                              build
+vertical-align                                   build
+vertical-form-controls                           build
+vibration                                        open    # a device the platform exposes, a platform integration; undecided
+video                                            build
+video-dynamic-range                              build   # cheap: the display's dynamic range is known to the render
+view-transition-class                            build
+view-transitions                                 build
+view-transitions-element-scoped                  build   # view transitions of a subtree
+viewport-segments                                open    # a device the platform exposes, a platform integration; undecided
+viewport-unit-variants                           build
+viewport-units                                   build
+virtual-keyboard                                 open    # a device the platform exposes, a platform integration; undecided
+virtual-pressure-sources                         cut     # browser automation, a browser product's
+virtual-sensors                                  cut     # browser automation, a browser product's
+visibility                                       build
+visual-viewport                                  build
+wasm                                             open
+wasm-bigint                                      open
+wasm-branch-hinting                              open
+wasm-bulk-memory                                 open
+wasm-exception-handling                          open
+wasm-exnref-exceptions                           open
+wasm-extended-constant-expressions               open
+wasm-garbage-collection                          open
+wasm-jspi                                        open
+wasm-memory64                                    open
+wasm-multi-memory                                open
+wasm-multi-value                                 open
+wasm-mutable-globals                             open
+wasm-non-trapping-float-to-int                   open
+wasm-reference-types                             open
+wasm-sign-extension-operators                    open
+wasm-simd                                        open
+wasm-simd-relaxed                                open
+wasm-string-builtins                             open
+wasm-tail-call-optimization                      open
+wasm-threads                                     open
+wasm-typed-fun-refs                              open
+wbr                                              build
+weak-references                                  quickjs
+weakmap                                          quickjs
+weakset                                          quickjs
+web-animations                                   build
+web-animations-iterationcomposite                build   # shipped by Gecko and WebKit
+web-audio                                        build
+web-bluetooth                                    cut     # Blink only, and the other engines object to it in principle
+web-cryptography                                 build
+web-locks                                        build
+web-midi                                         open    # a device the platform exposes, a platform integration; undecided
+web-nfc                                          cut     # Blink only, and the other engines object to it in principle
+web-otp                                          open    # the platform's payment and account integration, a platform integration; undecided
+webauthn                                         open    # the platform's payment and account integration, a platform integration; undecided
+webauthn-public-key-easy                         open    # the platform's payment and account integration, a platform integration; undecided
+webauthn-signals                                 open    # the platform's payment and account integration, a platform integration; undecided
+webcodecs                                        open    # protected and streamed media, a platform integration; undecided
+webdriver                                        cut     # browser automation, a browser product's
+webdriver-bidi                                   cut     # browser automation, a browser product's, not the engine's
+webgl                                            cut     # GPU APIs are out of scope for the engine
+webgl-color-buffer-float                         cut     # GPU APIs are out of scope for the engine
+webgl-color-management                           cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-astc                    cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-etc                     cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-etc1                    cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-pvrtc                   cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-s3tc                    cut     # GPU APIs are out of scope for the engine
+webgl-compressed-texture-s3tc-srgb               cut     # GPU APIs are out of scope for the engine
+webgl-debug-renderer-info                        cut     # GPU APIs are out of scope for the engine
+webgl-debug-shaders                              cut     # GPU APIs are out of scope for the engine
+webgl-depth-texture                              cut     # GPU APIs are out of scope for the engine
+webgl-desynchronized                             cut     # GPU APIs are out of scope for the engine
+webgl-draw-buffers                               cut     # GPU APIs are out of scope for the engine
+webgl-lose-context                               cut     # GPU APIs are out of scope for the engine
+webgl-multi-draw                                 cut     # GPU APIs are out of scope for the engine
+webgl-oes-draw-buffers-indexed                   cut     # GPU APIs are out of scope for the engine
+webgl-sab                                        cut     # GPU APIs are out of scope for the engine
+webgl2                                           cut     # GPU APIs are out of scope for the engine
+webgl2-color-management                          cut     # GPU APIs are out of scope for the engine
+webgl2-desynchronized                            cut     # GPU APIs are out of scope for the engine
+webgpu                                           cut     # GPU APIs are out of scope for the engine
+webgpu-subgroups                                 cut     # GPU APIs are out of scope for the engine
+webhid                                           cut     # Blink only, and the other engines object to it in principle
+webnn                                            open    # a device the platform exposes, a platform integration; undecided
+webp                                             build
+webrtc                                           open    # likely: what a native app's real-time communication maps to in a browser; undecided
+webrtc-encoded-transform                         open    # likely: what a native app's real-time communication maps to in a browser; undecided
+webrtc-sctp                                      open    # likely: what a native app's real-time communication maps to in a browser; undecided
+webrtc-stats                                     open    # likely: what a native app's real-time communication maps to in a browser; undecided
+websockets                                       build
+webtransport                                     open    # likely: what a native app's real-time communication maps to in a browser; undecided
+webusb                                           cut     # Blink only, and the other engines object to it in principle
+webvr                                            cut     # deprecated; WebXR replaces it
+webvtt                                           build
+webvtt-cue-alignment                             build   # shipped by Gecko and WebKit
+webvtt-cue-settings                              build
+webvtt-regions                                   build   # shipped by Gecko and WebKit
+webxr-anchors                                    open    # a device the platform exposes, a platform integration; undecided
+webxr-ar                                         open    # a device the platform exposes, a platform integration; undecided
+webxr-camera                                     open    # a device the platform exposes, a platform integration; undecided
+webxr-depth-sensing                              open    # a device the platform exposes, a platform integration; undecided
+webxr-device                                     open    # a device the platform exposes, a platform integration; undecided
+webxr-dom-overlays                               open    # a device the platform exposes, a platform integration; undecided
+webxr-gamepads                                   open    # a device the platform exposes, a platform integration; undecided
+webxr-hand-input                                 open    # a device the platform exposes, a platform integration; undecided
+webxr-hit-test                                   open    # a device the platform exposes, a platform integration; undecided
+webxr-layers                                     open    # a device the platform exposes, a platform integration; undecided
+webxr-lighting-estimation                        open    # a device the platform exposes, a platform integration; undecided
+wheel-events                                     build   # shipped by Blink and Gecko and WebKit
+where                                            build
+white-space                                      build
+white-space-collapse                             build
+widows-orphans                                   build   # shipped by Blink and WebKit
+width-height                                     build
+will-change                                      build
+window                                           build
+window-controls-overlay                          open    # an app's own window, which a host that shows one could take; undecided
+window-drag                                      open    # an app's own window, which a host that shows one could take; undecided
+window-management                                cut     # Blink only, and the other engines object to it in principle
+with                                             quickjs
+word-break                                       build
+word-break-auto-phrase                           open    # breaks at phrases need a phrase segmenter, which the text stack does not have
+word-break-break-word                            build   # deprecated, and interoperable content depends on it
+word-spacing                                     build
+writing-mode                                     build
+writing-mode-svg-values                          build   # deprecated, and interoperable content depends on it
+writingsuggestions                               build   # shipped by Blink and WebKit
+xhr                                              build
+xml-serializer                                   build
+xpath                                            build
+xslt                                             cut     # deprecated and being removed from the engines that have it
+z-index                                          build
+zoom                                             build
+zstd                                             build
+
+# Features that web-features does not name, by the anchor of their definition.
+css-color-5/#at-profile                          cut     # no engine ships it, and colors would wait on profiles that load
+css-color-5/#custom-color                        cut     # names an @color-profile
+css-color-5/#device-cmyk                         build   # no engine ships it; the naive conversion costs nothing outside it
+css-color-hdr-1/#hdr-color-function              build   # no engine ships it; it reads the headroom dynamic-range-limit does
+css-color-hdr-1/#predefined-HDR                  build   # no engine ships them; they are conversions in core
+css-color-adjust-1/#forced                       open    # forced colors, decided with forced colors mode
+svg2/paths.html#PathLengthProperty               build   # no engine ships it; the pathLength attribute is built through it

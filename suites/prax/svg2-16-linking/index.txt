@@ -1,0 +1,34 @@
+00-supports-1.html
+# SVG2/linking.html#URLReference 16.1 References: no page; its subsections have them
+# SVG2/linking.html#HeadOverview 16.1.1 Overview: no page; it lists what references are used for, which their chapters show
+# SVG2/linking.html#definitions 16.1.2 Definitions: no page; it defines terms the chapter's pages use
+# SVG2/linking.html#URLandURI 16.1.3 URLs and URIs: no page; it is terminology
+# SVG2/linking.html#URLforms 16.1.4 Syntactic forms: URL and <url>: no page; it is syntax
+# SVG2/linking.html#linkRefAttrs 16.1.5 URL reference attributes: no page; it is syntax
+SVG2/linking.html#XLinkRefAttrs 16.1.6 Deprecated XLink URL reference attributes
+    xlink-href.html
+SVG2/linking.html#processingURL 16.1.7 Processing of URL references
+    url-processing.html
+SVG2/linking.html#processingURL-absolute 16.1.7.1 Generating the absolute URL
+    absolute-url.html
+SVG2/linking.html#processingURL-fetch 16.1.7.2 Fetching the document
+    fetching.html
+SVG2/linking.html#processingURL-parsing 16.1.7.3 Processing the subresource document
+    subresource.html
+SVG2/linking.html#processingURL-target 16.1.7.4 Identifying the target element
+    target-element.html
+SVG2/linking.html#processingURL-validity 16.1.7.5 Valid URL targets
+    valid-targets.html
+SVG2/linking.html#Links 16.2 Links out of SVG content: the ‘a’ element
+    links.html
+SVG2/linking.html#LinksIntoSVG 16.3 Linking into SVG content: URL fragments and SVG views
+    linking-into-svg.html
+SVG2/linking.html#SVGFragmentIdentifiers 16.3.1 SVG fragment identifiers
+    fragment-identifiers.html
+SVG2/linking.html#SVGFragmentIdentifiersDefinitions 16.3.2 SVG fragment identifiers definitions
+    svg-view.html
+SVG2/linking.html#ViewElement 16.3.3 Predefined views: the ‘view’ element
+    view-element.html
+# SVG2/linking.html#DOMInterfaces 16.4 DOM interfaces: no page; it is object model
+# SVG2/linking.html#InterfaceSVGAElement 16.4.1 Interface SVGAElement: no page; it is object model
+# SVG2/linking.html#InterfaceSVGViewElement 16.4.2 Interface SVGViewElement: no page; it is object model

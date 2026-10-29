@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>auto margins take the free space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 40px; }
+  .t { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.1 Aligning with auto margins</div>
+  <h1>auto margins take the free space</h1>
+  <p class=pr-lede><q>Auto margins on flex items have an effect very similar to auto margins in block flow</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#auto-margins">CSS Flexible Box Layout 2 §8.1</a></span></p>
+</header>
+
+<section>
+  <h2>Positive free space goes to the auto margins</h2>
+  <p><q>Prior to alignment via justify-content and align-self, any positive free space is distributed to auto margins
+  in that dimension.</q> Items 40px wide.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit" style="margin-left: auto">D</div></div>
+    <figcaption>The spec's bar of actions: D's <code>margin-left: auto</code> takes the 40px left over: D at
+    160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="margin: 0 auto">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>B's <code>margin: 0 auto</code>: its two margins share the 80px, so B is 80 to 120px and C 160 to
+    200px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class="pr-a pr-fit" style="margin: auto">A</div></div>
+    <figcaption><code>margin: auto</code>, a stage 40px tall: A is centered both ways, 80 to 120px across, 10 to
+    30px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero while flexing, and they leave alignment nothing</h2>
+  <p><q>During calculations of flex bases and flexible lengths, auto margins are treated as 0.</q> <q>If free space is
+  distributed to auto margins, the alignment properties will have no effect in that dimension</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex-grow: 1; margin-left: auto">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption>A, <code>flex-grow: 1</code> and <code>margin-left: auto</code>: flexing takes all the space; A is
+    0 to 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: center"><div class="pr-a pr-fit" style="margin-left: auto">A</div></div>
+    <figcaption><code>justify-content: center</code>, A's <code>margin-left: auto</code>: the margin takes the 160px;
+    A at 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="align-items: flex-end"><div class="pr-a pr-fit" style="margin-bottom: auto">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>align-items: flex-end</code>: B at 20 to 40px; A's <code>margin-bottom: auto</code> holds it
+    at 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

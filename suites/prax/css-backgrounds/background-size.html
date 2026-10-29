@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-size: lengths, percentages and auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .disc { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>"); }
+  .ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%234f81bd'/></svg>"); }
+  .height { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='20'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .bare { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.10 Sizing Images: the background-size property</div>
+  <h1>background-size: lengths, percentages and auto</h1>
+  <p class=pr-lede><q>The first value gives the width of the corresponding image, the second value its height. If only
+  one value is given the second is assumed to be auto.</q> <q>A &lt;percentage&gt; is relative to the background
+  positioning area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-size">CSS Backgrounds 4 §2.10</a></span>
+  Each dashed box is a positioning area 140 by 60, with one image drawn once at its top left.</p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <p>A blue disc, 20 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost disc" style="background-size: 40px 20px"></div></div>
+    <figcaption><code>40px 20px</code>: an ellipse 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost disc" style="background-size: 50% 50%"></div></div>
+    <figcaption><code>50% 50%</code>: half the area each way, 70 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost disc" style="background-size: 0 20px; background-repeat: repeat"></div></div>
+    <figcaption><code>0 20px</code>, repeated: <q>If the background image's width or height resolves to zero, this
+    causes the image not to be displayed.</q> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One auto: the ratio, else the natural size, else 100%</h2>
+  <p><q>An auto value for one dimension is resolved by using the image's natural aspect ratio and the size of the other
+  dimension, or failing that, using the image's natural size, or failing that, treating it as 100%.</q> Each is
+  <code>background-size: 60px</code>, so the height is auto.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost ratio" style="background-size: 60px"></div></div>
+    <figcaption>A 2:1 ratio and no size: 60 by 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost height" style="background-size: 60px"></div></div>
+    <figcaption>A natural height of 20 and no ratio: 60 by 20. <span class=pr-flag>Safari</span> 60 by 8.6, as if
+    140 by 20 were its ratio.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost bare" style="background-size: 60px"></div></div>
+    <figcaption>No size and no ratio: 100% of the height, 60 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

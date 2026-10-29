@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>deg, grad, rad, turn</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { height: 60px; }
+  .r { height: 100px; }
+  .r div { width: 60px; height: 20px; margin: 40px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 7.1 Angle Units</div>
+  <h1>deg, grad, rad, turn</h1>
+  <p class=pr-lede><q>For example, a right angle is 90deg or 100grad or 0.25turn or approximately 1.57rad.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#angles">CSS Values and Units 4 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>A right angle, four ways</h2>
+  <p><q>when an angle denotes a direction in CSS, it is typically interpreted as a bearing angle, where 0deg is "up" or
+  "north" on the screen, and larger angles are more clockwise (so 90deg is "right" or "east").</q> Each stage is a
+  <code>linear-gradient()</code> from blue to orange at the angle under it.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow g" style="background: linear-gradient(90deg, #4f81bd, #d68a3c)"></div>
+    <figcaption><code>90deg</code>: blue at the left, orange at the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow g" style="background: linear-gradient(100grad, #4f81bd, #d68a3c)"></div>
+    <figcaption><code>100grad</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow g" style="background: linear-gradient(0.25turn, #4f81bd, #d68a3c)"></div>
+    <figcaption><code>0.25turn</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow g" style="background: linear-gradient(1.5708rad, #4f81bd, #d68a3c)"></div>
+    <figcaption><code>1.5708rad</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An eighth of a turn</h2>
+  <p>Each bar is <code>rotate()</code>d clockwise by the angle under it.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: 45deg"></div></div>
+    <figcaption><code>45deg</code>: the bar runs down to the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: 50grad"></div></div>
+    <figcaption><code>50grad</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: 0.125turn"></div></div>
+    <figcaption><code>0.125turn</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: 0.7854rad"></div></div>
+    <figcaption><code>0.7854rad</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

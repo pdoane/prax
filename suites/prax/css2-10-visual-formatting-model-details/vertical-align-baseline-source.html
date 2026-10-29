@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: first and last baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .ib { display: inline-block; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: first and last baselines</h1>
+  <p class=pr-lede>CSS 2 aligns an inline-block by its last line. Each stage's text is 13px on 20px lines, with the
+  line's baseline dashed in red, and each orange inline-block holds three lines.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-inline-3/#baseline-source">CSS Inline Layout 3 §4.2.1</a>, <a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></div>
+  <h2>baseline-source</h2>
+  <p><code>vertical-align</code> is a shorthand whose <code>baseline-source</code> longhand takes <code>auto | first |
+  last</code>: <q>this property specifies whether the first baseline set or last baseline set is preferred for
+  alignment</q>; <code>auto</code> <q>Specifies last-baseline alignment for 'inline-block'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-source">CSS Inline Layout 3 §4.2.1</a></span>
+  <q>if the position of a scroll container’s first/last baseline is outside its border edge, that baseline’s position
+  is clamped to the border edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span></p>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 40px"><span class=pr-baseline></span>Xx <span class="pr-chip ib">one<br>two<br>three</span></div>
+    <figcaption><code>auto</code>: its last line, "three", is on the red line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va" style="height: 60px"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="baseline-source: first">one<br>two<br>three</span></div>
+    <figcaption><code>baseline-source: first</code>: "one" is on the red line, and the box hangs below it. <span
+    class=pr-flag>Safari</span> Ignores it: "three" is.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="baseline-source: last; overflow: hidden; height: 20px; margin-bottom: 10px">one<br>two<br>three</span></div>
+    <figcaption><code>last</code> with <code>overflow: hidden</code>, 20px tall and a 10px bottom margin: "three" is
+    clipped away below, so the baseline is clamped to the bottom border edge, on the red line. <span
+    class=pr-flag>Safari</span> Ignores it: the margin edge is, 10px lower.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

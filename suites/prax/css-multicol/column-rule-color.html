@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 2; column-gap: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4.2 The Color of Column Rules: the column-rule-color property</div>
+  <h1>column-rule-color</h1>
+  <p class=pr-lede><q>Specifies the color of the column rule.</q> Its initial value is currentcolor. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#crc">CSS Multi-column Layout 1 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The rule's color</h2>
+  <p>Each stage has two columns of 90px and a 4px solid rule.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: 4px solid; column-rule-color: #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule-color: #c0392b</code>: a red rule.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: 4px solid; column-rule-color: rgb(44 90 143 / 0.3)">one two six ten red big fat sun</div>
+    <figcaption>A translucent blue: the stage's guides show through the rule.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>currentcolor</h2>
+  <p>The initial value is <code>currentcolor</code>: the multicol container's <code>color</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: 4px solid; color: #3f7a3f">one two six ten red big fat sun</div>
+    <figcaption><code>color: #3f7a3f</code>: a green rule, as the text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule-style: solid; column-rule-width: 4px; color: #8e44ad">one two six ten red big fat sun</div>
+    <figcaption>Only the style and width set: the rule purple, as the text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

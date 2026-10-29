@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The grid sizing algorithm: columns again</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .v { writing-mode: vertical-rl; }
+  .g { display: grid; grid-template-columns: 40px auto; grid-template-rows: 1fr; height: 60px; justify-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.1 Grid Sizing Algorithm, re-resolving</div>
+  <h1>The grid sizing algorithm: columns again</h1>
+  <p class=pr-lede><q>Then, if the min-content contribution of any grid item has changed based on the row sizes and
+  alignment calculated in step 2, re-resolve the sizes of the grid columns with the new min-content and max-content
+  contributions (once only).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grid-sizing">CSS Grid Layout 2 §12.1</a></span>
+  <q>This repetition is necessary for cases where the inline size of a grid item depends on the block size of its grid
+  area. Examples include</q> <q>orthogonal flows</q> <q>and items with an aspect-ratio</q>.</p>
+</header>
+
+<section>
+  <h2>An orthogonal flow</h2>
+  <p>Each grid is 60px tall, with columns <code>40px auto</code> and one <code>1fr</code> row. While the columns are
+  sized first, the <code>1fr</code> row has no definite maximum, so its space is taken as infinite; the rows then make
+  it 60px, and the columns are sized again.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=u>x</div><div class="t v">abcd efgh ijkl</div></div></div>
+    <figcaption>Blue, <code>vertical-rl</code>, first one line 140px long; again, in 60px lines: three, so its column
+    is 60px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-rows: 60px"><div class=u>x</div><div class="t v">abcd efgh ijkl</div></div></div>
+    <figcaption>The same with a 60px row, known from the start: three lines, 60px wide, at once.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An aspect ratio</h2>
+  <p>Blue is empty, with <code>aspect-ratio: 1</code>, <code>justify-self: start</code> and <code>align-self: stretch</code>: stretched to its row's
+  height, its width follows from that height.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g><div class=u>x</div><div class=t style="aspect-ratio: 1; justify-self: start; align-self: stretch"></div></div></div>
+    <figcaption>Once the row is 60px, blue is 60px tall, so 60px wide, and the column sized again to 60px.
+    <span class=pr-flag>Firefox</span> makes blue and its column 0 wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-rows: 60px"><div class=u>x</div><div class=t style="aspect-ratio: 1; justify-self: start; align-self: stretch"></div></div></div>
+    <figcaption>With a 60px row from the start: the same, a 60px square. <span class=pr-flag>Firefox</span>
+    makes it 0 wide here too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

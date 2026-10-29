@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border-box mask: nine pieces as a mask</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+  .img { display: block; width: 60px; height: 60px; margin: 10px; background: url(support/frame-alpha.svg) 0 0 / 60px 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8 Border-Box Mask</div>
+  <h1>Border-box mask: nine pieces as a mask</h1>
+  <p class=pr-lede><q>With mask-border an image can be split into nine pieces: four corners, four edges and the middle
+  piece</q>. <q>These pieces may be sliced, scaled and stretched in various ways to fit the size of the mask border
+  image area. This distorted image is then used as a mask.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#mask-borders">CSS Masking 1 §8</a></span></p>
+</header>
+
+<section>
+  <h2>The image, and the box it masks</h2>
+  <p>The image is 30 by 30: opaque discs in its 10px corners, 4px bars along its edges and a 4px square in the middle,
+  on transparency. Each box is 140 by 60 and blue.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=img></div></div>
+    <figcaption>The image, drawn at twice its size as a background, for reference.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption>The box, unmasked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sliced, stretched, and used as a mask</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border: url(support/frame-alpha.svg) 10 fill"></div></div>
+    <figcaption><code>mask-border: url(…) 10 fill</code>: blue only where the image is opaque. A disc 10 across in
+    each corner, bars 4px thick stretched along the edges between them, and the middle square stretched to 48 by 16
+    at the center. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

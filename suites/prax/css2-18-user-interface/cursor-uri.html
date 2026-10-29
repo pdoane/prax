@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cursor: URIs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cur { height: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; }
+  .url { padding: 4px 6px; font-size: 11px; line-height: 15px; word-break: break-all; }
+  .dot { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23c0392b'/%3E%3C/svg%3E"), auto; }
+  .next { cursor: url(missing.svg), url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAL0lEQVR42mNgGOyAEcZQX5fwnxKDbgYtYGRgYGBgorYLRw0cNXDUwFED6WPg4AcAlzwEILc/SpIAAAAASUVORK5CYII="), pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.1 Cursors: the 'cursor' property</div>
+  <h1>Cursor: URIs</h1>
+  <p class=pr-lede>A list of cursor images, then a generic cursor that is used when none of them can be. Hover a row to
+  see its cursor.</p>
+</header>
+
+<section>
+  <h2>&lt;uri&gt;, with a generic cursor at the end</h2>
+  <p><q>If the user agent cannot handle the first cursor of a list of cursors, it should attempt to handle the second,
+  etc. If the user agent cannot handle any user-defined cursor, it must use the generic cursor at the end of the
+  list.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#cursor-props">CSS 2 §18.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=url style="cursor: url(example.svg#linkcursor), url(hyper.cur), pointer">two missing images, then pointer</div>
+    </div>
+    <figcaption>The specification's example, <code>cursor: url(example.svg#linkcursor), url(hyper.cur),
+    pointer</code>. Neither file exists, so hover shows the hand of
+    <code>pointer</code>. <span class="pr-flag pr-since">Since CSS 2</span> trying each URL is now required.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-ui-4/#cursor">CSS Basic User Interface 4 §5.1.1</a></div>
+  <h2>The next image must be tried, and PNG and SVG must work</h2>
+  <p><q>If the user agent cannot handle the first cursor of a list of cursors, it must attempt to handle the second,
+  etc.</q> <q>The UA must support the following image file formats: PNG</q> and SVG <q>if it has a natural size.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#cursor">CSS Basic User Interface 4 §5.1.1</a></span> CSS 2's <q>should</q> is now a <q>must</q>, and CSS 2 named no
+  format.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="cur next">a PNG after a missing file</div>
+    </div>
+    <figcaption><code>url(missing.svg), url(data:image/png...), pointer</code>: the first image fails, so hover must
+    show the second, a 16px green square, not the hand.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="cur dot">an SVG of 24 by 24</div>
+    </div>
+    <figcaption>A <code>data:</code> URI of an SVG with a natural size, 24 by 24, then <code>auto</code>: it must be
+    supported, and hover shows a red dot in place of the pointer.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

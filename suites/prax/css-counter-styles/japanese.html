@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>japanese-informal and japanese-formal</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.1.1.1 Japanese: japanese-informal and japanese-formal</div>
+  <h1>japanese-informal and japanese-formal</h1>
+  <p class=pr-lede><q>Informal Japanese Kanji numbering (e.g., 千百十一)</q> <q>Formal Japanese Kanji numbering (e.g. 壱阡壱百壱拾壱)</q> Both are additive, with suffix "、" and <code>negative: "マイナス"</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#limited-japanese">CSS Counter Styles 3 §7.1.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Informal and formal</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: japanese-informal; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-5>-5<li value=0>0<li value=10>10<li value=1111>1111<li value=9090>9090</ol></div>
+    <figcaption><code>japanese-informal</code>: <bdi dir=ltr>"マイナス五、"</bdi>, <bdi dir=ltr>"〇、"</bdi>, <bdi dir=ltr>"十、"</bdi>, <bdi dir=ltr>"千百十一、"</bdi>, <bdi dir=ltr>"九千九十、"</bdi>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: japanese-formal; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-5>-5<li value=0>0<li value=10>10<li value=1111>1111<li value=9090>9090</ol></div>
+    <figcaption><code>japanese-formal</code>: <bdi dir=ltr>"マイナス伍、"</bdi>, <bdi dir=ltr>"零、"</bdi>, <bdi dir=ltr>"壱拾、"</bdi>, <bdi dir=ltr>"壱阡壱百壱拾壱、"</bdi>, <bdi dir=ltr>"九阡九拾、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

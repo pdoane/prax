@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canceling a wheel event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 12.3 wheel</div>
+  <h1>Canceling a wheel event</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a mouse wheel has been rotated around any axis, or when an
+  equivalent input device (such as a mouse-ball, certain tablets or touchpads, etc.) has emulated such an action.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheel">Pointer Events §12.3</a></span></p>
+</header>
+<section>
+  <h2>No scroll</h2>
+  <p><q>The typical default action of the wheel event type is to scroll (or in some cases, zoom) the document by the
+  indicated amount. If this event is canceled, the implementation MUST NOT scroll or zoom the document</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheel">§12.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=canceled><p>A listener cancels each wheel event here.</p></div>
+      <ol class=pr-log data-log="wheel" data-fields="cancelable deltaY" data-on="#canceled" data-lines=3></ol>
+    </div>
+    <figcaption>Turn the wheel over the box: wheel events, each <code>cancelable</code>, and the box does not
+    scroll; nor does the page around it.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels every wheel event over the box, from a listener that is not passive.
+  document.getElementById("canceled").addEventListener("wheel", event => event.preventDefault(), {passive: false});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

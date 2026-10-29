@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::file-selector-button</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  input { display: block; margin: 10px; font: 13px/20px "PR Arimo"; }
+  .border::file-selector-button { border: 3px solid #3f7a3f; }
+  .styled::file-selector-button { border: 0; padding: 0 10px; height: 30px; color: white; background: #4f81bd; font-weight: 700; }
+  .none::file-selector-button { display: none; }
+  .float::file-selector-button { float: right; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 5.1 File Selector Button: the ::file-selector-button pseudo-element</div>
+  <h1>::file-selector-button</h1>
+  <p class=pr-lede><q>The ::file-selector-button pseudo-element targets the &lt;button&gt; inside an &lt;input&gt;
+  element with type=file, if the UA renders such a button.</q> <q>There is no restriction on which properties apply
+  to the ::file-selector-button pseudo-element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#file-selector-button-pseudo">CSS Pseudo-Elements 4 §5.1</a></span>
+  The button's label and the text after it are each browser's own.</p>
+</header>
+
+<section>
+  <h2>Styling the button</h2>
+  <figure>
+    <div class="pr-stage pr-wide"><input type=file class=border></div>
+    <figcaption>The specification's example, <code>border: 3px solid green</code>: a green border around the
+    button.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><input type=file class=styled></div>
+    <figcaption>No border, 10px padding, 30px tall, white bold text on blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layout too</h2>
+  <figure>
+    <div class="pr-stage pr-wide"><input type=file class=none></div>
+    <figcaption><code>display: none</code>: no button. Chrome and Firefox keep the text that says no file is chosen;
+    Safari draws that text only beside its button, so the input is empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><input type=file class=float></div>
+    <figcaption><code>float: right</code>: the button at the right of the input, after the text in Chrome and
+    Firefox; Safari draws no text with it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

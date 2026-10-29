@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The mask element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; color: black; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true" style="color: white">
+  <mask id="left" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="white" /></mask>
+  <mask id="current" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="currentColor" /></mask>
+  <mask id="hidden" maskContentUnits="objectBoundingBox" style="display: none"><rect width="0.5" height="1" fill="white" /></mask>
+  <mask id="faded" maskContentUnits="objectBoundingBox" style="opacity: 0"><rect width="0.5" height="1" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 9.1 The mask element</div>
+  <h1>The mask element</h1>
+  <p class=pr-lede><q>mask elements are never rendered directly; their only usage is as something that can be referenced
+  using the mask property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#MaskElement">CSS Masking 1 §9.1</a></span>
+  Each box is 140 by 60 and blue, with black text color; each mask holds a rectangle over the left half of the box it
+  masks, white unless said otherwise.</p>
+</header>
+
+<section>
+  <h2>A mask from an SVG element</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#left)"></div></div>
+    <figcaption><code>mask-image: url(#left)</code>: the left half, 70 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#current)"></div></div>
+    <figcaption>Filled with <code>currentColor</code> in an <code>svg</code> whose color is white: <q>properties do not
+    inherit from the element referencing the mask element</q>, so white, and the left half.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>display and opacity do not apply</h2>
+  <p><q>The opacity, filter and display properties do not apply to the mask element</q>; <q>mask elements are available
+  for referencing even when the display property on the mask element or any of its ancestors is set to none.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#hidden)"></div></div>
+    <figcaption>A mask with <code>display: none</code>: still the left half. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> Nothing drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#faded)"></div></div>
+    <figcaption>A mask with <code>opacity: 0</code>: still the left half, fully opaque.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

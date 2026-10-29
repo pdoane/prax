@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>width and height: min and max</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .max-width { max-width: 60px; }
+  .min-width { min-width: 120px; }
+  .max-height { max-height: 20px; }
+  .min-height { min-height: 40px; }
+  foreignObject div { height: 100%; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.8 Sizing properties: the effect of the ‘width’ and ‘height’ properties</div>
+  <h1>width and height: min and max</h1>
+  <p class=pr-lede><q>The used value of width may be constrained by the value of the max-width and min-width
+  properties. The used value of height may be constrained by the value of the max-height and min-height
+  properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#Sizing">SVG 2 §7.8</a></span>
+  It says <q>may</q>, so no browser is flagged. Each stage is an SVG 160 by 60; each element is at 20, 10, and a
+  dashed outline marks 120 by 40.</p>
+</header>
+
+<section>
+  <h2>A rect</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=max-width x="20" y="10" width="120" height="40" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>width="120"</code>, <code>max-width: 60px</code>: constrained, 60 wide. Chrome, Safari and
+    Firefox: 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=min-width x="20" y="10" width="40" height="40" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>width="40"</code>, <code>min-width: 120px</code>: constrained, 120 wide. Chrome, Safari and
+    Firefox: 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image and a foreignObject</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=max-height href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>The flag, <code>height="40"</code>, <code>max-height: 20px</code>: constrained, 120 by 20.
+    Chrome, Safari and Firefox: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=min-height x="20" y="10" width="120" height="10"><div></div></foreignObject><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A green <code>foreignObject</code>, <code>height="10"</code>, <code>min-height: 40px</code>:
+    constrained, 120 by 40. Chrome, Safari and Firefox: 120 by 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

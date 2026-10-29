@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: line boxes</h1>
+  <p class=pr-lede>Margins adjoin only if no line boxes, no clearance, no padding and no border separate them, and both boxes are in flow in one block formatting context. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Line boxes</h2>
+  <p>A line of text between two margins keeps them apart. <q>Certain zero-height line boxes (see 9.4.2) are ignored for
+  this purpose</q>: a line with no text and nothing else that takes room is as if it were not there. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a>, <a href="https://drafts.csswg.org/css2/#inline-formatting">§9.4.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><div class=pr-b style="margin-top: 40px">B: mt 40</div></div>
+    <figcaption>One 40px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="line-height: 20px"><div class=pr-a style="margin-bottom: 40px">A: mb 40</div>a line box<div class=pr-b style="margin-top: 40px">B: mt 40</div></div>
+    <figcaption>A 20px line between: 40 + 20 + 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="line-height: 20px"><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><span></span><div class=pr-b style="margin-top: 40px">B: mt 40</div></div>
+    <figcaption>An empty <code>span</code> between makes a line of zero height, which is ignored: one 40px
+    gap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

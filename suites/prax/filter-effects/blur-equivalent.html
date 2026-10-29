@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>blur() as feGaussianBlur</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="blur-equivalent-0" color-interpolation-filters="sRGB" x="-0.7" y="-1" width="2.4" height="3">
+    <feGaussianBlur stdDeviation="2" edgeMode="none"/>
+  </filter>
+  <filter id="blur-equivalent-1" color-interpolation-filters="sRGB" x="-0.7" y="-1" width="2.4" height="3">
+    <feGaussianBlur stdDeviation="5" edgeMode="none"/>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.9 blur</div>
+  <h1>blur() as feGaussianBlur</h1>
+  <p class=pr-lede>The function is <code>&lt;feGaussianBlur stdDeviation="[radius radius]" edgeMode="[edge mode]"&gt;</code>, <q>Where edge mode computes to none for the filter property</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#blurEquivalent">Filter Effects 1 §13.1.9</a></span></p>
+</header>
+
+<section>
+  <h2>Two radii</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function, at the right the same box with <code>filter: url()</code> to the equivalent. Each equivalent's filter region runs 40px or more past the box on every side, as the shorthand's must cover what it draws (<a href="https://drafts.csswg.org/filter-effects-1/#filter-region-for-shorthands">§13.2</a>); the default region of an SVG filter, 10% past the box, would clip it.</p>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class=row style="margin-left: 20px"><div class=src style="filter: blur(2px)"></div><span style="display: inline-block; width: 20px"></span><div class=src style="filter: url(#blur-equivalent-0)"></div></div></div>
+    <figcaption><code>blur(2px)</code> and its equivalent alike: soft edges, a few pixels wide, fading into the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class=row style="margin-left: 20px"><div class=src style="filter: blur(5px)"></div><span style="display: inline-block; width: 20px"></span><div class=src style="filter: url(#blur-equivalent-1)"></div></div></div>
+    <figcaption><code>blur(5px)</code> and its equivalent alike: the colors run together, and fade past the box's edges, as <code>edgeMode=none</code> takes transparent black beyond them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

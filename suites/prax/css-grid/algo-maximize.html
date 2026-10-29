@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Maximizing tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; grid-template-columns: minmax(20px, 40px) minmax(20px, 100px); }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.6 Maximize Tracks</div>
+  <h1>Maximizing tracks</h1>
+  <p class=pr-lede><q>If the free space is positive, distribute it equally to the base sizes of all tracks, freezing
+  tracks as they reach their growth limits (and continuing to grow the unfrozen tracks as needed).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grow-tracks">CSS Grid Layout 2 §12.6</a></span>
+  Each grid has columns <code>minmax(20px, 40px) minmax(20px, 100px)</code>, blue and orange, at its start
+  (<code>justify-content: start</code>); its edges are dashed.</p>
+</header>
+
+<section>
+  <h2>Equally, up to the growth limits</h2>
+  <p>The <q>free space</q> is the <q>available grid space minus the sum of the base sizes of all the grid tracks
+  (including gutters), floored at zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-terms">§12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption>150px: 110px free. 20px to each brings blue to 40px; orange takes the rest it can, to 100px. 10px stay
+    free.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="width: 100px"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: 100px</code>: 60px free; blue 40px, orange 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="width: 60px"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: 60px</code>: 20px free, 10px each: 30px and 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Under intrinsic constraints, and a maximum width</h2>
+  <p><q>if sizing the grid container under a max-content constraint, the free space is infinite; if sizing under a
+  min-content constraint, the free space is zero.</q> <q>If this would cause the grid to be larger than the grid
+  container's inner size as limited by its max-width/height, then redo this step, treating the available grid space as
+  equal to the grid container's inner size when it's sized to its max-width/height.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="width: max-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: max-content</code>: both at their growth limits, 40 and 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="width: min-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: min-content</code>: both at their base sizes, 20 and 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="display: inline-grid; max-width: 100px"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>inline-grid</code> with <code>max-width: 100px</code>: 140px is too wide, so 100px is the
+    available space: 40 and 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

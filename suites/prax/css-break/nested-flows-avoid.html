@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page breaks inside columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.2 Nested Fragmentation Flows</div>
+  <h1>Page breaks inside columns</h1>
+  <p class=pr-lede><q>Breaking a fragmentainer F effectively splits the fragmentainer into two fragmentainers (F1 and
+  F2).</q> <q>the type of break between the two pieces F1 and F2 is the type of break created by the fragmentation
+  context that split F, not the type of break normally created by F’s own fragmentation context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#nested-flows">CSS Fragmentation 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>A page break, not a column break</h2>
+  <p>The same columns, filled in order (<code>column-fill: auto</code>). The tinted boxes, three lines each, have
+  <code>break-inside: avoid-page</code>.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto } .k { break-inside: avoid-page; background: #b9cde6 }</style><body class=pr-measure><div class=m>line 1<br>line 2<br>line 3<br>line 4<br>line 5<div class=k>line 6<br>line 7<br>line 8</div>line 9<br>line 10<br>line 11<br>line 12<div class=k>line 13<br>line 14<br>line 15</div>line 16<br>line 17</div>"></iframe>
+    <figcaption>Printed: the first tinted box breaks between the columns of the first page, lines 6 and 7 at the
+    foot of the first, 8 atop the second: that break is a column break only. The second would break between pages:
+    it moves whole to the second page, which starts with line 13. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> break it between the pages,
+    after line 14. <span class=pr-flag>Safari</span> prints one column, and breaks it there too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

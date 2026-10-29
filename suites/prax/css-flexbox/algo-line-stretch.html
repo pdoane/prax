@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 9: align-content: stretch</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; flex-wrap: wrap; }
+  .flex > div { width: 120px; }
+  .end { align-self: flex-end; width: 40px !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 9</div>
+  <h1>Step 9: align-content: stretch</h1>
+  <p class=pr-lede><q>If the flex container has a definite cross size, align-content is stretch, and the sum of the
+  flex lines' cross sizes is less than the flex container's inner cross size, increase the cross size of each flex
+  line by equal amounts such that the sum of their cross sizes exactly equals the flex container's inner cross
+  size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span>
+  Each stage wraps 120px items onto two lines; on each, a purple item of <code>align-self: flex-end</code> marks
+  its end, and the other stretches to fill it.</p>
+</header>
+
+<section>
+  <h2>Equal shares of the free space</h2>
+  <figure>
+    <div class="pr-stage flex" style="height: 100px"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit end">D</div><div class="pr-b pr-fit">B</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption><code>height: 100px</code> and the initial <code>align-content: normal</code>, which <q>behaves as
+    stretch</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-flex">CSS Box Alignment 3 §5.1.3</a></span>: two lines of 20px: 60px over, 30px to each, so each line 50px: A
+    0 to 50px, B 50 to 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="height: 100px; align-content: stretch"><div class="pr-a pr-fit" style="min-height: 40px">A</div><div class="pr-d pr-fit end">D</div><div class="pr-b pr-fit">B</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption>A at least 40px: lines of 40px and 20px share 40px, 20px each: 60px and 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only with a definite cross size</h2>
+  <figure>
+    <div class="pr-stage flex" style="align-content: stretch"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit end">D</div><div class="pr-b pr-fit">B</div><div class="pr-d pr-fit end">D</div></div>
+    <figcaption><code>height: auto</code>: the container is as tall as its lines, 40px, and none is over.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex pr-vertical" style="height: 140px; width: 100px"><div class="pr-a pr-fit" style="height: 80px; width: auto">A</div><div class="pr-d pr-fit end" style="height: 40px; width: 20px !important">D</div><div class="pr-b pr-fit" style="height: 80px; width: auto">B</div><div class="pr-d pr-fit end" style="height: 40px; width: 20px !important">D</div></div>
+    <figcaption><code>vertical-rl</code>, <code>width: 100px</code>: two lines, right to left, 50px wide each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

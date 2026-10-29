@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>fr in an indefinite space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.4 Flexible Lengths, in an indefinite space</div>
+  <h1>fr in an indefinite space</h1>
+  <p class=pr-lede><q>When the available space is infinite (which happens when the grid container’s width or height
+  is indefinite), flex-sized grid tracks are sized to their contents while retaining their respective
+  proportions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#fr-unit">CSS Grid Layout 2 §7.2.4</a></span></p>
+</header>
+
+<section>
+  <h2>The largest hypothetical 1fr</h2>
+  <p><q>The used size of each flex-sized grid track is computed by determining the max-content size of each
+  flex-sized grid track and dividing that size by the respective flex factor to determine a “hypothetical 1fr size”.
+  The maximum of those is used as the resolved 1fr length</q>. Each dashed grid is an <code>inline-grid</code>,
+  sized from its content.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: inline-grid; grid-template-columns: 1fr 1fr"><div class=t1>ab</div><div class=t2>abcdef</div></div></div>
+    <figcaption><code>1fr 1fr</code>, "ab" and "abcdef": 1fr is 60px; both columns 60px, the grid 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: inline-grid; grid-template-columns: 1fr 2fr"><div class=t1>abcd</div><div class=t2>ab</div></div></div>
+    <figcaption><code>1fr 2fr</code>, "abcd" and "ab": 40 and 10px per fr, so 1fr is 40px: columns of 40 and 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows of a grid of auto height</h2>
+  <p>A grid's <code>auto</code> height is indefinite. Each dashed grid holds two items 20px tall, one to a row.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: grid; grid-template-rows: 1fr 2fr"><div class=t1>a</div><div class=t2>b</div></div></div>
+    <figcaption><code>1fr 2fr</code>: 20px and 10px per fr, so 1fr is 20px: rows of 20 and 40px, the grid 60px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-frame style="display: grid; grid-template-rows: 3fr 1fr"><div class=t1>a</div><div class=t2>b</div></div></div>
+    <figcaption><code>3fr 1fr</code>: 1fr is 20px, from the second row: rows of 60 and 20px, 80px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

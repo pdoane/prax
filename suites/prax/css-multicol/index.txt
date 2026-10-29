@@ -1,0 +1,83 @@
+00-supports-1.html
+css-multicol-1/#introduction 1 Introduction
+    multicol-layout.html
+# css-multicol-1/#values 1.1 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+css-multicol-1/#the-multi-column-model 2 The Multi-Column Model
+    multicol-container.html
+    column-boxes.html
+    column-floats.html
+    column-abspos.html
+    column-order.html
+    nested-multicol.html
+# css-multicol-1/#the-number-and-width-of-columns 3 The Number and Width of Columns: no page; it introduces column-width, column-count and columns, which 3.1 to 3.4 show
+css-multicol-1/#cw 3.1 The Inline Size of Columns: the column-width property
+    column-width.html
+css-multicol-1/#cc 3.2 The Number of Columns: the column-count property
+    column-count.html
+css-multicol-1/#columns 3.3 The column-width and column-count Shorthand: The columns Property
+    columns.html
+css-multicol-1/#pseudo-algorithm 3.4 The Pseudo-algorithm
+    pseudo-algorithm.html
+    actual-column-count.html
+css-multicol-1/#stacking-context 3.5 Stacking Context
+    stacking-context.html
+css-multicol-1/#column-gaps-and-rules 4 Column Gaps and Rules
+    column-rules.html
+    column-rules-scroll.html
+css-multicol-1/#cg 4.1 Gutters Between Columns: the column-gap property
+    column-gap.html
+css-multicol-1/#crc 4.2 The Color of Column Rules: the column-rule-color property
+    column-rule-color.html
+css-multicol-1/#crs 4.3 The Style Of Column Rules: the column-rule-style property
+    column-rule-style.html
+css-multicol-1/#crw 4.4 The Width Of Column Rules: the column-rule-width property
+    column-rule-width.html
+css-multicol-1/#cr 4.5 Column Rule Shorthand: the column-rule property
+    column-rule.html
+css-multicol-1/#column-breaks 5 Column Breaks
+    column-breaks.html
+css-multicol-1/#break-before-break-after-break-inside 5.1 Controlling Fragmentation: the break-before, break-after, break-inside properties
+    break-between.html
+    break-avoid.html
+    break-inside.html
+    orphans-widows.html
+# css-multicol-1/#spanning-columns 6 Spanning Columns: no page; it introduces column-span, which 6.1 shows
+css-multicol-1/#column-span 6.1 Spanning An Element Across Columns: the column-span property
+    column-span.html
+    column-span-descendants.html
+    spanner-empty-fragment.html
+    column-span-containing-block.html
+    spanner-margins.html
+    spanner-margins-columns.html
+    spanner-no-room.html
+css-multicol-1/#filling-columns 7 Filling Columns
+    balancing.html
+css-multicol-1/#cf 7.1 Column Balancing: the column-fill property
+    column-fill.html
+    column-fill-lines.html
+# css-multicol-1/#overflow 8 Overflow: no page; it introduces 8.1 and 8.2
+css-multicol-1/#overflow-inside-multicol-elements 8.1 Overflow Inside Multicol Containers
+    overflow-inside.html
+css-multicol-1/#pagination-and-overflow-outside-multicol 8.2 Pagination and Overflow Outside Multicol Containers
+    overflow-columns.html
+    overflow-columns-height.html
+    overflow-clip.html
+# css-multicol-2/#interaction 2 Module Interactions: no page; it says level 2 will replace level 1, whose pages above walk what the two share
+# css-multicol-2/#the-multi-column-model 3 The multi-column model: no page; it adds multicol rows, which 4.2, 4.4 and 5.2 show
+css-multicol-2/#ch 4.2 The Block Size of Columns: the column-height property
+    column-height.html
+    column-height-spanners.html
+css-multicol-2/#cwr 4.4 The overflow direction: the column-wrap property
+    column-wrap.html
+css-multicol-2/#columns 4.5 The column-width, column-count, and column-height Shorthand: The columns Property
+    columns-column-height.html
+css-multicol-2/#pseudo-algorithm 4.6 The Pseudo-algorithm
+    column-height-alone.html
+css-multicol-2/#column-pseudo 4.8 Styling Columns: the ::column pseudo-element
+    column-pseudo.html
+css-multicol-2/#rg 5.2 Gutters Between Rows: the row-gap property
+    row-gap.html
+# css-multicol-2/#crc 5.3 The Color, Width, and Style of Column Rules: the gap decoration properties: no page; the properties are CSS Gaps 1's, whose pages are in css-gaps, and 4.2 to 4.5 of level 1 show the column rules
+css-multicol-2/#column-span 7.1 column-span
+    column-span-integer.html
+# css-multicol-2/#pagination-and-overflow-outside-multicol 9.2 Pagination and Overflow Outside Multicol Containers: no page; it adds the wrapping direction, which 4.4 shows

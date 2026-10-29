@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline boxes in bidirectional text: rtl</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .deco {
+    margin: 0 10px;
+    padding: 0 4px;
+    background: #f9cc9d;
+    border-left: 6px solid #c0392b;
+    border-right: 6px solid #2c5a8f;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.6 The box model for inline elements in bidirectional context</div>
+  <h1>Inline boxes in bidirectional text: rtl</h1>
+  <p class=pr-lede>Margins, borders and padding of an inline element go on its line boxes in visual order. Its left border is red and its right blue.</p>
+</header>
+
+<section>
+  <h2>direction: rtl</h2>
+  <p><q>When the element's 'direction' property is 'rtl', the right-most generated box of the first line box in which
+  the element appears has the right padding, right border and right margin, and the left-most generated box of the
+  last line box in which the element appears has the left margin, left border and left padding.</q> The text is Hebrew,
+  which reads from the right. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#bidi-box-model">CSS 2 §8.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text" dir=rtl>לפני <span class=deco>האלמנט מתחיל כאן וממשיך הלאה על פני שלוש שורות שלמות,
+    דרך שורה ארוכה באמצע, עד שהוא מסתיים כאן</span> אחרי.</div>
+    <figcaption>Blue at the right of the element's first line, which starts at the right; red at the left of its last.
+    The line between has neither.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide pr-text" dir=rtl>לפני <span class=deco>בשורה אחת</span> אחרי.</div>
+    <figcaption>On one line: blue on its right, red on its left, as in left-to-right text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The element's direction decides, not the text's</h2>
+  <p>Which sides go where follows the element's <code>direction</code>. Here the element is right-to-left, but its text
+  is English, so each line of it reads from the left. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#bidi-box-model">CSS 2 §8.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text" dir=rtl><span class=deco>the element starts here and runs on across two lines to end
+    here</span></div>
+    <figcaption>The first line still has the blue right side, and the last the red left side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

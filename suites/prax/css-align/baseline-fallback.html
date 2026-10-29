@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline alignment without a group</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .blk { height: 60px; }
+  .g { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 4px; height: 60px; }
+  .g > div { background: #f9cc9d; padding: 0 3px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.2 Baseline Alignment, fallback</div>
+  <h1>Baseline alignment without a group</h1>
+  <p class=pr-lede><q>If a box does not belong to a shared alignment context, then the fallback alignment is used. For
+  example, align-content: baseline on a block box falls back to start alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-values">CSS Box Alignment 3 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>A block box</h2>
+  <p>The fallback of <code>first baseline</code> for content-distribution is <q>safe start</q>, and of <code>last
+  baseline</code> <q>safe end</q>. Each stage is a block 60px tall holding A.</p>
+  <figure>
+    <div class="pr-stage blk" style="align-content: baseline"><div class=pr-a>A</div></div>
+    <figcaption><code>align-content: baseline</code>: A at the top.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage blk" style="align-content: last baseline"><div class=pr-a>A</div></div>
+    <figcaption><code>align-content: last baseline</code>: A at the bottom. <span class=pr-flag>Chrome</span> A at
+    the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Content distribution under baseline self-alignment</h2>
+  <p><q>if its content-distribution property in the same axis is normal, its used content-distribution property in
+  that axis is start or safe end for a baseline alignment preference of its baseline self-alignment of “first” or
+  “last”, respectively.</q> In a grid row 60px tall, A is one line; B is 50px tall with one line, both
+  <code>align-self: last baseline</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div style="align-self: last baseline">A</div><div style="align-self: last baseline; height: 50px">B</div></div></div>
+    <figcaption>B's line at the bottom of B, as <code>safe end</code>; B at the bottom of the row, and A on its
+    baseline, at the bottom too. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> B's line at its top, A beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div style="align-self: first baseline">A</div><div style="align-self: first baseline; height: 50px">B</div></div></div>
+    <figcaption><code>first baseline</code>: B's line at its top, as <code>start</code>; A and B at the top of the
+    row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

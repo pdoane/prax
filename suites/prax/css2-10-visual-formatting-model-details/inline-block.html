@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Widths: inline-block, non-replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ib { display: inline-block; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.9 'Inline-block', non-replaced elements in normal flow</div>
+  <h1>Widths: inline-block, non-replaced elements</h1>
+  <p class=pr-lede>Each orange box is an inline-block with text in it, on a line of the 200px stage.</p>
+</header>
+
+<section>
+  <h2>Shrink-to-fit</h2>
+  <p><q>If 'width' is 'auto', the used value is the shrink-to-fit width as for floating elements.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inlineblock-width">CSS 2 §10.3.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <div class="pr-chip ib">two words</div> b</div>
+    <figcaption>Short text: the box is as wide as its one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-chip ib">An inline-block whose text is too long for one line.</div></div>
+    <figcaption>Long text: the box takes the available width, filling the stage with its border, and its text
+    wraps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto margins are 0</h2>
+  <p><q>A computed value of 'auto' for 'margin-left' or 'margin-right' becomes a used value of '0'.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inlineblock-width">CSS 2 §10.3.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-chip ib" style="width: 100px; margin: 0 auto">margin: 0 auto</div></div>
+    <figcaption>A 100px inline-block with <code>margin: 0 auto</code> is not centered: it is at the start of the
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a<div class="pr-chip ib" style="margin: 0 auto">box</div>b</div>
+    <figcaption>Between a and b, with no spaces: auto margins leave no gap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

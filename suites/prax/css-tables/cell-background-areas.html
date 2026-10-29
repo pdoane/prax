@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cell backgrounds: originating tracks, and their areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.3.2 Drawing cell backgrounds, areas</div>
+  <h1>Cell backgrounds: originating tracks, and their areas</h1>
+  <p class=pr-lede>A cell draws the backgrounds of its <em>originating</em> column group, column, row group and row.
+  For positioning, <q>it is expected that a row occupies the largest possible area a single cell could occupy in the
+  row/column grid while originating in the row and not entering any other row.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#drawing-cell-backgrounds">CSS Table 3 §5.3.2</a></span>
+  Grey tables, <code>border-spacing: 10px</code>, cells 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Only the originating row</h2>
+  <figure>
+    <div class=pr-stage><table><tr style="background: #4f81bd"><td rowspan=2></td><td></td></tr><tr style="background: #d68a3c"><td></td></tr></table></div>
+    <figcaption>A cell spanning a blue row and an orange one: all blue, its first row's, 50px tall; the orange row's
+    one cell orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><col style="background: #4f81bd"><col style="background: #d68a3c"><tr><td colspan=2></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption>A cell spanning a blue column and an orange one: all blue, its first column's.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The row's area</h2>
+  <p>A gradient on the first row from blue at its top to orange at its bottom. The cell spanning both rows draws it
+  over the row's own area, 20px tall, and the image repeats below it.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr style="background-image: linear-gradient(#4f81bd, #d68a3c)"><td rowspan=2></td><td></td></tr><tr><td></td></tr></table></div>
+    <figcaption>The spanning cell: blue to orange in its top 20px, the row's height, then blue to orange again in the
+    next 20px and in the 10px left, as the image repeats; the cell beside it blue to orange once. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw
+    the image in the top 20px only, and leave the rest of the cell clear.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

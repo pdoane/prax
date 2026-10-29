@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsing through a box: when it does not</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Collapsing through a box: when it does not</h1>
+  <p class=pr-lede><q>If the top and bottom margins of a box are adjoining, then it is possible for margins to collapse through it.</q> A dashed outline is such a box. Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>When they do not</h2>
+  <p>Each condition broken in turn. The box between A and B again has mt 30 and mb 10, and now its margins are apart:
+  30 above it and 10 below. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; min-height: 10px"></div><div class=pr-b>B</div></div>
+    <figcaption><code>min-height: 10px</code>: 30 + 10 + 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; height: 10px"></div><div class=pr-b>B</div></div>
+    <figcaption><code>height: 10px</code>: 30 + 10 + 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; padding-top: 10px"></div><div class=pr-b>B</div></div>
+    <figcaption><code>padding-top: 10px</code>: 30 + 10 + 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; border-bottom: 10px solid #c0392b"></div><div class=pr-b>B</div></div>
+    <figcaption><code>border-bottom: 10px</code>: 30 + 10 + 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="line-height: 10px"><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; font-size: 10px">text</div><div class=pr-b>B</div></div>
+    <figcaption>A 10px line of text inside: 30 + 10 + 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px; overflow: hidden"></div><div class=pr-b>B</div></div>
+    <figcaption><code>overflow: hidden</code> makes it a block formatting context root, whose margins do not collapse
+    through: 30 + 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text decoration's fill and stroke</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 36px "PR Arimo"; }
+  .under { text-decoration: underline; text-decoration-thickness: 6px; text-decoration-skip-ink: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.11 Text decoration</div>
+  <h1>Text decoration's fill and stroke</h1>
+  <p class=pr-lede><q>The fill and stroke of the text decoration are given by the fill and stroke of the text at the
+  point where the text decoration is declared</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextDecorationProperties">SVG 2 §11.11</a></span>
+  Each stage is an SVG 160 by 60 holding "Text" in 36px bold PR Arimo at <code>x="20" y="40"</code>, underlined 6
+  thick; Safari draws the line thinner, ignoring <code>text-decoration-thickness</code>, which these figures
+  do not test.</p>
+</header>
+
+<section>
+  <h2>The declaring element's paint</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big under" x="20" y="40">Te<tspan fill="#d68a3c">xt</tspan></text></svg></div>
+    <figcaption>Underlined on the <code>text</code>, blue; "xt" an orange <code>tspan</code>: the underline blue
+    the whole way, under "xt" too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class=big x="20" y="40">Te<tspan class=under fill="#d68a3c">xt</tspan></text></svg></div>
+    <figcaption>Underlined on the orange <code>tspan</code> of "xt": an orange underline under "xt" only.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big under" x="20" y="40" fill="none" stroke="#2c5a8f" stroke-width="1.5">Te<tspan fill="#d68a3c">xt</tspan></text></svg></div>
+    <figcaption>The <code>text</code> unfilled, stroked blue: the underline outlined in blue, hollow, under "xt"
+    too, though "xt" is filled orange. <span class=pr-flag>Firefox</span> Under "xt" the
+    underline is filled orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The declaring element's paint-order</h2>
+  <p><q>The paint order of the text decoration itself (fill/stroke) is determined by the value of the paint-order
+  property at the point where the text decoration is declared.</q> The underline is stroked orange 4 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big under" x="20" y="40" stroke="#d68a3c" stroke-width="4">Text</text></svg></div>
+    <figcaption>Filled, then stroked: the orange stroke over the blue fill, 2 of it on the fill along each edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big under" x="20" y="40" stroke="#d68a3c" stroke-width="4" paint-order="stroke">Text</text></svg></div>
+    <figcaption><code>paint-order="stroke"</code>: the stroke first, the fill over it, the blue line wider and its
+    orange edge thinner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

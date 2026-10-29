@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>One animation for one image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 10px 0; font-size: 0; line-height: 0; }
+  .pic img + img { margin-left: 10px; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.3.2 Reacting to DOM mutations</div>
+  <h1>One animation for one image</h1>
+  <p class=pr-lede>An img's insertion is one of its relevant mutations, which update its image data. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#reacting-to-dom-mutations">HTML §4.8.4.3.2</a></span>
+  Where the image is animated, it joins the other imgs of the same image. <code>once.gif</code> is 80 by 40 and plays
+  once: blue, orange, green and purple, half a second each, then stays purple.</p>
+</header>
+
+<section>
+  <h2>One animation, however many imgs</h2>
+  <p><q>All animated images with the same absolute URL and the same image data are expected to be rendered
+  synchronized to the same timeline as a group, with the timeline starting at the time of the least recent addition to
+  the group.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#images-3">§15.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pic id=group></div>
+      <div class=act><button class=pr-target id=add>Add an img of once.gif</button></div>
+      <div class=act><button class=pr-target id=restart>Set the first one's src to the same value</button></div>
+    </div>
+    <figcaption>Press the button, then again while the first plays: the second appears at the first's color and the
+    two change together. Pressed after the first has finished, the new one is purple at once. The second button
+    restarts them all together.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("restart").addEventListener("click", () => {
+      const first = document.querySelector("#group img");
+      if (first)
+          first.src = first.getAttribute("src");
+  });
+  document.getElementById("add").addEventListener("click", () => {
+      const group = document.getElementById("group");
+      if (group.children.length < 3)
+          group.append(Object.assign(document.createElement("img"), {src: "support/once.gif", alt: ""}));
+  });
+</script>
+</body>
+</html>

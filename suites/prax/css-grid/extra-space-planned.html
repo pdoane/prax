@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributing extra space: the planned increase</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; width: 10px; }
+  .p { background: #b9cde6; }
+  .q { background: #f6d7b4; }
+  .m1 { height: 10px; background: #4f81bd; }
+  .m2 { height: 10px; background: #d68a3c; }
+  .m3 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5.1 Distributing Extra Space Across Spanned Tracks, planned increase</div>
+  <h1>Distributing extra space: the planned increase</h1>
+  <p class=pr-lede><q>Maintain separately for each affected track a planned increase, initially set to 0. (This
+  prevents the size increases from becoming order-dependent.)</q> <q>For each affected track, if the track’s
+  item-incurred increase is larger than the track’s planned increase set the track’s planned increase to that
+  value.</q> <q>Update the tracks' affected sizes by adding in the planned increase</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#extra-space">CSS Grid Layout 2 §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The largest increase, not the sum</h2>
+  <p>Each grid is 10px wide (dashed), with <code>auto</code> columns, so each column is its base size; bars in the last
+  row show the columns. Blue and orange both span two columns, and are sized together.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto"><div class=p style="grid-column: span 2">abcdef</div><div class=q style="grid-column: span 2">abcdefgh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption>Blue "abcdef" asks 30px of each column, orange "abcdefgh" 40px: each grows by 40px, not 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto auto"><div class=p style="grid-column: 1 / span 2">abcdef</div><div class=q style="grid-column: 2 / span 2">abcdef</div><div class=m1></div><div class=m2></div><div class=m3></div></div></div>
+    <figcaption>Blue spans the first two of three, orange the last two, each 60px: each asks 30px of the middle
+    column, which grows by 30px: 30px each. One after the other would give 30, 45 and 15px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

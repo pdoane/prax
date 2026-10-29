@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 1: irrelevant boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, stage 1</div>
+  <h1>Fixup, stage 1: irrelevant boxes</h1>
+  <p class=pr-lede><q>Remove irrelevant boxes: The following boxes are discarded as if they were display:none</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span>
+  Tinted, dashed boxes are tables with <code>border-spacing: 10px</code>; blue boxes are cells.</p>
+</header>
+
+<section>
+  <h2>Inside columns</h2>
+  <p><q>Children of a table-column.</q> <q>Children of a table-column-group which are not a table-column.</q></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-column><div style="display: block; height: 20px; background: #c0392b">gone</div></div><div class="pr-table-cell blue">A</div></div></div>
+    <figcaption>A red block inside a column: not drawn, and the table holds only A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-column-group>gone<div class=pr-table-column></div></div><div class="pr-table-cell blue">A</div></div></div>
+    <figcaption>Text inside a column group: not drawn; the group's column is kept, and draws nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>White space beside table boxes</h2>
+  <p><q>Anonymous inline boxes which contain only white space and are between two immediate siblings each of which is
+  a table-non-root box.</q> <q>Anonymous inline boxes which meet all of the following criteria: they contain only white
+  space; they are the first and/or last child of a tabular container; whose immediate sibling, if any, is a
+  table-non-root box</q>. Every stage below has spaces and line breaks between its elements.</p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent" style="white-space: pre"> <div class=pr-table-row> <div class="pr-table-cell blue">A</div> <div class="pr-table-cell blue">B</div> </div> </div></div>
+    <figcaption>Spaces around and between the row and cells, even with <code>white-space: pre</code>: all discarded,
+    so A and B are the only cells, 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="border-spacing: 10px"><div class="pr-table pr-parent">
+      <span>a</span> <span>b</span>
+    </div></div>
+    <figcaption>A space between two <code>span</code>s, which are not table boxes: kept, in the one anonymous cell
+    around them, so the cell reads "a b", 30px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

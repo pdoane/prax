@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fullwidth punctuation collapsing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 4px; font: 24px/36px "PR Noto Sans JP"; white-space: nowrap; }
+  .pr-stage { width: 100px; }
+  figure { margin-right: 8px; }
+  figure.pr-narrow figcaption { max-width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.5.1 Fullwidth Punctuation Collapsing</div>
+  <h1>Fullwidth punctuation collapsing</h1>
+  <p class=pr-lede><q>unless 'text-spacing-trim' is set to 'space-all' (or the font has proportional fullwidth
+  punctuation glyphs), the UA must collapse the space typically associated with such full width glyphs when placed
+  adjacently on a line</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#fullwidth-collapsing">CSS Text 4 §8.5.1</a></span>
+  At 24px, a trimmed glyph is 12px narrower. In each figure the stage
+  above is <code>space-all</code>, the one below <code>normal</code>.</p>
+</header>
+
+<section>
+  <h2>An opening bracket after</h2>
+  <p>Set half-width <q>if the previous character is any of: a fullwidth opening punctuation, a fullwidth middle dot
+  punctuation, an ideographic space (U+3000), a fullwidth closing punctuation of an equivalent or larger
+  'font-size'</q>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">〔（字</div>
+    <div class="pr-stage ja" lang=ja>〔（字</div>
+    <figcaption>〔（: below, （ 12px narrower. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢・（字</div>
+    <div class="pr-stage ja" lang=ja>漢・（字</div>
+    <figcaption>・（: the same. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢〕（字</div>
+    <div class="pr-stage ja" lang=ja>漢〕（字</div>
+    <figcaption>〕（: one of the two trimmed. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Neither trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢　（字</div>
+    <div class="pr-stage ja" lang=ja>漢　（字</div>
+    <figcaption>U+3000 then （: （ trimmed. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A closing bracket before</h2>
+  <p>Set half-width <q>if the next character is any of: a fullwidth closing punctuation, a fullwidth middle dot
+  punctuation, an ideographic space (U+3000), a fullwidth opening punctuation of a larger 'font-size'</q>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢）〕</div>
+    <div class="pr-stage ja" lang=ja>漢）〕</div>
+    <figcaption>）〕: below, ） 12px narrower. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢）・字</div>
+    <div class="pr-stage ja" lang=ja>漢）・字</div>
+    <figcaption>）・: the same. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢）　字</div>
+    <div class="pr-stage ja" lang=ja>漢）　字</div>
+    <figcaption>） then U+3000: ） trimmed. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢）<span style="font-size: 32px">（</span>字</div>
+    <div class="pr-stage ja" lang=ja>漢）<span style="font-size: 32px">（</span>字</div>
+    <figcaption>） then a larger （: ） trimmed, not the （. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font family names worth quoting</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3 Font family: the 'font-family' property</div>
+  <h1>Font family names worth quoting</h1>
+  <p class=pr-lede><q>Style sheet designers are encouraged to offer a generic font family as a last alternative. Generic
+  font family names are keywords and must NOT be quoted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-family.html">font-family: a list of alternatives</a>.</p>
+</header>
+
+<section>
+  <h2>Quote names with spaces, digits or punctuation</h2>
+  <p><q>To avoid mistakes in escaping, it is recommended to quote font family names that contain white space, digits,
+  or punctuation characters other than hyphens</q>, as in the specification's examples. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2
+  §15.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'New Century Schoolbook', serif">Handgloves</div>
+    <figcaption><code>"New Century Schoolbook", serif</code>: a serif face, Schoolbook's or the generic's.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: '21st Century', fantasy">Handgloves</div>
+    <figcaption><code>'21st Century', fantasy</code>: valid with its quotes; with no such family, the decorative
+    fantasy font draws it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

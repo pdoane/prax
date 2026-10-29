@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The document's focus and the system's</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.3 Document Focus and Focus Context</div>
+  <h1>The document's focus and the system's</h1>
+  <p class=pr-lede><q>When switching between focus contexts, the document's currently focused element and focus ring
+  normally remain in their current state.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-doc-focus">UI Events §3.3.3</a></span></p>
+</header>
+<section>
+  <h2>Away and back</h2>
+  <p><q>if a document has three focusable elements, with the second element focused, when a user changes operating
+  system focus to another application and then back to the browser, the second element will still be focused within
+  the document, and tabbing will change the focus to the third element.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-doc-focus">§3.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=first tabindex=0>first</div>
+        <div class=pr-target id=second tabindex=0>second</div>
+        <div class=pr-target id=third tabindex=0>third</div>
+      </div>
+    </div>
+    <figcaption>Click <code>first</code> and press Tab: <code>second</code> has the focus ring. Switch to another
+    application, then back to the browser by clicking its title bar: <code>second</code> still has the ring. Press
+    Tab: the ring moves to <code>third</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only the document's targets</h2>
+  <p><q>the event target identified in the event details MUST only be part of the document or documents in the window,
+  never a part of the browser or operating system, even when switching from one focus context to another.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-doc-focus">§3.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="focus blur" data-fields="target relatedTarget" data-on="document" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field, then the browser's address bar, then the field again: blur at
+    <code>field</code>, then focus at <code>field</code>. No event's target is the address bar, and no
+    <code>relatedTarget</code> names it: it is <code>null</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

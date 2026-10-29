@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Clicks and double clicks</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; user-select: none; }
+  .parent { margin: 10px 20px; padding: 10px; background: rgba(79, 129, 189, 0.16); outline: 1px dashed var(--pr-line);
+            font-size: 0; user-select: none; }
+  .parent .pr-target { display: inline-block; width: 100px; margin: 0 20px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.3 Mouse Event Order</div>
+  <h1>Clicks and double clicks</h1>
+  <p class=pr-lede><q>The following is the typical sequence of events when a button associated with a pointing device
+  (e.g., a mouse button or trackpad) is pressed and released over an element</q>: mousedown, mouseup, click, and again,
+  then dblclick. <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">Pointer Events §11.3</a></span></p>
+</header>
+<section>
+  <h2>A double click</h2>
+  <p>dblclick: <q>This event type MUST be dispatched after the event type click if a click and double click occur
+  simultaneously, and after the event type mouseup otherwise.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#dblclick">§11.4.4</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Double-click here.</div>
+      <ol class=pr-log data-log="mousedown mouseup click dblclick" data-fields="detail" data-on="#pad" data-lines=7></ol>
+    </div>
+    <figcaption>Double-click the box: the seven events above, in order; <code>detail</code> 1 for the first three,
+    2 for the rest.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Pressed on one element, released on another</h2>
+  <p><q>SHOULD fire click and dblclick events on the nearest common inclusive ancestor when the associated mousedown and
+  mouseup event targets are different.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">§11.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=parent id=parent><div class=pr-target id=a>a</div><div class=pr-target id=b>b</div></div>
+      <ol class=pr-log data-log="mousedown mouseup click" data-fields="target" data-on="#parent" data-lines=3></ol>
+    </div>
+    <figcaption>Press <code>a</code>, release on <code>b</code>: <code>mousedown</code> at <code>a</code>,
+    <code>mouseup</code> at <code>b</code>, <code>click</code> at <code>parent</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Lists and Counters 3 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · Support</div>
+  <h1>CSS Lists and Counters 3 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>display: list-item</code>
+  <code class=pr-decl>display: inline list-item</code>
+  <code class=pr-decl>content: "Note " counter(note-counter) ":  "</code>
+  <code class=pr-decl>content: counters(list-item, '.') '. '</code>
+  <code class=pr-decl>list-style-type: "★ "</code>
+  <code class=pr-decl>list-style-type: symbols(cyclic "○" "●")</code>
+  <code class=pr-decl>list-style-type: no-such-style</code>
+  <code class=pr-decl>list-style-image: linear-gradient(red, blue)</code>
+  <code class=pr-decl>list-style-position: inside</code>
+  <code class=pr-decl>list-style: "→ " inside</code>
+  <code class=pr-decl>marker-side: match-parent</code>
+  <code class=pr-decl>counter-reset: reversed(list-item) 4</code>
+  <code class=pr-decl>counter-increment: n 2 n 3</code>
+  <code class=pr-decl>counter-increment: list-item 0</code>
+  <code class=pr-decl>counter-set: n 7</code>
+  <code class=pr-decl>letter-spacing: 6px</code>
+  <code class=pr-decl>word-spacing: 20px</code>
+  <code class=pr-decl>text-transform: uppercase</code>
+  <code class=pr-decl>font-variant-numeric: proportional-nums</code>
+  <code class=pr-decl>text-combine-upright: all</code>
+  <code class=pr-decl>writing-mode: vertical-rl</code>
+  <code class=pr-decl>writing-mode: sideways-lr</code>
+  <code class=pr-decl>direction: rtl</code>
+  <code class=pr-decl>font-family: "PR Literata"</code>
+  <code class=pr-decl>display: contents</code>
+  <code class=pr-decl>padding-inline-start: 30px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+# Cases in which the engine is right and the corpus is wrong, as decided by docs/behavior.md from the
+# drafts, the browsers and the issues. They count as passing. An entry lists the files or cases it
+# covers, one per line, followed by the indented reason: what the sources say and why the corpus
+# loses. A key is either a file, for a file that throws before it completes, or a file and the
+# indices of its cases, as in `urange-parsing.html:0,30`. `a-b` is a range of indices. A case that
+# the engine has yet to build is a failure, not an erratum. A case that starts agreeing is reported
+# so its entry can be removed.
+
+css/CSS2/generated-content/quotes-036.xht
+    html/#phrasing-content-3 renders a br as a line break whatever its display, so the br elements
+    that the test sets inline break its line where it expects one line of text. Chrome, Firefox and
+    Safari draw the same three lines as the engine.
+
+css/WOFF2/directory-knowntags-001.xht
+css/WOFF2/tabledata-glyf-bbox-001.xht
+css/WOFF2/tabledata-glyf-origlength-001.xht
+css/WOFF2/tabledata-glyf-origlength-002.xht
+css/WOFF2/tabledata-glyf-origlength-003.xht
+    WOFF2 5, "Compressed data format": the reconstructed font "will retain the exact
+    functionality of the input font file", so a test matches its reference only if the reference's font is the one the
+    WOFF2 file holds. Here it is not: the origlength files hold the TrueType test font against
+    the CFF reference, bbox-001 the CFF one against the TrueType reference, and knowntags-001 a
+    font of four glyphs whose advances are not the reference's. Chrome and Safari draw each
+    differently from its reference too.
+
+css/css-conditional/js/CSS-supports-details-content-pseudo-parsing.html:7
+css/css-forms/parsing/picker-select-pseudo-element.html:17
+    css-pseudo-4/#element-backed: "All pseudo-classes and pseudo-elements are syntactically
+    allowed after an element-backed pseudo-element", which ::details-content is, and
+    ::picker(select) is, being the select popover (html/#the-select-element-2). The corpus
+    rejects ::part() and ::slotted() after them, which not every engine does.
+
+css/css-counter-styles/japanese-formal/counter-japanese-formal-extended.html
+css/css-counter-styles/japanese-informal/counter-japanese-informal-extended.html
+css/css-counter-styles/korean-hangul-formal/counter-korean-hangul-formal-extended.html
+css/css-counter-styles/korean-hanja-formal/counter-korean-hanja-formal-extended.html
+css/css-counter-styles/korean-hanja-informal/counter-korean-hanja-informal-extended.html
+    More than half of each file's counters are reset past 2^31, up to 10^16, and the reference writes
+    them in full. css-lists-3/#auto-numbering lets a UA limit a counter's range and clamp a reset to
+    it, and Chrome, Firefox and Safari each clamp at 2147483647, as the engine does. Each row within
+    that range matches the reference.
+
+css/css-display/run-in/run-in-listitem-between-001.xht
+    The reference has no list items, so it matches only if the empty list item takes no height and
+    neither item draws a marker. css-lists-3/#marker-pseudo gives every list item a marker, and an item
+    with no content lays out a line for its marker: an empty item is one line tall in Chrome, Firefox
+    and Safari, and each draws both markers. The file predates markers that browsers draw this way.
+
+css/css-fonts/parsing/font-synthesis-valid.html:3,7,10,14-16,18,20,22
+    css-fonts-4/#propdef-font-synthesis gives the shorthand the value `none | [ weight || style
+    || small-caps || position]`, which holds no oblique-only: that is a value of
+    font-synthesis-style alone (css-fonts-4/#propdef-font-synthesis-style).
+
+css/css-fonts/test_font_feature_values_parsing.html:237,240
+    css-fonts-4/#serializing-at-rules: "multiply-specified tuples and multiple blocks are
+    serialized as a single block containing only the last-defined value".
+
+css/css-fonts/test_font_feature_values_parsing.html:56
+    css-syntax-3/#parse-a-rule returns a syntax error where anything but whitespace follows the
+    rule, and the `}` after `@blah` closes the block of `@font-feature-values bongo { @blah }`,
+    so insertRule throws a SyntaxError (cssom-1/#insert-a-css-rule).
+
+css/css-images/parsing/image-resolution-valid.html:1-2,8-11
+    cssom-1/#serialize-a-css-value: component values that "can be placed in a different order
+    without changing the meaning of the value" are written "in the value's canonical order",
+    which css-images-4/#propdef-image-resolution gives as "per grammar": `from-image` before the
+    <resolution>, and `snap` last. The file expects the order written.
+
+css/css-lists/counter-001.html
+css/css-lists/counter-002.html
+css/css-lists/counter-003.html
+    csswg-drafts#5477 resolved to revert the change that took a counter from a previous sibling only
+    if the parent had none, and the revert landed in css-lists-3/#inheriting-counters
+    (csswg-drafts#13570). So a span's counter-reset nests a counter that its following siblings
+    increment. Firefox and Safari number the spans that way, and the corpus still follows Chrome's
+    reading of the reverted text.
+
+css/css-masking/mask-image/mask-clip-8.html
+    "For elements with associated CSS layout box, the values fill-box, stroke-box and view-box
+    compute to the initial value of mask-origin" (css-masking-1/#the-mask-origin), the border box.
+    The reference places the fill-box layer in the content box, which is mask-clip's mapping
+    (css-masking-1/#the-mask-clip), not mask-origin's. Firefox draws it in the border box.
+
+css/css-multicol/parsing/column-pseudo-valid.html:2-3
+    selectors-4/#sub-pseudo-elements: "Unless the corresponding sub-pseudo-element is explicitly
+    defined to exist in another specification, pseudo-element selectors are not valid when
+    compounded to another pseudo-element selector." css-multicol-2/#column-pseudo defines
+    ::column::scroll-marker, and no spec ::before::column.
+
+css/css-overflow/parsing/scroll-buttons-valid.html:29-36
+    css-overflow-5/#scroll-buttons: "The :disabled pseudo-class can apply to ::scroll-button()",
+    and nothing allows :enabled there; selectors-4/#pseudo-element-states: "Combinations that
+    are not explicitly allowed are invalid selectors."
+
+css/css-syntax/non-ascii-codepoints.html
+    A missing comma makes `[0x203f, 0x2040] [0x2070, 0x218f]` an index expression, so the range
+    list holds undefined and the file throws before it completes, in any engine.
+
+css/css-syntax/urange-parsing.html:0,30,47,66,76,87
+    css-syntax-3/#consume-unicode-range-token brought <unicode-range-token> back, so a comment
+    cannot appear inside one: a tokenizer reading code points cannot skip it. The suite tests
+    the <urange> production css-syntax-3 removed, which was a pattern over existing tokens.
+
+css/css-text/parsing/hanging-punctuation-valid.html:7,9-10,12-16
+    The canonical order of css-text-4/#propdef-hanging-punctuation is "per grammar": `first`,
+    then `force-end` or `allow-end`, then `last`. The file expects the order written, as
+    image-resolution-valid.html:1.
+
+css/css-text/parsing/word-space-transform-valid.html:5-6
+    The canonical order of css-text-4/#propdef-word-space-transform is "per grammar": the
+    keyword before `auto-phrase`. The file expects the order written, as
+    image-resolution-valid.html:1.
+
+css/css-typed-om/stylevalue-serialization/cssKeywordValue.tentative.html:1
+    css-typed-om-1/#keywordvalue-serialization returns the value string unchanged; the test
+    expects identifier escaping.
+
+css/css-typed-om/stylevalue-serialization/cssUnparsedValue.html:0,2
+    css-typed-om-1/#unparsedvalue-serialization concatenates string segments without inserting
+    comments.
+
+css/css-typed-om/the-stylepropertymap/properties/background-position.html
+css/css-typed-om/the-stylepropertymap/properties/object-position.html
+css/css-typed-om/the-stylepropertymap/properties/offset-anchor.html
+css/css-typed-om/the-stylepropertymap/properties/offset-position.html
+css/css-typed-om/the-stylepropertymap/properties/perspective-origin.html
+    The page names the syntax <position>, which resources/testsuite.js has no examples of, so
+    runPropertyTests throws before any case registers, in any engine.
+
+css/mediaqueries/display-mode.tentative.html:0-1
+    mediaqueries-5/#descdef-media-display-mode takes fullscreen, standalone, minimal-ui, browser
+    and picture-in-picture, and no spec defines unframed or window-controls-overlay.
+
+css/mediaqueries/navigation-controls.tentative.html:0-2,7
+    mediaqueries-5/#descdef-media-nav-controls defines nav-controls, whose values are none and
+    back, and no spec defines navigation-controls, which is an unknown <mf-name>
+    (mediaqueries-5/#error-handling).
+
+css/selectors/parsing/parse-has-slotted.tentative.html:0-17
+    css-shadow-1/#selectordef-has-slotted defines :has-slotted with no argument; no spec has the
+    functional form the corpus tests.
+
+html/semantics/embedded-content/the-img-element/list-of-available-images-does-not-coalesce-in-flight-requests.sub.tentative.html:0
+    whatwg/html#7005 is open on whether an in-flight image request enters the list of available
+    images, and the test says itself that no browser keeps two requests for the same image apart,
+    as it expects. Its two trickled loads race each other, and the count that the server reports
+    depends on which arrives first.
+
+html/semantics/forms/the-select-element/customizable-select/selectedcontent-insertion-removal.html:0
+    html/#the-selectedcontent-element: a selectedcontent's removing steps run "update a select's
+    selectedcontent" for the select it leaves, which fills the next selectedcontent. The corpus
+    follows whatwg/html#12263, which defers that update and is not merged.
+
+html/semantics/grouping-content/the-li-element/grouping-li-reftest-list-owner-parent.html
+    html/#css-list-rendering leaves the markers of a CSS user agent to css-lists-3, whose list-item
+    counter numbers an li outside a list after the items before it; the list owner's ordinal value
+    (html/#list-owner) is for non-CSS user agents. Chrome and Safari number the li from its parent,
+    Firefox follows the specifications, and csswg-drafts#5477 (Loirooriol, 2024-08) confirms Firefox.
+    The narrow list-item scope that csswg-drafts#9076 resolved to support covers counter-reset, which
+    nothing here declares.
+
+html/syntax/parsing/html5lib_write.html?file=template:43-45
+html/syntax/parsing/html5lib_write_single.html?file=template:43-45
+    html/#parsing-main-inhead sets the frameset-ok flag to "not ok" when a template start tag is
+    handled, so the frameset that follows one is ignored. The corpus predates that step and
+    expects the frameset to replace the body; template:46 and template:47 expect the flag to have
+    been cleared, so the corpus disagrees with itself here (tools/suite/html_tree.py records the same).
+

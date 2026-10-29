@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feGaussianBlur</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=zero x=-1 y=-1 width=3 height=3><feGaussianBlur stdDeviation="0"/></filter>
+  <filter id=both x=-1 y=-1 width=3 height=3><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id=x-only x=-1 y=-1 width=3 height=3><feGaussianBlur stdDeviation="6 0"/></filter>
+  <filter id=negative x=-1 y=-1 width=3 height=3><feGaussianBlur stdDeviation="-4"/></filter>
+  <filter id=edge-none x=0 y=0 width=1 height=1><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id=edge-duplicate x=0 y=0 width=1 height=1><feGaussianBlur stdDeviation="6" edgeMode="duplicate"/></filter>
+  <filter id=edge-wrap x=0 y=0 width=1 height=1><feGaussianBlur stdDeviation="6" edgeMode="wrap"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.14 Filter primitive feGaussianBlur</div>
+  <h1>feGaussianBlur</h1>
+  <p class=pr-lede><q>This filter primitive performs a Gaussian blur on the input image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feGaussianBlurElement">Filter Effects 1 §9.14</a></span>
+  In the first card each stage is an SVG 100 by 60 with an orange square 20 by 20 at (40, 20), outlined dashed, and
+  a filter region three times its size. A blur kernel is an approximation, so the browsers' soft edges differ
+  slightly.</p>
+</header>
+
+<section>
+  <h2>One or two deviations</h2>
+  <p><q>If one number is provided, then that value is used for both X and Y.</q> <q>If stdDeviation is 0 in only one of
+  X or Y, then the effect is that the blur is only applied in the direction that has a non-zero value.</q> <q>A
+  negative value or a value of zero disables the effect of the given filter primitive (i.e., the result is the filter
+  input image).</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=60><rect x=40 y=20 width=20 height=20 fill="#d68a3c" filter="url(#both)"/><rect x=40 y=20 width=20 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>4</code>: soft on all four sides, faded out about 12px past each.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=60><rect x=40 y=20 width=20 height=20 fill="#d68a3c" filter="url(#x-only)"/><rect x=40 y=20 width=20 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>6 0</code>: spread left and right only; the top and bottom edges stay sharp at y 20 and
+    40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=60><rect x=40 y=20 width=20 height=20 fill="#d68a3c" filter="url(#zero)"/><rect x=40 y=20 width=20 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>0</code>, the initial value: the square, sharp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><svg width=100 height=60><rect x=40 y=20 width=20 height=20 fill="#d68a3c" filter="url(#negative)"/><rect x=40 y=20 width=20 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>-4</code>: the same. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Past the input's edges: edgeMode</h2>
+  <p>Each rectangle fills its own filter region, 120 by 40 at (20, 10), so the blur reaches past the edges of its
+  input. <q>The initial value for edgeMode is none.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=60><rect x=20 y=10 width=120 height=40 fill="#d68a3c" filter="url(#edge-none)"/></svg></div>
+    <figcaption><code>none</code>: <q>extended with pixel values of zero</q>, so the edges fade toward
+    transparent. <span class=pr-flag>Safari</span> Solid to the edges.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=60><rect x=20 y=10 width=120 height=40 fill="#d68a3c" filter="url(#edge-duplicate)"/></svg></div>
+    <figcaption><code>duplicate</code>: the edge colors repeat outward, so it stays solid orange to the
+    edges. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Faded, as for none.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=60><rect x=20 y=10 width=120 height=40 fill="#d68a3c" filter="url(#edge-wrap)"/></svg></div>
+    <figcaption><code>wrap</code>: the opposite edge's colors, the same orange, so solid too. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Faded.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-width: the sizing keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .mc { font: 15px/20px "PR Cousine"; column-gap: 10px; column-rule: 1px solid #c0392b; }
+  .mc div { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.4 New Column Sizing Values</div>
+  <h1>column-width: the sizing keywords</h1>
+  <p class=pr-lede><q>When used as values for column-width, the new keywords specify the optimal column width</q>.
+  <q>The column width never varies by column. When the column width is informed by the multi-column container's
+  contents (as in the keywords above), all of its contents are taken under consideration and the calculated width is
+  shared by all the columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#column-sizing">CSS Box Sizing 3 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>Optimal widths from the contents</h2>
+  <p>Each stage is a multi-column container 200px wide with <code>column-gap: 10px</code> and red rules between
+  columns, holding six orange lines of "abc def" (63px, its words 27px). As many columns as fit at the optimal width
+  are made, then widened to fill the container.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: min-content"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>min-content</code>: 27px, the widest word, so five columns of 32px, each line wrapped in two.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One
+    column: the declaration is not supported.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: max-content"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>max-content</code>: 63px, so two columns of 95px, three lines each. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One
+    column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: fit-content"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>fit-content</code>: min(63, max(27, 200)), 63px: two columns. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One
+    column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage mc" style="column-width: stretch"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>stretch</code>: the container's 200px, one column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

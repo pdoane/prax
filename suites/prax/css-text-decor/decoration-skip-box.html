@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-skip-box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 5px 0; }
+  .u { text-decoration: underline #c0392b 3px; text-underline-offset: 3px; }
+  .box { margin: 0 10px; padding: 0 10px; border: 0 solid transparent; border-width: 0 10px; outline: 1px dashed #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10.2 Skipping Spaces: the text-decoration-skip-box property</div>
+  <h1>text-decoration-skip-box</h1>
+  <p class=pr-lede><q>This property specifies what parts of the element's box area any text decoration affecting the
+  element must skip over. It controls only text decoration lines drawn by its ancestors.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-skip-box-property">CSS Text Decoration 4 §2.10.2</a></span>
+  In each stage the outer span is underlined in red; "c" is in an inner span, dashed, with a 10px margin, a
+  transparent 10px border and 10px padding on each side. The text is monospace, 10px a character.</p>
+</header>
+
+<section>
+  <h2>none and all</h2>
+  <p><code>none</code>: <q>Skip nothing: line decorations from ancestor decorating boxes are drawn from margin edge to
+  margin edge.</q> <code>all</code>: <q>skip over the box's own margin, border, and padding areas and only draw line
+  decorations within its content area.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u>ab<span class=box>c</span>d</span></div>
+    <figcaption><code>none</code>, initial: one line from x=0 to 100, across the inner span's margins, borders and
+    padding. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> skip them, as for <code>all</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=u>ab<span class=box style="text-decoration-skip-box: all">c</span>d</span></div>
+    <figcaption><code>all</code>: under "ab" (0 to 20), "c" (50 to 60) and "d" (90 to 100) only, as all three draw it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Never over the decorating box's own</h2>
+  <p><q>This value only has an effect for decorations imposed by an ancestor; a decorating box never draws over its own
+  box decoration.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class="u box" style="text-decoration-skip-box: none">abc</span></div>
+    <figcaption>The dashed span itself underlined, with <code>none</code>: the line is under "abc" only, x=30 to
+    60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

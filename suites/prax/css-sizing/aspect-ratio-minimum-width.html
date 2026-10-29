@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content-based minimum, in the inline axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { height: 110px; }
+  .r { height: 100px; aspect-ratio: 1 / 1; background: #b9cde6; outline: 1px solid #2c5a8f; line-height: 0; }
+  .ib { display: inline-block; height: 20px; background: #d68a3c; outline: 1px solid #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.3 Automatic Content-based Minimum Sizes, inline axis</div>
+  <h1>The content-based minimum, in the inline axis</h1>
+  <p class=pr-lede><q>This automatic minimum operates in both axes.</q> <q>The width of the container, being auto,
+  resolves through the aspect ratio to 100px. However, its min-width, being auto, resolves to 150px. The resulting
+  width of the container is thus 150px. To ignore the contents when sizing the container, min-width: 0 can be
+  specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio-minimum">CSS Box Sizing 4 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>The spec's example</h2>
+  <p>A blue <code>height: 100px; aspect-ratio: 1 / 1</code> box, as a float so that its width is auto and not
+  stretched, holds orange inline-blocks 50px and 150px wide.</p>
+  <figure>
+    <div class="pr-stage s"><div class=r style="float: left"><span class=ib style="width: 50px"></span> <span class=ib style="width: 150px"></span></div></div>
+    <figcaption>The min-content width, 150px, is the minimum: the box is 150 by 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=r style="float: left; min-width: 0"><span class=ib style="width: 50px"></span> <span class=ib style="width: 150px"></span></div></div>
+    <figcaption><code>min-width: 0</code>: 100 by 100, the wider inline-block overflowing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A scroll container has no such minimum</h2>
+  <figure>
+    <div class="pr-stage s"><div class=r style="float: left; overflow: auto"><span class=ib style="width: 50px"></span> <span class=ib style="width: 150px"></span></div></div>
+    <figcaption><code>overflow: auto</code>: 100 by 100, the content scrolling.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

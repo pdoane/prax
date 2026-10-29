@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Types multiply and divide</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { column-gap: 10px; column-rule: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.9 Type Checking</div>
+  <h1>Types multiply and divide</h1>
+  <p class=pr-lede><q>Operators form sub-expressions, which gain types based on their arguments.</q> <q>In previous
+  versions of this specification, multiplication and division were limited in what arguments they could take</q>
+  <q>This version now relaxes those restrictions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-type-checking">CSS Values and Units 4 §10.9</a></span></p>
+</header>
+
+<section>
+  <h2>A length over a length</h2>
+  <p><q>At a / sub-expression</q>, the right type is inverted and multiplied in: a length divided by a length is a
+  number, and a length squared over a length a length. Each bar's <code>width</code> is under it.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(120px * 120px / 144px)">A</div></div>
+    <figcaption><code>calc(120px * 120px / 144px)</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 20px"><div class="pr-a pr-fit" style="width: calc(10px * (8em / 10px))">A</div></div>
+    <figcaption><code>calc(10px * (8em / 10px))</code> in 20px text: 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="column-count: calc(150px / 50px)">one two three four five six</div>
+    <figcaption><code>column-count: calc(150px / 50px)</code>: the number 3, three columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A number where an integer goes</h2>
+  <p><q>math functions that resolve to &lt;number&gt; can be used in any place that only accepts &lt;integer&gt;; the
+  value is rounded to the nearest integer as it resolves.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="column-count: calc(7 / 4)">one two three four</div>
+    <figcaption><code>column-count: calc(7 / 4)</code>: 1.75, two columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The script element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.9 The ‘script’ element</div>
+  <h1>The script element</h1>
+  <p class=pr-lede><q>A ‘script’ element is equivalent to the ‘script’ element in HTML and thus is the place for scripts
+  (e.g., ECMAScript). Any functions defined within any ‘script’ element have a "global" scope across the entire current
+  document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#ScriptElement">SVG 2 §15.9</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10, orange until a script makes it blue.</p>
+</header>
+
+<section>
+  <h2>Run, inline or by href, never rendered</h2>
+  <p><q>A ‘script’ element must be processed as an HTML script element is, following prepare the script element, with
+  its ‘href’ attribute in place of the HTML src attribute.</q> <q>The script's text content is never directly
+  rendered</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id=inline x="20" y="10" width="120" height="40" fill="#d68a3c" /><script>document.getElementById("inline").setAttribute("fill", "#4f81bd");</script></svg></div>
+    <figcaption>An inline <code>script</code> after the rect: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id=external x="20" y="10" width="120" height="40" fill="#d68a3c" /><script href="support/paint.js"></script></svg></div>
+    <figcaption><code>href="support/paint.js"</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id=global x="20" y="10" width="120" height="40" fill="#d68a3c" /><script class=shown>function paintGlobal() { document.getElementById("global").setAttribute("fill", "#4f81bd"); }</script></svg></div>
+    <figcaption>A function defined in it, <code>display: inline !important</code> on it, called by the page's last
+    HTML script: blue, and no text drawn.</figcaption>
+  </figure>
+</section>
+
+<script>paintGlobal();</script>
+</body>
+</html>

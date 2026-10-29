@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Corner shaping: partial curves and outer edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .partial { width: 40px; height: 40px; margin: 10px; border: solid 20px; border-color: #d68a3c #d68a3c #b5bcc7 #b5bcc7; border-top-right-radius: 100%; background: #b9cde6; background-clip: padding-box; }
+  .shadow { width: 100px; height: 40px; margin: 30px; border-radius: 4px; background: #4f81bd; box-shadow: 0 0 0 20px rgba(214, 138, 60, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3 Corners, the edges' curves</div>
+  <h1>Corner shaping: partial curves and outer edges</h1>
+  <p class=pr-lede><q>The margin edge, being outside the border edge, calculates its radius by adding the corresponding
+  margin thickness to each border radius, with the corresponding outset-adjusted border radius applied.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corners">CSS Borders and Box Decorations 4 §3</a></span></p>
+</header>
+
+<section>
+  <h2>A curve past the opposite padding edge</h2>
+  <p>A note: <q>If the center of a corner's outer curve is past an opposite padding edge (in the border area of a side
+  opposite the corner), the inner curve will not be a full quarter ellipse.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=partial></div></div>
+    <figcaption>40 by 40, a 20px border, <code>border-top-right-radius: 100%</code>: the blue padding box's curve is
+    less than 90°.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outward, the radius grows less where it is small</h2>
+  <p>The same adjustment applies to a shadow's spread. A 4px radius
+  outset by 20px, in a box 100 wide and 40 tall: the coverage is 2 × 4 / 100 = 0.08 and the ratio
+  4 / 20 = 0.2, so the radius becomes
+  4 + 20 × (1 − (1 − 0.2)³ × (1 − coverage³)) ≈ 13.8, not 24.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=shadow></div></div>
+    <figcaption>Radius 4, spread 20: shadow corners of radius 13.8. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 24.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=shadow style="border-radius: 30px"></div></div>
+    <figcaption>Radius 30, more than the spread: 30 + 20 = 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

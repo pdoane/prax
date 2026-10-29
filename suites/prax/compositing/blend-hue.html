@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hue: the source's hue</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .over > div > div { height: 20px; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  pre.pr-source { margin-right: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.2.1 hue blend mode</div>
+  <h1>hue: the source's hue</h1>
+  <p class=pr-lede><q>Creates a color with the hue of the source color and the saturation and luminosity of the backdrop color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blendinghue">Compositing and Blending 2 §10.2.1</a></span></p>
+</header>
+
+<section>
+  <h2><code>B(Cb, Cs) = SetLum(SetSat(Cs, Sat(Cb)), Lum(Cb))</code></h2>
+  <p>Rows, top to bottom: the backdrop, black, white, grey 50%, blue and orange; the source; <code>mix-blend-mode</code>; <code>background-blend-mode</code> over the backdrop as <code>background-color</code>; the formula's color and its hex.</p>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div></div><div class=over><div style="background: #000000"><div style="background: #8e44ad; mix-blend-mode: hue"></div></div><div style="background: #ffffff"><div style="background: #8e44ad; mix-blend-mode: hue"></div></div><div style="background: #808080"><div style="background: #8e44ad; mix-blend-mode: hue"></div></div><div style="background: #4f81bd"><div style="background: #8e44ad; mix-blend-mode: hue"></div></div><div style="background: #d68a3c"><div style="background: #8e44ad; mix-blend-mode: hue"></div></div></div><div><div style="background: linear-gradient(#8e44ad, #8e44ad) #000000; background-blend-mode: hue"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #ffffff; background-blend-mode: hue"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #808080; background-blend-mode: hue"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #4f81bd; background-blend-mode: hue"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #d68a3c; background-blend-mode: hue"></div></div><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #a355c3"></div><div style="background: #d268ff"></div></div><div class=hex><div>000000</div><div>ffffff</div><div>808080</div><div>a355c3</div><div>d268ff</div></div></div>
+    <figcaption>Purple: over black, white and grey, saturation 0, so the backdrop itself; over blue, purple at blue's saturation and luminosity, <code>#a355c3</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #0000ff"></div><div style="background: #0000ff"></div><div style="background: #0000ff"></div><div style="background: #0000ff"></div><div style="background: #0000ff"></div></div><div class=over><div style="background: #000000"><div style="background: #0000ff; mix-blend-mode: hue"></div></div><div style="background: #ffffff"><div style="background: #0000ff; mix-blend-mode: hue"></div></div><div style="background: #808080"><div style="background: #0000ff; mix-blend-mode: hue"></div></div><div style="background: #4f81bd"><div style="background: #0000ff; mix-blend-mode: hue"></div></div><div style="background: #d68a3c"><div style="background: #0000ff; mix-blend-mode: hue"></div></div></div><div><div style="background: linear-gradient(#0000ff, #0000ff) #000000; background-blend-mode: hue"></div><div style="background: linear-gradient(#0000ff, #0000ff) #ffffff; background-blend-mode: hue"></div><div style="background: linear-gradient(#0000ff, #0000ff) #808080; background-blend-mode: hue"></div><div style="background: linear-gradient(#0000ff, #0000ff) #4f81bd; background-blend-mode: hue"></div><div style="background: linear-gradient(#0000ff, #0000ff) #d68a3c; background-blend-mode: hue"></div></div><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #6d6ddb"></div><div style="background: #8c8cff"></div></div><div class=hex><div>000000</div><div>ffffff</div><div>808080</div><div>6d6ddb</div><div>8c8cff</div></div></div>
+    <figcaption>Blue: over orange, raised to orange's luminosity, 0.6, its blue passes 1 and ClipColor pulls it in: <code>#8c8cff</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

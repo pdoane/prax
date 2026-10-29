@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright: compressing to 1em</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 24px/36px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 120px; padding: 0 6px; }
+  .tcy { text-combine-upright: all; background: #f9cc9d; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1.3 Compression Rules</div>
+  <h1>text-combine-upright: compressing to 1em</h1>
+  <p class=pr-lede><q>The UA must ensure that the combined advance width of the composition fits within 1em by
+  compressing the combined text if necessary.</q> <q>OpenType implementations must use width-specific variants
+  (OpenType features hwid/twid/qwid; other glyph-width features such as fwid or pwid are not included) to compress text
+  in cases where those variants are available for all typographic character units in the composition. Otherwise, the
+  UA may use any means to compress the text</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-compression">CSS Writing Modes 4 §9.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Two, three and four characters in one em</h2>
+  <p>Each stage is 24px text; the highlighted composition is never wider than the column's 24px em. PR Noto Sans JP
+  has <code>hwid</code> forms, but no <code>twid</code> or <code>qwid</code>.</p>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy>12</span>月</div>
+    <figcaption>Two digits: their half-width forms side by side, fitting the em.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage>年<span class=tcy>123</span>月</div>
+    <figcaption>Three: compressed to fit the em, no wider than the characters above and below. <span class=pr-flag>Chrome</span> draws the glyphs off-center, past the square's right.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage>年<span class=tcy>1234</span>月</div>
+    <figcaption>Four: narrower still, the same 1em. <span class=pr-flag>Chrome</span> draws the glyphs off-center, past the square's right.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage>年<span class=tcy>WWW</span>月</div>
+    <figcaption>Three wide letters: squeezed to 1em. <span class=pr-flag>Chrome</span> draws the glyphs off-center, past the square's right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

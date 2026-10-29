@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: edges and empty lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: edges and empty lines</h1>
+  <p class=pr-lede>Between the boxes A and B, a dashed block holds only an empty span, whose margins, borders or
+  padding decide whether it makes a line. Text is 13px on 20px lines; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Each edge on its own</h2>
+  <p>A line that holds <q>no inline elements with non-zero margins, padding, or borders</q> is zero high. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div class=pr-frame><span style="margin-left: -1px; padding-left: 1px"></span></div><div class=pr-b>B</div></div>
+    <figcaption><code>margin-left: -1px; padding-left: 1px</code>: the two cancel out in width, but each is non-zero,
+    so the line is 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div class=pr-frame style="width: 0; display: flow-root"><span style="padding-left: 10%"></span></div><div class=pr-b>B</div></div>
+    <figcaption><code>padding-left: 10%</code> in a block 0px wide: specified non-zero, used 0. CSS 2 does not say
+    which counts; Chrome and Firefox make a 20px line, Safari none.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-inline-3/#invisible-line-boxes">CSS Inline Layout 3 §2.3</a></div>
+  <h2>Only inline-axis edges</h2>
+  <p>A phantom line box holds <q>no inline boxes with non-zero inline-axis margins, padding, or borders</q>. Such
+  boxes <q>must be treated as zero-height line boxes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#invisible-line-boxes">CSS Inline Layout 3 §2.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div class=pr-frame><span style="padding-top: 10px; border-bottom: 2px solid"></span></div><div class=pr-b>B</div></div>
+    <figcaption><code>padding-top: 10px</code> and a bottom border: block-axis edges, so the line is zero high and A
+    and B touch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

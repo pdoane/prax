@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The arrow pad</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.3 Arrow Pad Section</div>
+  <h1>The arrow pad</h1>
+  <p class=pr-lede><q>The arrow pad contains the 4 arrow keys. The keys are commonly arranged in an "upside-down T" configuration.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-arrowpad-section">UI Events KeyboardEvent code Values §3.3</a></span></p>
+</header>
+<section>
+  <h2>The upside-down T</h2>
+  <p><code>"ArrowDown"</code>, <code>"ArrowLeft"</code>, <code>"ArrowRight"</code>, <code>"ArrowUp"</code>, all required. The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-arrowpad-section">§3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="arrowpad" data-unit=44></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=3></ol>
+    </div>
+    <figcaption>Click the keys and press the four arrows: each lights at its place. The numpad's 8, 4, 6 and 2 with Num Lock off give <code>key="ArrowUp"</code> and the others, but <code>code="Numpad8"</code> and the like, and light nothing here.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block heights: border edges, zero, and the flow</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.3 Block-level non-replaced elements in normal flow when 'overflow' computes to 'visible'</div>
+  <h1>Block heights: border edges, zero, and the flow</h1>
+  <p class=pr-lede>The tinted, outlined box in each stage is the block measured; it has no border or padding of its own,
+  so its children's margins can collapse with its own.</p>
+</header>
+
+<section>
+  <h2>The last child's border edge, or zero</h2>
+  <p><q>the bottom border edge of the last in-flow child whose top margin doesn't collapse with the element's bottom
+  margin</q> <q>zero, otherwise</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#normal-block">CSS 2 §10.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-parent><div class=pr-a style="margin-bottom: 20px">A: mb 20</div></div></div>
+    <figcaption>A's bottom margin collapses with the block's, so the block ends at A's border edge: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-parent><div class=pr-a>A</div><div style="margin: 20px 0"></div></div></div>
+    <figcaption>After A, an empty block whose margins collapse through it and with the block's: the block ends at A,
+    20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only children in the normal flow</h2>
+  <p><q>Only children in the normal flow are taken into account (i.e., floating boxes and absolutely positioned boxes
+  are ignored, and relatively positioned boxes are considered without their offset).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#normal-block">CSS 2
+  §10.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-parent><div class="pr-a pr-fit" style="float: left; width: 60px; height: 40px">float</div></div></div>
+    <figcaption>Only a float: the block is 0px tall, a dashed line at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-parent><div class=pr-a style="position: relative; top: 30px">A: top 30</div></div></div>
+    <figcaption>A relative child moved down 30px: the block is still 20px, as if it had not moved.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Strings and attr(): text like any other</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .two::before { content: "First  " "  Second "; }
+  .pre::before { content: "First  " "  Second "; white-space: pre; }
+  .ref::before { content: "[" attr(data-ref) "] "; }
+  .title::after { content: " (" attr(title) ")"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.1 Basic Strings: &lt;string&gt; and &lt;attr()&gt; values</div>
+  <h1>Strings and attr(): text like any other</h1>
+  <p class=pr-lede>A <code>&lt;string&gt;</code> <q>Represents an anonymous inline box filled with the specified
+  text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#strings">CSS Generated Content 3 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>White space in strings</h2>
+  <p><q>White space in the string is handled the same as in literal text, and controlled by the properties in
+  [CSS-TEXT-3] and elsewhere. In particular, white space character can collapse, even across multiple strings</q>.
+  The stage's text is set in <code>.pr-measure</code>, so each character and space is 10px wide.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=two>end</div></div>
+    <figcaption><code>"First&nbsp; " "&nbsp; Second "</code>: "First Second end", one space between the words: "Second"
+    starts 60px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pre>end</div></div>
+    <figcaption>With <code>white-space: pre</code> on the <code>::before</code>: all four spaces kept, "Second"
+    starts 90px in.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>attr(): the attribute's value as a string</h2>
+  <p><q>The attr() functional notation represents the string stored as the specified attribute’s value.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=ref data-ref="Ishmael 1851">Call me</div></div>
+    <figcaption><code>data-ref="Ishmael 1851"</code>: "[Ishmael 1851] Call me".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=title title="a whale">Moby</div></div>
+    <figcaption><code>attr(title)</code> after: "Moby (a whale)".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The rp element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 10px; font: 20px/40px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.12 The rp element</div>
+  <h1>The rp element</h1>
+  <p class=pr-lede><q>The rp element can be used to provide parentheses or other content around a ruby text component of a ruby annotation, to be shown by user agents that don't support ruby annotations.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-rp-element">HTML §4.5.12</a></span></p>
+</header>
+<section>
+  <h2>Not drawn</h2>
+  <p><q>An rp element that is a child of a ruby element represents nothing.</q> The user agent's style sheet hides
+  every rp: <q>area, base, basefont, datalist, head, link, meta, noembed, noframes, param, rp, script, style,
+  template, title { display: none; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage t"><ruby>漢<rp>(</rp><rt>かん</rt><rp>)</rp></ruby></div>
+    <figcaption>かん over 漢, with no parentheses anywhere.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

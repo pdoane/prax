@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns in the inline direction</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 2; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .pr-stage.pr-vertical { height: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model, multicol lines</div>
+  <h1>Columns in the inline direction</h1>
+  <p class=pr-lede><q>The column boxes are ordered in the inline base direction of the multicol container and arranged
+  into multicol lines. The column width is the length of the column box in the inline direction. The column height is
+  the length of the column box in the block direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span>
+  Each multicol container has two columns, a 10px gap and a dashed rule.</p>
+</header>
+
+<section>
+  <h2>In the inline base direction</h2>
+  <figure>
+    <div class="pr-stage pr-measure mc">one two three four</div>
+    <figcaption><code>direction: ltr</code>: the first column on the left, "one two" and "three"; "four" in the
+    second, on the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure mc" style="direction: rtl">one two three four</div>
+    <figcaption><code>direction: rtl</code>: the first column on the right, its lines set from its right edge;
+    "four" in the second, on the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In vertical writing modes</h2>
+  <p><q>In text set using a vertical writing mode, the block direction runs horizontally. In a vertical writing
+  mode columns are laid out horizontally, and the direction of the flow of blocks may be right to left, or left to
+  right. The column-width property therefore refers to the inline size of the column, and not the physical
+  horizontal width.</q> Each column is a band across the stage, and the bands follow each other down, in the inline
+  direction. The stages are 160px tall, so each column is 75px tall.</p>
+  <figure>
+    <div class="pr-stage pr-vertical pr-measure"><div class=mc>one two three four</div></div>
+    <figcaption><code>vertical-rl</code>: the first column on top, its lines read from the right; "four" in
+    the second, below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical pr-measure" style="writing-mode: vertical-lr"><div class=mc>one two three four</div></div>
+    <figcaption><code>vertical-lr</code>: the same columns, top and bottom, with the lines read from the
+    left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

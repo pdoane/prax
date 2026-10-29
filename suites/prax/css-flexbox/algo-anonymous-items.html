@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 1: generate anonymous flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .box { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.1 Initial Setup</div>
+  <h1>Step 1: generate anonymous flex items</h1>
+  <p class=pr-lede><q>Generate anonymous flex items</q>, as <a href="https://drafts.csswg.org/css-flexbox-2/#flex-items">§4</a> describes. <q>Flex layout works with the flex
+  items in order-modified document order, not their original document order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#box-manip">CSS Flexible Box Layout 2 §9.1</a></span>
+</p>
+</header>
+
+<section>
+  <h2>Anonymous items are items like any other</h2>
+  <p>The text is <code>.pr-measure</code>, 10px a letter; A is 40px wide. An anonymous item takes the initial
+  values of its properties: <code>order: 0</code> and <code>flex: 0 1 auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure">text<div class="pr-a pr-fit box">A</div></div>
+    <figcaption>"text" in an item 40px wide, then A, from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">text<div class="pr-a pr-fit box" style="order: -1">A</div></div>
+    <figcaption>A <code>order: -1</code>: A first; the anonymous item, at order 0, after it, from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">text<div class="pr-a pr-fit box" style="flex-grow: 1">A</div></div>
+    <figcaption>A <code>flex-grow: 1</code>: the anonymous item does not grow; it stays 40px and A fills the rest,
+    160px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Anonymous items align with align-items</h2>
+  <p><q>For anonymous flex items, align-self always matches the value of align-items on their associated flex
+  container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">§8.3</a></span>
+  Each stage is 60px tall, with <code>align-items: center</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 60px; align-items: center">text<div class="pr-a pr-fit box" style="align-self: flex-start">A</div></div>
+    <figcaption>"text" centered, 20px down; A <code>align-self: flex-start</code> at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

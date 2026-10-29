@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: in the line box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: in the line box</h1>
+  <p class=pr-lede>In each figure the blue box is the first box on the first line, and the guides are 10px
+  apart.</p>
+</header>
+
+<section>
+  <h2>From the line box's edge</h2>
+  <p><q>The box is indented with respect to the left (or right, for right-to-left layout) edge of the line box.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span> A line beside a
+  float is shortened, so its edge is past the float.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><div class="pr-c pr-fit f"></div><span class=pr-a>first</span> line</div>
+    <figcaption>A green 60px float, then <code>text-indent: 30px</code>: the box starts 30px past the float, at
+    90.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></div>
+  <h2>A margin at the line's start</h2>
+  <p><q>The indent is treated as a margin applied to the start edge of the line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></span> So the line is
+  aligned in the room the indent leaves.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 40px; text-align: center"><span class=pr-a>first</span></div>
+    <figcaption><code>text-indent: 40px; text-align: center</code>: the box is centered in the 160px after the
+    indent, 20px right of the stage's middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: -40px; text-align: center"><span class=pr-a>first</span></div>
+    <figcaption><code>text-indent: -40px</code>: the line is 240px, from 40px left of the stage, and the box is
+    centered in it, 20px left of the stage's middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 40px; text-align: right"><span class=pr-a>first</span></div>
+    <figcaption><code>text-align: right</code>: the indent is at the other side, and the box ends at the right
+    edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

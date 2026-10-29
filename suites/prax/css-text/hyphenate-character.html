@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hyphenate-character</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 70px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.2 Hyphens: the hyphenate-character property</div>
+  <h1>hyphenate-character</h1>
+  <p class=pr-lede><q>This property specifies the string that is shown between parts of hyphenated words.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphenate-character">CSS Text 4 §6.3.2</a></span>
+  Each stage is <code>lang=en</code>, 70px wide, of 10px letters, and holds "hyphen", a soft hyphen, "ation".</p>
+</header>
+
+<section>
+  <h2>A string, or none</h2>
+  <p><code>&lt;string&gt;</code>: <q>Specifies the string that appears at the hyphenation break when hyphenating.</q>
+  <q>Specifying the empty string "" is valid, and causes the UA to break at hyphenation opportunities without
+  inserting a visible hyphenation character.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>auto</code>: the language's hyphen, "hyphen-".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-character: '='"><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>"="</code>: "hyphen=".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-character: ''"><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>""</code>: "hyphen", no mark, then "ation".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-character: '–'"><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>"–"</code>, an en dash: "hyphen–".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Automatic hyphens too</h2>
+  <p><q>Both hyphens triggered by automatic hyphenation and hyphens triggered by soft hyphens are rendered according
+  to 'hyphenate-character'.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: auto; hyphenate-character: '='"><span class=t>typography</span></div>
+    <figcaption><code>hyphens: auto</code>, <code>"="</code>: "typography" broken with "=", such as
+    "typog=".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

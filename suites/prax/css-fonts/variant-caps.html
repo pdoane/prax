@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-caps</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 26px; }
+  .lit { font-family: 'PR Literata'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.6 Capitalization: the 'font-variant-caps' property</div>
+  <h1>font-variant-caps</h1>
+  <p class=pr-lede>The values select capital forms: <code>small-caps</code> (<code>smcp</code>),
+  <code>all-small-caps</code> (<code>c2sc</code> and <code>smcp</code>), <code>petite-caps</code>,
+  <code>all-petite-caps</code>, <code>unicase</code> and <code>titling-caps</code>. A font without them has small
+  capitals synthesized. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-caps-prop">CSS Fonts 4 §6.6</a></span></p>
+</header>
+
+<section>
+  <h2>The font's small capitals</h2>
+  <p>PR Literata has <code>smcp</code> and <code>c2sc</code>, and no petite capitals.</p>
+  <figure>
+    <div class="pr-stage pr-sample lit" style="font-variant-caps: small-caps">Paris 2024</div>
+    <figcaption><code>small-caps</code>: P a capital, "aris" small capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample lit" style="font-variant-caps: all-small-caps">Paris 2024</div>
+    <figcaption><code>all-small-caps</code>: every letter a small capital.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample lit" style="font-variant-caps: petite-caps">Paris 2024</div>
+    <figcaption><code>petite-caps</code>: no petite capitals, so <q>rendered using small capital glyphs</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample lit" style="font-variant-caps: unicase">Paris 2024</div>
+    <figcaption><code>unicase</code>: capitals as small capitals, lowercase as it is. Safari draws them unchanged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Synthesized, and turned off</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-variant-caps: small-caps">Paris 2024</div>
+    <figcaption>PR Tinos has none: capitals scaled for the lowercase letters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample lit" style="font-variant-caps: small-caps; font-feature-settings: 'smcp' 0">Paris 2024</div>
+    <figcaption><code>small-caps</code> and <code>"smcp" 0</code>: the font supports small capitals, so none,
+    native or synthesized.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The dialog element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { font-size: 13px; line-height: 20px; }
+  .stage p { margin: 0; padding: 0 10px; }
+  .act { padding: 10px 20px 0; }
+  .act dialog { font-size: 12px; }
+  .act dialog .pr-target { margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.4 The dialog element</div>
+  <h1>The dialog element</h1>
+  <p class=pr-lede><q>The dialog element represents a transitory part of an application, in the form of a small window
+  ("dialog box")</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">HTML §4.11.4</a></span></p>
+</header>
+<section>
+  <h2>Shown only while open</h2>
+  <p><q>A dialog element without an open attribute specified should not be shown to the user.</q> An open one is
+  centered across its containing block, with a solid border. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb stage" style="height: 70px">
+      <p>before</p>
+      <dialog>closed</dialog>
+      <p>after</p>
+    </div>
+    <figcaption>No <code>open</code>: "before" and "after", and no box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb stage" style="height: 70px">
+      <p>before</p>
+      <dialog open>open</dialog>
+      <p>after</p>
+    </div>
+    <figcaption><code>open</code>: a box with a 3px black border, centered across the stage, its top at the second
+    line.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>show() and close()</h2>
+  <p><code>show()</code> adds <code>open</code> and runs the dialog focusing steps; <code>close()</code> removes it,
+  returns the focus to the <q>previously focused element</q> and queues a <code>close</code> event. Each fires
+  <code>beforetoggle</code> and queues <code>toggle</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-stacking">
+      <div class=act style="height: 80px">
+        <button class=pr-target id=show>show()</button>
+        <button class=pr-target id=other>still reachable</button>
+        <dialog id=box><span>Not modal.</span> <button class=pr-target id=done>close()</button></dialog>
+      </div>
+      <ol class=pr-log data-log="click beforetoggle toggle close" data-fields="target newState" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>show()</code>: the dialog appears below the buttons and its <code>close()</code> button
+    takes the focus. The page stays interactive: "still reachable" takes a click. <code>close()</code> hides it
+    and returns the focus to <code>show()</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons call the methods.
+  const box = document.getElementById("box");
+  document.getElementById("show").addEventListener("click", () => box.show());
+  document.getElementById("done").addEventListener("click", () => box.close());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

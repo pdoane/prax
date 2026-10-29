@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating with alpha: premultiplied</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .half { animation: 10s linear -5s paused both; }
+  @keyframes pair { from { background-color: rgb(24% 12% 98% / 0.4); } to { background-color: rgb(62% 26% 64% / 0.6); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.4 Interpolating with Alpha</div>
+  <h1>Interpolating with alpha: premultiplied</h1>
+  <p class=pr-lede><q>When the colors to be interpolated are not fully opaque, they are first premultiplied</q>: <q>For
+  rectangular orthogonal color coordinate systems, all component values are multiplied by the alpha value.</q> <q>For
+  cylindrical polar color coordinate systems, the hue angle is <em>not</em> premultiplied</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation-alpha">CSS Color 4 §13.4</a></span></p>
+</header>
+
+<section>
+  <h2>To and from transparent</h2>
+  <p>A note: <q>With premultiplied colors, transitions to or from "transparent" always look nice</q>; unpremultiplied,
+  <q>the center of the gradient would be a noticeably grayish color</q>. The bar is <code>linear-gradient(90deg, red,
+  transparent, blue)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4
+  §3.1</a>) over white.</p>
+  <figure>
+    <div class="pr-stage pr-wide" style="background: white"><div class=bar style="background: linear-gradient(90deg, red, transparent, blue)"></div></div>
+    <figcaption>Red fading to white, white, then blue: pink and pale blue, no gray or dark band.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The specification's examples</h2>
+  <p><code>rgb(24% 12% 98% / 0.4)</code> and <code>rgb(62% 26% 64% / 0.6)</code> <q>would first be converted to
+  premultiplied form [9.6% 4.8% 39.2%] and [37.2% 15.6% 38.4%]</q>; the midpoint, with alpha 0.5, undone, is
+  <code>rgb(46.8% 20.4% 77.6% / 0.5)</code>. In LCH, <q>the L and C coordinates (but not H) are premultiplied</q>, and
+  <code>rgb(76% 62% 3% / 0.4)</code> to <code>color(display-p3 0.84 0.19 0.72 / 0.6)</code> has its midpoint at
+  <code>lch(58.873% 81.126 31.82 / 0.5)</code>. Swatches on a checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class="sw mid" style="background-image: linear-gradient(to right, rgb(24% 12% 98% / 0.4), rgb(62% 26% 64% / 0.6))"></div><div class="sw half" style="animation-name: pair"></div><div class=sw style="background: rgb(46.8% 20.4% 77.6% / 0.5)"></div></div>
+    <figcaption>The gradient's middle, an animation at 50%, and <code>rgb(46.8% 20.4% 77.6% / 0.5)</code>: one
+    half-transparent violet.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class="sw mid" style="background-image: linear-gradient(in lch to right, rgb(76% 62% 3% / 0.4), color(display-p3 0.84 0.19 0.72 / 0.6))"></div><div class=sw style="background: lch(58.873% 81.126 31.82 / 0.5)"></div></div>
+    <figcaption>The LCH example's middle, beside its <code>lch()</code>: one half-transparent coral
+    red. <span class=pr-flag>Firefox</span> The middle is a darker raspberry, about <code>rgb(85% 27% 46% /
+    0.5)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

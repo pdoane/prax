@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line height calculations: a line break</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .small { font-size: 10px; line-height: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8 Line height calculations: the 'line-height' and 'vertical-align' properties</div>
+  <h1>Line height calculations: a line break</h1>
+  <p class=pr-lede>HTML gives <code>br</code> <code>display-outside: newline</code>, which no CSS specification
+  defines: it ends the line, and makes no inline box of its own. Each stage is 10px text on 10px lines, with the
+  first line's span in orange.</p>
+</header>
+
+<section>
+  <h2>The break is the parent's</h2>
+  <p><q>The height of a line box is determined as follows</q>: from <q>the height of each inline-level box in the line
+  box</q>, aligned, then measured <q>from the uppermost box top and the lowermost box bottom</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span>
+  A <code>br</code> is none of those boxes, so its own font, line height and alignment take no part.</p>
+  <figure>
+    <div class="pr-stage small"><span class=pr-hl>first line</span><br><span class=pr-hl>second</span></div>
+    <figcaption>A plain <code>&lt;br&gt;</code>: two 10px lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><span class=pr-hl>first line</span><br style="font-size: 40px"><span class=pr-hl>second</span></div>
+    <figcaption><code>&lt;br style="font-size: 40px"&gt;</code>: the first line is still 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><span class=pr-hl>first line</span><br style="line-height: 50px"><span class=pr-hl>second</span></div>
+    <figcaption><code>&lt;br style="line-height: 50px"&gt;</code>: still 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><span class=pr-hl>first line</span><br style="vertical-align: 30px"><span class=pr-hl>second</span></div>
+    <figcaption><code>&lt;br style="vertical-align: 30px"&gt;</code>: still 10px in Chrome and Safari. Firefox
+    raises the break, and the first line grows 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

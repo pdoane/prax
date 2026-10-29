@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lh: the element's line height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 80px; font-family: "PR Arimo"; }
+  .box { width: 60px; margin: 0 20px; background: #4f81bd; }
+  .ref { width: 60px; margin: 0 20px; height: 0; border-top: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, lh</div>
+  <h1>lh: the element's line height</h1>
+  <p class=pr-lede>An lh is <q>equal to the computed value of the 'line-height' property of the element on which it
+  is used, converting normal to an absolute length by using only the metrics of the first available font.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span>
+  Each blue box is empty, and as tall as its <code>height</code>.</p>
+</header>
+
+<section>
+  <h2>A length, and a number</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="line-height: 30px; height: 2lh"></div></div>
+    <figcaption><code>height: 2lh</code> on 30px lines: 60px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="font-size: 20px; line-height: 1.5; height: 1lh"></div></div>
+    <figcaption><code>1lh</code> at <code>line-height: 1.5</code> in 20px text: 30px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="font-size: 40px; line-height: 1.5; height: 1lh"></div></div>
+    <figcaption>The same at 40px: 60px, from its own font size.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="line-height: 0; height: 1lh"></div><div class=box style="line-height: 0; height: calc(1lh + 10px); margin-top: 10px"></div></div>
+    <figcaption>At <code>line-height: 0</code>, <code>1lh</code> is 0: no box, then one 10px tall for
+    <code>1lh + 10px</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>normal, from the first available font</h2>
+  <p>At <code>line-height: normal</code>, the box is <code>1lh</code> tall; the dashed line under it is
+  <code>1.2em</code> down, the usual stand-in for normal.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="font: 40px 'PR Baseline Diagnostic Zero'"><div class=box id=diag style="height: 1lh"></div><div class=ref style="margin-top: calc(0.2em - 1px)"></div></div>
+    <figcaption>PR Baseline Diagnostic Zero has an ascent of 0.8em, a descent of 0.2em and no gap: at 40px, the box
+    is 40px tall, short of the line at 48px. It reads <code class=pr-computed data-of=diag data-dom=offsetHeight></code>.
+    <span class=pr-flag>Firefox</span> makes it 48px, 1.2em, reaching the line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="font: 40px 'PR Arimo'"><div class=box id=arimo style="height: 1lh"></div><div class=ref style="margin-top: calc(1.2em - 1lh - 1px)"></div></div>
+    <figcaption>PR Arimo's ascent, descent and gap add to 1.15em: at 40px, a box about 46px tall, short of the line.
+    It reads <code class=pr-computed data-of=arimo data-dom=offsetHeight></code>; Chrome and Safari round each metric,
+    to 45px. <span class=pr-flag>Firefox</span> makes it 48px.</figcaption>
+  </figure>
+  <p class=pr-note><q>Setting the 'height' of an element using either the lh or the rlh units does not enable authors
+  to control the actual number of lines in that element.</q></p>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

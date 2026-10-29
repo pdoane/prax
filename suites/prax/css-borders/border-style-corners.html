@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-style: dots and dashes at the corners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.2 Line Patterns: the border-style properties, corners</div>
+  <h1>border-style: dots and dashes at the corners</h1>
+  <p class=pr-lede>Note: <q>There is no control over the spacing of the dots and dashes, nor over the length of the
+  dashes. Implementations are encouraged to choose a spacing that makes the corners symmetrical.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-style">CSS Borders and Box Decorations 4 §2.2</a></span>
+  How dots and dashes are spaced is the user agent's choice. How two styles meet is on <a href="corner-transitions-styles.html">3.2's page</a>.</p>
+</header>
+
+<section>
+  <h2>One style all round</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-style: dotted"></div></div>
+    <figcaption><code>dotted</code>, 10px: a dot in each corner if the spacing is symmetrical. <span class=pr-flag>Safari</span> Square dots, <q>round dots</q> being required.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-style: dashed"></div></div>
+    <figcaption><code>dashed</code>, 10px: a dash in each corner if symmetrical.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous block boxes: floats and white space around a block in an inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 60px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.1.1 Anonymous block boxes</div>
+  <h1>Anonymous block boxes: floats and white space around a block in an inline</h1>
+  <p class=pr-lede>In each figure the orange block is inside a span, which is broken around it. Text is 13px on 20px
+  lines; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Floats reach the block</h2>
+  <p>The block <q>becomes a sibling of those anonymous boxes</q>, so it is placed beside, below or clear of the floats
+  before it as any block is. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a>, <a href="https://drafts.csswg.org/css2/#floats">§9.5</a></span>
+  Each span starts with a blue left float, 60 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-text"><span><span class="pr-a pr-fit f"></span><div class=pr-b>the block</div></span></div>
+    <figcaption>The block is at the top, under the float, and its line is shortened beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span><span class="pr-a pr-fit f"></span><div class=pr-b style="clear: left">clear: left</div></span></div>
+    <figcaption>With <code>clear: left</code>, it is below the float, at 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span><span class="pr-a pr-fit f"></span><div class=pr-b style="display: flow-root">flow-root</div></span></div>
+    <figcaption>A <code>flow-root</code> does not overlap the float: it is 140px wide, beside it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>White space beside the block</h2>
+  <p>A block ends the line before it and starts a line after it, so white space that would collapse at the end or
+  start of a line is removed there, and a preserved newline still ends a line. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span>one<div class=pr-b>block</div> <span class=pr-a>two</span></span></div>
+    <figcaption>A space after the block, before "two": removed, and "two" starts the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="white-space: pre"><span>one
+<div class=pr-b>block</div>
+<span class=pr-a>two</span></span></div>
+    <figcaption><code>white-space: pre</code>, a newline before and after the block: the newline after it is a line
+    of its own, so "two" is at 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

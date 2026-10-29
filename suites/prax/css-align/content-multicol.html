@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Content distribution in multicol</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .mc { column-width: 50px; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .mc > div { margin: 0; }
+  .tall { height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.1.2 Multicol Containers</div>
+  <h1>Content distribution in multicol</h1>
+  <p class=pr-lede>The subjects are <q>The column boxes, with any spacing inserted between column boxes added to the
+  relevant column gaps.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-multicol">CSS Box Alignment 3 §5.1.2</a></span>
+  Each stage: <code>column-width: 50px</code>, a 10px gap, three columns.</p>
+</header>
+
+<section>
+  <h2>justify-content: columns at their column-width</h2>
+  <p><q>In the case of multi-column containers with a non-auto 'column-width',
+  'justify-content' values other than normal or stretch cause the columns to take their specified 'column-width'
+  rather than stretching to fill the container.</q></p>
+  <figure>
+    <div class="pr-stage mc"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>normal</code> <q>behaves as stretch</q>: 60px columns, filling the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="justify-content: start"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>start</code>: columns of 50px from the left, C ending at 170px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 60px columns.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="justify-content: center"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>center</code>: the 50px columns from 15 to 185px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 60px columns.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="justify-content: space-between"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>space-between</code>: 50px columns at 0, 75 and 150px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 60px columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>align-content: the columns as one</h2>
+  <p>The block axis, <q>treating the column boxes (and any column-spanning elements), as a singular unit.</q> The
+  container is 80px tall; the balanced columns, 40px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc tall" style="align-content: end"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>C</div></div>
+    <figcaption><code>end</code>: the three columns at the bottom, from 40px down. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

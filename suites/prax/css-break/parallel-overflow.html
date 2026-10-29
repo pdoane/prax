@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow is a parallel flow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .fixed { height: 20px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.1 Parallel Fragmentation Flows</div>
+  <h1>Overflow is a parallel flow</h1>
+  <p class=pr-lede><q>Content overflowing the content edge of a fixed-size box is considered parallel to the content
+  after the fixed-size box and follows the normal fragmentation rules. Although overflowing content doesn’t affect the
+  size of the fragmentation root box, it does increase the length of the fragmented flow, spilling into or generating
+  additional fragmentainers as necessary.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#parallel-flows">CSS Fragmentation 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>In columns</h2>
+  <p>Three columns 60px tall. The tinted box is 20px tall and holds five lines; B follows it, 30px in from the
+  left so that the lines show beside it.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=fixed>one two six ten red</div><div class=pr-b style="margin-left: 30px">B</div></div>
+    <figcaption>B right under the tinted box, beside "two". The overflowing lines break as the flow does: "one",
+    "two" and "six" in the first column, "ten" and "red" in the second. Safari breaks after two lines, as a UA may: "six" and "ten" in the second, "red" below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

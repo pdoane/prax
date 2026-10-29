@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: values</h1>
+  <p class=pr-lede><code>text-align</code> takes <code>left | right | center | justify</code>. Inherited, applies to block
+  containers. <q>This property describes how inline-level content of a block container is aligned.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+</header>
+
+<section>
+  <h2>left, right, center</h2>
+  <p><q>A block of text is a stack of line boxes. In the case of 'left', 'right' and 'center', this property specifies
+  how the inline-level boxes within each line box align with respect to the line box's left and right sides.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: left"><span class=pr-a>box</span> and a line<br>of text</div>
+    <figcaption><code>left</code>: each line starts at the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: right"><span class=pr-a>box</span> and a line<br>of text</div>
+    <figcaption><code>right</code>: each line ends at the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center"><span class=pr-a>box</span> and a line<br>of text</div>
+    <figcaption><code>center</code>: each line has as much room on its left as on its right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>justify</h2>
+  <p><q>In the case of 'justify', this property specifies that the inline-level boxes are to be made flush with both
+  sides of the line box if possible, by expanding or contracting the contents of inline boxes, else aligned as for the
+  initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: left">The lines of this text are not as long as the stage, and end raggedly.</div>
+    <figcaption><code>left</code>: each line ends where its words end.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify">The lines of this text are not as long as the stage, and end raggedly.</div>
+    <figcaption><code>justify</code>: the same words, with wider spaces, so that every line but the last reaches both
+    edges. The last line starts at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

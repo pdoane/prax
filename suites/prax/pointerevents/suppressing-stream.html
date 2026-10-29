@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Suppressing a pointer event stream</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 30px; margin: 10px 20px; }
+  .scroller { height: 60px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.3.3 Suppressing a pointer event stream</div>
+  <h1>Suppressing a pointer event stream</h1>
+  <p class=pr-lede><q>The user agent MUST suppress a pointer event stream when it detects that the web page is unlikely
+  to continue to receive pointer events with a specific pointerId.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#suppressing-a-pointer-event-stream">Pointer Events §3.1.3.3</a></span></p>
+</header>
+<section>
+  <h2>pointercancel, pointerout, pointerleave</h2>
+  <p><q>The user agent MUST run the following steps to suppress a pointer event stream:</q> fire
+  <code>pointercancel</code>, then <code>pointerout</code>, then <code>pointerleave</code>, then <q>Implicitly release
+  the pointer capture if the pointer is currently captured.</q> It does so <q>As part of the drag operation initiation
+  algorithm as defined in the drag and drop processing model [HTML], for the pointer that caused the drag
+  operation.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#suppressing-a-pointer-event-stream">§3.1.3.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=drag draggable=true>Drag this box away.</div>
+      <ol class=pr-log data-log="pointercancel pointerout pointerleave pointerup" data-fields="target" data-on="#drag" data-lines=3></ol>
+    </div>
+    <figcaption>Press the box and drag it: as the drag begins, <code>pointercancel</code>, <code>pointerout</code>
+    and <code>pointerleave</code>, and no <code>pointerup</code> when you drop it.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Panning, and a menu</h2>
+  <p><q>The pointer is subsequently used by the user agent to manipulate the page viewport (e.g. panning or
+  zooming).</q> <q>The user agent has opened a modal dialog or menu.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#suppressing-a-pointer-event-stream">§3.1.3.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=box><p>Drag a finger up here, or press the right button.</p></div>
+      <ol class=pr-log data-log="pointerdown pointercancel pointerout pointerleave lostpointercapture" data-fields="pointerType" data-on="#box" data-lines=5></ol>
+    </div>
+    <figcaption>Needs a touch screen. Drag a finger up the box: as it scrolls, <code>pointercancel</code>,
+    <code>pointerout</code>, <code>pointerleave</code>, and <code>lostpointercapture</code> for the touch's implicit
+    capture. With a mouse, press the right button: as the context menu opens, the same three.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

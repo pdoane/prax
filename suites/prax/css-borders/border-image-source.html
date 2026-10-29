@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-image-source: an image in place of the style</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 76px; height: 20px; margin: 10px; padding: 0 0 0 4px; border: 10px dashed #2c5a8f; background: #f4f5f7; font-size: 12px; line-height: 20px; border-image-slice: 10; }
+  .np { border-image-source: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>"); }
+  .missing { border-image-source: url(no-such-image.png); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.1 Image Source: the border-image-source property</div>
+  <h1>border-image-source: an image in place of the style</h1>
+  <p class=pr-lede><q>If the value is none or if the image cannot be displayed (or the property doesn't apply), the
+  border styles will be used; otherwise the element's 'border-style' borders are not drawn and this border image is
+  drawn</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-source">CSS Borders and Box Decorations 4 §4.1</a></span>
+  The image, 30 by 30, has orange 10px squares in its corners, a blue dot in the middle of each side and a green
+  center. Each box has a 10px blue dashed border and <code>border-image-slice: 10</code>.</p>
+</header>
+
+<section>
+  <h2>The image, or the style</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box np">text</div></div>
+    <figcaption>The image: orange corners, a dot along each side, no dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box missing">text</div></div>
+    <figcaption>An image that fails to load: the blue dashes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layout from border-width only</h2>
+  <p><q>The border-image properties do not affect layout: layout of the box, its content, and surrounding content is
+  based on the 'border-width' and 'border-style' properties only.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-images">§4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box np" style="border-image-width: 20px">text</div></div>
+    <figcaption><code>border-image-width: 20px</code>: the image is 20px wide, over the text, which stays 10px
+    in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box np" style="border-image-width: 20px; border-width: 4px">text</div></div>
+    <figcaption>The same with <code>border-width: 4px</code>: the box and the text move in, the image is as
+    wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

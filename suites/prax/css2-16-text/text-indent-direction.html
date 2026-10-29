@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: right-to-left</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: right-to-left</h1>
+  <p class=pr-lede><code>text-indent</code> takes <code>&lt;length&gt; | &lt;percentage&gt;</code>. Initial
+  <code>0</code>, inherited. In each figure the blue box is the first box on the first line.</p>
+</header>
+
+<section>
+  <h2>Right-to-left</h2>
+  <p><q>The box is indented with respect to the left (or right, for right-to-left layout) edge of the line box.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl; text-indent: 30px"><span class=pr-a>first</span> and then text that wraps to a second line</div>
+    <figcaption><code>direction: rtl; text-indent: 30px</code>: the first line ends 30px from the right edge, after
+    blank space; the second line ends at the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl; text-indent: -30px; padding-right: 30px; width: 170px"><span class=pr-a>first</span> and then text that wraps to a second line</div>
+    <figcaption><code>direction: rtl; text-indent: -30px</code> with 30px of padding on the right: the first line
+    ends at the stage's right edge, 30px right of the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

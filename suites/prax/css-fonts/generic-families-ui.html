@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generic families of the user interface</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1.5 Generic font families</div>
+  <h1>Generic families of the user interface</h1>
+  <p class=pr-lede>'ui-serif', 'ui-sans-serif', 'ui-monospace' and 'ui-rounded' are the variants of the system's user
+  interface font. Each <q>is not expected to map to any font on platforms without an appropriate system font</q>, and
+  then the next family in the list is used. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#generic-font-families">CSS Fonts 4 §2.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>The variants, or the next family</h2>
+  <p>Each list ends in PR Cousine, a monospace, which shows where the platform has no such font.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: ui-serif, 'PR Cousine'">Handgloves</div>
+    <figcaption><code>ui-serif</code>: the system's serif, such as New York, or else monospace.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: ui-sans-serif, 'PR Cousine'">Handgloves</div>
+    <figcaption><code>ui-sans-serif</code>: the system's sans-serif, such as San Francisco, or else
+    monospace.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: ui-monospace, 'PR Tinos'">Handgloves</div>
+    <figcaption><code>ui-monospace, 'PR Tinos'</code>: the system's monospace, such as SF Mono, or else a
+    serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: ui-rounded, 'PR Cousine'">Handgloves</div>
+    <figcaption><code>ui-rounded</code>: the system's rounded font, such as SF Rounded, or else
+    monospace.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

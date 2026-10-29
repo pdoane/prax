@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>initial-letter-align: the UA style sheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Arimo", "PR Noto Sans JP", "PR Noto Sans Devanagari"; margin: 0; }
+  .p::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .pr-stage { width: 130px; }
+  figcaption { max-width: 130px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.4.1 UA Default Stylesheet for initial-letter-align</div>
+  <h1>initial-letter-align: the UA style sheet</h1>
+  <p class=pr-lede><q>In order to provide the better behavior by default, UAs must include in their default UA style
+  sheet the following rules</q>: <code>[lang]:lang(zh, ja, ko, ii)</code> <code>ideographic</code>;
+  <code>[lang]:lang(hi, mr, ne, pi, kok, brx, mai, sd, sa)</code> <code>hanging</code>; <code>[lang]:lang('*-Latn',
+  '*-Cyrl')</code> <code>alphabetic</code>; <code>[lang]:lang('*-Hani', '*-Hant', '*-Hans')</code>
+  <code>ideographic</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-align-defaults">CSS Inline Layout 3 §7.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>By language, then by script</h2>
+  <p>Each paragraph's first letter is two lines tall, aligned by the <code>initial-letter-align</code> its language gives it.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p id=a>No language: the initial value applies here.</p></div>
+    <figcaption>No <code>lang</code>: <code>alphabetic</code>, the initial value: the N from the first line's cap
+    height to the second line's baseline. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No initial letter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p id=b lang=ja>日本語の段落の頭文字です。</p></div>
+    <figcaption><code>lang=ja</code>: <code>ideographic</code>, 日 between the lines' ideographic ink over and
+    under. <span class=pr-flag>Chrome</span> As the first. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No initial letter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p id=c lang=hi>हिंदी का एक अनुच्छेद यहाँ है।</p></div>
+    <figcaption><code>lang=hi</code>: <code>hanging</code>, the headstroke of हि on the first line's.
+    <span class=pr-flag>Chrome</span> As the first. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No initial letter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p id=d lang=ja-Latn>Nihongo no danraku desu.</p></div>
+    <figcaption><code>lang=ja-Latn</code>: the script tag wins, <code>alphabetic</code>, as the first.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No initial letter.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

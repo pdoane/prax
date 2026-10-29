@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Chinese longhand styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.1.1.3 Chinese: simp-chinese-informal, simp-chinese-formal, trad-chinese-informal, and trad-chinese-formal</div>
+  <h1>Chinese longhand styles</h1>
+  <p class=pr-lede><q>For the informal styles, if the counter value is between ten and nineteen, remove the tens digit (leave the digit marker).</q> <q>Drop any trailing zeros and collapse any remaining zeros into a single zero digit.</q> <q>cjk-ideographic This counter style is identical to 'trad-chinese-informal'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#limited-chinese">CSS Counter Styles 3 §7.1.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Zeros, the tens digit, the negative sign</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: simp-chinese-informal; font-family: "PR Noto Sans SC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-3>-3<li value=15>15<li value=110>110<li value=1001>1001<li value=1010>1010</ol></div>
+    <figcaption><code>simp-chinese-informal</code>: <bdi dir=ltr>"负三、"</bdi>, <bdi dir=ltr>"十五、"</bdi>, <bdi dir=ltr>"一百一十、"</bdi>, <bdi dir=ltr>"一千零一、"</bdi>, <bdi dir=ltr>"一千零一十、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: simp-chinese-formal; font-family: "PR Noto Sans SC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-3>-3<li value=15>15<li value=110>110<li value=1001>1001<li value=1010>1010</ol></div>
+    <figcaption><code>simp-chinese-formal</code>: <bdi dir=ltr>"负叁、"</bdi>, <bdi dir=ltr>"壹拾伍、"</bdi>, <bdi dir=ltr>"壹佰壹拾、"</bdi>, <bdi dir=ltr>"壹仟零壹、"</bdi>, <bdi dir=ltr>"壹仟零壹拾、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: trad-chinese-informal; font-family: "PR Noto Sans TC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-3>-3<li value=15>15<li value=110>110<li value=1001>1001<li value=1010>1010</ol></div>
+    <figcaption><code>trad-chinese-informal</code>: <bdi dir=ltr>"負三、"</bdi>, <bdi dir=ltr>"十五、"</bdi>, <bdi dir=ltr>"一百一十、"</bdi>, <bdi dir=ltr>"一千零一、"</bdi>, <bdi dir=ltr>"一千零一十、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: trad-chinese-formal; font-family: "PR Noto Sans TC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-3>-3<li value=15>15<li value=110>110<li value=1001>1001<li value=1010>1010</ol></div>
+    <figcaption><code>trad-chinese-formal</code>: <bdi dir=ltr>"負參、"</bdi>, <bdi dir=ltr>"壹拾伍、"</bdi>, <bdi dir=ltr>"壹佰壹拾、"</bdi>, <bdi dir=ltr>"壹仟零壹、"</bdi>, <bdi dir=ltr>"壹仟零壹拾、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: cjk-ideographic; font-family: "PR Noto Sans TC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-3>-3<li value=15>15<li value=110>110<li value=1001>1001<li value=1010>1010</ol></div>
+    <figcaption><code>cjk-ideographic</code>: <bdi dir=ltr>"負三、"</bdi>, <bdi dir=ltr>"十五、"</bdi>, <bdi dir=ltr>"一百一十、"</bdi>, <bdi dir=ltr>"一千零一、"</bdi>, <bdi dir=ltr>"一千零一十、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

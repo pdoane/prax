@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lines { white-space: pre-line; line-height: 20px; }
+  .rl { writing-mode: vertical-rl; }
+  .lr { writing-mode: vertical-lr; }
+  .tall { line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.3 Glyph metrics and layout</div>
+  <h1>Line boxes</h1>
+  <p class=pr-lede><q>Multi-line text is produced by stacking these boxes. The height of a line box is determined by finding the maximum ascent and the maximum descent of all the
+  glyphs in a line of text after applying the effect of the line-height property.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphsMetrics">SVG 2 §11.1.3</a></span>
+  The text is PR Noto Sans Mono, 10 a letter, with <code>white-space: pre-line; line-height: 20px</code>, so a
+  line feed breaks the line; the expected lines are dashed in red.</p>
+</header>
+
+<section>
+  <h2>Stacked down the page</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure lines" x="20" y="30">one
+two</text></svg></div>
+    <figcaption>"one", a line feed, "two": "two" on the next line, its baseline 20 lower, at 50. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 60H160" class=pr-baseline /><text class="pr-measure lines" x="20" y="30">o<tspan class=tall>n</tspan>e
+two</text></svg></div>
+    <figcaption>The n of "one" in a <code>tspan</code> with <code>line-height: 40px</code>: the first line box
+    reaches 10 further down, so "two" stands at 60. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stacked across, for vertical text</h2>
+  <p><q>For vertical text, line boxes are stacked from right-to-left (writing-mode value vertical-rl) or
+  left-to-right (writing-mode value vertical-lr).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M80 0V80 M60 0V80" class=pr-baseline /><text class="pr-measure lines rl" x="80" y="10">one
+two</text></svg></div>
+    <figcaption><code>vertical-rl</code> at x 80: "one" down x 80, then "two" down x 60, to its left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M80 0V80 M100 0V80" class=pr-baseline /><text class="pr-measure lines lr" x="80" y="10">one
+two</text></svg></div>
+    <figcaption><code>vertical-lr</code> at x 80: "one" down x 80, then "two" down x 100, to its right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentage gaps in flex containers sized by their content</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { display: flex; }
+  .f > div { width: 40px; height: 20px; flex: none; padding: 0; box-sizing: border-box; }
+  .vlr { writing-mode: vertical-lr; }
+  .vlr > div { width: 20px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2.3 Percentages In gap Properties</div>
+  <h1>Percentage gaps in flex containers sized by their content</h1>
+  <p class=pr-lede><q>In Flex Layout ... Cyclic percentage sizes resolve against zero in all cases.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-percent">CSS Gaps 1 §2.3</a></span> Each dashed
+  frame is a flex container of 40 by 20px items whose size, in the gap's axis, comes from those items.</p>
+</header>
+
+<section>
+  <h2>In the block axis</h2>
+  <p>A container's auto height comes from its content, here and in its layout: each <code>row-gap: 20%</code> is 0,
+  and the items touch.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-frame" style="flex-direction: column; row-gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>A column of auto height: B right under A, 40px tall in all.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 60px"><div class="f vlr pr-frame" style="height: 50px; flex-wrap: wrap; row-gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>vertical-lr</code>, 50px tall, wrapping: B's line right of A's, 40px wide in all.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 60px"><div class="f vlr pr-frame" style="height: 50px; flex-direction: column; row-gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>vertical-lr</code> column: B right of A, 40px wide in all.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the inline axis</h2>
+  <p>A <code>min-content</code> width comes from the items too: the <code>column-gap: 50%</code> is 0, so it is 40px and
+  A and B touch.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f pr-frame" style="width: min-content; column-gap: 50%"><div class=pr-a style="width: 20px">A</div><div class=pr-b style="width: 20px">B</div></div></div>
+    <figcaption><code>width: min-content</code> over A and B of 20px: 40px, B from 20px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    give it 40px, then a gap of 20px against it, B from 40px outside it, as in grid.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

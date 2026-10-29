@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Choosing among candidates</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.3.7 Selecting an image source</div>
+  <h1>Choosing among candidates</h1>
+  <p class=pr-lede><q>In an implementation-defined manner, choose one image source from sourceSet.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#selecting-an-image-source">HTML §4.8.4.3.7</a></span>
+  Blue is 80 by 40; orange and green are 160 by 80.</p>
+</header>
+
+<section>
+  <h2>Any candidate, each at its density</h2>
+  <p>Which candidate is the user agent's choice, typically by the display's pixel ratio, but whichever it takes is
+  drawn at its own density, so these are 80 by 40 either way.</p>
+  <figure>
+    <div class="pr-stage pr-row pic"><img srcset="support/blue-80x40.png 1x, support/orange-160x80.png 2x" alt=""></div>
+    <figcaption><code>blue 1x, orange 2x</code>: 80 by 40, blue or orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><img srcset="support/blue-80x40.png 80w, support/orange-160x80.png 160w" sizes="80px" alt=""></div>
+    <figcaption><code>blue 80w, orange 160w</code>, <code>sizes="80px"</code>: densities 1 and 2. 80 by 40,
+    blue or orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A repeated density: the later candidate is dropped</h2>
+  <p><q>If an entry b in sourceSet has the same associated pixel density descriptor as an earlier entry a in
+  sourceSet, then remove entry b.</q> This leaves no choice.</p>
+  <figure>
+    <div class="pr-stage pr-row pic"><img srcset="support/orange-160x80.png 2x, support/green-160x80.png 2x" alt=""></div>
+    <figcaption><code>orange 2x, green 2x</code>: orange, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><img srcset="support/orange-160x80.png 160w, support/green-160x80.png 2x" sizes="80px" alt=""></div>
+    <figcaption><code>orange 160w, green 2x</code>, <code>sizes="80px"</code>: both are 2x once normalized.
+    Orange.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: the border, clipping and shadows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; border-radius: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.7 Corner Shaping: the corner-*-shape properties, effects</div>
+  <h1>corner-shape: the border, clipping and shadows</h1>
+  <p class=pr-lede><q>The curve specified by 'corner-*-shape' defines the outer edge of the border. The inner edge of the border follows the curve of the outer edge</q> <q>with a nearly consistent distance from the outer edge throughout</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shaping">CSS Borders and Box Decorations 4 §3.7</a></span></p>
+</header>
+
+<section>
+  <h2>The border, and no radius</h2>
+  <p>Each box is 120 by 60, with <code>border-radius: 30px</code> unless said.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border: 10px solid #2c5a8f; background: #f9cc9d; width: 100px; height: 40px"></div></div>
+    <figcaption><code>bevel</code> with a 10px border: the inner edge is a parallel diagonal, the border 10px thick along it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop; border: 10px solid #2c5a8f; border-width: 4px 16px; background: #f9cc9d; width: 88px; height: 52px"></div></div>
+    <figcaption><code>scoop</code>, 4px top and bottom, 16px sides: the thickness changes steadily round the scoop. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: notch; border-radius: 0"></div></div>
+    <figcaption><code>notch</code> with <code>border-radius: 0</code>: a note: <q>'corner-shape' won't have any effect.</q> Square.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clipping and shadows</h2>
+  <p><q>elements are still clipped by the shaped border as normal.</q> <q>'corner-*-shape' also affects the rendering of 'box-shadow'</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; overflow: hidden; background: none; outline: 1px dashed #6b7381"><div style="height: 80px; background: #d68a3c"></div></div></div>
+    <figcaption><code>overflow: hidden</code>, <code>bevel</code>: the orange child cut along the diagonals. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop; box-shadow: 0 0 0 10px #d68a3c"></div></div>
+    <figcaption><code>scoop</code>, a shadow spread 10px: its corners are scoops too, scaled outward. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; background: linear-gradient(#b9cde6, #4f81bd)"></div></div>
+    <figcaption>A gradient background, <code>bevel</code>: painted inside the diagonals. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

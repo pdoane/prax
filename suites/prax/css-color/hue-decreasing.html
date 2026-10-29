@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hue interpolation: decreasing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.5.4 decreasing</div>
+  <h1>Hue interpolation: decreasing</h1>
+  <p class=pr-lede><q>Hue angles are interpolated so that, as they progress from the first color to the second, the angle is always <em>decreasing</em>.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-decreasing">CSS Color 4
+  §13.5.4</a></span> Bars are <code>linear-gradient(in oklch decreasing hue to right, A, B)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+</header>
+
+<section>
+  <h2>Brown to turquoise, downward</h2>
+  <p>The same brown and turquoise: <q>the midpoint [...] would be at a hue angle of (30 + 360 + 190) * 0.5 = 290 degrees, giving a purple</q>.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch decreasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 190))"></div></div>
+    <figcaption>Brown, mauve, purple, blue, turquoise.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch decreasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 190))"></div><div class=sw style="background: oklch(0.6 0.1 290)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.6 0.1 290)</code>: one purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Still decreasing</h2>
+  <p>To <code>oklch(0.7 0.1 230)</code>: <q>the midpoint of the interpolation will be (30 + 360 + 230) * 0.5 = 310 degrees, continuing in the same decreasing direction</q>.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch decreasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 230))"></div></div>
+    <figcaption>Brown, mauve, purple, sky blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch decreasing hue to right, oklch(0.5 0.1 30), oklch(0.7 0.1 230))"></div><div class=sw style="background: oklch(0.6 0.1 310)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.6 0.1 310)</code>: another purple, pinker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

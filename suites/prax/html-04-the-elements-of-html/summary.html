@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The summary element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; font-size: 13px; line-height: 20px; }
+  .act details > :not(summary) { margin: 0; color: #2c5a8f; }
+  .act summary:focus-visible { outline: 3px solid var(--pr-accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.2 The summary element</div>
+  <h1>The summary element</h1>
+  <p class=pr-lede><q>The summary element represents a summary, caption, or legend for the rest of the contents of the
+  summary element's parent details element, if any.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-summary-element">HTML §4.11.2</a></span></p>
+</header>
+<section>
+  <h2>Activating the summary toggles its details</h2>
+  <p><q>If the open attribute is present on parent, then remove it. Otherwise, set parent's open attribute to the
+  empty string.</q> A key that activates it fires a click, as any activation does. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-summary-element">§4.11.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=before>start here</button>
+        <details id=keyed><summary id=size>Size</summary><div>40cm by 30cm.</div></details>
+      </div>
+      <ol class=pr-log data-log="keydown click toggle" data-fields="key target newState" data-lines=3></ol>
+    </div>
+    <figcaption>Click "start here", Tab to "Size" and press Enter: a click at <code>size</code>, then the blue line
+    appears and <code>toggle newState="open"</code> is logged. Press Space: it closes.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only the summary for its parent details</h2>
+  <p>Activation does nothing unless the element is <q>the summary for its parent details</q>: its parent is a
+  <code>details</code> element and <q>parent's first summary element child</q> is this one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-summary-element">§4.11.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <details open><summary id=first>First summary</summary><summary id=second>Second summary</summary></details>
+        <summary id=orphan style="display: list-item; list-style: disclosure-closed inside">No details</summary>
+      </div>
+      <ol class=pr-log data-log="click toggle" data-fields="target newState" data-lines=2></ol>
+    </div>
+    <figcaption>The open details shows its second <code>summary</code> as content. Click it, or "No details": a
+    click is logged, and nothing toggles. Click "First summary": the details closes.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

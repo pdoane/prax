@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolutely positioned boxes in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 3; column-gap: 10px; }
+  .abs { position: absolute; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model, positioning</div>
+  <h1>Absolutely positioned boxes in columns</h1>
+  <p class=pr-lede><q>Column boxes, which are anonymous boxes, do not become the containing block for absolutely
+  positioned boxes. The position property, which establishes a containing block for such boxes, applies to the
+  multicol container, it being the principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span>
+  Each stage has three columns of 60px with 10px gaps, six words, one to a line.</p>
+</header>
+
+<section>
+  <h2>The multicol container is the containing block</h2>
+  <p>B, <code>position: absolute; top: 0; left: 0</code>, follows "four", in the second column. The tinted multicol
+  container has <code>position: relative</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent mc" style="position: relative">one two three four<span class="pr-b pr-fit abs" style="top: 0; left: 0">B</span> five six</div></div>
+    <figcaption>B at the container's top left corner, over "one", not at the second column's, 70px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent mc" style="position: relative">one two three four<span class="pr-b pr-fit abs" style="top: 20px; left: 40px">B</span> five six</div></div>
+    <figcaption><code>top: 20px; left: 40px</code>: B 40px across and 20px down the container, after the
+    first column's "two".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out-of-flow boxes count in balancing</h2>
+  <p><q>Out-of-flow descendants of a multi-column container do affect column balancing, and the block-size of the
+  multi-column container.</q> First, an empty block with <code>position: relative</code> holds B, <code>position:
+  absolute; top: 0</code>, 120px tall, in three columns; then a float in two columns of 95px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent mc"><div style="position: relative"><div class="pr-b pr-light pr-fit abs" style="top: 0; height: 120px">B</div></div></div></div>
+    <figcaption>The columns balance B: the container is 40px tall, and B is cut into three pieces of 40px, one in
+    each column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-count: 2; column-gap: 10px"><div class="pr-b pr-fit" style="float: left; width: 30px; height: 80px; break-inside: avoid">B</div>one two three</div>
+    <figcaption>B, a float 80px tall, <code>break-inside: avoid</code>: the container 80px tall, B and three
+    lines in the first column. <span class=pr-flag>Safari</span> Breaks B in two; the container 40px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

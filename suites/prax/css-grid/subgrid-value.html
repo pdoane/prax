@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The subgrid value</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 30px 50px 70px; }
+  .s { display: grid; grid-template-columns: subgrid; }
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2 Explicit Track Sizing, subgrid</div>
+  <h1>The subgrid value</h1>
+  <p class=pr-lede><q>The subgrid value indicates that the grid will adopt the spanned portion of its parent grid in
+  that axis</q>. <q>Rather than being specified explicitly, the sizes of the grid rows/columns will be taken from the
+  parent grid's definition</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizing">CSS Grid Layout 2 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>The parent's tracks, and local names</h2>
+  <p>The parent has columns of 30, 50 and 70px. <q>if a &lt;line-name-list&gt; is given, the specified
+  &lt;line-names&gt;s are assigned to the lines of the subgrid’s explicit grid, one per line, starting with line
+  1.</q> The dashed subgrid is <code>grid-column: 2 / 4</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-frame" style="grid-column: 2 / 4"><div class="pr-a pr-fit">X</div><div class="pr-b pr-fit">Y</div></div></div></div>
+    <figcaption>X fills the parent's second column, 50px from 30px; Y its third, 70px from 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="pr-frame" style="grid-column: 2 / 4; display: grid; grid-template-columns: subgrid [p] [q] [r]"><div class="pr-a pr-fit" style="grid-column: q / r">q</div></div></div></div>
+    <figcaption><code>subgrid [p] [q] [r]</code>: the item at <code>q / r</code> is in the subgrid's second column,
+    70px wide from 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No parent grid: none</h2>
+  <p><q>If there is no parent grid, or if the grid container is otherwise forced to establish an independent
+  formatting context (for example, due to layout containment or absolute positioning), the used value is the
+  initial value, none, and the grid container is not a subgrid.</q> Each dashed grid holds "abcd" and "ef".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="s pr-frame"><div class=t1>abcd</div><div class=t2>ef</div></div></div>
+    <figcaption>A child of a block: <code>none</code>, so one column, the stage's width, "abcd" over
+    "ef".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-frame" style="grid-column: 1 / 4; contain: layout"><div class=t1>abcd</div><div class=t2>ef</div></div></div></div>
+    <figcaption><code>contain: layout</code> on the item that spans the parent's three columns: not a subgrid, so
+    "abcd" over "ef", 150px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="position: relative; height: 40px"><div class=p><div class="s pr-frame" style="position: absolute; top: 0; left: 0; width: 150px"><div class=t1>abcd</div><div class=t2>ef</div></div></div></div>
+    <figcaption>Absolutely positioned, 150px wide: not a subgrid, so "abcd" over "ef" again.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

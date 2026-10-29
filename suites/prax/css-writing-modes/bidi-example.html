@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An example of bidirectional text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .pr-stage p { margin: 0 0 6px; }
+  .narrow { width: 100px; }
+  .narrow + figcaption { max-width: 200px; }
+  [dir=rtl] { direction: rtl; unicode-bidi: isolate; }
+  [dir=ltr] { direction: ltr; unicode-bidi: isolate; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.3 Example of Bidirectional Text</div>
+  <h1>An example of bidirectional text</h1>
+  <p class=pr-lede>The specification's example, with Hebrew words for its uppercase ones: אאא for HEBREW1, בבב for
+  HEBREW2, and so on through the alphabet, each of them three letters that read the same either way. The style sheet
+  is the example's: <code>[dir=rtl] {direction: rtl; unicode-bidi: isolate; }</code>, and so for <code>ltr</code>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-example">CSS Writing Modes 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A long line and a narrow one</h2>
+  <p><q>The first section element is a block with a right-to-left base direction, the second section element is a
+  block with a left-to-right base direction.</q> <q>The emphasis element is inline-level, and since its value for
+  unicode-bidi is normal (the initial value), it has no effect on the ordering of the text.</q> <q>The quote element,
+  on the other hand, creates an isolated sequence with the given internal directionality.</q></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div dir=rtl><p>אאא בבב english3 גגג דדד</p><p>ההה <b>ווו</b> זזז</p></div>
+      <div dir=ltr><p>english9 english10 english11 חחח טטט</p><p>english14 english15 english16</p><p>english17 <i dir=rtl>ייי english19 כככ</i></p></div>
+    </div>
+    <figcaption>The first two paragraphs at the right, read from it: אאא at the right edge, then בבב, "english3",
+    גגג, and דדד at the left; ההה at the right, bold ווו, then זזז. The last three at the left. In the last, the italic
+    quote reads from its right: ייי right of "english19", כככ left of it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage narrow">
+      <div dir=rtl><p>אאא בבב english3 גגג דדד</p><p>ההה <b>ווו</b> זזז</p></div>
+      <div dir=ltr><p>english9 english10 english11 חחח טטט</p><p>english14 english15 english16</p><p>english17 <i dir=rtl>ייי english19 כככ</i></p></div>
+    </div>
+    <figcaption>Lines are broken in logical order, then each is ordered: <q>because HEBREW18 must be read before
+    english19, it is on the line above english19.</q></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

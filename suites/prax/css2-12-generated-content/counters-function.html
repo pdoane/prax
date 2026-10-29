@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: the counters() function</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .nest ol { counter-reset: item; }
+  .nest > ol { padding-left: 6px; }
+  .nest li { display: block; }
+  .dots li:before { content: counters(item, ".") " "; counter-increment: item; font-weight: 600; color: #2c5a8f; }
+  .styled li:before { content: counters(item, "-", upper-roman) " "; counter-increment: item; font-weight: 600; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.1 Nested counters and scope</div>
+  <h1>Nested counters: the counters() function</h1>
+  <p class=pr-lede><q>The 'counters()' function generates a string composed of all of the counters with the same name that
+  are in scope, separated by a given string.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Numbering nested list items</h2>
+  <p><q>The following style sheet numbers nested list items as "1", "1.1", "1.1.1", etc.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2
+  §12.4.1</a></span></p>
+  <pre class=pr-source>OL { counter-reset: item }
+LI { display: block }
+LI:before { content: counters(item, ".") " ";
+            counter-increment: item }</pre>
+  <figure>
+    <div class="pr-stage pr-text nest dots"><ol>
+      <li>item<ol><li>item<ol><li>item</li><li>item</li></ol></li><li>item</li></ol></li>
+      <li>item</li>
+    </ol></div>
+    <figcaption>"1", "1.1", "1.1.1", "1.1.2", "1.2", "2".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text nest styled"><ol>
+      <li>item<ol><li>item<ol><li>item</li><li>item</li></ol></li><li>item</li></ol></li>
+      <li>item</li>
+    </ol></div>
+    <figcaption>The same lists with <code>counters(item, "-", upper-roman)</code>: "I", "I-I", "I-I-I", "I-I-II",
+    "I-II", "II".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

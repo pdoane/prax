@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A mouse press focuses</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; margin: 0 16px 0 0; }
+  .row .pr-target:focus { outline: 3px solid var(--pr-accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.2.12 handle native mouse down</div>
+  <h1>A mouse press focuses</h1>
+  <p class=pr-lede><q>Let result be dispatch event at target</q> <q>If result is true and target is a focusable area
+  that is click focusable, then</q> <q>Run the focusing steps at target</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#handle-native-mouse-down">Pointer Events §11.2.12</a></span></p>
+</header>
+<section>
+  <h2>Unless mousedown is canceled</h2>
+  <p>A <code>mousedown</code> event's dispatch returns false when a listener cancels it. A listener cancels
+  <code>mousedown</code> on the second box. Both have <code>tabindex=0</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=plain tabindex=0>press me</div><div class=pr-target id=held tabindex=0>and me</div></div>
+      <ol class=pr-log data-log="mousedown focus blur" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Press the first box: <code>mousedown</code>, then <code>focus</code> at <code>plain</code>, which
+    takes the ring. Press the second: <code>mousedown</code>, and no focus moves; the first keeps the
+    ring.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>And the secondary button opens a menu</h2>
+  <p><q>if mbutton is the secondary mouse button, then</q> <q>Maybe show context menu with native, target</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#handle-native-mouse-down">§11.2.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=menu>right-press me</div></div>
+      <ol class=pr-log data-log="mousedown contextmenu mouseup" data-fields="button" data-on="#menu" data-lines=3></ol>
+    </div>
+    <figcaption>Press the right button on the box and hold it: <code>mousedown</code>, then
+    <code>contextmenu</code> and the menu, before you release. (Windows, by its own convention, waits for the
+    release: see <a href="https://w3c.github.io/pointerevents/#contextmenu">§11.4.3</a>.)</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels mousedown on the second box.
+  document.getElementById("held").addEventListener("mousedown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

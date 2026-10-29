@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table model: table and inline-table</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2 The CSS table model</div>
+  <h1>The table model: table and inline-table</h1>
+  <p class=pr-lede><q>The following 'display' values assign table formatting rules to an arbitrary element</q>. Every
+  table on this page is made of <code>div</code> and <code>span</code> elements. Each cell is 20px tall.</p>
+</header>
+
+<section>
+  <h2>table and inline-table</h2>
+  <p><code>table</code>: <q>Specifies that an element defines a block-level table: it is a rectangular block that
+  participates in a block formatting context.</q> <code>inline-table</code>: <q>Specifies that an element defines an
+  inline-level table: it is a rectangular block that participates in an inline formatting context).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before<div class=pr-table><div class=pr-table-row><div class=pr-table-cell>one</div><div class=pr-table-cell>two</div></div></div>after</div>
+    <figcaption><code>table</code>: the table is on its own between the line "before" and the line "after", and as
+    narrow as its cells.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-inline-table style="vertical-align: top"><span class=pr-table-row><span class=pr-table-cell>one</span><span class=pr-table-cell>two</span></span></span> after</div>
+    <figcaption><code>inline-table</code>: the table sits on the line between "before" and "after".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>table-row and table-cell</h2>
+  <p><code>table-row</code>: <q>Specifies that an element is a row of cells.</q> <code>table-cell</code>:
+  <q>Specifies that an element represents a table cell.</q> <q>Columns are derived once all the rows have been
+  specified -- the first cell of each row belongs to the first column, the second to the second column, etc.)</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>a</div><div class=pr-table-cell>b</div></div><div class=pr-table-row><div class=pr-table-cell>longer</div><div class=pr-table-cell>c</div></div><div class=pr-table-row><div class=pr-table-cell>d</div><div class=pr-table-cell>e</div></div></div></div>
+    <figcaption>Three rows of two cells, 20px each, stacked from the top. The first cell of each row is in the first
+    column, as wide as "longer"; b, c and e line up in the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>a</div><div class=pr-table-cell>b</div><div class=pr-table-cell>c</div></div><div class=pr-table-row><div class=pr-table-cell>d</div></div></div></div>
+    <figcaption>A row of three and a row of one: the table has three columns, and the second row's cell is in the
+    first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

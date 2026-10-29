@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating with missing components</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.3 Interpolating with Missing Components</div>
+  <h1>Interpolating with missing components</h1>
+  <p class=pr-lede><q>If a color with a carried forward missing component is interpolated with another color which is
+  not missing that component, the missing component is treated as having the <em>other color's</em> component
+  value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation-missing">CSS Color 4
+  §13.3</a></span></p>
+</header>
+
+<section>
+  <h2>A missing hue takes the other's</h2>
+  <p>The specification's example, in OkLCh, from <code>oklch(78.3% 0.108 326.5)</code> to <code>oklch(39.2% 0.4
+  none)</code>: <q>the actual colors to be interpolated are oklch(78.3% 0.108 326.5) [and] oklch(39.2% 0.4
+  326.5)</q>. Bars are <code>linear-gradient(in oklch to right, …)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in oklch to right, oklch(78.3% 0.108 326.5), oklch(39.2% 0.4 none))"></div></div>
+    <figcaption>To hue <code>none</code>: pale to deep magenta, one hue throughout.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in oklch to right, oklch(78.3% 0.108 326.5), oklch(39.2% 0.4 326.5))"></div></div>
+    <figcaption>To hue 326.5, written out: the same bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in oklch to right, oklch(78.3% 0.108 326.5), oklch(39.2% 0.4 0))"></div></div>
+    <figcaption><q>and not</q> to hue 0: the hue swings toward red, and the end is redder.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch to right, oklch(78.3% 0.108 326.5), oklch(39.2% 0.4 none))"></div><div class=sw style="background: oklch(58.75% 0.254 326.5)"></div></div>
+    <figcaption>The first bar's middle, beside <code>oklch(58.75% 0.254 326.5)</code>: one magenta.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A missing alpha takes the other's</h2>
+  <p><q>If the carried forward missing component is alpha, the color must be premultiplied with this carried forward
+  value</q>. On a checkerboard, from <code>oklch(0.783 0.108 326.5 / 0.5)</code> to <code>oklch(0.392 0.4 0 /
+  none)</code>.</p>
+  <figure>
+    <div class="pr-stage chk"><div class=bar style="background: linear-gradient(in oklch to right, oklch(0.783 0.108 326.5 / 0.5), oklch(0.392 0.4 0 / none))"></div></div>
+    <figcaption>Half transparent all the way, never fading out.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage chk"><div class=bar style="background: linear-gradient(in oklch to right, oklch(0.783 0.108 326.5 / 0.5), oklch(0.392 0.4 0 / 0.5))"></div></div>
+    <figcaption>With alpha 0.5 written out: the same bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

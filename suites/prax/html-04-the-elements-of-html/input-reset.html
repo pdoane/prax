@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Reset buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+  .pad input[type=checkbox], .pad input[type=radio] { margin: 0 4px 0 0; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.20 Reset Button state (type=reset)</div>
+  <h1>Reset buttons</h1>
+  <p class=pr-lede><q>The input element represents a button that, when activated, resets the form.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#reset-button-state-(type=reset)">HTML §4.10.5.1.20</a></span></p>
+</header>
+
+<section>
+  <h2>Back to the defaults</h2>
+  <p><q>If the element has a value attribute, the button's label must be the value of that attribute; otherwise, it must
+  be an implementation-defined string that means "Reset" or some such.</q> Resetting an input sets its value back to
+  its <code>value</code> attribute and its checkedness to its <code>checked</code> attribute.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#reset-button-state-(type=reset)">§4.10.5.1.20</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">§4.10.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad>
+        <div><input value="default" size=10> <input type=range value=20 style="width: 100px; vertical-align: middle"></div>
+        <div><label><input type=checkbox checked>on</label> <label><input type=radio name=r>a</label>
+             <label><input type=radio name=r checked>b</label></div>
+        <div><input type=reset> <input type=reset value="Start over"></div>
+      </form>
+      <ol class=pr-log data-log="click reset" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The browser's word for Reset, then "Start over". Type in the field, move the slider, clear the box, check
+    "a"; then click either button: <code>click</code>, <code>reset</code>, and every control is as it was at load.
+    </figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input value="no form" size=10></div>
+        <div><input type=reset></div>
+      </div>
+      <ol class=pr-log data-log="click reset" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption><q>If the element does not have a form owner, then return.</q> No form: edit the field and click Reset:
+    <code>click</code> alone, and the field keeps its text.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

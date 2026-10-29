@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Common patterns: named areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(5, 40px); grid-auto-rows: 20px;
+       grid-template-areas: "head head head head head" "side main main main ." "side main main main ." "foot foot foot foot foot"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.1.1 Named Areas</div>
+  <h1>Common patterns: named areas</h1>
+  <p class=pr-lede><q>An item can be placed into a named grid area (such as those produced by the template in
+  grid-template-areas) by specifying the area’s name in grid-area</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#common-uses-named-areas">CSS Grid Layout 2 §8.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Into a named area</h2>
+  <p>Each stage's grid has five 40px columns and four 20px rows, with the areas</p>
+  <pre class=pr-source>"head head head head head"
+"side main main main ."
+"side main main main ."
+"foot foot foot foot foot"</pre>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: main">main</div><div class=pr-b style="grid-area: head">head</div><div class=pr-c style="grid-area: side">side</div><div class=pr-d style="grid-area: foot">foot</div></div></div>
+    <figcaption>Four items, each <code>grid-area</code> naming an area: head across the top, side at the left of rows 2
+    and 3, main from 40 to 160px beside it, foot across the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Partly aligned with an area</h2>
+  <p><q>An item can also be partially aligned with a named grid area, with other edges aligned to some other line</q>,
+  as <code>grid-row-start: main</code> <q>Align the row-start edge to the start edge of the "main" named area.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-row-start: main; grid-column: 5">A</div></div></div>
+    <figcaption><code>grid-row-start: main; grid-column: 5</code>: A starts on main's first row, row 2, from 20 to
+    40px, in the last column.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-row: main; grid-column-start: main; grid-column-end: 6">A</div></div></div>
+    <figcaption><code>grid-row: main</code> and columns from main's start to line 6: rows 2 and 3, from 40 to
+    200px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

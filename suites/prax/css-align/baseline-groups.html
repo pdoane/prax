@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline-sharing groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; flex-wrap: wrap; align-items: baseline; width: 120px; column-gap: 4px; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; height: 70px; }
+  .gr { display: grid; grid-template: 35px 35px / auto auto; justify-content: start; column-gap: 4px; }
+  .gc { display: grid; grid-template-columns: 200px; grid-template-rows: 40px 40px; }
+  .f > div, .g > div, .gr > div, .gc > div { background: #f9cc9d; line-height: 1; padding: 0 3px; font-size: 13px; }
+  .gc > div { padding: 3px 0; }
+  .big { font-size: 32px !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.2 Baseline Alignment Grouping</div>
+  <h1>Baseline-sharing groups</h1>
+  <p class=pr-lede><q>A baseline-sharing group is composed of boxes that participate in baseline alignment
+  together.</q> They must <q>Share an alignment context along an axis perpendicular to the axis they're being
+  baseline-aligned in</q> and <q>Have compatible baseline alignment preferences</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-terms">CSS Box Alignment 3 §9.2</a></span>
+  Items are highlighted.</p>
+</header>
+
+<section>
+  <h2>Contexts, and compatible preferences</h2>
+  <p>Flex items share one <q>in the same flex line</q>. Preferences are compatible with <q>the same block flow
+  direction and same baseline alignment preference</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=f><div>Ag</div><div class=big>Ag</div><div>Ag</div><div>Ag</div><div class=big>Ag</div></div></div>
+    <figcaption>A wrapping flexbox, <code>align-items: baseline</code>: each line on its own baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div style="align-self: first baseline">Ag</div><div class=big style="align-self: last baseline">Ag</div><div style="align-self: last baseline">Ag<br>Bh</div></div></div>
+    <figcaption>A grid row 70px tall: the first item, <code>first baseline</code>, alone at the top; the other two,
+    <code>last baseline</code>, a group at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Opposite block flow, opposite preference</h2>
+  <p>Also compatible: <q>opposite block flow direction and opposite baseline alignment preference</q>. In a grid
+  column, aligned by <code>justify-self</code>: A <code>vertical-rl</code>, B <code>vertical-lr</code>, each two
+  lines.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=gc><div style="writing-mode: vertical-rl; justify-self: first baseline">A1<br>A2</div><div style="writing-mode: vertical-lr; justify-self: last baseline">B1<br>B2</div></div></div>
+    <figcaption>A <code>first baseline</code>, B <code>last baseline</code>: one group, A1 and B2 on one vertical
+    baseline, at the right. <span class=pr-flag>Safari</span> A at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=gc><div style="writing-mode: vertical-rl; justify-self: first baseline">A1<br>A2</div><div style="writing-mode: vertical-lr; justify-self: first baseline">B1<br>B2</div></div></div>
+    <figcaption>Both <code>first baseline</code>: not compatible; A at the right, B at the left, each its own
+    start. <span class=pr-flag>Safari</span> Both at the left.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

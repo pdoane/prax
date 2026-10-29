@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rounding to the nearest integer</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .z { position: absolute; width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.2 Integers</div>
+  <h1>Rounding to the nearest integer</h1>
+  <p class=pr-lede><q>Unless otherwise specified, in the CSS specifications rounding to the nearest integer requires
+  rounding in the direction of +∞ when the fractional portion is exactly 0.5. (For example, 1.5 rounds to 2, while -1.5
+  rounds to -1.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#integers">CSS Values and Units 4 §5.2</a></span>
+  A <code>calc()</code> that gives a number where an integer goes is rounded so (<a href="https://drafts.csswg.org/css-values-4/#calc-type-checking">§10.9</a>).</p>
+</header>
+
+<section>
+  <h2>column-count</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="column-count: calc(5 / 2)">one two three four five six</div>
+    <figcaption><code>column-count: calc(5 / 2)</code>: 2.5 rounds up, to three columns.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="column-count: calc(2.49)">one two three four five six</div>
+    <figcaption><code>calc(2.49)</code> rounds down, to two.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>z-index: −1.5 rounds to −1</h2>
+  <p>Blue A comes first in the stage with <code>z-index: -1</code>; orange B comes after it, overlapping, with
+  <code>z-index: calc(-3 / 2)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="height: 100px"><div class="pr-a pr-fit z" style="z-index: -1; left: 20px; top: 10px">A</div><div class="pr-b pr-fit z" style="z-index: calc(-3 / 2); left: 80px; top: 30px">B</div></div>
+    <figcaption>B rounds to −1, A's level, and as the later box paints over A. Rounded to −2, it would be under A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

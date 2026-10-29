@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks: the root and boxes in flow</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.1 Definition of "containing block"</div>
+  <h1>Containing blocks: the root and boxes in flow</h1>
+  <p class=pr-lede><q>The position and size of an element's box(es) are sometimes calculated relative to a certain
+  rectangle, called the containing block of the element.</q> Each frame below is a viewport 200 by 100.</p>
+</header>
+
+<section>
+  <h2>The initial containing block</h2>
+  <p><q>The containing block in which the root element lives is a rectangle called the initial containing block. For
+  continuous media, it has the dimensions of the viewport and is anchored at the canvas origin</q> <q>The 'direction'
+  property of the initial containing block is the same as for the root element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2
+  §10.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { width: 50%; height: 50%; box-sizing: border-box; border: 2px solid #2c5a8f; background: #e7eaef } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>The root element has <code>width: 50%; height: 50%</code> of the viewport: its border is 100 by 50, at
+    the top left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { direction: rtl; width: 50%; height: 50%; box-sizing: border-box; border: 2px solid #2c5a8f; background: #e7eaef } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>The same root with <code>direction: rtl</code>: the initial containing block is right to left too, so
+    the root sits at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Static and relative: the nearest block container</h2>
+  <p><q>For other elements, if the element's position is 'relative' or 'static', the containing block is formed by the
+  content edge of the nearest ancestor box that is a block container or which establishes a formatting context.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2 §10.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="width: 160px; padding: 0 19px"><div class="pr-a pr-fit" style="width: 100%">100%</div></div></div>
+    <figcaption>The dashed box has 19px of padding each side of a 160px content box. A child with <code>width:
+    100%</code> is 160px, inside the padding.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-frame style="padding: 0 30px">a <span class="pr-b pr-fit" style="display: inline-block; width: 50%">50%</span> b</span></div>
+    <figcaption>An inline-block in a dashed inline box: the inline is not a block container, so <code>width:
+    50%</code> is of the stage, 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

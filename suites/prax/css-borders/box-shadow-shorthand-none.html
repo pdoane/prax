@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow: none in a list</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.6 Drop Shadows Shorthand: the box-shadow property</div>
+  <h1>box-shadow: none in a list</h1>
+  <p class=pr-lede><q>Omitted lengths are 0; omitted colors default to transparent when the specified offset is none and to currentcolor otherwise.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow">CSS Borders and Box Decorations 4 §6.6</a></span> Each box is 104 by 44.</p>
+</header>
+
+<section>
+  <h2>A shadow with offset none</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow: #8e44ad none, #d68a3c 10px 10px"></div></div>
+    <figcaption><code>#8e44ad none, #d68a3c 10px 10px</code>: the purple shadow is not drawn; the orange one is. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow: none 4px 4px, 10px 10px; color: #6aa36a"></div></div>
+    <figcaption><code>none 4px 4px, 10px 10px</code>, <code>color: #6aa36a</code>: one green shadow at 10px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow: the specification's examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ex { font: 20px/1.1 "PR Arimo"; width: 3.1em; padding: .2em; border: solid .1em #1f2430; margin: 10px 6px; background: #f4f5f7; }
+  .ex p { margin: 0; }
+  .stage { height: 125px; }
+  .pr-stage.pr-narrow { width: 90px; }
+  figure.pr-narrow { margin-right: 6px; }
+  figure.pr-narrow figcaption { max-width: 92px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1.4 text-overflow examples</div>
+  <h1>text-overflow: the specification's examples</h1>
+  <p class=pr-lede><q>These examples demonstrate setting the text-overflow of a block container element that has text
+  which overflows its dimensions</q>, with <code>width: 3.1em; padding: .2em; border: solid .1em black; line-height:
+  1.1</code>, here in PR Arimo at 20px. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#text-overflow-examples">CSS Overflow 3 §6.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>CSS IS AWESOME, YES</h2>
+  <p><q>Note: the side of the line that the ellipsis is placed depends on the direction of the block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#text-overflow-examples">CSS Overflow 3 §6.1.4</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=ex>CSS IS AWESOME, YES</div></div>
+    <figcaption><q>a box with text drawing outside of it.</q> "AWESOME," runs past the right border.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=ex style="text-overflow: clip; overflow: hidden">CSS IS AWESOME, YES</div></div>
+    <figcaption><code>clip</code>, <code>overflow: hidden</code>: <q>a similar box with the text clipped outside
+    the box.</q></figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=ex style="text-overflow: ellipsis; overflow: hidden">CSS IS AWESOME, YES</div></div>
+    <figcaption><code>ellipsis</code>: <q>a similar box with an ellipsis representing the clipped text.</q>
+    "AWESOME," is cut short and ends in "…".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=ex style="text-overflow: ellipsis; overflow: hidden">NESTED
+      <p>PARAGRAPH</p>
+      WON'T ELLIPSE.</div></div>
+    <figcaption><code>ellipsis</code>: "NESTED" and "WON'T", in anonymous blocks, are ellipsed (<a href="https://drafts.csswg.org/css-overflow-4/#text-overflow">CSS Overflow 4 §4.1</a> says so); "PARAGRAPH" is clipped, its value the initial one.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" ><div class=ex dir=rtl style="text-overflow: ellipsis; overflow: hidden">CSS IS AWESOME, YES</div></div>
+    <figcaption><code>dir=rtl</code>: the ellipsis at the left of "AWESOME,".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

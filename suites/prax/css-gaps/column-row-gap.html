@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>row-gap and column-gap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 30px); }
+  .f { display: flex; }
+  .f > div { width: 30px; padding: 0; box-sizing: border-box; }
+  .pr-stage.pr-vertical { height: 130px; }
+  .mc { column-count: 3; column-rule: 1px dashed #6b7381; font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2.1 Row and Column Gutters</div>
+  <h1>row-gap and column-gap</h1>
+  <p class=pr-lede><q>The 'column-gap' property specifies spacing between “columns”, separating boxes in the
+  container's inline axis similar to inline-axis margin; while 'row-gap' indicates spacing between “rows”, separating
+  boxes in the container's block axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-gap">CSS Gaps 1 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Columns run in the inline axis</h2>
+  <p>Both grids have three 30px columns, <code>column-gap: 20px</code> and <code>row-gap: 4px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="column-gap: 20px; row-gap: 4px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>Horizontal: A, B and C 20px apart across; D under A, 4px below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical"><div class=g style="column-gap: 20px; row-gap: 4px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>vertical-rl</code>: the columns run down, so A, B and C are 20px apart down the stage; D is
+    left of A, 4px from it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths, line widths and normal</h2>
+  <p>A gap is <q>normal | &lt;length-percentage [0,∞]&gt; | &lt;line-width&gt;</q>; <q>The value 'normal' represents a used value of '1em' on multi-column containers, and a used value of
+  '0px' in all other contexts.</q></p>
+  <figure class="pr-erratum">
+    <div class=pr-stage><div class=f style="column-gap: thick"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <div class=f style="column-gap: 5px; margin-top: 4px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Above, <code>column-gap: thick</code>, 5px; below, <code>5px</code>: the rows line up.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    gaps above: none takes a line width for a gap.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=mc><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Multicol in 20px text, <code>normal</code>: 1em, 20px gaps, and 20px columns.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=f style="column-gap: normal"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Flex, <code>normal</code>: 0, so A, B and C touch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

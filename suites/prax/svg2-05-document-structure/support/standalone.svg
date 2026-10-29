@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A stand-alone SVG document: a blue rect 120 by 40 at 20, 10. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+  <rect x="20" y="10" width="120" height="40" fill="#4f81bd" />
+</svg>

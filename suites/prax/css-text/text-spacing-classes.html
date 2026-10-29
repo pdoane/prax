@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The punctuation classes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 4px; font: 30px/44px "PR Noto Sans JP"; white-space: nowrap; }
+  .pr-stage { width: 120px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.5.2 Text Spacing Trim Character Classes</div>
+  <h1>The punctuation classes</h1>
+  <p class=pr-lede><q>The UA must classify fullwidth colon punctuation and fullwidth dot punctuation under either the
+  fullwidth closing punctuation category or the fullwidth middle dot punctuation category as appropriate. The UA may
+  rely on language conventions and the writing mode (horizontal vs. vertical), and/or font information to determine
+  this categorization.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-spacing-classes">CSS Text 4 §8.5.2</a></span>
+  At 30px; in each figure the stage above is <code>space-all</code>, the one below <code>normal</code>.</p>
+</header>
+
+<section>
+  <h2>In Japanese: dots are closing, colons middle dots</h2>
+  <p>The specification's table: Japanese, <q>middle dot</q> for colon punctuation, <q>closing</q> for dot
+  punctuation. PR Noto Sans JP draws 。 at the left of its box and ： centered.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢。」字</div>
+    <div class="pr-stage ja" lang=ja>漢。」字</div>
+    <figcaption>"。」": as closing punctuation before a closing bracket, 。 is trimmed: below, 15px
+    narrower. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not trimmed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢：「字</div>
+    <div class="pr-stage ja" lang=ja>漢：「字</div>
+    <figcaption>"：「": as middle dot punctuation, ： keeps its width and the 「 after it is trimmed. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 「 not trimmed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Curly quotes, proportional in this font</h2>
+  <p>Opening punctuation <q>Also includes LEFT SINGLE QUOTATION MARK (U+2018) and LEFT DOUBLE QUOTATION MARK
+  (U+201C).</q> But PR Noto Sans JP draws them proportional, and <q>for such proportional glyphs, the given advance
+  width is considered simultaneously full-width and half-width: the UA must not add or remove space to these
+  glyphs.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#fullwidth-collapsing">§8.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢「“字</div>
+    <div class="pr-stage ja" lang=ja>漢「“字</div>
+    <figcaption>"「“": the “ the same width above and below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="text-spacing-trim: space-all">漢”」字</div>
+    <div class="pr-stage ja" lang=ja>漢”」字</div>
+    <figcaption>"”」": the ” the same width above and below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

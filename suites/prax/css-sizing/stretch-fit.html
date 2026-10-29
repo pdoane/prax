@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretch-fit sizing: widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 13px/20px "PR Arimo"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 4.2 Stretch-fit Sizing, widths</div>
+  <h1>Stretch-fit sizing: widths</h1>
+  <p class=pr-lede><q>Stretch-fit sizing tries to set the box’s used size to the length necessary to make its principal
+  box’s outer size as close to filling the containing block as possible while still respecting the constraints imposed
+  by min-height/min-width/max-height/max-width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#stretch-fit-sizing">CSS Box Sizing 3 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The margin box fills the containing block</h2>
+  <p><q>Sizes the margin box to fill the containing block exactly, treating auto margins as zero.</q> Each stage is
+  150px wide.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="display: inline-block; width: stretch; margin: 0 10px">inline-block</div></div>
+    <figcaption>An inline-block with <code>margin: 0 10px</code>: 130px. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> shrink it to its text.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: stretch; margin-left: auto">auto margin</div></div>
+    <figcaption>A block with <code>margin-left: auto</code>, as zero: 150px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: stretch; max-width: 100px; margin: 0 10px">max 100</div></div>
+    <figcaption><code>max-width: 100px</code> still applies: 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The spec's float, and a formatting context beside a float</h2>
+  <p><q>width: stretch causes the box to fill its container, being 20px narrower than the width of "some more text"
+  (due to the 10px margin)</q>. <q>For in-flow block-level boxes that form an independent formatting context, use the
+  space available to line boxes (i.e. excluding floats) in place of the containing block’s inline size.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div style="float: left" class=pr-parent><div class=box style="width: stretch; margin: 10px">text</div>some more text</div></div>
+    <figcaption>A float holding a child of <code>width: stretch; margin: 10px</code> and the line "some more text":
+    the float is as wide as the line, and the child 20px narrower. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> shrink the child to "text".</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class="pr-a" style="float: left; width: 40px; height: 40px; padding: 0"></div><div class=box style="display: table; width: stretch">table</div></div>
+    <figcaption>A <code>display: table</code> box, an independent formatting context, beside a 42px float: 108px, the room
+    beside the float. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> shrink it to its text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

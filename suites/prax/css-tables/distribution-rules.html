@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Width distribution: the rules</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.2.1 Rules</div>
+  <h1>Width distribution: the rules</h1>
+  <p class=pr-lede>The section is not normative; it sums up what the algorithm of <a href="https://drafts.csswg.org/css-tables-3/#width-distribution-algorithm">§3.9.3</a>
+  does. <q>Ideally, each column should get its preferred width (usually its max-content width).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#width-distribution-principles-rN">CSS Table 3 §3.9.2.1</a></span>
+  Each table has three columns: blue "aaaa" with no width, orange "b" with <code>width: 40px</code>, green "c" with
+  <code>width: 30%</code>; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Rule 1: percent, then pixel, then auto</h2>
+  <p><q>When assigning preferred widths, specified percent columns have a higher priority than specified unit value
+  columns, which have a higher priority than auto columns.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 100px"><tr><td>aaaa</td><td style="width: 40px">b</td><td style="width: 30%">c</td></tr></table></div>
+    <figcaption>100px: green gets its 30%, 30px; orange what can be found, 30px; blue its min-content, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td>aaaa</td><td style="width: 40px">b</td><td style="width: 30%">c</td></tr></table></div>
+    <figcaption>200px: green 60px, orange 40px, and blue, the auto column, takes all the rest, 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rule 2's exception: a percentage below the minimum</h2>
+  <p><q>When giving its preferred percent width to a percent-column, if that would result in a size smaller than its
+  min-content width, the column will be assigned its min-content width instead</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 10%">aaaa</td><td>b</td></tr></table></div>
+    <figcaption>Blue <code>width: 10%</code>, 20px, holding "aaaa": 40px, its min-content width; orange the other
+    160px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

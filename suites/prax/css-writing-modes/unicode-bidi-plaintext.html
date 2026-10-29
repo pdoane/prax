@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>unicode-bidi: plaintext</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.2 Embeddings and Overrides: the unicode-bidi property, plaintext</div>
+  <h1>unicode-bidi: plaintext</h1>
+  <p class=pr-lede><q>This value behaves as isolate except that for the purposes of the Unicode bidirectional
+  algorithm, the base directionality of each of the box's bidi paragraphs (if a block container) or isolated sequences
+  (if an inline) is determined by following the heuristic in rules P2 and P3 of the Unicode bidirectional algorithm
+  (rather than by using the direction property of the box).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">CSS Writing Modes 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>On a block: each paragraph from its first strong letter</h2>
+  <p>P2 and P3 take a paragraph's direction from its first strong character. Each stage is <code>ltr</code>; the first
+  two are <code>text-align: left</code>, so that only the order changes.</p>
+  <figure>
+    <div class=pr-stage style="text-align: left">אבג abc!</div>
+    <figcaption>Without <code>plaintext</code>: left to right, the Hebrew word at the left, then
+    "abc!".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="text-align: left; unicode-bidi: plaintext">אבג abc!</div>
+    <figcaption><code>plaintext</code>: the Hebrew comes first, so the paragraph is right to left: from the left,
+    "!abc" and then the Hebrew word.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="unicode-bidi: plaintext">אבג<br>abc!</div>
+    <figcaption>A <code>br</code> starts a paragraph: the first is right to left, the second left to right.
+    <code>text-align: start</code> follows each (<a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a>):
+    the Hebrew at the right, "abc!" at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On an inline: its own direction</h2>
+  <p>The span is an isolated sequence whose direction its own text gives.</p>
+  <figure>
+    <div class=pr-stage>x <span class=pr-hl style="unicode-bidi: isolate">אבג abc</span> y</div>
+    <figcaption><code>isolate</code> with <code>ltr</code>: the Hebrew word left of "abc".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span class=pr-hl style="unicode-bidi: plaintext">אבג abc</span> y</div>
+    <figcaption><code>plaintext</code>: the span reads from the right, the Hebrew word right of "abc"; "x" and "y"
+    stay where they were.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

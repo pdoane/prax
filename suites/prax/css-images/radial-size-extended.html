@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): two keywords, and a circle's percentage</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 80px; }
+  .d { width: 170px; height: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.2.2 Expanding &lt;radial-size&gt;</div>
+  <h1>radial-gradient(): two keywords, and a circle's percentage</h1>
+  <p class=pr-lede><q>This level extends the &lt;radial-size&gt; options to include the additions from the circle()
+  and ellipse() &lt;basic-shape&gt; values</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#radial-size">CSS Images 4 §3.2.2</a></span>
+  Orange inside the ending shape, light blue beyond.</p>
+</header>
+
+<section>
+  <h2>A keyword for each radius</h2>
+  <p>Two-component values <q>indicate the horizontal (first) and vertical (second) radii of the ellipse.</q> Each box
+  is 160 by 80, its gradient centered <code>at 40px 30px</code>: 40 from the left, 120 from the right, 30 from the
+  top, 50 from the bottom.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(closest-side farthest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>closest-side farthest-side</code>: radii 40 and 50, from 0 to 80 across, meeting the bottom.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    gradient.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(farthest-side closest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>farthest-side closest-side</code>: radii 120 and 30, meeting the right side and the top.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    gradient.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A circle's percentage</h2>
+  <p><q>For circle, a &lt;percentage&gt; value is resolved against the “scaled diagonal” of the gradient box's width
+  and height: sqrt(width² + height²)/sqrt(2).</q> Each box is 170 by 70: its scaled diagonal is 130.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=d style="background: radial-gradient(circle 20%, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 20%</code>: radius 26, from 59 to 111 across. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No gradient.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=d style="background: radial-gradient(circle 50%, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 50%</code>: radius 65, from 20 to 150 across, past the top and bottom.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    gradient.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

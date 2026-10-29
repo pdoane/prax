@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The contents keyword</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage b { color: #2c5a8f; }
+  .used::after { content: " [" contents "]"; }
+  .moved { content: none; }
+  .moved::after { content: " [" contents "]"; }
+  .twice { content: none; }
+  .twice::before { content: "(" contents ") "; }
+  .twice::after { content: "[" contents "]"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.3 Elemental Content: the contents keyword</div>
+  <h1>The contents keyword</h1>
+  <p class=pr-lede><code>contents</code> is <q>The element's descendants. Since this can only be used once per element
+  (you can't duplicate the children if, e.g., one is a plugin or form control), it is handled as follows:</q> it is
+  honoured on the element, and on a pseudo-element only where <q>it is not set on a "previous" pseudo-element, in the
+  following order, depth first: the element itself ::before ::after</q>. <q>If it is already used, then it evaluates to
+  nothing (like 'none').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#element-content">CSS Generated Content 3 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>The element uses its contents first</h2>
+  <p><q>Note that this is the default, since the initial value of 'content' is 'normal' and 'normal' computes to
+  'contents' on an element.</q> Each element holds "<b>Moby</b>", in blue.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=used><b>Moby</b></div></div>
+    <figcaption><code>::after { content: " [" contents "]" }</code>: the element keeps its contents, so the
+    <code>::after</code> has only its strings: "<b>Moby</b> []". <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No browser has the keyword: no
+    <code>::after</code>, "<b>Moby</b>".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=moved><b>Moby</b></div></div>
+    <figcaption><code>content: none</code> on the element: in the section's example, the <code>::after</code> takes
+    them, "&nbsp;[<b>Moby</b>]"; as <code>none</code> <q>behaves as 'normal'</q>, the element might keep them, "<b>Moby</b>
+    []". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> The element draws its contents, "<b>Moby</b>", and no <code>::after</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>::before before ::after</h2>
+  <p>The element has <code>content: none</code>; both pseudo-elements name <code>contents</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div class=twice><b>Moby</b></div></div>
+    <figcaption>As in the example, <code>::before</code> comes first and takes the contents: "(<b>Moby</b>) []"; if the
+    element keeps them, "() <b>Moby</b>[]".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> "<b>Moby</b>", from the element, and neither pseudo-element.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

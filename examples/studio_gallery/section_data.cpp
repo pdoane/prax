@@ -1,0 +1,437 @@
+// The gallery's data views: the collection of five thousand assets, the timeline and the node graph.
+
+#include "examples/studio_gallery/section_data.h"
+
+#include "pr/kit_button.h"
+#include "pr/kit_choice.h"
+#include "pr/kit_collection.h"
+#include "pr/kit_data.h"
+#include "pr/kit_graph.h"
+#include "pr/kit_menu.h"
+#include "pr/kit_surface.h"
+#include "pr/kit_timeline.h"
+#include "pr/ui.h"
+
+#include "examples/studio_gallery/gallery_parts.h"
+
+namespace gallery {
+
+namespace {
+
+constexpr PrKitTextStyle kBodySecondaryLine = {.tone = PrKitTone_Secondary, .wrap = PrKitWrap_Nowrap};
+
+// The collection's row height and viewport height, and the least width and the height of a grid's tile, in px.
+constexpr float kRowHeight = 32;
+constexpr float kViewHeight = 360;
+constexpr float kTileWidth = 112;
+constexpr float kTileHeight = 104;
+
+// The views that the segmented control chooses between.
+enum {
+    CollectionView_List,
+    CollectionView_Grid,
+    CollectionView_Tree,
+};
+typedef uint32_t CollectionView;
+
+// Creates the list view's rows, and returns its scroll container.
+PrLayoutNode buildList(PrKit* kit, PrLayoutNode parent, CollectionsState& collections) {
+    PrKitListViewStyle style{.rowHeight = kRowHeight,
+                             .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}};
+    PrLayoutNode view = prKitListView(
+        kit, parent, {.count = uint32_t(collections.assets.size()), .selection = &collections.cursor}, style);
+    PrKitWindow window = prKitListWindow(kit, view);
+    for (uint32_t i = window.first; i < window.first + window.count; ++i) {
+        const CollectionAsset& asset = collections.assets[i];
+        bool selected = selectionHolds(collections.selection, i);
+        PrKitRow row{.index = i,
+                     .item = i,
+                     .icon = asset.icon,
+                     .tone = PrKitTone_Primary,
+                     .selected = selected,
+                     .label = asset.name,
+                     .meta = asset.sizeText};
+        PrLayoutNode node = prKitListRow(kit, view, row);
+        PrKitBoxStyle type{.direction = PrKitDirection_Row, .justify = PrKitJustify_End};
+        type.place.width = prKitPx(60);
+        type.place.flex = PrKitFlex_Fixed;
+        prKitLabel(kit, prKitBox(kit, node, {}, type), {.text = asset.type}, kMonoFaint);
+    }
+    PrKitSelectionEdit edit{};
+    if (prKitSelectionEdited(kit, view, &edit))
+        selectionApply(collections.selection, edit, nullptr);
+    return view;
+}
+
+// Creates the grid's tiles, which share the list's selection, and returns its scroll container.
+PrLayoutNode buildGrid(PrKit* kit, PrLayoutNode parent, CollectionsState& collections) {
+    PrKitListViewStyle style{.rowHeight = kTileHeight,
+                             .tileWidth = kTileWidth,
+                             .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}};
+    PrLayoutNode view = prKitListView(
+        kit, parent, {.count = uint32_t(collections.assets.size()), .selection = &collections.cursor}, style);
+    PrKitWindow window = prKitListWindow(kit, view);
+    for (uint32_t i = window.first; i < window.first + window.count; ++i) {
+        const CollectionAsset& asset = collections.assets[i];
+        PrKitTile tile{.index = i,
+                       .item = i,
+                       .icon = asset.icon,
+                       .tint = asset.tint,
+                       .selected = selectionHolds(collections.selection, i),
+                       .label = asset.name};
+        prKitListTile(kit, view, tile);
+    }
+    PrKitSelectionEdit edit{};
+    if (prKitSelectionEdited(kit, view, &edit))
+        selectionApply(collections.selection, edit, nullptr);
+    return view;
+}
+
+// Creates the tree view's rows over the assets' groups, and returns its scroll container.
+PrLayoutNode buildTree(PrKit* kit, PrLayoutNode parent, CollectionsState& collections) {
+    collectionsTreeOrder(collections);
+    PrKitTreeView tree{.count = uint32_t(collections.treeRows.size()),
+                       .selection = &collections.treeCursor,
+                       .items = collections.treeRows.data()};
+    PrLayoutNode view =
+        prKitTreeView(kit, parent, tree, {.place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
+    PrKitWindow window = prKitListWindow(kit, view);
+    for (uint32_t i = window.first; i < window.first + window.count; ++i) {
+        uint32_t key = collections.treeKeys[i];
+        bool selected = selectionHolds(collections.treeSelection, key);
+        uint32_t index = 0;
+        char label[32];
+        char meta[16];
+        PrKitRow row{.index = i, .item = key, .tone = PrKitTone_Primary, .selected = selected};
+        if (collectionAssetOf(key, &index)) {
+            const CollectionAsset& asset = collections.assets[index];
+            row.icon = asset.icon;
+            row.label = asset.name;
+            row.meta = asset.type;
+        } else {
+            row.icon = collections.treeRows[i].open ? PrKitIconKind_FolderOpen : PrKitIconKind_Folder;
+            row.label = format(label, sizeof label, "Group %u", collectionGroupOf(key));
+            row.meta = format(meta, sizeof meta, "%u", kCollectionGroupSize);
+        }
+        prKitTreeRow(kit, view, row);
+    }
+    PrKitTreeFold fold{};
+    if (prKitFolded(kit, view, &fold))
+        collections.groupOpen[collectionGroupOf(collections.treeKeys[fold.row])] = fold.open ? 1 : 0;
+    PrKitSelectionEdit edit{};
+    if (prKitSelectionEdited(kit, view, &edit))
+        selectionApply(collections.treeSelection, edit, collections.treeKeys.data());
+    return view;
+}
+
+// Records the timeline's gestures for its Undo: a gesture copies the blocks that it opens on, and one that changed them
+// becomes the state that Undo restores.
+void timelineEdit(void* context, PrLayoutNode, PrUiEditPhase phase) {
+    TimelineState& timeline = *static_cast<TimelineState*>(context);
+    switch (phase) {
+        case PrUiEditPhase_Begin:
+            timeline.opened = timeline.blocks;
+            timeline.wrote = false;
+            ++timeline.begins;
+            break;
+        case PrUiEditPhase_Change:
+            timeline.wrote = true;
+            ++timeline.changes;
+            break;
+        default:
+            if (timeline.wrote) {
+                timeline.undo = timeline.opened;
+                timeline.hasUndo = true;
+            }
+            ++timeline.commits;
+            break;
+    }
+}
+
+} // namespace
+
+void sectionCollections(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
+    CollectionsState& collections = state.collections;
+    PrLayoutNode section = sectionFrame(
+        kit, parent, "19", "Collections", "Virtualized multi-select over five thousand assets.",
+        "The set is five thousand generated assets, and only the rows the viewport shows are built, a dozen or "
+              "so of them at a time. Click to select, Shift-click for a range, Cmd or Ctrl-click to add or remove "
+              "one; the arrow keys move the lead and Shift extends from the anchor. The grid shows the same assets "
+              "as tiles, as many to a row as fit, and shares the list's selection. The tree reaches them through "
+              "their groups, where Right opens a group and steps into it and Left closes it.");
+    PrLayoutNode panel = demoPanel(kit, section, "ASSET BROWSER", "LIST . GRID . TREE", true);
+    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    strip.box.direction = PrKitDirection_Row;
+    strip.box.align = PrKitAlign_Center;
+    strip.box.gap = kPrKitSpace3;
+    strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
+    strip.box.place.height = prKitPx(kPrKitHeightMd);
+    strip.box.place.flex = PrKitFlex_Fixed;
+    PrLayoutNode bar = prKitSurface(kit, panel, {}, strip);
+    const PrKitChoice modes[] = {{.label = "List"}, {.label = "Grid"}, {.label = "Tree"}};
+    segmented(kit, bar, modes, 3, &collections.viewMode, {.size = PrKitControlSize_Sm});
+    prKitSpacer(kit, bar, {});
+    bool tree = collections.viewMode == CollectionView_Tree;
+    char summary[64];
+    size_t held = tree ? collections.treeSelection.size() : collections.selection.size();
+    prKitLabel(kit, bar,
+               {.text = format(summary, sizeof summary, "%zu of %zu selected", held, collections.assets.size())},
+               kMonoMuted);
+    if (!collections.verb.empty())
+        prKitLabel(kit, bar, {.text = collections.verb}, kBodySecondaryLine);
+
+    PrLayoutNode view = tree                                                 ? buildTree(kit, panel, collections)
+                        : collections.viewMode == CollectionView_Grid ? buildGrid(kit, panel, collections)
+                                                                      : buildList(kit, panel, collections);
+    PrKitMenuStyle wide{.minWidth = 200};
+    PrLayoutNode menu = prKitContextMenu(kit, view, {}, wide);
+    if (menu != kPrLayoutNodeNone) {
+        const char* const verbs[] = {"Open", "Reveal in Finder"};
+        for (const char* verb : verbs) {
+            PrKitMenuItem item{.text = verb};
+            if (prUiActivated(prKitUi(kit), prKitMenuItem(kit, menu, item, {})))
+                collections.verb = verb;
+        }
+        prKitMenuSeparator(kit, menu, {});
+        PrKitMenuItem remove{.text = "Delete"};
+        PrKitMenuItemStyle danger{.variant = PrKitMenuItemVariant_Danger};
+        if (prUiActivated(prKitUi(kit), prKitMenuItem(kit, menu, remove, danger)))
+            collections.verb = "Delete";
+    }
+
+    PrLayoutNode empty = demoPanel(kit, section, "EMPTY STATE", "NO RESULTS", true);
+    PrKitSurfaceStyle region{.ground = PrKitGround_Panel};
+    region.box.place.height = prKitPx(140);
+    region.box.place.flex = PrKitFlex_Fixed;
+    prKitEmptyState(kit, prKitSurface(kit, empty, {}, region),
+                    {.icon = PrKitIconKind_Search,
+                     .title = "No assets match the filter",
+                     .hint = "Clear the filter to see every asset again"});
+}
+
+void sectionTimeline(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
+    TimelineState& timeline = state.timeline;
+    PrLayoutNode section = sectionFrame(
+        kit, parent, "20", "Timeline", "An editable clip over caller-owned tracks.",
+        "The kit's timeline draws the ruler, the lanes, the blocks, the markers, the loop band and the playhead, "
+              "and writes the model that this example owns. Drag the ruler to scrub the playhead, a block to move it, "
+              "a block's end to resize it, and an empty part of a track to select with a rectangle; double-click a "
+              "track to add a block, and Delete removes what is selected. A drag snaps to the grid, and to the edges "
+              "of other blocks, the markers and the playhead as the toolbar enables them, and a line marks a snap to "
+              "any of those. The wheel pans the view and Cmd with the wheel zooms it. Every gesture reports to the "
+              "edit sink, which is what Undo steps back.");
+
+    // The playhead runs through the loop while the clip plays.
+    PrUi* ui = prKitUi(kit);
+    if (timeline.playing) {
+        timeline.playhead += float(prUiCurrentRound(ui)->delta);
+        if (timeline.playhead >= timeline.loop.end)
+            timeline.playhead = timeline.loop.start;
+        prUiRequestFrame(ui);
+    }
+
+    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    strip.box.direction = PrKitDirection_Row;
+    strip.box.align = PrKitAlign_Center;
+    strip.box.gap = kPrKitSpace5;
+    strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
+    strip.box.place.height = prKitPx(kPrKitHeightMd);
+    strip.box.place.flex = PrKitFlex_Fixed;
+    PrLayoutNode bar = prKitSurface(kit, section, {}, strip);
+    prKitToggle(kit, bar, {.value = &timeline.playing, .label = "Play"}, {});
+    PrKitButtonStyle small{.size = PrKitControlSize_Sm};
+    PrKitButton reset{.text = "Reset cursor"};
+    if (prUiActivated(ui, prKitButton(kit, bar, reset, small)))
+        timeline.playhead = timeline.loop.start;
+    PrKitButton fit{.text = "Fit view"};
+    if (prUiActivated(ui, prKitButton(kit, bar, fit, small)))
+        timeline.view = PrKitTimeSpan{0, 8};
+    const PrKitCheck snaps[] = {{.value = &timeline.snapping, .label = "Grid 0.25s"},
+                                {.value = &timeline.snapEdges, .label = "Edges"},
+                                {.value = &timeline.snapMarkers, .label = "Markers"},
+                                {.value = &timeline.snapPlayhead, .label = "Playhead"}};
+    for (const PrKitCheck& snap : snaps)
+        prKitCheckbox(kit, bar, snap, {});
+    prKitSpacer(kit, bar, {});
+    PrKitButton undo{.text = "Undo", .icon = PrKitIconKind_Undo, .disabled = !timeline.hasUndo};
+    bool undone = prUiActivated(ui, prKitButton(kit, bar, undo, small));
+    if (undone) {
+        timeline.blocks = timeline.undo;
+        timeline.hasUndo = false;
+    }
+    uint32_t selected = 0;
+    for (const PrKitTimelineBlock& block : timeline.blocks)
+        selected += block.selected ? 1 : 0;
+    char count[32];
+    prKitLabel(kit, bar, {.text = format(count, sizeof count, "%u selected", selected)}, kMonoMuted);
+
+    PrLayoutNode panel = demoPanel(kit, section, "ANIMATION CLIP", "EDITABLE . UNDO SINK", true);
+    PrKitTimeline view{.tracks = timeline.tracks.data(),
+                       .trackCount = uint32_t(timeline.tracks.size()),
+                       .blocks = timeline.blocks.data(),
+                       .blockCount = uint32_t(timeline.blocks.size()),
+                       .markers = timeline.markers.data(),
+                       .markerCount = uint32_t(timeline.markers.size()),
+                       .view = &timeline.view,
+                       .playhead = &timeline.playhead,
+                       .loop = &timeline.loop,
+                       .snap = {.step = timeline.snapping ? 0.25f : 0,
+                                .edges = timeline.snapEdges,
+                                .markers = timeline.snapMarkers,
+                                .playhead = timeline.snapPlayhead}};
+    prUiSetEditSink(prKitUi(kit), panel, timelineEdit, &timeline);
+    PrLayoutNode clip = prKitTimeline(kit, panel, view, {.trackHeight = 30});
+    if (prKitRemoved(kit, clip)) {
+        std::vector<PrKitTimelineBlock> kept;
+        for (const PrKitTimelineBlock& block : timeline.blocks) {
+            if (!block.selected)
+                kept.push_back(block);
+        }
+        timeline.blocks = kept;
+    }
+    uint32_t addTrack = 0;
+    float addTime = 0;
+    if (prKitAdded(kit, clip, &addTrack, &addTime)) {
+        timeline.blocks.push_back(PrKitTimelineBlock{.id = timeline.nextId++,
+                                                     .track = addTrack,
+                                                     .start = addTime,
+                                                     .duration = 1,
+                                                     .color = {.47f, .70f, .47f, 1},
+                                                     .label = "New"});
+    }
+    PrKitSurfaceStyle tally{.rules = PrKitRuleFlag_Top};
+    tally.box.direction = PrKitDirection_Row;
+    tally.box.gap = kPrKitSpace4;
+    tally.box.padding = prKitEdgesAll(kPrKitSpace4);
+    PrLayoutNode counts = prKitSurface(kit, panel, {}, tally);
+    const char* const labels[] = {"BEGIN", "CHANGE", "COMMIT"};
+    const uint32_t values[] = {timeline.begins, timeline.changes, timeline.commits};
+    for (uint32_t i = 0; i < 3; ++i) {
+        char value[16];
+        PrKitStatTile tile{.label = labels[i], .value = format(value, sizeof value, "%u", values[i])};
+        prKitStatTile(kit, counts, tile);
+    }
+
+    // The same model again, shown and not edited, with its own view.
+    PrLayoutNode live = demoPanel(kit, section, "STATE INSPECTOR", "READ-ONLY", true);
+    PrKitTimeline shown = view;
+    shown.view = &timeline.inspectorView;
+    shown.readOnly = true;
+    prKitTimeline(kit, live, shown, {.trackHeight = 22});
+}
+
+void sectionGraph(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
+    GraphState& graph = state.graph;
+    PrLayoutNode section = sectionFrame(
+        kit, parent, "22", "Node Graph", "Typed nodes joined by wires.",
+        "The kit's graph draws the canvas, the node boxes and the wires, and hands back each node's body, where "
+              "the blend node's swatch is declared with the same kit calls as the rest of the page. Drag a node to "
+              "move it and every node selected with it; drag from a port to a port of the same type to wire them, and "
+              "an unlike pair refuses. Drag on empty canvas to select, click a wire to pick it, and Delete removes "
+              "what is selected. The wheel pans, and Cmd with the wheel zooms.");
+    PrUi* ui = prKitUi(kit);
+
+    PrKitSurfaceStyle strip{.rules = PrKitRuleFlag_Bottom};
+    strip.box.direction = PrKitDirection_Row;
+    strip.box.align = PrKitAlign_Center;
+    strip.box.gap = kPrKitSpace3;
+    strip.box.padding = prKitEdgesXY(0, kPrKitSpace4);
+    strip.box.place.height = prKitPx(kPrKitHeightMd);
+    strip.box.place.flex = PrKitFlex_Fixed;
+    PrLayoutNode bar = prKitSurface(kit, section, {}, strip);
+    PrKitButtonStyle small{.size = PrKitControlSize_Sm};
+    PrKitButton arrange{.text = "Arrange"};
+    if (prUiActivated(ui, prKitButton(kit, bar, arrange, small)))
+        prKitGraphArrange(graph.nodes.data(), uint32_t(graph.nodes.size()), graph.wires.data(),
+                          uint32_t(graph.wires.size()));
+    uint32_t selected = 0;
+    for (const PrKitGraphNode& node : graph.nodes)
+        selected += node.selected ? 1 : 0;
+    uint32_t picked = 0;
+    for (const PrKitGraphWire& wire : graph.wires)
+        picked += wire.selected ? 1 : 0;
+    PrKitButton remove{.text = "Delete", .disabled = selected + picked == 0};
+    bool removing = prUiActivated(ui, prKitButton(kit, bar, remove, small));
+    prKitSpacer(kit, bar, {});
+    char readout[64];
+    prKitLabel(kit, bar,
+               {.text = format(readout, sizeof readout, "%zu nodes . %zu wires . %u selected", graph.nodes.size(),
+                               graph.wires.size(), selected + picked)},
+               kMonoMuted);
+
+    PrLayoutNode panel = demoPanel(kit, section, "MATERIAL GRAPH", "EDITABLE", true);
+    static const PrColor kTypeColors[PortType_Count] = {
+        {.41f, .62f, .87f, 1}, // scalar
+        {.46f, .76f, .54f, 1}, // vector
+        {.89f, .64f, .35f, 1}, // color
+    };
+    PrKitGraph view{.nodes = graph.nodes.data(),
+                    .nodeCount = uint32_t(graph.nodes.size()),
+                    .wires = graph.wires.data(),
+                    .wireCount = uint32_t(graph.wires.size()),
+                    .typeColors = kTypeColors,
+                    .typeCount = PortType_Count,
+                    .view = &graph.view};
+    PrLayoutNode canvas = prKitGraph(kit, panel, view, {.place = {.height = prKitPx(340), .flex = PrKitFlex_Fixed}});
+
+    // The blend node's body shows its mix from its first input's color to its second's.
+    for (uint32_t i = 0; i < uint32_t(graph.nodes.size()); ++i) {
+        PrLayoutNode body = prKitGraphBody(kit, canvas, i);
+        if (body == kPrLayoutNodeNone)
+            continue;
+        PrLayoutNode row = prKitBox(kit, body, {}, {.direction = PrKitDirection_Row, .gap = 0});
+        constexpr uint32_t kCells = 12;
+        for (uint32_t c = 0; c < kCells; ++c) {
+            float t = float(c) / float(kCells - 1);
+            PrColor from = kTypeColors[PortType_Color];
+            PrColor to = kTypeColors[PortType_Vector];
+            PrColor mixed{from.r + (to.r - from.r) * t, from.g + (to.g - from.g) * t, from.b + (to.b - from.b) * t, 1};
+            prKitSwatch(kit, row, {.color = mixed}, {.size = 12});
+        }
+    }
+
+    PrKitGraphLink link{};
+    if (prKitConnected(kit, canvas, &link)) {
+        // A wire into an input replaces the wire that fed it.
+        std::vector<PrKitGraphWire> kept;
+        for (const PrKitGraphWire& wire : graph.wires) {
+            if (wire.link.toNode != link.toNode || wire.link.toPort != link.toPort)
+                kept.push_back(wire);
+        }
+        kept.push_back(PrKitGraphWire{.id = graph.nextWireId++, .link = link});
+        graph.wires = kept;
+    }
+    if (prKitRemoved(kit, canvas) || removing) {
+        std::vector<PrKitGraphNode> nodes;
+        for (const PrKitGraphNode& node : graph.nodes) {
+            if (!node.selected)
+                nodes.push_back(node);
+        }
+        auto held = [&](uint64_t id) {
+            for (const PrKitGraphNode& node : nodes) {
+                if (node.id == id)
+                    return true;
+            }
+            return false;
+        };
+        std::vector<PrKitGraphWire> wires;
+        for (const PrKitGraphWire& wire : graph.wires) {
+            if (!wire.selected && held(wire.link.fromNode) && held(wire.link.toNode))
+                wires.push_back(wire);
+        }
+        graph.nodes = nodes;
+        graph.wires = wires;
+    }
+
+    PrKitBoxStyle legend{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace6,
+                    .padding = prKitEdgesAll(kPrKitSpace4)};
+    PrLayoutNode types = prKitBox(kit, panel, {}, legend);
+    const char* const names[] = {"scalar", "vector", "color"};
+    for (uint32_t i = 0; i < PortType_Count; ++i) {
+        PrLayoutNode cell = prKitBox(kit, types, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
+        prKitSwatch(kit, cell, {.color = kTypeColors[i]}, {.size = 8});
+        prKitLabel(kit, cell, {.text = names[i]}, kBodySecondaryLine);
+    }
+}
+
+} // namespace gallery

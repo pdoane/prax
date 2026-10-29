@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font's underline position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { padding: 0 6px; font-size: 50px; line-height: 80px; text-decoration: underline #c0392b 2px; text-decoration-skip-ink: none; }
+  .far { font-family: "PR Underline Test Far"; }
+  .near { font-family: "PR Underline Test Thick"; }
+  figure.n .pr-stage { width: 150px; }
+  figure.n figcaption { max-width: 150px; }
+  figure.n { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.8.2 Using Font Metrics for Automatic Positioning</div>
+  <h1>The font's underline position</h1>
+  <p class=pr-lede><q>The UA should use such font-based information in its choice of auto offset wherever appropriate,
+  and must use such information when from-font is specified for 'text-underline-position'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#line-auto-offset">CSS Text Decoration 4 §2.8.2</a></span>
+  "Gag" at 50px in two fonts: PR Underline Test Far puts its underline 300/2048 em below the baseline, 7px; PR
+  Underline Test Thick, 150/2048 em, about 4px. Each line is red and 2px thick; red dashes mark the baseline.</p>
+</header>
+
+<section>
+  <h2>from-font must use it</h2>
+  <p>With <code>from-font</code>, <code>auto</code> offset <q>must be zero if the computed value of
+  'text-underline-position' is from-font and the UA was able to extract an appropriate metric to use from the
+  font.</q></p>
+  <figure class=n>
+    <div class="pr-stage g far" style="text-underline-position: from-font"><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Gag</div>
+    <figcaption>Far: the line's top 7px below the dashes.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g near" style="text-underline-position: from-font"><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Gag</div>
+    <figcaption>Thick: about 4px below, half as far.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g far" style="text-underline-position: from-font; text-underline-offset: 10px"><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Gag</div>
+    <figcaption>Far with a 10px offset: 17px below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto should use it</h2>
+  <p>With the initial <code>auto</code> position and offset.</p>
+  <figure class=n>
+    <div class="pr-stage g far"><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Gag</div>
+    <figcaption>Far: lower, near the 7px the font asks for.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g near"><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Gag</div>
+    <figcaption>Thick: nearer the baseline, 3px higher, as Firefox draws it. Chrome and Safari put both lines at the same place.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

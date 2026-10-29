@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters: block-axis position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .s::first-letter { initial-letter: 2 3; }
+  .big { font-size: 26px; }
+  .r::first-letter { initial-letter: 3 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.6.1 Block-axis Positioning</div>
+  <h1>Initial letters: block-axis position</h1>
+  <p class=pr-lede><q>In the block axis, the initial letter is positioned with respect to the line box in which it
+  originates as required to satisfy its alignment (initial-letter-align) and specified sink (initial-letter)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-block-position">CSS Inline Layout 3 §7.6.1</a></span>
+  Each paragraph is 13px PR Literata on 20px lines, its first letter blue. <span class=pr-flag>Safari</span> has
+  only <code>-webkit-initial-letter</code>, <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>By the sink, not by the lines</h2>
+  <p><q>Its position is not affected by line height inconsistencies introduced by the contents of the impacted line
+  boxes.</q> If <q>its size is less than its sink, the initial letter is positioned to satisfy its over
+  alignment.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>Three lines, the second <span class=big>taller</span> than the rest, and the letter does not stretch for it.</p></div>
+    <figcaption><code>3</code>, a 26px word on the second line: the T placed as if every line were 20px, its
+    foot is above the third baseline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p s">Size two, sink three: the letter keeps its top on the first line's cap height.</p></div>
+    <figcaption><code>2 3</code>: smaller than its sink, so its top is level with the first line's capitals, and the
+    third line is still beside it. <span class=pr-flag>Chrome</span> Its foot on the third baseline, its top a line
+    lower.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not part of the line's height</h2>
+  <p><q>The initial letter does not increase the logical height of the line box in which it participates</q>. <q>It
+  … can force its originating line box (and subsequent content) to shift further away from that edge.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>The first line stays 20px; the letter hangs down beside the next two.</p></div>
+    <figcaption><code>3</code>: the first line 20px, the T beside the next two.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p r">Raised three lines above the first baseline, so the line moves down.</p></div>
+    <figcaption><code>3 1</code>: the R rises two lines above the first baseline, so the line moves 40px down to
+    keep it in the block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

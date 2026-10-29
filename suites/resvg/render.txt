@@ -1,0 +1,24 @@
+# How the suite renders (tools/suite/suite_render.h). It uses the fonts that resvg's own
+# harness uses, from the corpus, with the families that harness assigns to the generic ones.
+font third_party/resvg-tests/fonts/Amiri-Regular.ttf
+font third_party/resvg-tests/fonts/MPLUS1p-Regular.ttf
+font third_party/resvg-tests/fonts/NotoColorEmoji.ttf
+font third_party/resvg-tests/fonts/NotoEmoji-Regular.ttf
+font third_party/resvg-tests/fonts/NotoMono-Regular.ttf
+font third_party/resvg-tests/fonts/NotoSans-Black.ttf
+font third_party/resvg-tests/fonts/NotoSans-Bold.ttf
+font third_party/resvg-tests/fonts/NotoSans-ExtraCondensed.ttf
+font third_party/resvg-tests/fonts/NotoSans-Italic.ttf
+font third_party/resvg-tests/fonts/NotoSans-Light.ttf
+font third_party/resvg-tests/fonts/NotoSans-Regular.ttf
+font third_party/resvg-tests/fonts/NotoSans-Thin.ttf
+font third_party/resvg-tests/fonts/NotoSansDevanagari-Regular.ttf
+font third_party/resvg-tests/fonts/NotoSerif-Regular.ttf
+font third_party/resvg-tests/fonts/SedgwickAveDisplay-Regular.ttf
+font third_party/resvg-tests/fonts/SourceSansPro-Regular.ttf
+font third_party/resvg-tests/fonts/Yellowtail-Regular.ttf
+alias serif = Noto Serif
+alias sans-serif = Noto Sans
+alias cursive = Yellowtail
+alias fantasy = Sedgwick Ave Display
+alias monospace = Noto Mono

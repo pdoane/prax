@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointermove</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.4 pointermove</div>
+  <h1>pointermove</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointermove when a pointer changes any properties
+  that don't fire pointerdown or pointerup events.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointermove">Pointer Events §3.3.4</a></span></p>
+</header>
+<section>
+  <h2>A move without moving</h2>
+  <p><q>This includes any changes to coordinates, pressure, tangential pressure, tilt, twist, contact geometry (width
+  and height) or chorded buttons.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointermove">§3.3.4</a></span>
+  The page cancels the context menu over the box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Hold still here, and press.</div>
+      <ol class=pr-log data-log="pointermove" data-fields="pointerType clientX clientY pressure buttons" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Hold the left button down over the box, keep the mouse still, and press the right button too: a
+    <code>pointermove</code> at the same <code>clientX</code> and <code>clientY</code>, with <code>buttons=3</code>.
+    Hold a pen's tip still on the box and press harder: <code>pointermove</code>s at one place, each with a different
+    <code>pressure</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu from opening over the box.
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

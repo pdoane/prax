@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-clip: text and border-area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { margin: 10px; font: 700 30px/40px sans-serif; color: transparent; background: linear-gradient(to right, #4f81bd, #d68a3c); background-clip: text; }
+  .b { width: 100px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed rgba(31, 36, 48, 0.2); background: linear-gradient(to right, #4f81bd, #d68a3c); background-clip: border-area; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.8 Painting Area: the background-clip property</div>
+  <h1>background-clip: text and border-area</h1>
+  <p class=pr-lede><q>text: The background is painted within (clipped to) the intersection of the border box and the
+  geometry of the text including any decorations and emphasis marks in the element and its in-flow and floated
+  descendants. The text color has no effect on the painting of the background.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-clip">CSS Backgrounds 4 §2.8</a></span></p>
+</header>
+
+<section>
+  <h2>text</h2>
+  <p>A gradient from blue to orange, and transparent text.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=t>Gloves</div></div>
+    <figcaption>"Gloves" in the gradient, nothing around it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=t style="text-decoration: underline 4px"><span style="color: rgba(0, 0, 0, 0.3)">Glo</span>ves</div></div>
+    <figcaption>Underlined, and "Glo" in a translucent black: the underline in the gradient; "Glo" darker over
+    it. <span class=pr-flag>Firefox</span> No underline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-area</h2>
+  <p><q>border-area: The background is clipped to the area painted by the border, taking 'border-width' and
+  'border-style' into account but ignoring any transparency introduced by 'border-color'.</q> The box has a faint
+  10px dashed border.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=b></div></div>
+    <figcaption>The gradient only in the dashes, as solid as if they were opaque. <span class=pr-flag>Firefox</span> The gradient fills the border box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=b style="background-clip: border-area text; font: 700 20px/20px sans-serif; color: transparent">Glo</div></div>
+    <figcaption><code>border-area text</code>: <q>the union of these two areas</q>: the dashes and the text. <span class=pr-flag>Safari</span> The dashes only. <span class=pr-flag>Firefox</span> The gradient fills the border box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font family: a list of alternatives</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3 Font family: the 'font-family' property</div>
+  <h1>Font family: a list of alternatives</h1>
+  <p class=pr-lede><code>font-family</code> takes a comma separated list of <code>&lt;family-name&gt;</code> and
+  <code>&lt;generic-family&gt;</code>. Initial depends on the user agent, it applies to all elements, is inherited, and
+  computes to the value as specified.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-family.html">font-family: a list of alternatives</a>.</p>
+</header>
+
+<section>
+  <h2>Alternatives, in order</h2>
+  <p><q>The property value is a prioritized list of font family names and/or generic family names. Unlike most other
+  CSS properties, component values are separated by a comma to indicate that they are alternatives</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Gill, Helvetica, sans-serif">Grand gloves</div>
+    <figcaption>The specification's <code>Gill, Helvetica, sans-serif</code>: there is no family "Gill", so Helvetica
+    draws it: the "G" has a spur at its lower right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Gill Sans', Helvetica, sans-serif">Grand gloves</div>
+    <figcaption><code>"Gill Sans", Helvetica, sans-serif</code>: Gill Sans exists and draws it: rounder letters,
+    and a "G" with no spur.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>initial: the user agent's family</h2>
+  <p><code>initial</code> asks for the initial value, which depends on the user agent. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia"><span style="font-family: initial">Handgloves</span></div>
+    <figcaption>A <code>span</code> with <code>font-family: initial</code> inside Georgia: it is drawn in the user
+    agent's own family, not Georgia.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

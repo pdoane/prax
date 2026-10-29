@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins at page breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.3.3 Allowed page breaks</div>
+  <h1>Margins at page breaks</h1>
+  <p class=pr-lede><q>When an unforced page break occurs here, the used values of the relevant 'margin-top' and 'margin-bottom' properties are set to '0'. When a forced page break occurs here, the used value of the relevant 'margin-bottom' property is set to '0'; the relevant 'margin-top' used value may either be set to '0' or retained.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#allowed-page-breaks">CSS 2 §13.3.3</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Unforced and forced</h2>
+  <p>The orange boxes have <code>margin-top: 40px</code>.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } .m { margin-top: 40px; background: #f9cc9d }</style><div style='height: 100px; background: #c3d08b'></div><div class=m><div>line 1</div><div>line 2</div></div>"></iframe>
+    <figcaption>The box does not fit after the 100px block and breaks to page 2, unforced: its 40px margin is set to 0, and it is at the top of page 2's page area.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } .m { margin-top: 40px; background: #f9cc9d; page-break-before: always }</style><div>line 1</div><div class=m><div>line 2</div></div>"></iframe>
+    <figcaption>A forced break before the box: CSS 2 lets its margin be 0 or 40px. Chrome keeps it, the box 40px down on page 2; Safari and Firefox set it to 0. <span class="pr-flag pr-since">Since CSS 2</span> The margin is kept.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></div>
+  <h2>The margin after a forced break is kept</h2>
+  <p><q>When a forced break occurs there, adjoining margins before the break are truncated, but margins after the break are preserved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } .m { margin-top: 40px; background: #f9cc9d; break-before: page }</style><div>line 1</div><div class=m><div>line 2</div></div>"></iframe>
+    <figcaption><code>break-before: page</code>: the box is 40px below the top of page 2's page area. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The margin is 0: the box is at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

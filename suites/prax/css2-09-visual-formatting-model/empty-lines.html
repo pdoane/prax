@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: empty lines and alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: empty lines and alignment</h1>
+  <p class=pr-lede><q>Line boxes are created as needed to hold inline-level content within an inline formatting
+  context.</q> Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Lines with nothing in them</h2>
+  <p><q>Line boxes that contain no text, no preserved white space, no inline elements with non-zero margins, padding,
+  or borders, and no other in-flow content (such as images, inline blocks or inline tables), and do not end with a
+  preserved newline must be treated as zero-height line boxes</q>. Between A and B, a box with only an empty span.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div><span></span></div><div class=pr-b>B</div></div>
+    <figcaption>An empty span: a line of zero height, and A and B touch.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div><span style="padding-left: 1px"></span></div><div class=pr-b>B</div></div>
+    <figcaption>The span with 1px of padding: a 20px line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div style="white-space: pre"> </div><div class=pr-b>B</div></div>
+    <figcaption>A preserved space: a 20px line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Room left on a line</h2>
+  <p><q>When the total width of the inline-level boxes on a line is less than the width of the line box containing
+  them, their horizontal distribution within the line box is determined by the 'text-align' property.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a>, <a href="https://drafts.csswg.org/css2/#alignment-prop">§16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center">a short line</div>
+    <figcaption><code>text-align: center</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: right">a short line</div>
+    <figcaption><code>text-align: right</code></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

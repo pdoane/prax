@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The initial coordinate system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 24px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.4 The initial coordinate system</div>
+  <h1>The initial coordinate system</h1>
+  <p class=pr-lede><q>The origin of both coordinate systems must be at the origin of the SVG viewport, and one unit in
+  the initial coordinate system must equal one CSS 2.1 px in the SVG viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#InitialCoordinateSystem">SVG 2 §8.4</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Top left, x right, y down, upright</h2>
+  <p><q>the initial viewport coordinate system (and therefore the initial user coordinate system) must have its origin
+  at the top/left of the viewport, with the positive x-axis pointing towards the right, the positive y-axis pointing
+  down, and text rendered with an "upright" orientation</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="20" height="20" fill="#4f81bd" /><rect x="120" y="40" width="20" height="10" fill="#d68a3c" /></svg></div>
+    <figcaption>A blue square 20 by 20 at 0, 0: in the top left corner. An orange rect at 120, 40: 120 px right,
+    40 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 10 10 H 150 L 140 5 M 150 10 L 140 15 M 10 10 V 55 L 5 45 M 10 55 L 15 45" fill="none" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>Arrows from 10, 10 toward growing x and y: one to the right, one down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="40" fill="#2c5a8f">Upright</text></svg></div>
+    <figcaption>Text at 20, 40: upright, reading left to right, its baseline on y 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

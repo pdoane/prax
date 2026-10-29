@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The grid from HTML's algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { display: table; border-spacing: 4px; background: #e0e3e8; }
+  .r { display: table-row; }
+  .c, td { display: table-cell; padding: 0; background: #b9cde6; }
+  .o { background: #f6d7b4; }
+  table { border-spacing: 4px; background: #e0e3e8; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.3.1 HTML Algorithm</div>
+  <h1>The grid from HTML's algorithm</h1>
+  <p class=pr-lede><q>Apply the HTML5 Table Formatting algorithm, where boxes act like the HTML element equivalent to
+  their display type, and use the attributes of their originating element if and only if it is an HTML element of the
+  same type (otherwise, they act like if they didn't have any attribute).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#dimensioning-the-row-column-grid--step1">CSS Table 3 §3.3.1</a></span>
+  Tables are grey with 4px spacing; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>colspan on a td, and on anything else</h2>
+  <p>Each table is built of <code>div</code>s with table display values; the orange cell of the first row has
+  <code>colspan=2</code>. (The parser would move a <code>td</code> out of a <code>div</code>, so a script puts it
+  there, as the section's example does.)</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=t><div class=r><span class=make-td data-colspan=2>aaaa</span></div><div class=r><div class=c>b</div><div class=c>c</div></div></div></div>
+    <figcaption>A <code>td</code> element: it spans both columns, over "b" and "c".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=t><div class=r><div class="c o" colspan=2>aaaa</div></div><div class=r><div class=c>b</div><div class=c>c</div></div></div></div>
+    <figcaption>A <code>div</code> with <code>display: table-cell</code>: the attribute is not used, so it is one
+    column, over "b" only, and widens it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>span on a col, and on anything else</h2>
+  <p>Columns of <code>width: 50px</code> with <code>span=2</code>, in tables of two cells.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><col span=2 style="width: 50px"><tr><td>a</td><td class=o>b</td></tr></table></div>
+    <figcaption>A <code>col</code> element: both columns are 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table class=make-col><tr><td>a</td><td class=o>b</td></tr></table></div>
+    <figcaption>A <code>div</code> with <code>display: table-column</code>, put in the table by a script: the
+    attribute is not used, so only the first column is 50px, and the second is as narrow as "b".</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const slot of document.querySelectorAll(".make-td")) {
+    const td = document.createElement("td");
+    td.className = "o";
+    td.colSpan = Number(slot.dataset.colspan);
+    td.textContent = slot.textContent;
+    slot.replaceWith(td);
+  }
+  for (const table of document.querySelectorAll(".make-col")) {
+    const col = document.createElement("div");
+    col.setAttribute("span", "2");
+    col.style.cssText = "display: table-column; width: 50px";
+    table.prepend(col);
+  }
+</script>
+</body>
+</html>

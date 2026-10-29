@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: a child's reset nests, a sibling's replaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage div { margin-left: 16px; }
+  .pr-stage > div { margin-left: 0; }
+  .r1 { counter-reset: n 1; }
+  .r2 { counter-reset: n 2; }
+  .r3 { counter-reset: n 3; }
+  .all .show::before { content: counters(n, ".") " "; color: #2c5a8f; }
+  .one .show::before { content: counter(n) " "; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.3 Nested Counters and Scope</div>
+  <h1>Nested counters: a child's reset nests, a sibling's replaces</h1>
+  <p class=pr-lede><q>Counters are “self-nesting”; instantiating a new counter on an element which inherited an
+  identically-named counter from its parent creates a new counter of the same name, nested inside the existing
+  counter.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#nested-counters">CSS Lists and Counters 3 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>One structure, two functions</h2>
+  <p>A block resets <code>n</code> to 1, its child to 2, and that child's next sibling to 3.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text all"><div class=r1><span class=show>outer</span><div class=r2><span class=show>child</span></div><div class=r3><span class=show>sibling</span></div><span class=show>after</span></div></div>
+    <figcaption><code>counters(n, ".")</code>: "1 outer", "1.2 child", "1.3 sibling", then "1.3 after": the
+    sibling's 3 replaced the 2, and its scope runs on to the following text. <span class=pr-flag>Chrome</span> "1 after": the outer counter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text one"><div class=r1><span class=show>outer</span><div class=r2><span class=show>child</span></div><div class=r3><span class=show>sibling</span></div><span class=show>after</span></div></div>
+    <figcaption><code>counter(n)</code>, only the innermost: "1 outer", "2 child", "3 sibling", "3 after". <span class=pr-flag>Chrome</span> "1 after".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The scope</h2>
+  <p><q>The scope of a counter therefore starts at the first element in the document that instantiates that counter and
+  includes the element’s descendants and its following siblings with their descendants. However, it does not include
+  any elements in the scope of a counter with the same name created by a 'counter-reset' on a later sibling of the
+  element, allowing such explicit counter instantiations to obscure those earlier siblings.</q></p>
+  <figure>
+    <div class="pr-stage pr-text all"><div><div class=r2><span class=show>a</span></div><span class=show>b</span><div class=r3><span class=show>c</span></div><span class=show>d</span></div></div>
+    <figcaption>No outer counter: "2 a", "2 b" (a following sibling), "3 c", and "3 d": the later reset obscures the
+    first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

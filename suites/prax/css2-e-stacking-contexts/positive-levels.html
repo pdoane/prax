@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: positive stack levels</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; box-sizing: border-box; width: 90px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: positive stack levels</h1>
+  <p class=pr-lede>Step 9, the last of the boxes. Each stage forms the stacking context, and its absolutely positioned
+  boxes are in the source in the order A, B, C, D.</p>
+</header>
+
+<section>
+  <h2>Smallest first, then tree order</h2>
+  <p><q>Stacking contexts formed by positioned descendants with z-indices greater than or equal to 1 in z-index order
+  (smallest first) then tree order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 110px"><div class="pr-a p" style="z-index: 2; left: 10px; top: 10px">A: 2</div><div class="pr-b p" style="z-index: 1; left: 40px; top: 30px">B: 1</div><div class="pr-c p" style="z-index: 2; left: 70px; top: 50px">C: 2</div><div class="pr-d p" style="z-index: 1; left: 100px; top: 70px">D: 1</div></div>
+    <figcaption>Painted B, D, A, C: A covers B, and C covers B and D, though D comes after C in the tree.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 110px"><div class="pr-a p" style="z-index: 1; left: 10px; top: 10px">A: 1</div><div class="pr-b p" style="z-index: 1; left: 40px; top: 30px">B: 1</div><div class="pr-c p" style="z-index: 1; left: 70px; top: 50px">C: 1</div><div class="pr-d p" style="z-index: 1; left: 100px; top: 70px">D: 1</div></div>
+    <figcaption>All at 1: tree order alone, each covering the one before.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After level 0, whatever the tree order</h2>
+  <p>Step 9 follows step 8, so a box at level 1 is over boxes at <code>auto</code> and <code>0</code> that come after
+  it in the tree. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 90px"><div class="pr-a p" style="z-index: 1; left: 20px; top: 10px; width: 120px">A: 1</div><div class="pr-b p" style="left: 40px; top: 30px">B: auto</div><div class="pr-c p" style="z-index: 0; left: 80px; top: 50px">C: 0</div></div>
+    <figcaption>A, first in the tree, is over B and C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties on ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 0; }
+  .font::first-line { font-size: 200%; }
+  .spacing::first-line { letter-spacing: 10px; }
+  .decor::first-line { text-decoration: underline 2px #d68a3c; }
+  .opacity::first-line { opacity: 0.3; }
+  .dir::first-line { direction: rtl; }
+  .wm::first-line { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1.2 Styling the ::first-line Pseudo-element</div>
+  <h1>Properties on ::first-line</h1>
+  <p class=pr-lede><q>The ::first-line pseudo-element’s generated box behaves similar to that of an inline-level box,
+  but with certain restrictions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-line-styling">CSS Pseudo-Elements 4 §2.1.2</a></span>
+  Each paragraph is 10px a character, 20 characters to a line; backgrounds, margins and borders on
+  <code>::first-line</code> are CSS Backgrounds', CSS Box's and CSS Borders' to show.</p>
+</header>
+
+<section>
+  <h2>Font, typesetting, decoration and opacity apply</h2>
+  <p><q>all font properties</q>, <q>the color and opacity properties</q>, <q>any typesetting properties that apply to
+  inline elements</q>, <q>all text decoration properties</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=font>aaaa bbbb cccc dddd</p></div>
+    <figcaption><code>font-size: 200%</code>: <q>aaaa bbbb</q> at 20px a character fills the first line; <q>cccc
+    dddd</q> wraps, at 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=spacing>aaaa bbbb cccc dddd</p></div>
+    <figcaption><code>letter-spacing: 10px</code>: 20px a character, so again <q>aaaa bbbb</q> on the first line and
+    the rest at 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=decor>aaaa bbbb cccc dddd eeee ffff</p></div>
+    <figcaption>An orange underline under the first line's 190px, none under <q>eeee ffff</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=opacity>aaaa bbbb cccc dddd eeee ffff</p></div>
+    <figcaption><code>opacity: 0.3</code>: the first line pale grey, the second black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Never the writing mode</h2>
+  <p><q>User agents may apply other properties as well except for the following excluded properties: writing-mode,
+  direction, text-orientation</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=dir>abc, def.</p></div>
+    <figcaption><code>direction: rtl</code> on <code>::first-line</code> does nothing: <q>abc, def.</q> at the left,
+    in order.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><p class=wm>abc def</p></div>
+    <figcaption><code>writing-mode: vertical-rl</code> does nothing: the line runs across, 70px. <span class=pr-flag>Safari</span> The letters run down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shaped and unshaped edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .round { border-radius: 40px; background: #c3d08b; border: 10px solid #e6b54a; }
+  .fill { height: 60px; background: #8cb6c0; }
+  .t { font: 13px/20px "PR Arimo"; }
+  .disc { float: left; width: 60px; height: 60px; border-radius: 50%; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2.1 Boxes and Edges, shaped edges</div>
+  <h1>Shaped and unshaped edges</h1>
+  <p class=pr-lede><q>Properties like 'border-radius' can change the shape of the box’s edges as used for painting and
+  clipping</q>; <q>these effects typically do not affect layout however.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#box-edges">CSS Box Model 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Painting and clipping follow the shaped edge</h2>
+  <p>Each box has <code>border-radius: 40px</code> and a 10px border, and holds a blue child 60px tall that fills its
+  content box.</p>
+  <figure>
+    <div class=pr-stage><div class=round><div class=fill></div></div></div>
+    <figcaption>The border and the green background follow the rounded corners; the blue child, not clipped, keeps its
+    square corners over the curve.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=round style="overflow: hidden"><div class=fill></div></div></div>
+    <figcaption><code>overflow: hidden</code>: the child is clipped to the shaped padding edge, its corners
+    rounded.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layout follows the unshaped edge</h2>
+  <figure>
+    <div class="pr-stage t"><div style="border-radius: 30px; overflow: hidden; background: #c3d08b">Text runs from the unshaped content edge, into the clipped corners, on every line.</div></div>
+    <figcaption><code>border-radius: 30px; overflow: hidden</code>, no padding: each line starts at the unshaped edge,
+    so the curve clips the first and last lines' ends.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class=disc></div>Lines beside a round float keep clear of its square margin box,
+    even where the disc curves away.</div>
+    <figcaption>A float with <code>border-radius: 50%</code>: every line beside it starts at 60px, none in the
+    corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

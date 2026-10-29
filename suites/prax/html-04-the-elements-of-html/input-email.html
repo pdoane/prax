@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Email fields</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.5 Email state (type=email)</div>
+  <h1>Email fields</h1>
+  <p class=pr-lede><q>How the Email state operates depends on whether the multiple attribute is specified or not.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#email-state-(type=email)">HTML §4.10.5.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>One address</h2>
+  <p><q>While the value of the element is neither the empty string nor a single valid email address, the element is
+  suffering from a type mismatch.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#email-state-(type=email)">§4.10.5.1.5</a></span>
+  Each field is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=email value="a@example.com" size=18></div>
+        <div><input type=email value="a@localhost" size=18></div>
+        <div><input type=email value="a@b@example.com" size=18></div>
+        <div><input type=email value="a@example.com, b@example.com" size=18></div>
+      </div>
+    </div>
+    <figcaption>Green, green, red, red: a host need not have a dot, an address has one "@", and without
+    <code>multiple</code> two addresses are a mismatch.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=email value="  a@example.com  " style="width: 180px; box-sizing: border-box; text-align: center; font-size: 12px"></div>
+      </div>
+    </div>
+    <figcaption>Leading and trailing whitespace is stripped from the value: the address is centered, and green.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A list of addresses</h2>
+  <p>With <code>multiple</code>, the value is split on commas, each address stripped of whitespace, and joined
+  <q>separating each value from the next by a single U+002C COMMA character (,)</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#email-state-(type=email)">§4.10.5.1.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><input type=email multiple value="a@example.com ,  b@example.com" size=30></div>
+        <div><input type=email multiple value="a@example.com, b" size=30></div>
+      </div>
+    </div>
+    <figcaption>Green, "a@example.com,b@example.com", with no spaces; then red, since "b" is not an address. Type
+    "@example.com" after the "b": green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

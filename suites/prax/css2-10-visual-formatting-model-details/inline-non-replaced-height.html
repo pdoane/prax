@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Heights: inline, non-replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .chip { background: rgba(214, 138, 60, 0.6); }
+  .bordered { border: 2px solid #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.1 Inline, non-replaced elements</div>
+  <h1>Heights: inline, non-replaced elements</h1>
+  <p class=pr-lede>An inline box's content area comes from its font; only its 'line-height' counts toward the line box.
+  Each stage's text is 13px on 20px lines; orange is a span's background, translucent so overlaps show.</p>
+</header>
+
+<section>
+  <h2>The content area is based on the font</h2>
+  <p><q>The 'height' property does not apply. The height of the content area should be based on the font, but this
+  specification does not specify how.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-non-replaced">CSS 2 §10.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=chip style="height: 60px">13px text</span> b</div>
+    <figcaption>The background covers the 13px font's content area, a little taller than 13px; <code>height:
+    60px</code> does nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=chip style="font-size: 26px; line-height: 20px">26px</span> b</div>
+    <figcaption>At 26px, with <code>line-height: 20px</code>: the content area is about twice as tall, and overflows the
+    line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Padding, borders and margins do not count</h2>
+  <p><q>The vertical padding, border and margin of an inline, non-replaced box start at the top and bottom of the
+  content area, and has nothing to do with the 'line-height'. But only the 'line-height' is used when calculating the
+  height of the line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-non-replaced">CSS 2 §10.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">first line<br>a <span class="chip bordered" style="padding: 10px 0; margin: 20px 0">span</span> b<br>third line</div>
+    <figcaption><code>padding: 10px 0; margin: 20px 0</code> and a border: the background spreads over the lines
+    above and below, which stay 20px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">first line<br>a <span class=chip style="line-height: 40px">span</span> b<br>third line</div>
+    <figcaption><code>line-height: 40px</code> does count: the middle line is 40px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

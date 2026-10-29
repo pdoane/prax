@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paint servers: referenced, never rendered</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="halves"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <g color="#4f81bd"><linearGradient id="current"><stop stop-color="currentColor" /></linearGradient></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.1 Introduction</div>
+  <h1>Paint servers: referenced, never rendered</h1>
+  <p class=pr-lede><q>Paint servers are used by including a URL reference in a ‘fill’ or ‘stroke’ property (i.e.
+  fill="url(#MyLightPurple)").</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#Introduction">SVG 2 §14.1</a></span>
+  Each stage is an SVG 160 by 60. The gradient in the first card is blue on its left half and orange on its
+  right.</p>
+</header>
+
+<section>
+  <h2>Fill and stroke</h2>
+  <p>A paint server <q>allows the ‘fill’ or ‘stroke’ of an object to be defined by a resource found elsewhere.</q>
+  Each rect is 120 by 40 at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#halves)" /></svg></div>
+    <figcaption><code>fill="url(#halves)"</code>: blue to x 80, orange after.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="none" stroke="url(#halves)" stroke-width="10" /></svg></div>
+    <figcaption><code>stroke="url(#halves)"</code>, 10 wide: a frame, blue on its left half, orange on its right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An element in the tree, never rendered</h2>
+  <p><q>The display value for these elements must always be set to none by the user agent style sheet, and this
+  declaration must have importance over any other CSS rule or presentation attribute.</q> <q>Paint-server elements are
+  available for referencing even when the display property on the paint-server element or any of its ancestors is
+  set to none.</q> <q>properties inherit into a paint-server element from its ancestors; properties do not inherit
+  from the element referencing the paint server element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><pattern class=shown width="160" height="60" patternUnits="userSpaceOnUse"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></pattern></svg></div>
+    <figcaption>A <code>pattern</code> holding a blue rect, placed in the stage with <code>display: inline
+    !important</code>: nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g display="none"><linearGradient id="hidden"><stop stop-color="#6aa36a" /></linearGradient></g><rect x="20" y="10" width="120" height="40" fill="url(#hidden)" /></svg></div>
+    <figcaption>A gradient of one green stop in a <code>g</code> with <code>display="none"</code>: the rect is
+    green. <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" color="#d68a3c" fill="url(#current)" /></svg></div>
+    <figcaption>One <code>currentColor</code> stop, its <code>g</code>'s color blue, on a rect whose
+    <code>color</code> is orange: blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

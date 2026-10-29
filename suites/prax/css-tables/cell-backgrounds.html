@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cell backgrounds: six layers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 40px; height: 20px; }
+  .grad { background-image: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.3.2 Drawing cell backgrounds</div>
+  <h1>Cell backgrounds: six layers</h1>
+  <p class=pr-lede><q>In addition to its own 'background', table-cell boxes also render the backgrounds of the
+  table-track and table-track-group boxes in which they belong.</q> <q>the 'background-origin' and 'background-size'
+  computations will actually be done on the bounds of the grouping boxes, and not on those of the cell.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#drawing-cell-backgrounds">CSS Table 3 §5.3.2</a></span>
+  Grey tables, <code>border-spacing: 10px</code>, cells 40 by 20.</p>
+</header>
+
+<section>
+  <h2>One image over a row, a column</h2>
+  <p>A blue-to-orange gradient, drawn by each cell over the area of the box that has it: one run from blue to orange
+  across the cells, broken by the spacing.</p>
+  <figure>
+    <div class=pr-stage><table><tr class=grad><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>On the first row: one gradient, blue at its left, orange at its right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><col class=grad style="background-image: linear-gradient(#4f81bd, #d68a3c)"><tr><td></td><td></td></tr><tr><td></td><td></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption>A top-to-bottom gradient on the first column: blue in its top cell, orange in its bottom one.
+    <span class=pr-flag>Safari</span> draws the whole gradient in each cell.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Bottom to top</h2>
+  <p><q>The background set in one of the layers will only be visible if the layers above it have a transparent
+  background.</q> From the bottom: column group, column, row group, row, cell; the table's own is below them all.</p>
+  <figure>
+    <div class=pr-stage><table><colgroup style="background: #c0392b"><col style="background: #8e44ad"><col></colgroup><tbody style="background: #6aa36a"><tr style="background: #4f81bd"><td style="background: #d68a3c"></td><td></td></tr><tr><td></td><td></td></tr></tbody></table></div>
+    <figcaption>An orange cell in a blue row in a green row group, over purple and red columns: orange, blue,
+    then green; no column shows.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><colgroup style="background: #c0392b"><col style="background: #8e44ad"><col></colgroup><tr><td></td><td></td></tr></table></div>
+    <figcaption>No rows' colors: purple, the first column's, over the group's red; red in the
+    second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

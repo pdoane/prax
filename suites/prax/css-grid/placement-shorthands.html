@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement shorthands</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(5, 40px); grid-template-rows: repeat(3, 20px);
+       grid-template-areas: ". . . . ." ". a a a ." ". a a a ."; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.4 Placement Shorthands</div>
+  <h1>Placement shorthands</h1>
+  <p class=pr-lede><q>The grid-row and grid-column properties are shorthands for grid-row-start/grid-row-end and
+  grid-column-start/grid-column-end, respectively.</q> <q>The grid-area property is a shorthand for grid-row-start,
+  grid-column-start, grid-row-end and grid-column-end.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#placement-shorthands">CSS Grid Layout 2 §8.4</a></span>
+  Each grid has five 40px columns and three 20px rows, with an area "a" over columns 2 to 4 of rows 2 and 3.</p>
+</header>
+
+<section>
+  <h2>grid-column and grid-row: one value</h2>
+  <p><q>When the second value is omitted, if the first value is a &lt;custom-ident&gt;, the grid-row-end/grid-column-end
+  longhand is also set to that &lt;custom-ident&gt;; otherwise, it is set to auto.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: a; grid-row: 1">A</div></div></div>
+    <figcaption><code>grid-column: a</code>: the end is "a" too, so A spans the area's columns, 40 to 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: 2; grid-row: 1">A</div></div></div>
+    <figcaption><code>grid-column: 2</code>: the end is <code>auto</code>, a span of 1, 40 to 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>grid-area: one to four values</h2>
+  <p>Four values set, in turn, <q>grid-row-start</q>, <q>grid-column-start</q>, <q>grid-row-end</q> and
+  <q>grid-column-end</q>. An omitted end is the start's &lt;custom-ident&gt; or else auto; <q>When grid-column-start is
+  omitted, if grid-row-start is a &lt;custom-ident&gt;, all four longhands are set to that value.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: a">A</div></div></div>
+    <figcaption><code>grid-area: a</code>: all four "a"; A fills the area, 40 to 160px, 20 to 60px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-area: 1 / 3 / -1">A</div></div></div>
+    <figcaption><code>grid-area: 1 / 3 / -1</code>: <q>Place into column 3, span all rows</q>, 80 to 120px, the full
+    60px tall, one column wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

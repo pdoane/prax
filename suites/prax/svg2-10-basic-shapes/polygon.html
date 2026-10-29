@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>polygon: connected segments, closed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.7 The ‘polygon’ element</div>
+  <h1>polygon: connected segments, closed</h1>
+  <p class=pr-lede><q>The ‘polygon’ element defines a closed shape consisting of a set of connected straight line
+  segments.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#PolygonElement">SVG 2 §10.7</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>The points</h2>
+  <p><q>The points that make up the polygon. All coordinate values are in the user coordinate system.</q> <q>The
+  initial value, (none), indicates that the polygon element is valid, but does not render.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="20,10 140,10 120,50 40,50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>points="20,10 140,10 120,50 40,50"</code>: a trapezoid, 120 wide at the top, 80 at the
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="80,5 92,23 112,23 98,36 104,55 80,44 56,55 62,36 48,23 68,23" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>Ten points: a five-pointed star, its top at 80, 5 and its feet at 56 and 104 on y 55.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption>No <code>points</code>, filled blue and stroked orange: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its path ends with a closepath</h2>
+  <p><q>perform an absolute moveto operation to the first coordinate pair in the list of points</q> <q>for each
+  subsequent coordinate pair, perform an absolute lineto operation to that coordinate pair</q> <q>perform a closepath
+  command</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="20,50 80,10 140,50" fill="none" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption>Three points, stroked 10 wide: the stroke closes along the bottom and every corner is mitered,
+    20, 50 too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="20,50 80,10 140,50" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>One orange dash of 40: from the first point, 20, 50, up towards 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="20,50 80,10 140,50" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" stroke-dashoffset="-224.22" /></svg></div>
+    <figcaption>Offset by the two sloping sides, 144.22, and 80 of the bottom: the closing segment's last 40, x 60
+    to 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/36px "PR Arimo"; }
+  .t span { text-decoration-line: underline; text-decoration-color: #c0392b; text-decoration-thickness: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.2 Text Decoration Style: the text-decoration-style property</div>
+  <h1>text-decoration-style</h1>
+  <p class=pr-lede>It <q>sets the line-drawing style of underlines, overlines, and line-throughs specified on the
+  element with 'text-decoration-line', and affects all decorations originating from this element even if descendant
+  boxes specify a different style.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-style-property">CSS Text Decoration 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>The styles</h2>
+  <p><q>Values have the same meaning as for the border-style properties</q>. <q>wavy indicates a wavy line.</q> Each
+  underline is red and 2px thick.</p>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-style: solid">solid</span><br><span style="text-decoration-style: double">double</span><br><span style="text-decoration-style: dotted">dotted</span></div>
+    <figcaption>One unbroken line; two parallel lines; a row of dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-style: dashed">dashed</span><br><span style="text-decoration-style: wavy">wavy</span><br><span style="text-decoration-style: wavy; text-decoration-line: overline line-through">wavy, all</span></div>
+    <figcaption>A row of dashes; a wave; and a wavy overline and line-through on "wavy, all".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A descendant's style does not change it</h2>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-style: wavy">wavy <b style="text-decoration-style: dotted">dotted?</b> wavy</span></div>
+    <figcaption>The bold child sets <code>dotted</code> but draws no line of its own: the red underline is wavy under
+    all three words.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-style: wavy">wavy <b style="text-decoration: overline dotted #2c5a8f">and</b> wavy</span></div>
+    <figcaption>The child adds its own blue overline, dotted; the red underline under it stays wavy.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

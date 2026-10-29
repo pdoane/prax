@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative hwb()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.5 Relative HWB Colors</div>
+  <h1>Relative hwb()</h1>
+  <p class=pr-lede><q>h is a &lt;number&gt; that corresponds to the origin color's HWB hue</q>; <q>w and b are &lt;number&gt;s
+  that correspond to the origin color's HWB whiteness and blackness</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-HWB">CSS Color 5
+  §4.5</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>More black, more white</h2>
+  <p><code>#d68a3c</code> is <code>hwb(30.39 23.53% 16.08%)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #d68a3c"></div><div class=sw style="background: hwb(from #d68a3c h w calc(b + 30))"></div><div class=sw style="background: hwb(30.39 23.53% 46.08%)"></div></div>
+    <figcaption>The orange, then 30 more blackness, beside <code>hwb(30.39 23.53% 46.08%)</code>: one brown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hwb(from #d68a3c h calc(w + 40) b)"></div><div class=sw style="background: hwb(30.39 63.53% 16.08%)"></div></div>
+    <figcaption>40 more whiteness, beside <code>hwb(30.39 63.53% 16.08%)</code>: one pale peach.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

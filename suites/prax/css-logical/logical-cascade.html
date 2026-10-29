@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative and physical properties share a value</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4 Flow-Relative Box Model Properties, cascading</div>
+  <h1>Flow-relative and physical properties share a value</h1>
+  <p class=pr-lede><q>Within each logical property group, corresponding flow-relative and physical properties are paired using the element’s own computed writing mode. Although the specified value of each property remains distinct, paired properties share a computed value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#box">CSS Logical Properties and Values 1 §4</a></span> The orange tint is A's margin area.</p>
+</header>
+
+<section>
+  <h2>The later declaration of a pair wins</h2>
+  <p>The section's example, at 10px for 1px: each A has <code>margin-inline-start: 10px; margin-left: 20px; margin-inline-end: 30px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="margin-inline-start: 10px; margin-left: 20px; margin-inline-end: 30px">A</div></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: <code>margin-left</code> after its pair: 20px at the left, 30px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-margin-area><div class=pr-a style="margin-inline-start: 10px; margin-left: 20px; margin-inline-end: 30px">A</div></div></div>
+    <figcaption><code>rtl</code>: <code>margin-inline-end</code> after its pair, <code>margin-left</code>: 30px at the left, 10px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-margin-area><div class=pr-a style="margin-inline-start: 10px; margin-left: 20px; margin-inline-end: 30px">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: 20px at the left; inline-start and -end are the top, 10px, and the bottom, 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The element's own writing mode</h2>
+  <p>The stage is horizontal and <code>ltr</code>; A has a writing mode of its own, and pairs its properties by it, not by the stage's.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="direction: rtl; margin-inline-start: 40px">A</div></div></div>
+    <figcaption>A with <code>direction: rtl; margin-inline-start: 40px</code>: 40px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-a style="writing-mode: vertical-rl; margin-block-start: 40px">A</div></div></div>
+    <figcaption>A with <code>writing-mode: vertical-rl; margin-block-start: 40px</code>: 40px at A's right, none above it.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

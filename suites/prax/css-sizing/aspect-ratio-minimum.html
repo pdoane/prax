@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content-based minimum of a ratio box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .s { width: 150px; height: 105px; }
+  figure.f figcaption { max-width: 152px; }
+  .r { width: 80px; aspect-ratio: 1 / 1; background: #b9cde6; outline: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.3 Automatic Content-based Minimum Sizes</div>
+  <h1>The content-based minimum of a ratio box</h1>
+  <p class=pr-lede><q>In order to avoid unintentional overflow, the automatic minimum size in the ratio-dependent axis
+  of a box with a preferred aspect ratio that is neither a replaced element, nor a scroll container in that axis, is
+  its min-content size capped by its maximum size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio-minimum">CSS Box Sizing 4 §4.3</a></span>
+  Each blue box is <code>width: 80px; aspect-ratio: 1 / 1</code>, its text PR Cousine on 20px lines.</p>
+</header>
+
+<section>
+  <h2>At least as tall as it is wide, and as its content</h2>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=r>abc def ehg</div></div>
+    <figcaption>Two lines: 80 by 80.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=r>abc def ehg ijk lmn opq rst uvw xyz</div></div>
+    <figcaption>Five lines, 100px: the box grows to 80 by 100.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=r style="max-height: 90px">abc def ehg ijk lmn opq rst uvw xyz</div></div>
+    <figcaption>And <code>max-height: 90px</code>: the minimum capped, 80 by 90, the last line overflowing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Kept square</h2>
+  <p><q>When overflow: auto is specified, however, even the box with excess content maintains the 1:1 aspect
+  ratio</q>; <q>Overriding the min-height property also maintains the 1:1 aspect ratio, but will result in content
+  overflowing the box if it is not otherwise handled.</q></p>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=r style="overflow: auto">abc def ehg ijk lmn opq rst uvw xyz</div></div>
+    <figcaption><code>overflow: auto</code>: 80 by 80, its content scrolling.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=r style="min-height: 0">abc def ehg ijk lmn opq rst uvw xyz</div></div>
+    <figcaption><code>min-height: 0</code>: 80 by 80, the fifth line out of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

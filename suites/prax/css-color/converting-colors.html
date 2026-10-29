@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>One color, many forms</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 11.1 Introduction to Converting Colors</div>
+  <h1>One color, many forms</h1>
+  <p class=pr-lede><q>Colors may be converted from one color space to another and, provided that there is no gamut
+  mapping and that each color space can represent out of gamut colors [...] then (subject to numerical precision and
+  round-off error) the two colors will look the same and represent the same color sensation.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#color-convert-intro">CSS Color 4 §11.1</a></span></p>
+</header>
+
+<section>
+  <h2>The same color, five ways</h2>
+  <p><q>these different syntactic forms are all the same color</q>: <code>oklch(65% 0.15 270)</code>,
+  <code>lab(57.9% 11.4 -53.7)</code>, <code>color(display-p3 0.445 0.529 0.891)</code>, <code>color(rec2020 0.522
+  0.557 0.892)</code>, <code>#6c88ea</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: oklch(65% 0.15 270)"></div><div class=sw style="background: lab(57.9% 11.4 -53.7)"></div><div class=sw style="background: color(display-p3 0.445 0.529 0.891)"></div><div class=sw style="background: color(rec2020 0.522 0.557 0.892)"></div><div class=sw style="background: #6c88ea"></div></div>
+    <figcaption>The five: one cornflower blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The fourth, rec2020, lighter: each decodes it with the BT.2020 camera curve, not gamma 2.4 (<a href="https://drafts.csswg.org/css-color-4/#predefined-rec2020">§10.8</a>).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not clamped</h2>
+  <p><q>the results of color conversion are not clamped</q>. <q>these are all the same color, but it is outside the
+  gamut of even rec2020</q>: <code>oklch(65% 0.25 270)</code>, <code>lab(56.03% 32.3 -88.58)</code>,
+  <code>color(display-p3 0.3731 0.4673 1.105)</code>, <code>color(srgb 0.3475 0.4707 1.146)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(65% 0.25 270)"></div><div class=sw style="background: lab(56.03% 32.3 -88.58)"></div><div class=sw style="background: color(display-p3 0.3731 0.4673 1.105)"></div><div class=sw style="background: color(srgb 0.3475 0.4707 1.146)"></div></div>
+    <figcaption>The four, each mapped for display: one vivid blue, <code>rgb(37.6% 50.1% 100%)</code>. The browsers
+    clip each to <code>rgb(35% 47% 100%)</code>, within a just noticeable difference of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

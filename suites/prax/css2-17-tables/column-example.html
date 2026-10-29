@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns: the example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; font-size: 12px; line-height: 18px; color: #1f2430; }
+  td { height: 20px; padding: 0 6px; box-sizing: border-box; }
+  .rules col { border-style: none solid; }
+  .rules { border-style: hidden; }
+  .fixed { table-layout: fixed; width: 200px; }
+  .fixed col.totals { background: blue; width: 5em; }
+  .fixed td { border: 1px solid #b5bcc7; }
+  .totals-cell { color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.3 Columns</div>
+  <h1>Columns: the example</h1>
+  <p class=pr-lede><q>Here are some examples of style rules that set properties on columns.</q> Both tables have
+  <code>border-collapse: collapse</code>, for the column borders to apply, and 12px text.</p>
+</header>
+
+<section>
+  <h2>HTML's rules="cols"</h2>
+  <p><q>The first two rules together implement the "rules" attribute of HTML 4 with a value of "cols".</q> They are
+  <code>col { border-style: none solid }</code> and <code>table { border-style: hidden }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2
+  §17.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table class=rules><col><col><col><tr><td>Apples<td>3<td>1.20<tr><td>Pears<td>2<td>0.90<tr><td>Plums<td>9<td>2.10</table></div>
+    <figcaption>Vertical lines only between the columns: 3px (<code>medium</code>) and black. The table's
+    <code>hidden</code> border turns off the columns' outer left and right borders.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A blue column of fixed size</h2>
+  <p><q>The third rule makes the "totals" column blue, the final two rules shows how to make a column a fixed size, by
+  using the fixed layout algorithm.</q> They are <code>col.totals { background: blue }</code>, <code>table {
+  table-layout: fixed }</code> and <code>col.totals { width: 5em }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2 §17.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px; width: 280px"><div style="width: 200px"><table class=fixed><col><col><col class=totals><tr><td>Apples<td>3<td class=totals-cell>3.60<tr><td>Pears<td>2<td class=totals-cell>1.80</table></div></div>
+    <figcaption>The table is 200px wide. The blue totals column is 60px, 5em of 12px; the other two share the
+    remaining 140px, 70px each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

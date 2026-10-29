@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 2; column-gap: 10px; }
+  .fixed { height: 60px; column-fill: auto; }
+  .fl { float: left; width: 30px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model, floats</div>
+  <h1>Floats in columns</h1>
+  <p class=pr-lede><q>Floats that appear inside multi-column layouts are positioned with regard to the column box where
+  the float appears.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span>
+  Each stage has two columns of 95px with a 10px gap; B is a float 30px wide and 40px tall.</p>
+</header>
+
+<section>
+  <h2>Placed in its column</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc fixed"><div class="pr-a pr-light pr-fit" style="height: 60px">A</div><div><div class="pr-b pr-fit fl">B</div>four five six</div></div>
+    <figcaption>A fills the first column, so B, <code>float: left</code>, is in the second: at its left edge, 105px from the stage's, with
+    "four" and "five" beside it from 135px, and "six" below. <span class=pr-flag>Safari</span> Fits two lines in
+    the 60px column, and sets "six" in a third column, past the stage's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure mc fixed"><div class="pr-b pr-fit fl" style="float: right">B</div>one two</div>
+    <figcaption>B, <code>float: right</code>, in the first column: at that column's right edge, 65 to 95px, not
+    the stage's; "one" and "two" beside it, one to a line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure mc fixed"><div class="pr-b pr-fit fl" style="width: 100%; height: 20px">B</div>one two</div>
+    <figcaption>B, <code>width: 100%</code>: 95px, the column's width; "one two" starts below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

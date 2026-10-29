@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Coloring the gradient line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  figure { margin-right: 10px; }
+  .bar { height: 10px; }
+  .bar + .bar { margin-top: 10px; }
+  .white { background: white; }
+  .sw { display: inline-block; vertical-align: top; width: 30px; height: 30px; margin: 10px 0 0 10px; }
+  .quarter { background-position: 25% 0; background-size: 4000px 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.5.2 Coloring the Gradient Line</div>
+  <h1>Coloring the gradient line</h1>
+  <p class=pr-lede><q>Between each pair of color stops, the gradient line’s color is interpolated between the colors of
+  the two color stops, with the interpolation taking place in the specified color space</q>, with missing components,
+  hue and premultiplied alpha as CSS Color 4 defines them. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#coloring-gradient-line">CSS Images 4 §3.5.2</a></span>
+  The default space, Oklab, or sRGB between legacy colors, is <a href="../css-color/interpolation-legacy.html">CSS
+  Color's</a> to show. Each bar is <code>to right</code> and 200px wide.</p>
+</header>
+
+<section>
+  <h2>Before the first stop and after the last</h2>
+  <p><q>Before the first color stop, the gradient line is the color of the first color stop, and after the last color
+  stop, the gradient line is the color of the last color stop.</q></p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, #4f81bd 60px, #d68a3c 140px)"></div><div class=bar style="background: linear-gradient(to right in hsl longer hue, red 60px, blue 140px)"></div></div>
+    <figcaption>Stops at x 60 and 140: solid blue before, orange after. Below, <code>in hsl longer hue</code>: the
+    rainbow only between.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, #4f81bd 50%, #6aa36a 50%, #d68a3c 50%)"></div></div>
+    <figcaption>Three stops at 50%: <q>an infinitesimal transition from the one specified first in the list to the one
+    specified last</q>, blue then orange at x 80.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div style="height: 50px; background: radial-gradient(circle 20px, #4f81bd 100%, #d68a3c 100%)"></div></div>
+    <figcaption>Radial, the last two at 100%: a blue disc 40 across, then orange. <span class=pr-flag>Safari</span>
+    All blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Premultiplied alpha, and a missing hue</h2>
+  <p>In OKLCh, <q>the conversion of the neutral #888 to oklch gives a missing hue component</q>, so <q>in the first
+  gradient segment, the hue is taken from red</q> and <q>in the second segment it is taken from green</q>.</p>
+  <figure>
+    <div class="pr-stage white"><div class=bar style="background: linear-gradient(to right, red, transparent, blue)"></div><div class=pr-row><div class="sw quarter" style="background-image: linear-gradient(to right, red, transparent, blue)"></div><div class=sw style="background: rgb(100% 50% 50%)"></div><div class=sw style="background: rgb(75% 50% 50%)"></div></div></div>
+    <figcaption><code>red, transparent, blue</code> over white, no grey between. Its color at 25%, half-opaque red,
+    then <code>rgb(100% 50% 50%)</code>; last, the darker pink of an unpremultiplied mix.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right in oklch, red, #888, green)"></div><div class=bar style="background: linear-gradient(to right in oklch, red, oklch(62.68% 0 300), green)"></div></div>
+    <figcaption><code>in oklch, red, #888, green</code>: no hue but red's and green's. Below, the grey given hue 300deg:
+    purple and blue tints beside it. <span class=pr-flag>Chrome</span> Orange and olive in
+    both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>direction in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .rtl { direction: rtl; }
+  .embed { direction: rtl; unicode-bidi: embed; }
+  .override { direction: rtl; unicode-bidi: bidi-override; }
+  .heb { font: calc(50px / 3) "PR Noto Sans Mono", "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.4 The ‘direction’ property</div>
+  <h1>direction in SVG text</h1>
+  <p class=pr-lede><q>The property specifies the inline-base direction of a ‘text’ or ‘tspan’ element. It defines the
+  "start" and "end" points of a line of text as used by the text-anchor and inline-size properties. It also may
+  affect the direction in which characters are positioned if the unicode-bidi property's value is either embed or
+  bidi-override.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#DirectionProperty">SVG 2 §11.10.2.4</a></span>
+  Each stage is an SVG 160 by 60 holding text in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter, at
+  <code>x="80" y="35"</code>; the point is solid red.</p>
+</header>
+
+<section>
+  <h2>Where the line starts</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><text class=pr-measure x="80" y="35">abc 12</text></svg></div>
+    <figcaption>"abc 12", left to right: from 80 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><text class="pr-measure rtl" x="80" y="35">abc 12</text></svg></div>
+    <figcaption><code>direction: rtl</code>: the start is the right, so it ends at 80, from 20; the Latin and digits
+    still read left to right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With unicode-bidi</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><text class=pr-measure x="80" y="35">ab<tspan class=embed>cd ef</tspan></text></svg></div>
+    <figcaption>"ab" and a <code>tspan</code> of "cd ef", <code>rtl</code> and <code>embed</code>: "abcd ef", the
+    embedded run's words kept left to right, from 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><text class=pr-measure x="80" y="35">ab<tspan class=override>cd ef</tspan></text></svg></div>
+    <figcaption>The same with <code>bidi-override</code>: "abfe dc", the run reversed, from 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

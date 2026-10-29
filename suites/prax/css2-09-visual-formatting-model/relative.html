@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.3 Relative positioning</div>
+  <h1>Relative positioning</h1>
+  <p class=pr-lede><q>Once a box has been laid out according to the normal flow or floated, it may be shifted relative to
+  this position.</q> Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The next box does not move</h2>
+  <p><q>Offsetting a box (B1) in this way has no effect on the box (B2) that follows: B2 is given a position as if B1
+  were not offset ... This implies that relative positioning may cause boxes to overlap.</q> <q>A relatively
+  positioned box keeps its normal flow size, including line breaks and the space originally reserved for it.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>B1</div><div class=pr-b>B2</div></div>
+    <figcaption>In normal flow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="position: relative; top: 10px; left: 30px">B1: top 10, left 30</div><div class=pr-b>B2</div></div>
+    <figcaption>B1 moved 10px down and 30px right, over half of B2, which stays put.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline boxes, and the line</h2>
+  <p>An inline box moves with its text, and the line keeps the place it had. <q>Although relative positioning may be
+  used as a form of superscripting and subscripting, the line height is not automatically adjusted to take the
+  positioning into consideration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-chip>two</span> three<br>next line</div>
+    <figcaption>In normal flow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-chip style="position: relative; top: 10px">two</span> three<br>next line</div>
+    <figcaption><code>top: 10px</code>: "two" moves down over the next line, which stays put, as do "one" and
+    "three".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

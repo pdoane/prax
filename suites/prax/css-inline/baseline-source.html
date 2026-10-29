@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline-source: first and last</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; white-space: nowrap; height: 80px; padding-top: 10px; box-sizing: border-box; }
+  .pr-stage { width: 160px; }
+  figcaption { max-width: 160px; }
+  .pr-baseline { width: 160px; margin-right: -160px; }
+  .ib { display: inline-block; width: 60px; }
+  .fx { display: inline-flex; flex-direction: column; width: 60px; }
+  .gr { display: inline-grid; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.1 Alignment Baseline Source: the baseline-source longhand</div>
+  <h1>baseline-source: first and last</h1>
+  <p class=pr-lede><q>When an inline-level box has more than one possible source for baseline information (such as
+  for a multi-line inline block or inline flex container) this property specifies whether the first baseline set or
+  last baseline set is preferred for alignment</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-source">CSS Inline Layout 3 §4.2.1</a></span>
+  Each orange box holds three lines, one, two and three; the red line is the line's baseline.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <p><code>auto</code> <q>Specifies last-baseline alignment for inline-block, first-baseline alignment for everything
+  else.</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip ib">one<br>two<br>three</span></div>
+    <figcaption>An inline-block: "three" on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip fx"><span>one</span><span>two</span><span>three</span></span></div>
+    <figcaption>An inline flex container, a column: "one" on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip gr"><span>one</span><span>two</span><span>three</span></span></div>
+    <figcaption>An inline grid of three rows: "one" on the red line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>first and last</h2>
+  <p><code>first</code> <q>Specifies first-baseline alignment.</q> <code>last</code> <q>Specifies last-baseline
+  alignment.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip fx" style="baseline-source: last"><span>one</span><span>two</span><span>three</span></span></div>
+    <figcaption>The flex container with <code>last</code>: "three" on the red line. <span
+    class=pr-flag>Safari</span> Ignores it: "one".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip gr" style="baseline-source: last"><span>one</span><span>two</span><span>three</span></span></div>
+    <figcaption>The grid with <code>last</code>: "three" on the red line. <span class=pr-flag>Safari</span> Ignores
+    it: "one".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="vertical-align: first">one<br>two<br>three</span></div>
+    <figcaption>The inline-block with <code>vertical-align: first</code>: "one" on the red line. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> "three" on it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

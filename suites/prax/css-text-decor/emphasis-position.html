@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-emphasis-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/48px "PR Noto Sans JP"; text-emphasis: dot #c0392b; }
+  .pr-stage.v { padding: 6px; font: 24px/48px "PR Noto Sans JP"; height: 60px; text-emphasis: dot #c0392b; }
+  .tight { padding: 0 6px; font: 20px/20px "PR Noto Sans JP"; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 110px; }
+  figure.s .pr-stage.j, figure.s .tight { width: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.4 Emphasis Mark Position: the text-emphasis-position property</div>
+  <h1>text-emphasis-position</h1>
+  <p class=pr-lede><q>Emphasis marks are drawn exactly as if each character was assigned the mark as its ruby
+  annotation text with the ruby position given by 'text-emphasis-position' and the ruby alignment as centered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-position-property">CSS Text Decoration 4 §3.4</a></span>
+  Red dots.</p>
+</header>
+
+<section>
+  <h2>over and under across, right and left down</h2>
+  <p><code>over</code>, <code>under</code>: <q>Draw marks over the text in horizontal typographic modes.</q> and under
+  it; <code>right</code>, <code>left</code>: <q>Draw marks to the right of the text in vertical typographic
+  modes.</q> and to the left. The initial value is <code>over right</code>.</p>
+  <figure class=s>
+    <div class="pr-stage j" lang=ja>強調</div>
+    <figcaption>Initial: dots over.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage j" lang=ja style="text-emphasis-position: under">強調</div>
+    <figcaption><code>under</code>: dots under.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" lang=ja>強調</div>
+    <figcaption>Vertical, initial: on the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" lang=ja style="text-emphasis-position: over left">強調</div>
+    <figcaption><code>over left</code>: on the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Room on the line as ruby takes it</h2>
+  <p><q>The effect of emphasis marks on the line height is the same as for ruby text.</q> Two lines of 20px text on
+  20px lines, each line's first two characters marked.</p>
+  <figure class=s>
+    <div class="pr-stage tight" lang=ja><span style="text-emphasis: dot #c0392b">強調</span>する<br><span style="text-emphasis: dot #c0392b">強調</span>する</div>
+    <figcaption>Emphasis marks: the lines move apart as in the next figure.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage tight" lang=ja><ruby>強調<rt style="color: #c0392b">・・</rt></ruby>する<br><ruby>強調<rt style="color: #c0392b">・・</rt></ruby>する</div>
+    <figcaption>Ruby text in place of the marks.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage tight" lang=ja>強調する<br>強調する</div>
+    <figcaption>Neither: 20px apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>KeyboardEvent</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.5.1 Interface KeyboardEvent</div>
+  <h1>KeyboardEvent</h1>
+  <p class=pr-lede><q>The KeyboardEvent interface provides specific contextual information associated with keyboard devices. Each
+  keyboard event references a key using a value.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#interface-keyboardevent">UI Events §3.5.1</a></span></p>
+</header>
+<section>
+  <h2>A key and its value</h2>
+  <p><q>Keyboard events are commonly directed at the element that has the focus.</q> <q>key holds a key attribute
+  value corresponding to the key pressed.</q> <q>code holds a string that identifies the physical key being
+  pressed.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#interface-keyboardevent">§3.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code repeat shiftKey ctrlKey altKey metaKey" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press A: keydown and keyup with <code>key="a"</code> and
+    <code>code="KeyA"</code>. Hold Shift and press A: <code>key="A"</code>, still <code>code="KeyA"</code>, with
+    <code>shiftKey</code>. Hold A down: the keydowns that repeat while it is held have <code>repeat</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A key held down</h2>
+  <p><q>Holding down a key MUST result in the repeating the events keydown, beforeinput, input in this order, at a
+  rate determined by the system configuration.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#interface-keyboardevent">§3.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=held></div>
+      <ol class=pr-log data-log="keydown beforeinput input keyup" data-fields="key repeat data" data-on="#held" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field and hold down <code>x</code> until it fills: the log repeats keydown with
+    <code>repeat</code>, beforeinput with <code>data="x"</code>, and input, in that order, and ends with one keyup
+    when you let go.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

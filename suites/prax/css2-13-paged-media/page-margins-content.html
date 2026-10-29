@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Content in the page margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.2.1 Page margins</div>
+  <h1>Content in the page margins</h1>
+  <p class=pr-lede><q>The page context has no notion of fonts, so 'em' and 'ex' units are not allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#page-margins">CSS 2 §13.2.1</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Content outside the page box</h2>
+  <p><q>Due to negative margin values (either on the page box or on elements) or absolute positioning content may end up outside the page box, but this content may be "cut"</q>.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px } html { background: #8cb6c0 } .out { margin-left: -40px; background: #4f81bd; color: white }</style><div>line 1</div><div class=out>margin-left: -40px</div><div>line 3</div>"></iframe>
+    <figcaption>The dark box would start 20px left of the page's edge. Chrome, Safari and Firefox cut it at the page area's edge, so its first letters are lost: it may be cut.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-page-3/#page-properties">CSS Paged Media 3 §6</a></div>
+  <h2>Font-relative units in the page context</h2>
+  <p><q>Values in units of 'em' and 'ex' are interpreted relative to the font associated with their context.</q> CSS 2 allowed none: <q>The page context has no notion of fonts</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-properties">CSS Paged Media 3 §6</a></span></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; font-size: 20px; margin: 1em } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>font-size: 20px; margin: 1em</code> in the page context: margins of 20px. <span class=pr-flag>Firefox</span> Margins of 16px, from the initial font size.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

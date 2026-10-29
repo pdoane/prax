@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display and visibility</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: calc(50px / 3) "PR Noto Sans Mono"; fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <clipPath id="hidden-clip"><rect x="20" y="10" width="40" height="40" visibility="hidden" /></clipPath>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.2.3 Controlling visibility: the effect of the ‘display’ and ‘visibility’ properties</div>
+  <h1>display and visibility</h1>
+  <p class=pr-lede><q>Although they have a similar visible effect in static documents, they are conceptually
+  distinct.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#VisibilityControl">SVG 2 §3.2.3</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>display: none</h2>
+  <p><q>setting display to none results in the element (and all its descendents) not becoming part of the rendering
+  tree.</q> <q>The display property affects the direct processing of a given element, but it does not prevent it from
+  being referenced by other elements.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g display="none"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" display="inline" /></g></svg></div>
+    <figcaption>A <code>g</code> <code>display="none"</code>, its rect <code>inline</code>: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path id="line" d="M 20 40 H 140" display="none" /><text><textPath href="#line">on a path</textPath></text></svg></div>
+    <figcaption>A <code>path</code> <code>display="none"</code> as a <code>textPath</code>'s: the text set on its
+    line, at y 40 from x 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>visibility: hidden</h2>
+  <p>A hidden element <q>is, however, still part of the rendering tree.</q> It <q>contributes to bounding box
+  calculations and clipping paths, and does affect text layout.</q> <q>Since visibility is an inherited property,
+  however, although it has no effect on a ‘use’ element or container element itself, its inherited value can affect
+  descendant elements.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g visibility="hidden"><rect x="20" y="10" width="40" height="40" fill="#4f81bd" /><rect x="100" y="10" width="40" height="40" fill="#d68a3c" visibility="visible" /></g></svg></div>
+    <figcaption>A hidden <code>g</code>: its blue square hidden, its orange one, <code>visible</code>, at 100,
+    10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="#4f81bd" clip-path="url(#hidden-clip)" /></svg></div>
+    <figcaption>A clip of a hidden square at 20, 10: by this section, the blue square there; by css-masking, <q>If
+    a child element is made invisible by ‘display’ or ‘visibility’ it does not contribute</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#ClipPathElement">CSS Masking 1 §6.1</a></span>, nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="35">ab<tspan visibility="hidden">cd</tspan>ef</text></svg></div>
+    <figcaption><q>cd</q> hidden: its room kept, <q>ab</q>, a gap 20 wide, <q>ef</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

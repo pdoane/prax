@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The baseline of a cell</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/20px "PR Arimo"; }
+  table { border-spacing: 4px 0; }
+  td { padding: 0; vertical-align: baseline; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .blk { width: 30px; height: 30px; background: #4f81bd; }
+  .inner { border-spacing: 0; }
+  .inner td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.2 Row layout (first pass), the baseline of a cell</div>
+  <h1>The baseline of a cell</h1>
+  <p class=pr-lede><q>The baseline of a cell is defined as the baseline of the first in-flow line box in the cell, or
+  the first in-flow table-row in the cell, whichever comes first. If there is no such line box or table-row, the
+  baseline is the bottom of content edge of the cell box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-layout">CSS Table 3 §3.10.2</a></span>
+  In each row, cells are <code>vertical-align: baseline</code>: a blue one with "x", then an orange one whose
+  baseline is the subject. The red line is the blue cell's baseline.</p>
+</header>
+
+<section>
+  <h2>The first line, or the first row</h2>
+  <figure>
+    <div class=pr-stage><table><tr><td><span class=pr-baseline style="width: 120px; margin-right: -120px"></span>x</td><td><div class=blk></div>Hx</td></tr></table></div>
+    <figcaption>A 30px block, then "Hx": the first line is below the block, and "x" lines up with it, 30px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td><span class=pr-baseline style="width: 120px; margin-right: -120px"></span>x</td><td><table class=inner><tr><td style="padding-top: 20px">Hx</td></tr></table>Hx</td></tr></table></div>
+    <figcaption>A green table whose cell has 20px of padding on top, then "Hx": its first row comes first, so "x"
+    lines up with the green "Hx".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No line and no row: the bottom of the content</h2>
+  <figure>
+    <div class=pr-stage><table><tr><td><span class=pr-baseline style="width: 120px; margin-right: -120px"></span>x</td><td><div class=blk></div></td></tr></table></div>
+    <figcaption>Only a 30px block: the baseline is the bottom of its content, so "x" sits on the block's
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><table><tr><td><span class=pr-baseline style="width: 120px; margin-right: -120px"></span>x</td><td><div style="height: 0; overflow: hidden">Hx</div></td></tr></table></div>
+    <figcaption>The note's example: a block of <code>height: 0; overflow: hidden</code> holding "Hx". Its line is the
+    first line box, so the cell's baseline is below its bottom border, and the orange cell is pulled up above "x".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

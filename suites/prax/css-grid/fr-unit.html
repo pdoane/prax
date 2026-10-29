@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flexible lengths: the fr unit</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.4 Flexible Lengths: the fr unit</div>
+  <h1>Flexible lengths: the fr unit</h1>
+  <p class=pr-lede><q>The distribution of leftover space occurs after all non-flexible track sizing functions have
+  reached their maximum. The total size of such rows or columns is subtracted from the available space, yielding the
+  leftover space, which is then divided among the flex-sized rows and columns in proportion to their flex
+  factor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#fr-unit">CSS Grid Layout 2 §7.2.4</a></span></p>
+</header>
+
+<section>
+  <h2>Shares of the leftover space</h2>
+  <p><q>Each column or row's share of the leftover space can be computed as the column or row's &lt;flex&gt; *
+  &lt;leftover space&gt; / &lt;sum of all flex factors&gt;.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 50px 1fr 2fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>50px 1fr 2fr</code>: 150px left over: B 50px from 50px, C 100px from 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 0.5fr 1.5fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>0.5fr 1.5fr</code>: a quarter and three quarters, 50 and 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 0.25fr 0.25fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>0.25fr 0.25fr</code>: the sum is under 1, <q>they'll take up only a corresponding fraction
+    of the leftover space</q>: 50px each, the last 100px empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nothing left over</h2>
+  <p>The spec's example: <code>150px 1fr</code>. <q>If the used width of the grid container is 200px, then the second
+  column is 50px wide. If the used width of the grid container is 100px, then the second column is 0px and any
+  content positioned in the column will overflow the grid container.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 150px 1fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="min-width: 0">B</div></div></div>
+    <figcaption>200px: B 50px wide, from 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="width: 98px; grid-template-columns: 150px 1fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="min-width: 0">B</div></div></div>
+    <figcaption>A dashed grid 100px wide: A 150px, past its edge, and B 0px wide at 150px, its text spilling out.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Large negative outline-offset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 120px; height: 40px; background: #b9cde6; outline: 5px solid #c0392b; }
+  .span { outline: 3px solid #c0392b; outline-offset: -20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.5 Offsetting the Outline, negative values</div>
+  <h1>Large negative outline-offset</h1>
+  <p class=pr-lede><q>Both the height and the width of the outside of the shape drawn by the outline should not become
+  smaller than twice the computed value of the outline-width property to make sure that an outline can be rendered
+  even with large negative values. User agents should apply this constraint independently in each dimension.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-offset">CSS Basic User Interface 4 §3.5</a></span></p>
+</header>
+
+<section>
+  <h2>No smaller than twice the width, in each dimension</h2>
+  <p>Each box is 120 by 40 with a 5px red outline, so the outline's outside is never less than 10px either way.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="outline-offset: -15px"></div></div>
+    <figcaption><code>-15px</code>: the outside is 120 − 30 + 10 = 100 by 40 − 30 + 10 = 20, a red frame centered in
+    the box, with a light slit 90 by 10 inside.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=box style="outline-offset: -40px"></div></div>
+    <figcaption><code>-40px</code>: 50 wide, and 40 − 80 + 10 would be −30 tall, held to 10: a solid red bar 50 by
+    10 at the box's center. <span class=pr-flag>Safari</span> draws no outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each shape separately</h2>
+  <p><q>If the outline is drawn as multiple disconnected shapes, this constraint applies to each shape separately.</q>
+  The span, broken over two lines with a gap between its pieces, has a 3px outline and <code>outline-offset:
+  -20px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="padding: 10px 0 10px 20px; width: 100px">all <span class=span>wordy span</span> end</div>
+    <figcaption>"wordy", 50px wide, ends the first line and "span", 40px, starts the second. Each piece is held
+    to its own minimum: a red bar 16 by 6 on "wordy" and a red square 6 by 6 on "span", each at its piece's
+    center. <span class=pr-flag>Safari</span> draws no outline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

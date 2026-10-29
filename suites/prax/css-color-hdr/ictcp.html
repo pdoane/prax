@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ictcp()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 6.3 ICtCp</div>
+  <h1>ictcp()</h1>
+  <p class=pr-lede><q>I representing the Intensity (similar to L in Lab, but covering a luminance range up to 10,000 cd/m²) while C<sub>T</sub> and C<sub>P</sub> represent the yellowness-blueness (tritanope) and redness-greenness (protanope) opponent-color axes</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#ICtCp">CSS Color HDR 1
+  §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>White and lime</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: ictcp(0.58069 0 0)"></div><div class=sw style="background: white"></div></div>
+    <figcaption><code>ictcp(0.58069 0 0)</code> beside <code>white</code>: one white.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>ictcp()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: ictcp(0.5393 -0.2643 -0.0625)"></div><div class=sw style="background: lime"></div></div>
+    <figcaption><code>ictcp(0.5393 -0.2643 -0.0625)</code> beside <code>lime</code>: one green.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>ictcp()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Intensity past white</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: ictcp(0.58069 0 0)"></div><div class=sw style="background: ictcp(0.65 0 0)"></div><div class=sw style="background: ictcp(0.75 0 0)"></div></div>
+    <figcaption>I at 0.58069 (white), 0.65 and 0.75, along the neutral axis. An HDR display shows the second and third
+    brighter than white. An SDR display shows three whites. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>ictcp()</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The multi-column container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 2; column-gap: 10px; }
+  .fl { float: left; width: 40px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model</div>
+  <h1>The multi-column container</h1>
+  <p class=pr-lede><q>An element whose column-width or column-count property is not auto establishes a
+  multi-column container (or multicol container for short), and therefore acts as a container for multi-column
+  layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span> Each letter is 10px wide.</p>
+</header>
+
+<section>
+  <h2>Not auto: a multicol container</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent mc">one two three four</div></div>
+    <figcaption><code>column-count: 2</code>, a 10px gap: two columns of 95px, "four" in the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-parent style="column-count: auto; column-width: auto">one two three four</div></div>
+    <figcaption>Both <code>auto</code>: no columns; the text runs across the 200px, on one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A block container that is an independent formatting context</h2>
+  <p><q>A multi-column container therefore is a regular block container that establishes a new independent formatting
+  context</q>. B is a float before the tinted block.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-b pr-fit fl"></div><div class="pr-parent mc">one two three four</div></div>
+    <figcaption>Beside B, not over it: 160px wide, two columns of 75px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-b pr-fit fl"></div><div class=pr-parent>one two three four</div></div>
+    <figcaption>Without columns, the block runs under B, 200px wide, and only its lines wrap around B.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins stay inside</h2>
+  <p><q>a top margin set on the first child element of a multicol container will not collapse with the margins of
+  the multicol container.</q> The child has <code>margin-top: 20px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-parent mc" style="column-count: 1"><div style="margin-top: 20px">one two</div></div></div>
+    <figcaption><code>column-count: 1</code>: the tint starts at the stage's top, the text 20px below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-parent><div style="margin-top: 20px">one two</div></div></div>
+    <figcaption>Without columns, the margin collapses through: tint and text both at 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

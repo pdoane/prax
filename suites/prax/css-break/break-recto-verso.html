@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>recto and verso</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.2 Page Break Values</div>
+  <h1>recto and verso</h1>
+  <p class=pr-lede><code>recto</code>: <q>whichever is second (according to the page progression) in a page spread.</q> <code>verso</code>: <q>whichever is first (according to the page progression) in a page spread.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></span>
+  B has the value. A left-to-right document starts on a right page, a right-to-left one on a left page. <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#progression">CSS Paged Media 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Left to right, then right to left (<code>dir=rtl</code> on the root)</h2>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: recto'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Left to right, <code>recto</code> is <code>right</code>: the second page is left blank, B and C on the third. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> No blank page: B and C on the second. <span class=pr-flag>Firefox</span> No break: one page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: verso'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Left to right, <code>verso</code> is <code>left</code>: B and C on the second page. <span class=pr-flag>Firefox</span> No break: one page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html dir=rtl><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: recto'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Right to left, <code>recto</code> is <code>left</code>: the second page is left blank, B and C on the third. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> No blank page: B and C on the second. <span class=pr-flag>Firefox</span> No break: one page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><html dir=rtl><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: verso'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Right to left, <code>verso</code> is <code>right</code>: B and C on the second page. <span class=pr-flag>Firefox</span> No break: one page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

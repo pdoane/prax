@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cap and junction insets</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.3.2 -cap- and -junction- shorthands</div>
+  <h1>Cap and junction insets</h1>
+  <p class=pr-lede><q>These shorthands allow authors to achieve different treatments at cap segment endpoints versus
+  junction segment endpoints.</q> <q>If one value is specified, both properties are set to that value. If two values
+  are specified, '-start' is set to the first and '-end' is set to the second.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#insets-cap-junction">CSS Gaps 1 §3.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>One value or two</h2>
+  <p>Each grid has <code>rule-break: intersection</code>; column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset-cap: 0px; column-rule-inset-junction: -5px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset-cap: 0px; column-rule-inset-junction: -5px</code>: the red rules are flush
+    with the top and bottom edges and reach 5px into the junction from each side, meeting. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset-cap: 0 10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset-cap: 0 10px</code>: caps start 0, end 10px: the red rules start at the top
+    edge and stop 10px above the bottom one. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Both axes at once</h2>
+  <p><code>rule-inset-cap</code> <q>sets 'column-rule-inset-cap' and 'row-rule-inset-cap' to the same value</q>, and
+  <code>rule-inset-junction</code> the junction insets.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-inset-cap: 6px; rule-inset-junction: 2px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-inset-cap: 6px; rule-inset-junction: 2px</code>: every rule stops 6px short of the
+    container's edges and 2px short of each junction. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

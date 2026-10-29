@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::details-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  details { margin: 10px; font: 13px/20px "PR Arimo"; }
+  summary { height: 20px; }
+  .boxed::details-content { border: 2px dashed #d68a3c; padding: 8px; background: #f6d7b4; }
+  .open-only[open]::details-content { border: 2px dashed #d68a3c; padding: 8px; background: #f6d7b4; }
+  .side::details-content { margin-left: 40px; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 5.2 Expandable contents of details element: the ::details-content pseudo-element</div>
+  <h1>::details-content</h1>
+  <p class=pr-lede><q>The ::details-content pseudo-element targets the additional information in a &lt;details&gt;
+  element that can be expanded or collapsed. It is an element-backed pseudo-element.</q> <q>There is no restriction
+  on which properties apply to the ::details-content pseudo-element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#details-content-pseudo">CSS Pseudo-Elements 4 §5.2</a></span>
+  Each <code>details</code> has a summary "Summary" and the text "More". The disclosure triangle is each browser's.</p>
+</header>
+
+<section>
+  <h2>Open</h2>
+  <figure>
+    <div class=pr-stage><details class=boxed open><summary>Summary</summary>More</details></div>
+    <figcaption>A 2px dashed orange border, 8px padding and light orange: "More" in a box 40px tall below the
+    summary.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><details class=side open><summary>Summary</summary>More</details></div>
+    <figcaption><code>margin-left: 40px</code> and blue: "More" in blue, 40px in from the summary's left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Closed: the contents hidden, not the box</h2>
+  <p><q>The default UA stylesheet styles a closed ::details-content with content-visibility: hidden</q> <q>This,
+  however, only suppresses the display of the pseudo-elements's contents; if margin, borders, etc are set on the
+  pseudo-element, they'll still be visible.</q> (a Note)</p>
+  <figure>
+    <div class=pr-stage><details class=boxed><summary>Summary</summary>More</details></div>
+    <figcaption>Closed, the same styles: below the summary, an empty dashed box, its border and padding only, 20px
+    tall; no "More".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><details class=open-only><summary>Summary</summary>More</details></div>
+    <figcaption>With the styles on <code>[open]::details-content</code>, as the Note suggests: the summary
+    alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

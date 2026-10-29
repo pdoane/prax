@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shadows of highlighted text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 24px/40px "PR Arimo"; color: #1f2430; }
+  .own ::highlight(h) { background-color: #b9cde6; text-shadow: 4px 4px #d68a3c; }
+  .both .t { text-shadow: -4px -4px #6aa36a; }
+  .both ::highlight(h) { text-shadow: 4px 4px #d68a3c; }
+  .layers ::highlight(low) { text-shadow: 4px 4px #d68a3c; }
+  .layers ::highlight(high) { background-color: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.6.2 Shadows</div>
+  <h1>Shadows of highlighted text</h1>
+  <p class=pr-lede><q>Any text-shadow applying to a highlight pseudo-element is drawn over its corresponding highlight
+  overlay background. Such text shadows also stack over each other (and over any original text-shadow applied to the
+  text and its decorations, which continues to apply).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-shadows">CSS Pseudo-Elements 4 §3.6.2</a></span>
+  Each stage holds “Shadow” in 24px Arimo, all of it in custom highlights.</p>
+</header>
+
+<section>
+  <h2>Over the background, over the text's own</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage own"><div class=t><span data-highlight=h>Shadow</span></div></div>
+    <figcaption>A light blue background and an orange shadow 4px down and right: the shadow over the blue. <span class=pr-flag>Safari</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage both"><div class=t><span data-highlight=h>Shadow</span></div></div>
+    <figcaption>The text's own green shadow, 4px up and left, and the highlight's orange one: both drawn. <span class=pr-flag>Safari</span> Only the green shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A higher background over a lower shadow</h2>
+  <p><q>Since each highlight overlay background is drawn over any shadows belonging to the layer(s) below, a highlight
+  overlay background can obscure lower-level shadows.</q> (a Note) The text is in two highlights: <code>low</code>
+  with an orange shadow, and <code>high</code>, of higher priority, with a light blue background.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage layers"><div class=t><span data-highlight=low><span data-highlight=high data-priority=1>Shadow</span></span></div></div>
+    <figcaption>The light blue over the orange shadow: the shadow shows only below the band. <span class=pr-flag>Firefox</span> draws the
+    shadow over the blue. <span class=pr-flag>Safari</span> draws no shadow.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The transform property and attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { transform: translate(60px, 0); }
+  .turned { transform: rotate(90deg); }
+  .boxed { transform: rotate(90deg); transform-box: fill-box; transform-origin: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.5 The ‘transform’ property</div>
+  <h1>The transform property and attribute</h1>
+  <p class=pr-lede><q>User agents must support the transform property and presentation attribute as defined in
+  [css-transforms-1].</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#TransformProperty">SVG 2 §8.5</a></span>
+  Each stage is an SVG 160 by 60; a dashed outline marks each rect untransformed, 40 by 20 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>The attribute and the property</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="40" height="20" /><rect x="20" y="10" width="40" height="20" fill="#4f81bd" transform="translate(60 20)" /></svg></div>
+    <figcaption><code>transform="translate(60 20)"</code>: at 80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="40" height="20" /><rect class=styled x="20" y="10" width="40" height="20" fill="#4f81bd" transform="translate(0 20)" /></svg></div>
+    <figcaption>A style sheet's <code>transform: translate(60px, 0)</code> over <code>translate(0 20)</code>: at 80,
+    10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="40" height="20" /><rect x="20" y="10" width="40" height="20" fill="#4f81bd" transform="rotate(90 40 20)" /></svg></div>
+    <figcaption>The attribute's <code>rotate(90 40 20)</code>, about the rect's center: 20 by 40, from 30, 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The origin</h2>
+  <p>The user agent style sheet sets <q>transform-origin: 0 0</q> for SVG elements <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#UAStyleSheet">§6.8</a></span>,
+  so a rotation from CSS turns about the user space's origin.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 0)"><rect class=pr-ghost x="20" y="10" width="40" height="20" /><rect class=turned x="20" y="10" width="40" height="20" fill="#4f81bd" /></g></svg></div>
+    <figcaption>In a <code>g</code> moved to 80, 0, the rect at 100, 10 with <code>rotate(90deg)</code>: about 80,
+    0, so from 50, 20 to 70, 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="40" height="20" /><rect class=boxed x="20" y="10" width="40" height="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>transform-box: fill-box; transform-origin: center</code>: about its own center, 20 by 40
+    from 30, 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

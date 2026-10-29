@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Radial gradient examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.s { width: 120px; }
+  .s + figcaption { max-width: 120px; }
+  .g { width: 120px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.4 Radial Gradient Examples</div>
+  <h1>Radial gradient examples</h1>
+  <p class=pr-lede><q>These examples demonstrate different ways to write the basic syntax for radial gradients</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-gradient-examples">CSS Images 3 §3.2.4</a></span>
+  The examples are written for a box 200 by 100; these boxes are 120 by 60, the same shape, and the examples' px are
+  kept.</p>
+</header>
+
+<section>
+  <h2>One gradient, three ways, and others</h2>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(yellow, green)"></div></div>
+    <figcaption><code>yellow, green</code>: yellow at the center, green at the corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(ellipse at center, yellow 0%, green 100%)"></div></div>
+    <figcaption><code>ellipse at center, yellow 0%, green 100%</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(farthest-corner at 50% 50%, yellow, green)"></div></div>
+    <figcaption><code>farthest-corner at 50% 50%</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(circle, yellow, green)"></div></div>
+    <figcaption><code>circle, yellow, green</code>: round.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(red, yellow, green)"></div></div>
+    <figcaption><code>red, yellow, green</code>: yellow halfway out.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(farthest-side at left bottom, red, yellow 50px, green)"></div></div>
+    <figcaption><code>farthest-side at left bottom, red, yellow 50px, green</code>: yellow 50px from the corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Closest side, and its explicit size</h2>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(closest-side at 20px 30px, red, yellow, green)"></div></div>
+    <figcaption><code>closest-side at 20px 30px</code>: radii 20 and 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(20px 30px at 20px 30px, red, yellow, green)"></div></div>
+    <figcaption><code>20px 30px at 20px 30px</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(closest-side circle at 20px 30px, red, yellow, green)"></div></div>
+    <figcaption><code>closest-side circle at 20px 30px</code>: radius 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class=g style="background: radial-gradient(20px 20px at 20px 30px, red, yellow, green)"></div></div>
+    <figcaption><code>20px 20px at 20px 30px</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

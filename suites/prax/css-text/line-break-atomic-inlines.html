@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line breaking beside atomic inlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ib { display: inline-block; width: 60px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.5 Line Breaking Details</div>
+  <h1>Line breaking beside atomic inlines</h1>
+  <p class=pr-lede><q>For Web-compatibility there is a soft wrap opportunity before and after each replaced element
+  or other atomic inline, even when adjacent to a character that would normally suppress them, including U+00A0
+  NO-BREAK SPACE. However, with the exception of U+00A0 NO-BREAK SPACE, there must be no soft wrap opportunity between
+  atomic inlines and adjacent characters belonging to the Unicode GL, WJ, or ZWJ line breaking classes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-details">CSS Text 4 §6.5</a></span>
+  Each stage is 100px wide and holds two 60px inline-blocks, A and B, which do not fit on one line together, and what
+  the caption says between them.</p>
+</header>
+
+<section>
+  <h2>A break even where text would not have one</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span><span class="pr-b ib">B</span></div>
+    <figcaption>Nothing: B on the next line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span>&nbsp;<span class="pr-b ib">B</span></div>
+    <figcaption>U+00A0, the exception: B on the next line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span>(<span class="pr-b ib">B</span></div>
+    <figcaption>"(", which keeps with what follows: "(" ends the first line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib" style="width: 95px">A</span>, then</div>
+    <figcaption>A 95px box, then ",", which keeps with what precedes it: the comma starts the next line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>None beside GL, WJ or ZWJ, and none under nowrap</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span>&#x2060;<span class="pr-b ib">B</span></div>
+    <figcaption>U+2060 WORD JOINER, WJ: no break, B past the edge. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span>&#x202F;<span class="pr-b ib">B</span></div>
+    <figcaption>U+202F NARROW NO-BREAK SPACE, GL: no break. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">A</span>&#x200D;<span class="pr-b ib">B</span></div>
+    <figcaption>U+200D ZERO WIDTH JOINER, ZWJ: no break. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text" style="white-space: nowrap"><span class="pr-a ib">A</span><span class="pr-b ib">B</span></div>
+    <figcaption><code>nowrap</code>: the opportunity is not taken, B past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The small element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 20px/40px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.4 The small element</div>
+  <h1>The small element</h1>
+  <p class=pr-lede><q>The small element represents side comments such as small print.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-small-element">HTML §4.5.4</a></span></p>
+</header>
+<section>
+  <h2>Smaller than its parent</h2>
+  <p><q>small { font-size: smaller; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> The ratio of <code>smaller</code> is the user agent's. The stage's text is
+  20px.</p>
+  <figure>
+    <div class="pr-stage t">Total <small>tax <small>included</small></small></div>
+    <figcaption>"tax" smaller than "Total", and "included" smaller again.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

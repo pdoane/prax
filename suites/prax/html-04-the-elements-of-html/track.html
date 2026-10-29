@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The track element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  video::cue { font: 13px sans-serif; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.10 The track element</div>
+  <h1>The track element</h1>
+  <p class=pr-lede><q>The track element allows authors to specify explicit external timed text tracks for media
+  elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#the-track-element">HTML §4.8.10</a></span>
+  Each video is <code>clip.mp4</code> from 0.25s, blue, 140 by 70; each track has one cue, from 0s to 2s, naming
+  it, set in 13px type.</p>
+</header>
+
+<section>
+  <h2>Subtitles and captions are drawn over the video, other kinds are not</h2>
+  <p>Subtitles and captions are <q>Overlaid on the video</q>; descriptions are <q>Synthesized as audio</q>, and
+  chapters and metadata are <q>Not displayed by the user agent</q>. A missing kind is subtitles, an invalid one
+  metadata. <code>default</code> <q>indicates that the track is to be enabled if the user's preferences do not
+  indicate that another track would be more appropriate</q>; of several, <q>set the text track mode of the first such
+  track to showing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#sourcing-out-of-band-text-tracks">§4.8.11.11.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track kind=subtitles srclang=en default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Asubtitles%0A"></video></div>
+    <figcaption><code>kind=subtitles default</code>: "subtitles" over the video, near its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track srclang=en default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Ano%20kind%0A"></video></div>
+    <figcaption>No kind, <code>default</code>: "no kind", as subtitles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track kind=captions srclang=en default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Acaptions%0A"></video></div>
+    <figcaption><code>kind=captions default</code>: "captions".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track kind=subtitles srclang=en src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Anot%20default%0A"></video></div>
+    <figcaption>No <code>default</code>: nothing over the video, unless your preferences ask for subtitles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track kind=subtitles srclang=en label=First default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Afirst%0A"><track kind=subtitles srclang=fr label=Second default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Asecond%0A"></video></div>
+    <figcaption>Two with <code>default</code>: "first" only.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.25" width="140" height="70"><track kind=descriptions srclang=en default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Adescriptions%0A"><track kind=chapters srclang=en default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Achapters%0A"><track kind=metadata default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Ametadata%0A"><track kind=bogus default src="data:text/vtt,WEBVTT%0A%0A00%3A00.000%20--%3E%2000%3A02.000%0Abogus%0A"></video></div>
+    <figcaption>Descriptions, chapters, metadata and <code>kind=bogus</code>, each <code>default</code>: blue, and no text.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

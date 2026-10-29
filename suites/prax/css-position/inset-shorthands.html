@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The inset shorthands</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { width: 160px; height: 80px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+  .abs { position: absolute; background: rgba(214, 138, 60, 0.6); outline: 1px solid #9c5f22; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.2 Box Insets Shorthands: the inset-block, inset-inline, and inset properties</div>
+  <h1>The inset shorthands</h1>
+  <p class=pr-lede>Each stage is relative, 160 by 80, and the containing block of the orange box, whose width and
+  height are <code>auto</code>, so that its four insets decide its edges.</p>
+</header>
+
+<section>
+  <h2>inset: like margin, on the physical sides</h2>
+  <p><q>The inset property is a shorthand property that sets all of the inset properties in a single declaration,
+  assigning values to the longhands representing each side exactly as the margin property does for its longhands.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#inset-shorthands">CSS Positioned Layout 3 §3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=abs style="inset: 10px 20px"></div></div>
+    <figcaption><code>inset: 10px 20px</code>: 10px top and bottom, 20px left and right; the box 120 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=abs style="inset: 10px 20px 30px 40px"></div></div>
+    <figcaption><code>inset: 10px 20px 30px 40px</code>: top, right, bottom, left; the box from 40, 10 to 140,
+    50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div id=rl class=abs style="direction: rtl; inset: 10px 20px 30px 40px"></div></div>
+    <figcaption>The same, the box <code>rtl</code>: the same box, 40px from the left; <code>inset</code> sets
+    <code>left</code>, not the box's inline start.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inset-block and inset-inline: start, then end</h2>
+  <p><q>The first component value sets the start side, the second sets the end; if omitted, the second value defaults
+  to the first.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=abs style="inset-block: 10px 30px; inset-inline: 20px"></div></div>
+    <figcaption><code>inset-block: 10px 30px; inset-inline: 20px</code>: 10px at the top, 30px at the bottom, 20px each
+    side; the box 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=abs style="direction: rtl; inset-block: 10px; inset-inline: 20px 100px"></div></div>
+    <figcaption>The box <code>rtl</code>, <code>inset-inline: 20px 100px</code>: 20px at its start, the right, and
+    100px at its end, the left; the box from 100 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=abs style="writing-mode: vertical-rl; inset-block: 10px 100px; inset-inline: 20px"></div></div>
+    <figcaption>The box <code>vertical-rl</code>, <code>inset-block: 10px 100px</code>: 10px at its block start, the
+    right, 100px at the left; 20px top and bottom: the box from 100 to 150, 40 tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

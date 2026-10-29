@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating transform lists</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 40px; }
+  .half { animation: 4s ease-in-out -2s infinite alternate both; }
+  @keyframes shrink { from { transform: scale(2); } to { transform: none; } }
+  @keyframes pad { from { transform: translateX(40px); } to { transform: translateX(40px) rotate(90deg); } }
+  @keyframes prefix { from { transform: rotate(0deg) translateX(0); } to { transform: rotate(360deg) scale(1); } }
+  @keyframes whole { from { transform: translateX(0) rotate(0deg); } to { transform: rotate(360deg) translateX(0); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 9 Interpolation of Transforms</div>
+  <h1>Interpolating transform lists</h1>
+  <p class=pr-lede><q>Interpolation of transform function lists is performed as follows</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#interpolation-of-transforms">CSS Transforms 1 §9</a></span>
+  Each blue box is a 40px square at (60, 30), on the dashed outline, its "A" at its top left, animating to and fro; a
+  still shows the middle, <i>p</i> = 0.5.</p>
+</header>
+
+<section>
+  <h2>A shorter list is padded with identity functions</h2>
+  <p><q>extend the shorter list to the length of the longer list, setting the function at each additional position to
+  the identity transform function matching the function at the corresponding position in the longer list.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: shrink">A</div></div>
+    <figcaption><code>scale(2)</code> to <code>none</code>, as <code>scale(1)</code>: <code>scale(1.5)</code>, a 60px
+    square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: pad">A</div></div>
+    <figcaption><code>translateX(40px)</code> to the same and <code>rotate(90deg)</code>: 40px right, turned
+    45deg.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Matching functions first, then matrices</h2>
+  <p><q>While the functions have either the same name, or are derivatives of the same primitive transform function,
+  interpolate the corresponding pair of functions</q>; <q>If the pair do not have a common name or primitive transform
+  function, post-multiply the remaining transform functions</q> into matrices.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: prefix">A</div></div>
+    <figcaption><code>rotate(0deg) translateX(0)</code> to <code>rotate(360deg) scale(1)</code>: the rotations match:
+    upside down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: whole">A</div></div>
+    <figcaption><code>translateX(0) rotate(0deg)</code> to <code>rotate(360deg) translateX(0)</code>: two identity
+    matrices: upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

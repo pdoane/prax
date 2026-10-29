@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hanging glyphs</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ib { display: inline-block; vertical-align: top; }
+  figure { margin-right: 10px; }
+  figure.pr-narrow figcaption { max-width: 230px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 9.2 Hanging Glyphs</div>
+  <h1>Hanging glyphs</h1>
+  <p class=pr-lede><q>When a glyph at the start or end edge of a line hangs, it is not considered when measuring the
+  line’s contents for fit, alignment, or justification.</q> <q>The hanging glyph is also not taken into account when
+  computing intrinsic sizes (min-content size and max-content size), and any sizes derived thereof.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hanging">CSS Text 4 §9.2</a></span>
+  Preserved spaces under <code>pre-wrap</code>, which hang, show the rules. Letters are 10px wide; the
+  text is highlighted.</p>
+</header>
+
+<section>
+  <h2>Not in intrinsic sizes</h2>
+  <p>Each box is shrink-to-fit, dashed, around <code>pre-wrap</code> text. <q>Glyphs that conditionally hang
+  are not taken into account when computing min-content sizes and any sizes derived thereof, but they are taken into
+  account for max-content sizes</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" style="white-space: pre-wrap; width: min-content"><span class=t>aa   bb</span></span></div>
+    <figcaption><code>min-content</code>, "aa", three spaces, "bb": the spaces hang at the wrap, so 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" style="white-space: pre-wrap"><span class=t>aa   </span></span></div>
+    <figcaption>Max-content, "aa" and three spaces before the end, which hang only conditionally: they count, 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Padding stops a glyph hanging</h2>
+  <p><q>Non-zero inline-axis borders or padding between a hangable glyph and the edge of the line prevent the glyph
+  from hanging.</q> Each stage is 60px wide, right-aligned, <code>pre-wrap</code>; "aaaa", then two spaces in a
+  span, then "bb".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: pre-wrap; text-align: right">aaaa<span class=t>  </span>bb</div>
+    <figcaption>The spaces hang: "aaaa" flush right.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="width: 60px; white-space: pre-wrap; text-align: right">aaaa<span class=t style="padding-right: 2px">  </span>bb</div>
+    <figcaption>2px of right padding on the span: the spaces cannot hang, so take room; "aaaa" is no longer
+    flush. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> hang them anyway.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The disabled attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button, .pad input { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.5 Enabling and disabling form controls: the disabled attribute</div>
+  <h1>The disabled attribute</h1>
+  <p class=pr-lede>A button, input, select or textarea with <code>disabled</code> is disabled. <q>A form control that
+  is disabled must prevent any click events that are queued on the user interaction task source from being dispatched
+  on the element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#enabling-and-disabling-form-controls:-the-disabled-attribute">HTML §4.10.19.5</a></span></p>
+</header>
+
+<section>
+  <h2>No click, and not submitted</h2>
+  <p>The entry list skips a field if <q>field is disabled</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set">§4.10.22.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=disabled-result>
+        <textarea name=on cols=6 rows=1>kept</textarea>
+        <textarea name=off cols=6 rows=1 disabled>dropped</textarea>
+        <button id=enabled-submit>Submit</button>
+        <button id=disabled-submit disabled>Submit</button>
+      </form>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=1></ol>
+      <iframe class=pr-result name=disabled-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click the grey Submit: nothing is logged and nothing submits. Click the other: its <code>click</code>,
+    and the frame shows <code>on=kept</code> alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Changed all the same</h2>
+  <p><q>Being disabled does not prevent all modifications to the form control.</q> <q>they could be indirectly
+  modified by user action, e.g., if other non-disabled elements in the control's radio button group were
+  modified.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#enabling-and-disabling-form-controls:-the-disabled-attribute">§4.10.19.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <label><input type=radio name=size checked disabled> Small, disabled</label><br>
+      <label><input type=radio name=size> Large</label>
+    </div>
+    <figcaption>Small is checked and grey. Click Large: Large is checked, and Small, disabled, is unchecked.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

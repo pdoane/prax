@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The selectedcontent element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+  .base, .base::picker(select) { appearance: base-select; }
+  .swatch { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 0; }
+  .note { margin: 0 0 0 6px; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.17 The selectedcontent element</div>
+  <h1>The selectedcontent element</h1>
+  <p class=pr-lede><q>The selectedcontent element reflects the contents of a select element's currently selected
+  option element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-selectedcontent-element">HTML §4.10.17</a></span></p>
+</header>
+
+<section>
+  <h2>A copy of the selected option</h2>
+  <p><q>Every time the selected option of a select switches from one option to another, the selectedcontent element
+  removes all of its children and replaces them with a new copy of the DOM structure of the select's selected option
+  element.</q> Each stage's <code>select</code> is in base appearance, its first child a <code>button</code> holding a
+  <code>selectedcontent</code>; Safari's chevron is flagged on <a href="select-base.html">the customizable select</a>'s page. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-selectedcontent-element">§4.10.17</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide pad">
+      <select class=base id=colors>
+        <button><selectedcontent></selectedcontent></button>
+        <option><span class=swatch style="background: #4f81bd"></span>Blue <i class=note>calm</i>
+        <option><span class=swatch style="background: #d68a3c"></span>Orange <i class=note>warm</i>
+        <option><span class=swatch style="background: #6aa36a"></span>Green <i class=note>fresh</i>
+      </select>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2 data-on="#colors" style="margin: 10px -10px -10px"></ol>
+    </div>
+    <figcaption>The box shows a blue square, "Blue" and an italic blue "calm", copied from the first option. Open it and
+    pick Orange: the box shows the orange square, "Orange" and "warm". <span class=pr-flag>Firefox</span> shows a
+    native box with the options' text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not the label attribute</h2>
+  <p><q>The option element's label attribute can be used to render a visible label for the option, but the
+  selectedcontent element will not reflect the content of the label attribute.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-selectedcontent-element">§4.10.17</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad">
+      <select class=base>
+        <button><selectedcontent></selectedcontent></button>
+        <option label="S">Small, 30 cm
+        <option label="L">Large, 40 cm
+      </select>
+    </div>
+    <figcaption>The box shows "Small, 30 cm", the option's content; open it, and the list shows "S" and "L", the labels.
+    <span class=pr-flag>Firefox</span> shows "S" in a native box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad">
+      <select class=base>
+        <button><selectedcontent></selectedcontent></button>
+        <option>One
+        <option selected><b>Two</b>, bold
+      </select>
+    </div>
+    <figcaption>The parser's selected option is the second: the box shows a bold "Two" and ", bold".
+    <span class=pr-flag>Firefox</span> shows "Two, bold" in a native box.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

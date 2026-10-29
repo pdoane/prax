@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>select</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.2.3.5 select</div>
+  <h1>select</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a user selects some text. This event is dispatched
+  after the selection has occurred.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-select">UI Events §3.2.3.5</a></span></p>
+</header>
+<section>
+  <h2>After the selection</h2>
+  <p>The event's target is the <q>element whose text content has been selected</q>. The page's script records the
+  field's selected text as each event reaches it, as <code>selected</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-select">§3.2.3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field value="select some of this text"></div>
+      <ol class=pr-log data-log="select" data-fields="target selected" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Drag across <code>some</code> in the field, or hold Shift and press the arrows. select reaches the
+    field with <code>selected</code> the text already highlighted, such as <code>selected="some"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>In a text area</h2>
+  <p><q>in [HTML5], select events can be dispatched only on form input and textarea elements.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-select">§3.2.3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><textarea class=pr-target id=area style="height: 40px">two lines
+of text</textarea></div>
+      <ol class=pr-log data-log="select" data-fields="target selected" data-on="#area" data-lines=3></ol>
+    </div>
+    <figcaption>Double-click <code>lines</code>: select reaches the text area, with
+    <code>selected="lines"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records, on each select event, the text that the control has selected when the event reaches it.
+  for (const control of [document.getElementById("field"), document.getElementById("area")]) {
+      control.addEventListener("select", event => {
+          event.selected = control.value.slice(control.selectionStart, control.selectionEnd);
+      }, {capture: true});
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

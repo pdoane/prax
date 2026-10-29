@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute and fixed boxes: blockified, not floated, independent</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .abs { position: absolute; }
+  .fl { float: left; width: 40px; height: 60px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2 Choosing A Positioning Scheme: position property</div>
+  <h1>Absolute and fixed boxes: blockified, not floated, independent</h1>
+  <p class=pr-lede><q>A position value of absolute or fixed blockifies the box, causes float to compute to none, and
+  forces the box to establish an independent formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#position-property">CSS Positioned Layout 3 §2</a></span>
+  Each stage is the containing block.</p>
+</header>
+
+<section>
+  <h2>Blockified, and not floated</h2>
+  <p>Orange: a <code>span</code> with <code>position: absolute; top: 20px; left: 20px</code>, and a <code>width</code>
+  and <code>height</code>, which apply only to a box that is not inline. Blue: a box with <code>float: left</code> and
+  <code>position: absolute; top: 20px; right: 20px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><span id=sp class="pr-b abs" style="display: inline-flex; top: 20px; left: 20px; width: 100px; height: 40px">span</span></div>
+    <figcaption>The span, even with <code>display: inline-flex</code>, is a box 112 by 40, from 20, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div id=fa class="pr-a abs" style="float: left; top: 20px; right: 20px; width: 40px">fl</div>Text that would wrap.</div>
+    <figcaption>The box is at the top right, 20px in, and the text runs over it, not around it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An independent formatting context</h2>
+  <p>In each stage, a dashed absolute box at <code>top: 10px; left: 10px</code>, 120px wide, holds what the caption
+  says.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure" style="height: 100px"><div class="pr-frame abs" style="top: 10px; left: 10px; width: 120px"><div class=fl></div>abc</div></div>
+    <figcaption>A green float 60px tall and a line of text: the dashed box grows to hold the float, 60px tall,
+    from 10 to 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 100px"><div class="pr-frame abs" style="top: 10px; left: 10px; width: 120px"><div class=pr-b style="margin-top: 20px">child</div></div></div>
+    <figcaption>An orange child with <code>margin-top: 20px</code>: the margin stays inside the dashed box, whose top
+    is at 10, the child's at 31.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

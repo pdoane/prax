@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dashed lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.4 Line styles</div>
+  <h1>Dashed lines</h1>
+  <p class=pr-lede>setLineDash <q>Sets the current line dash pattern (as used when stroking). The
+  argument is a list of distances for which to alternately have the line on and the line off.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#line-styles">HTML §4.12.5.1.4</a></span>
+  Every line here runs from x 10 to 190, 6 wide, butt-capped unless a caption says otherwise.</p>
+</header>
+<section>
+  <h2>On, off, odd lists, and the phase</h2>
+  <p><q>If the number of elements in segments is odd, then let segments be the concatenation of two copies of
+  segments.</q> <q>Let position be 0 minus offset.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=dash data-dash="20 10"></canvas></div>
+    <figcaption><code>[20, 10]</code>: dashes 20 long, gaps 10: from x 10 to 30, 40 to 60, and on.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=dash data-dash="20 10 5"></canvas></div>
+    <figcaption><code>[20, 10, 5]</code>, read as <code>[20, 10, 5, 20, 10, 5]</code>: dashes at x 10 to 30, 40 to
+    45, 65 to 75, 80 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=dash data-dash="20 10" data-offset=10></canvas></div>
+    <figcaption><code>lineDashOffset</code> 10: a first dash of 10, x 10 to 20, then 30 to 50, 60 to
+    80.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=dash data-dash="20 10" data-offset=-10></canvas></div>
+    <figcaption><code>lineDashOffset</code> −10: a gap of 10 first, then dashes from 20 to 40, 50 to 70.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Caps on every dash, and dashes along the whole subpath</h2>
+  <p><q>Points with no lines coming out of them must have two caps placed back-to-back</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=dash data-dash="0 20" data-cap=round data-width=10></canvas></div>
+    <figcaption><code>[0, 20]</code>, width 10, <code>round</code>: dashes of length zero as dots 10 across, at x 10,
+    30, … 190.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=box></canvas></div>
+    <figcaption>A rectangle from (10, 10) to (190, 60), <code>[25, 15]</code>: the fifth dash bends round the corner
+    at (190, 10), from x 170 to 5 down the side.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    dash(context, canvas) {
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = Number(canvas.dataset.width || 6);
+      context.lineCap = canvas.dataset.cap || "butt";
+      context.setLineDash(canvas.dataset.dash.split(" ").map(Number));
+      context.lineDashOffset = Number(canvas.dataset.offset || 0);
+      context.beginPath();
+      context.moveTo(10, 20);
+      context.lineTo(190, 20);
+      context.stroke();
+    },
+    box(context) {
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 4;
+      context.setLineDash([25, 15]);
+      context.strokeRect(10, 10, 180, 50);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

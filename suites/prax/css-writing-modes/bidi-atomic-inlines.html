@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Atomic inlines in bidi text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .box { display: inline-block; width: 16px; height: 16px; background: #8e44ad; }
+  img { width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.3 Bidi Treatment of Atomic Inlines</div>
+  <h1>Atomic inlines in bidi text</h1>
+  <p class=pr-lede><q>replaced elements with display: inline are treated as neutral characters, unless their
+  unicode-bidi property is either embed or bidi-override, in which case they are treated as strong characters in the
+  direction specified for the element.</q> <q>All other atomic inline-level boxes are treated as neutral characters
+  always.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-atomic-inlines">CSS Writing Modes 4 §2.4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Neutral or strong</h2>
+  <p>Each stage is <code>ltr</code> and holds "abc", a purple 16px box, and the Hebrew word אבג. A neutral between a
+  left-to-right word and a right-to-left one takes the paragraph's direction and stays between them; a strong
+  right-to-left one joins the Hebrew run, which reads from the right.</p>
+  <figure>
+    <div class=pr-stage>abc <span class=box></span> אבג</div>
+    <figcaption>An inline-block: neutral, between "abc" and the Hebrew word.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>abc <span class=box style="direction: rtl; unicode-bidi: embed"></span> אבג</div>
+    <figcaption>An inline-block with <code>direction: rtl; unicode-bidi: embed</code>: still neutral, between
+    them.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>abc <img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='%238e44ad'/></svg>"> אבג</div>
+    <figcaption>An image: neutral, between them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>abc <img alt="" style="direction: rtl; unicode-bidi: embed" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='%238e44ad'/></svg>"> אבג</div>
+    <figcaption>An image with <code>direction: rtl; unicode-bidi: embed</code>: strong right to left, it is the
+    Hebrew run's first character, so at its right end: "abc", the Hebrew word, the box. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> keep it neutral, between them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>abc <img alt="" style="direction: rtl; unicode-bidi: bidi-override" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='%238e44ad'/></svg>"> אבג</div>
+    <figcaption>With <code>bidi-override</code>: strong too, the box at the right end.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> keep it
+    neutral.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

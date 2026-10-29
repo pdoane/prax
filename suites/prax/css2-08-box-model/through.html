@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsing through a box</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Collapsing through a box</h1>
+  <p class=pr-lede><q>If the top and bottom margins of a box are adjoining, then it is possible for margins to collapse through it.</q> A dashed outline is such a box. Every named box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>When a box's own margins collapse</h2>
+  <p><q>A box's own margins collapse if the 'min-height' property is zero, and it has neither top or bottom borders nor
+  top or bottom padding, and it has a 'height' of either 0 or 'auto', and it does not contain a line box, and all of
+  its in-flow children's margins (if any) collapse.</q> In each figure the box between A and B has mt 30 and mb 10.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px"></div><div class=pr-b>B</div></div>
+    <figcaption>Empty: one 30px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-ghost style="margin: 30px 0 10px"><div style="margin: 40px 0 0"></div></div><div class=pr-b>B</div></div>
+    <figcaption>Its child is empty too, with mt 40: all collapse, one 40px gap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The white-space property: HTML</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6 White space: the 'white-space' property</div>
+  <h1>The white-space property: HTML</h1>
+  <p class=pr-lede><code>white-space</code> takes <code>normal | pre | nowrap | pre-wrap | pre-line</code>. Initial
+  <code>normal</code>, inherited.</p>
+</header>
+
+<section>
+  <h2>The specification's HTML examples</h2>
+  <p><q>The following examples show what white space behavior is expected from the PRE and P elements and the "nowrap"
+  attribute in HTML.</q> <code>pre { white-space: pre }</code>, <code>p { white-space: normal }</code>,
+  <code>td[nowrap] { white-space: nowrap }</code>, and <code>pre[wrap] { white-space: pre-wrap }</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-prop">CSS 2 §16.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-table style="width: 200px"><div class=pr-table-cell>a cell that wraps its text</div><div class=pr-table-cell style="white-space: nowrap">nowrap cell</div></div></div>
+    <figcaption>The left cell wraps across lines. The right, <code>nowrap</code>, keeps "nowrap cell" on one
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><pre style="margin: 0; font: inherit; white-space: pre-wrap">pre[wrap]   keeps   its spaces and wraps</pre></div>
+    <figcaption>A <code>pre</code> with <code>white-space: pre-wrap</code>: each run of three spaces stays, and the line wraps
+    at the stage's edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

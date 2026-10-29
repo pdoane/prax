@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>grid-template-areas: named areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-auto-columns: 40px; grid-auto-rows: 20px; justify-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.3 Named Areas: the grid-template-areas property</div>
+  <h1>grid-template-areas: named areas</h1>
+  <p class=pr-lede><q>This property specifies named grid areas, which are not associated with any particular grid item,
+  but can be referenced from the grid-placement properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-template-areas-property">CSS Grid Layout 2 §7.3</a></span>
+  In each stage the tracks the strings create are sized by <code>grid-auto-columns: 40px</code> and
+  <code>grid-auto-rows: 20px</code>.</p>
+</header>
+
+<section>
+  <h2>A row for each string, a column for each cell</h2>
+  <p><q>A row is created for every separate string listed for the grid-template-areas property, and a column is
+  created for each cell in the string</q>. <q>A sequence of one or more "." (U+002E FULL STOP)</q> is a <q>null cell
+  token</q>, which <q>represents an unnamed area in the grid container.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: 'head head' 'nav main' 'foot ....'"><div class=pr-a style="grid-area: head">A</div><div class=pr-b style="grid-area: nav">B</div><div class=pr-c style="grid-area: main">C</div><div class=pr-d style="grid-area: foot">D</div></div></div>
+    <figcaption><code>"head head" "nav main" "foot ...."</code>: three rows, two columns. A, in head, is 80px
+    wide across the top; B and C below it; D under B, and the cell beside D empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: 'a...b'"><div class=pr-a style="grid-area: a">A</div><div class=pr-b style="grid-area: b">B</div></div></div>
+    <figcaption><code>"a...b"</code> is three cells: a, a null cell token, b. A is at 0 and B at 80px, an empty
+    column between.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One area from many cells</h2>
+  <p><q>Multiple named cell tokens within and between rows create a single named grid area that spans the
+  corresponding grid cells.</q> A name is <q>A sequence of ident code points</q>, so it can begin with a digit:
+  <q>like grid-row: \31st; to reference the area named 1st.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: 'a a b' 'a a c'"><div class=pr-a style="grid-area: a">A</div><div class=pr-b style="grid-area: b">B</div><div class=pr-c style="grid-area: c">C</div></div></div>
+    <figcaption><code>"a a b" "a a c"</code>: A fills the area a, 80px wide and 40px tall; B and C stack at
+    80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: '1st 2nd 3rd'"><div class=pr-b style="grid-area: \33rd">3</div><div class=pr-a style="grid-area: \31st">1</div></div></div>
+    <figcaption><code>"1st 2nd 3rd"</code>: 1, at <code>grid-area: \31st</code>, is at 0; 3, at
+    <code>\33rd</code>, at 80px, though it comes first; 2nd, with no item, still
+    makes its column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

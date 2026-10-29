@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width: auto: through the aspect ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; align-items: flex-start; }
+  .x { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.5 Automatic Minimum Size of Flex Items, transferred size suggestion</div>
+  <h1>min-width: auto: through the aspect ratio</h1>
+  <p class=pr-lede><q>If the item has a preferred aspect ratio and its preferred cross size is definite, then the
+  transferred size suggestion is that size (clamped by its minimum and maximum cross sizes if they are definite),
+  converted through the aspect ratio.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#min-size-auto">CSS Flexible Box Layout 2 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>The larger of content and transferred sizes, capped by the specified size</h2>
+  <p>For a non-replaced item, <q>Use the larger of the content size suggestion and the transferred size
+  suggestion</q>. Each item has <code>aspect-ratio: 2 / 1</code> and holds "ab", 20px, in a dashed container 40px
+  wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 40px"><div class=x style="aspect-ratio: 2 / 1; height: 30px">ab</div></div></div>
+    <figcaption><code>height: 30px</code>: transferred 60px, larger than 20px: the item is 60 by 30.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 40px"><div class=x style="aspect-ratio: 2 / 1; height: 30px; min-width: 0">ab</div></div></div>
+    <figcaption>With <code>min-width: 0</code>: it shrinks to the container's 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 40px"><div class=x style="aspect-ratio: 2 / 1; height: 10px; min-height: 30px">ab</div></div></div>
+    <figcaption><code>height: 10px; min-height: 30px</code>: clamped to 30px, so 60 by 30 again.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="aspect-ratio: 2 / 1; height: 30px; width: 30px">ab</div></div></div>
+    <figcaption><code>width: 30px</code>, in 20px: 60px capped at 30px: 30 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The content size, clamped through the ratio</h2>
+  <p>The content size suggestion is the min-content size, <q>clamped, if it has a preferred aspect ratio, by any
+  definite minimum and maximum cross sizes converted through the aspect ratio.</q> Each item has
+  <code>aspect-ratio: 1 / 1</code>, no height, and holds "flexbox", 70px, in a dashed container 20px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 80px"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="aspect-ratio: 1 / 1; max-height: 30px">flexbox</div></div></div>
+    <figcaption><code>max-height: 30px</code>: 70px clamped to 30px; the item is 30 by 30, its word spilling
+    out.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 80px"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="aspect-ratio: 1 / 1">flexbox</div></div></div>
+    <figcaption>No maximum: the item is 70 by 70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

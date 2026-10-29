@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-line-count: a minimum number of lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 40px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 6.1 Minimum Flex Lines: the flex-line-count property</div>
+  <h1>flex-line-count: a minimum number of lines</h1>
+  <p class=pr-lede><q>The flex-line-count property specifies a minimum flex line count that the flex container should
+  create to balance the items across.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-line-count-property">CSS Flexible Box Layout 2 §6.1</a></span>
+  Each stage's items are 40px wide and <code>flex: none</code>.</p>
+</header>
+
+<section>
+  <h2>Lines to balance across</h2>
+  <p><q>The minimum flex line count is clamped from above by the number of flex items in the flex container; it will
+  only create as many lines as there are flex items.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance; flex-line-count: 2"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>balance</code> and <code>flex-line-count: 2</code>: the four fit on one line, but make two, A and B
+    above C and D. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance; flex-line-count: 3; align-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>flex-line-count: 3</code> with two items: two lines, A above B, the stage 40px tall.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line, 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cross-axis space of each item</h2>
+  <p><q>flex-line-count changes the available space in the cross axis for flex items: subtracting the size of N-1 gaps
+  from the normal available space, then dividing the leftover by N</q>; <q>Percentages continue to resolve as
+  normal</q>; <q>If the flex container is single-line [...], this property has no effect.</q> Each stage is 100px tall
+  with <code>row-gap: 20px</code>, <code>flex-line-count: 2</code> and <code>align-items: flex-start</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: wrap; flex-line-count: 2; height: 100px; row-gap: 20px; align-items: flex-start"><div class="pr-a pr-fit" style="height: stretch">A</div><div class="pr-b pr-fit" style="height: 50%">B</div></div>
+    <figcaption><code>wrap</code>: A, <code>height: stretch</code>, fills (100 - 20) / 2, 40px; B,
+    <code>height: 50%</code>, is 50px. <span class=pr-flag>Chrome</span> A 100px. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> A 20px, which do not parse <code>stretch</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-line-count: 2; height: 100px; row-gap: 20px; align-items: flex-start"><div class="pr-a pr-fit" style="height: stretch">A</div></div>
+    <figcaption><code>nowrap</code>: no effect, A fills the stage's 100px. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

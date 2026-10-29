@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerup</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.6 pointerup</div>
+  <h1>pointerup</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointerup when a pointer leaves the active buttons
+  state.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerup">Pointer Events §3.3.6</a></span></p>
+</header>
+<section>
+  <h2>No pressure</h2>
+  <p><q>All pointerup events have a pressure value of 0.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerup">§3.3.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press and release here.</div>
+      <ol class=pr-log data-log="pointerdown pointerup" data-fields="pointerType pressure" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Click with the mouse: <code>pointerdown</code> with <code>pressure=0.5</code>, <code>pointerup</code>
+    with <code>pressure=0</code>. Press hard with a pen and lift it quickly: still 0 on the
+    <code>pointerup</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Capture ends</h2>
+  <p><q>The user agent MUST also implicitly release the pointer capture if the pointer is currently captured.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerup">§3.3.6</a></span>
+  A <code>pointerdown</code> listener captures the pointer to the box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=captor>Press here, drag off, release.</div>
+      <ol class=pr-log data-log="pointerup gotpointercapture lostpointercapture" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Press the box, drag off it and release: <code>gotpointercapture</code>, then <code>pointerup</code>
+    at <code>captor</code> though the pointer is off it, then <code>lostpointercapture</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Captures the pointer to the second box when it is pressed.
+  const captor = document.getElementById("captor");
+  captor.addEventListener("pointerdown", event => captor.setPointerCapture(event.pointerId));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

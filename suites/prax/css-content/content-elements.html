@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property on elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .list { content: "generated " "text"; }
+  .none { content: none; }
+  .none::before { content: "before "; color: #c0392b; }
+  .item { display: list-item; list-style-position: inside; content: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 1 Inserting and Replacing Content: the content property</div>
+  <h1>The content property on elements</h1>
+  <p class=pr-lede>Of the values that are not an image, on an element only <code>normal</code> and
+  <code>none</code> mean anything, and both leave its contents drawn. <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-property">CSS Generated Content 3 §1</a></span></p>
+</header>
+
+<section>
+  <h2>A content list on an element; none on an element</h2>
+  <p><q>On regular elements, this value has no effect.</q> For <code>none</code>: <q>On regular elements, this behaves
+  as 'normal'.</q> <q>In neither case does it prevent any pseudo-elements which have this element or pseudo-element as
+  an originating element from being generated.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=list>own text</div></div>
+    <figcaption><code>content: "generated " "text"</code> on a <code>div</code>: its own text, "own text", and nothing
+    generated.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=none>own text</div></div>
+    <figcaption><code>content: none</code> on the <code>div</code>: its text is drawn, and its <code>::before</code>
+    still is: "<span style="color: #c0392b">before</span> own text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=item>own text</div></div>
+    <figcaption>A list item with <code>content: none</code>: its marker is still generated, "• own text".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

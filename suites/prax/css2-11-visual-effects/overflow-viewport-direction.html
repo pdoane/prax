@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: the viewport's direction</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: the viewport's direction</h1>
+  <p class=pr-lede>Each frame is a document whose content is a bar 300px wide, blue at its left end and orange at its
+  right, wider than the 200px viewport, which scrolls.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-writing-modes-4/#principal-flow">CSS Writing Modes 4 §8</a>, <a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></div>
+  <h2>From the principal writing mode, which body gives</h2>
+  <p><q>The root viewport, which scrolls the page canvas, uses the principal writing mode for determining its scroll
+  origin and initial scroll position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span> <q>if the
+  root element has a &lt;body&gt; child element whose 'display' value is not 'none', the used value of the of
+  'writing-mode' and 'direction' properties on root element are taken from the computed 'writing-mode' and 'direction'
+  of the first such child element instead of from the root element's own values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#principal-flow">CSS Writing Modes 4 §8</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0 } div { width: 300px; height: 40px; background: linear-gradient(to right, #4f81bd, #d68a3c); color: white; font: 600 12px/40px sans-serif; padding: 0 6px; box-sizing: border-box; direction: ltr } span + span { float: right }</style><body dir=rtl><div><span>left end</span><span>right end</span></div></body>"></iframe></div>
+    <figcaption><code>&lt;body dir=rtl&gt;</code>: the viewport scrolls from the right, and shows the bar's right
+    end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0 } div { width: 300px; height: 40px; background: linear-gradient(to right, #4f81bd, #d68a3c); color: white; font: 600 12px/40px sans-serif; padding: 0 6px; box-sizing: border-box; direction: ltr } span + span { float: right }</style><html dir=rtl><body dir=ltr><div><span>left end</span><span>right end</span></div></body></html>"></iframe></div>
+    <figcaption><code>&lt;html dir=rtl&gt;</code> but <code>&lt;body dir=ltr&gt;</code>: body's direction wins, and the
+    viewport shows the left end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>@font-feature-values syntax</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-feature-values "PR Bungee Spice" { @styleset { e: 1; } }
+  @font-feature-values "PR Bungee Spice" { @styleset { e: 3; } }
+  @font-feature-values "PR Bungee Spice" { @styleset { Round: 1; round: 2; } @styleset { both: 1; } @styleset { both: 2; } }
+  .pr-sample { font-family: 'PR Bungee Spice'; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.9.1 Basic syntax</div>
+  <h1>@font-feature-values syntax</h1>
+  <p class=pr-lede>Names are <q>case-sensitive</q>. <q>If the same tuple appears more than once in a document ... the
+  last-defined one is used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-feature-values-syntax">CSS Fonts 4 §6.9.1</a></span></p>
+</header>
+
+<section>
+  <h2>Cascading definitions</h2>
+  <p>PR Bungee Spice's <code>ss01</code> changes most letters, its <code>ss02</code> A, M, N, W, X and Y, and its
+  <code>ss03</code> only E.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(e)">EMMA</div>
+    <figcaption><code>e</code> is defined as 1, then as 3 in a later rule: <code>ss03</code>, alternate Es
+    only.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(round)">EMMA</div>
+    <figcaption><code>round</code> is 2 and <code>Round</code> another name: <code>ss02</code>, alternate M and A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(both)">EMMA</div>
+    <figcaption>Two @styleset blocks <q>are cascaded together</q>: <code>both</code> is 2, alternate M and A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

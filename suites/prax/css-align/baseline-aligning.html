@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Aligning boxes by baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo", "PR Noto Sans JP"; }
+  .vg { writing-mode: vertical-rl; display: grid; grid-template-columns: auto auto auto; justify-content: start; height: 120px; width: 60px; column-gap: 4px; }
+  .vg > div { padding: 0 3px !important; }
+  .vg > div { background: #f9cc9d; line-height: 1; padding: 3px 0; align-self: baseline; }
+  .dg { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 4px; font: 80px/1 "PR Baseline Diagnostic"; }
+  .dg > div { background: #f9cc9d; align-self: baseline; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.3 Aligning Boxes by Baseline</div>
+  <h1>Aligning boxes by baseline</h1>
+  <p class=pr-lede><q>Generate the baseline-sharing group’s baseline table from the first available font of the
+  group’s alignment context</q>. <q>Align each alignment subject by its specified alignment baseline to the group’s
+  baseline table</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-by-baseline">CSS Box Alignment 3 §9.3</a></span></p>
+</header>
+
+<section>
+  <h2>The dominant baseline of the context</h2>
+  <p><q>Unless otherwise specified (e.g. via the 'alignment-baseline' property), the alignment baseline is the
+  dominant baseline of the alignment context.</q> Each stage is a <code>vertical-rl</code> grid of one row, 60px wide, its items
+  <code>align-self: baseline</code> down it, of 13, 26 and 13px text.</p>
+  <figure>
+    <div class=pr-stage><div class=vg><div style="font-size: 13px">日本</div><div style="font-size: 26px">日本</div><div style="font-size: 13px">Ag</div></div></div>
+    <figcaption>Upright text: the dominant baseline is central: the three centered on one vertical line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=vg style="text-orientation: sideways"><div style="font-size: 13px">日本</div><div style="font-size: 26px">Ag</div><div style="font-size: 13px">Ag</div></div></div>
+    <figcaption><code>text-orientation: sideways</code>: alphabetic: the bottoms of the glyphs, to their left, on one
+    vertical line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Another alignment baseline</h2>
+  <p>A grid row in PR Baseline Diagnostic at 80px, whose "X" labels its baselines; the second item is 40px with
+  <code>alignment-baseline: hanging</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=dg><div>X</div><div style="font-size: 40px; alignment-baseline: hanging">X</div></div></div>
+    <figcaption>The small X's hanging line on the large X's hanging line. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Their alphabetic lines together.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

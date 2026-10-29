@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: numbering systems</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-type property: numbering systems</h1>
+  <p class=pr-lede><q>Numbering systems are specified with:</q> six keywords. Each list has three items, numbered 1 to 3,
+  and in the first four an <code>ol start=9</code> shows 9 and 10. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Decimal and roman</h2>
+  <p><q>decimal: Decimal numbers, beginning with 1.</q> <q>decimal-leading-zero: Decimal numbers padded by initial
+  zeros (e.g., 01, 02, 03, ..., 98, 99).</q> <q>lower-roman: Lowercase roman numerals (i, ii, iii, iv, v, etc.).</q>
+  <q>upper-roman: Uppercase roman numerals (I, II, III, IV, V, etc.).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: decimal"><li>one<li>two<li>three</ol><ol start=9 style="list-style-type: decimal"><li>nine<li>ten</ol></div>
+    <figcaption><code>decimal</code>: 1., 2., 3.; 9., 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: decimal-leading-zero"><li>one<li>two<li>three</ol><ol start=9 style="list-style-type: decimal-leading-zero"><li>nine<li>ten</ol></div>
+    <figcaption><code>decimal-leading-zero</code>: 01., 02., 03.; 09., 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: lower-roman"><li>one<li>two<li>three</ol><ol start=9 style="list-style-type: lower-roman"><li>nine<li>ten</ol></div>
+    <figcaption><code>lower-roman</code>: i., ii., iii.; ix., x.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: upper-roman"><li>one<li>two<li>three</ol><ol start=9 style="list-style-type: upper-roman"><li>nine<li>ten</ol></div>
+    <figcaption><code>upper-roman</code>: I., II., III.; IX., X.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Georgian and Armenian</h2>
+  <p><q>georgian: Traditional Georgian numbering (an, ban, gan, ..., he, tan, in, in-an, ...).</q> <q>armenian:
+  Traditional uppercase Armenian numbering.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: georgian"><li>one<li>two<li>three</ol></div>
+    <figcaption><code>georgian</code>: ა., ბ., გ. (an, ban, gan).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: armenian"><li>one<li>two<li>three</ol></div>
+    <figcaption><code>armenian</code>: Ա., Բ., Գ.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>initial-letter: size and sink</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 11px/16px "PR Literata"; margin: 0; }
+  .p::first-letter { color: #2c5a8f; }
+  .v1::first-letter { initial-letter: 3; }
+  .v2::first-letter { initial-letter: 3 2; }
+  .v3::first-letter { initial-letter: raise 3; }
+  .v4::first-letter { initial-letter: 2.51 3; }
+  .pr-stage { width: 112px; }
+  figcaption { max-width: 112px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.3 Creating Initial Letters: the initial-letter property</div>
+  <h1>initial-letter: size and sink</h1>
+  <p class=pr-lede><q>This property specifies the size and sink for dropped, raised, and sunken initial letters as the
+  number of lines spanned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#sizing-drop-initials">CSS Inline Layout 3 §7.3</a></span>
+  Each paragraph is 11px PR Literata on 16px lines; its first letter, in blue, has the caption's
+  <code>initial-letter</code>. <span class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code>,
+  and <span class=pr-flag>Firefox</span> none, so both draw a plain first letter in every figure.</p>
+</header>
+
+<section>
+  <h2>The spec's examples</h2>
+  <p>The <q>size of the initial letter in terms of how many lines it occupies</q>, then the number of lines it should
+  <q>sink</q>: <q>If the initial letter sink value is omitted, drop is assumed.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p v1">Three lines high and three lines deep, a dropped initial with the text beside it.</p></div>
+    <figcaption><code>3</code>, also <code>3 3</code>, <code>3 drop</code>, <code>drop 3</code>: <q>a dropped initial 3
+    lines high, 3 lines deep</q>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p v2">Three lines high, two lines deep: a sunken initial above the text.</p></div>
+    <figcaption><code>3 2</code>: <q>a sunken initial 3 lines high, 2 lines deep</q>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p v3">Three lines high, one line deep: a raised initial on the first baseline.</p></div>
+    <figcaption><code>raise 3</code>, also <code>3 1</code>, <code>3 raise</code>: <q>a raised initial 3 lines
+    high, 1 line deep</q>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p v4">Not whole: two and a half lines high, three lines deep, so only its top aligns.</p></div>
+    <figcaption><code>2.51 3</code>: <q>The size of the initial letter does not have to be an integral number of
+    lines. In this case only the top aligns.</q></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

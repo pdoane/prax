@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Bidirectionality</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2 Inline Direction and Bidirectionality</div>
+  <h1>Bidirectionality</h1>
+  <p class=pr-lede><q>In some documents, in particular those written with the Arabic or Hebrew script, and in some
+  mixed-language contexts, text in a single (visually displayed) block may appear with mixed directionality. This
+  phenomenon is called bidirectionality, or "bidi" for short.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-direction">CSS Writing Modes 4 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Mixed directions in one block</h2>
+  <p>The Hebrew words are the letters אבג (alef, bet, gimel) and דהו (dalet, he, vav), each written from the right.
+  <q>CSS relies on this algorithm</q>, Unicode's, <q>to achieve proper bidirectional rendering.</q></p>
+  <figure>
+    <div class=pr-stage dir=rtl>אבג Latin דהו</div>
+    <figcaption>A Latin word in a Hebrew sentence: the sentence reads from the right, אבג first at the right edge,
+    then "Latin" read left to right, then דהו at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one אבג two</div>
+    <figcaption>A Hebrew word in an English sentence: the sentence reads from the left, and within the Hebrew word
+    א is at its right end and ג at its left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Markup first</h2>
+  <p><q>If a document language provides markup features to control bidi, authors and users should use those
+  features instead</q>. HTML's <code>dir</code> attribute maps to <code>direction</code> and
+  <code>unicode-bidi: isolate</code>, so the two stages below match.</p>
+  <figure>
+    <div class=pr-stage>x <span dir=rtl>abc אבג</span> 1</div>
+    <figcaption><code>&lt;span dir=rtl&gt;</code>: the span reads from the right, אבג left of "abc"; "1" stays at
+    the end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span style="direction: rtl; unicode-bidi: isolate">abc אבג</span> 1</div>
+    <figcaption>The same span with <code>direction: rtl; unicode-bidi: isolate</code>: the same line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

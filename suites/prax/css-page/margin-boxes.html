@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The sixteen page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5 Page-Margin Boxes</div>
+  <h1>The sixteen page-margin boxes</h1>
+  <p class=pr-lede><q>The margin area of a page box is divided into 16 page-margin boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-model">§3</a></span> <q>Page-margin boxes are positioned with respect to the page area and are independent of page orientation</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#margin-boxes">CSS Paged Media 3 §5</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Corners, sides, and three boxes on each side</h2>
+  <p>Each box here has content: its initials, white on a color. A corner box is <q>a fixed-size box defined by the intersection of the</q> two margins; <q>top-center</q> is <q>a variable-width box centered horizontally between the page's left and right border edges</q>.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-left-corner { content: 'TLC'; background: #8e44ad; color: white; text-align: center } @top-left { content: 'TL'; background: #4f81bd; color: white; text-align: center } @top-center { content: 'TC'; background: #6aa36a; color: white; text-align: center } @top-right { content: 'TR'; background: #4f81bd; color: white; text-align: center } @top-right-corner { content: 'TRC'; background: #8e44ad; color: white; text-align: center } @right-top { content: 'RT'; background: #4f81bd; color: white; text-align: center } @right-middle { content: 'RM'; background: #6aa36a; color: white; text-align: center } @right-bottom { content: 'RB'; background: #4f81bd; color: white; text-align: center } @bottom-right-corner { content: 'BRC'; background: #8e44ad; color: white; text-align: center } @bottom-right { content: 'BR'; background: #4f81bd; color: white; text-align: center } @bottom-center { content: 'BC'; background: #6aa36a; color: white; text-align: center } @bottom-left { content: 'BL'; background: #4f81bd; color: white; text-align: center } @bottom-left-corner { content: 'BLC'; background: #8e44ad; color: white; text-align: center } @left-bottom { content: 'LB'; background: #4f81bd; color: white; text-align: center } @left-middle { content: 'LM'; background: #6aa36a; color: white; text-align: center } @left-top { content: 'LT'; background: #4f81bd; color: white; text-align: center } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>With 40px margins: four purple 40 by 40 corners; across the top TL, TC and TR, TC centered; down the right side RT, RM and RB; BR, BC and BL across the bottom, and LB, LM and LT up the left. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 160px 240px; margin: 40px; @top-left-corner { content: 'TLC'; background: #8e44ad; color: white; text-align: center } @top-left { content: 'TL'; background: #4f81bd; color: white; text-align: center } @top-center { content: 'TC'; background: #6aa36a; color: white; text-align: center } @top-right { content: 'TR'; background: #4f81bd; color: white; text-align: center } @top-right-corner { content: 'TRC'; background: #8e44ad; color: white; text-align: center } @right-top { content: 'RT'; background: #4f81bd; color: white; text-align: center } @right-middle { content: 'RM'; background: #6aa36a; color: white; text-align: center } @right-bottom { content: 'RB'; background: #4f81bd; color: white; text-align: center } @bottom-right-corner { content: 'BRC'; background: #8e44ad; color: white; text-align: center } @bottom-right { content: 'BR'; background: #4f81bd; color: white; text-align: center } @bottom-center { content: 'BC'; background: #6aa36a; color: white; text-align: center } @bottom-left { content: 'BL'; background: #4f81bd; color: white; text-align: center } @bottom-left-corner { content: 'BLC'; background: #8e44ad; color: white; text-align: center } @left-bottom { content: 'LB'; background: #4f81bd; color: white; text-align: center } @left-middle { content: 'LM'; background: #6aa36a; color: white; text-align: center } @left-top { content: 'LT'; background: #4f81bd; color: white; text-align: center } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>On a portrait page, 160 by 240, the same boxes in the same places around the page area: TL, TC and TR still above it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

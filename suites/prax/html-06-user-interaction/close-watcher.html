@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CloseWatcher</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A watcher that is open: a chip that the page's script adds when it creates the watcher and removes on its close. */
+  .chip { display: inline-block; margin: 0 6px 10px 0; padding: 0 6px; background: #6aa36a; color: white;
+          font-size: 12px; line-height: 20px }
+  .chips { min-height: 30px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.10.3 The CloseWatcher interface</div>
+  <h1>CloseWatcher</h1>
+  <p class=pr-lede><code>new CloseWatcher()</code> <q>Creates a new CloseWatcher instance.</q> A close request does what <code>requestClose()</code> does, which
+  <q>Acts as if a close request was sent targeting watcher, by first firing a cancel event, and if that event is not
+  canceled with preventDefault(), proceeding to fire a close event</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-closewatcher-interface">HTML §6.10.3</a></span></p>
+</header>
+<section>
+  <h2>Closed by Esc</h2>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=plain>new CloseWatcher()</button>
+        <div class=chips id=chips1></div>
+      </div>
+      <ol class=pr-log id=log1 data-lines=2></ol>
+    </div>
+    <figcaption>Click the button: a green chip for the watcher. Press Esc: <code>cancel cancelable</code>, then <code>close</code>, and the chip goes
+    away.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A cancel that holds once</h2>
+  <p>The page's script cancels each cancel event of this watcher. <q>For abuse prevention purposes, this event is only
+  cancelable if the page has history-action activation, which will be lost after any given close request.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-closewatcher-interface">§6.10.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=holding>new CloseWatcher(), canceling</button>
+        <div class=chips id=chips2></div>
+      </div>
+      <ol class=pr-log id=log2 data-lines=3></ol>
+    </div>
+    <figcaption>Click the button: a chip. Press Esc: <code>cancel cancelable</code>, canceled, and the chip stays.
+    Press Esc again, with no click between: <code>cancel</code>, not cancelable, then close, and the chip goes
+    away.</figcaption>
+  </figure>
+</section>
+<script>
+  // Each button creates a watcher shown as a chip, and logs its events; the second's cancel events are canceled.
+  function create(chips, log, holding) {
+      const watcher = new CloseWatcher();
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = "a watcher";
+      chips.append(chip);
+      const note = text => {
+          const item = document.createElement("li");
+          item.textContent = text;
+          log.append(item);
+          while (log.children.length > Number(log.dataset.lines))
+              log.firstElementChild.remove();
+      };
+      watcher.addEventListener("cancel", event => {
+          note("cancel" + (event.cancelable ? " cancelable" : ""));
+          if (holding)
+              event.preventDefault();
+      });
+      watcher.addEventListener("close", () => {
+          note("close");
+          chip.remove();
+      });
+  }
+  for (const [button, chips, log, holding] of [["plain", "chips1", "log1", false], ["holding", "chips2", "log2", true]]) {
+      const l = document.getElementById(log);
+      l.style.setProperty("--pr-log-lines", l.dataset.lines);
+      document.getElementById(button).addEventListener("click", () => create(document.getElementById(chips), l, holding));
+  }
+</script>
+</body>
+</html>

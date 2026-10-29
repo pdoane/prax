@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dimensional mapping</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; writing-mode: vertical-rl; width: 100px; height: 100px; }
+  .pr-a, .pr-b { font-family: "PR Arimo"; }
+  .pr-table-cell { font-family: "PR Arimo"; height: auto; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.2 Dimensional Mapping</div>
+  <h1>Dimensional mapping</h1>
+  <p class=pr-lede><q>The height properties (height, min-height, and max-height) refer to the physical height</q>.
+  <q>However, the rules used to calculate box dimensions and positions are logical.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#dimension-mapping">CSS Writing Modes 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>Physical sizes, percentages of the inline size</h2>
+  <p>Each stage is <code>vertical-rl</code>, 100px square. Margin and padding percentages <q>are calculated with
+  respect to the inline size of the containing block in CSS3.</q> Here the inline size is the height; the last two
+  stages are 60px tall, so that it differs from their width.</p>
+  <figure class=s>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 50px">A</div></div>
+    <figcaption><code>width: 50px</code>: 50px wide, its block size.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage><div class="pr-a pr-fit" style="height: 40px">A</div></div>
+    <figcaption><code>height: 40px</code>: 40px tall, its inline size.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit" style="width: 20px; margin-right: 20%">A</div></div>
+    <figcaption><code>margin-right: 20%</code>: 12px from the right, a fifth of the 60px height, not of the
+    width.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit" style="width: 20px; height: 30px; margin-top: 20%">A</div></div>
+    <figcaption><code>margin-top: 20%</code>: 12px too, so A starts 12px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-spacing and line-height</h2>
+  <p><q>The first and second values of the border-spacing property represent spacing between columns and rows
+  respectively, not necessarily the horizontal and vertical spacing respectively.</q> <q>The line-height property
+  always refers to the logical height.</q></p>
+  <figure class=s>
+    <div class=pr-stage>
+      <div class=pr-table style="border-spacing: 20px 4px">
+        <div class=pr-table-row><div class=pr-table-cell>a</div><div class=pr-table-cell>b</div></div>
+        <div class=pr-table-row><div class=pr-table-cell>c</div><div class=pr-table-cell>d</div></div>
+      </div>
+    </div>
+    <figcaption><code>border-spacing: 20px 4px</code>: 20px between columns, a above b; 4px between
+    rows.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="line-height: 40px">ab cd ef gh</div>
+    <figcaption><code>line-height: 40px</code>: each vertical line 40px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>object-view-box with object-fit and object-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 80px; height: 60px; margin: 10px; background: #f9cc9d; object-view-box: inset(0 50% 0 0); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 3.1 Setting The Viewbox: the object-view-box property</div>
+  <h1>object-view-box with object-fit and object-position</h1>
+  <p class=pr-lede><q>Further adjustments to the size/position of the element's contents, such as object-position or
+  object-fit, are similarly performed on the view box instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#the-object-view-box">CSS Images 5 §3.1</a></span>
+  Each image is 80 by 60, on light orange, the flag PNG 40 by 20 with <code>object-view-box: inset(0 50% 0 0)</code>:
+  its left half, blue over green, 20 by 20.</p>
+</header>
+
+<section>
+  <h2>Fitted and positioned as the view box</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: fill" alt=""></div>
+    <figcaption><code>fill</code>: the left half stretched to 80 by 60, blue over green. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole flag stretched.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: none" alt=""></div>
+    <figcaption><code>none</code>: the view box 20 by 20 centered, 30 to 50, the rest of the flag to
+    70. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The flag centered, from 20 to
+    60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the view box, still drawn</h2>
+  <p>Nothing clips the contents to the view box; the section's example is to show <q>how the parts outside the
+  viewbox can still be painted.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: contain" alt=""></div>
+    <figcaption><code>contain</code>: the view box 60 by 60 from 10 to 70, then 10px of orange and purple at
+    the right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The
+    whole flag, 80 by 40 in the middle.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: contain; object-position: left" alt=""></div>
+    <figcaption><code>contain left</code>: blue and green 60 by 60, then 20px of orange and purple. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole flag, 80 by 40 in
+    the middle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

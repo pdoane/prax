@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content area</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .wrap { inline-size: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.4 Text layout – Content Area</div>
+  <h1>The content area</h1>
+  <p class=pr-lede><q>A content area is defined by specifying in a ‘text’ element an inline-size property. If no
+  content area is provided, the content area defaults to a rectangle of infinite width and height</q>. <q>Once a
+  wrapping area is defined, the text is laid out inside the wrapping area according to the rules of CSS</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutContentArea">SVG 2 §11.4</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code> on 20px lines, each
+  letter 10 wide, at <code>x="20" y="30"</code>.</p>
+</header>
+
+<section>
+  <h2>Laid out as CSS lays out a block</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160" class=pr-baseline /><text class=pr-measure x="20" y="30">no area to wrap in</text></svg></div>
+    <figcaption>No <code>inline-size</code>: one line from 20, running off the stage after "no area to wr".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160 M20 0V80 M120 0V80" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30">an area to wrap in</text></svg></div>
+    <figcaption><code>inline-size: 100px</code>: "an area to" on y 30, "wrap in" on y 50, within 20 to 120.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160 M20 0V80 M120 0V80" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30" style="overflow-wrap: anywhere">overflowingly</text></svg></div>
+    <figcaption>"overflowingly", 130 long, with <code>overflow-wrap: anywhere</code>: broken at 100, "overflowin" on
+    y 30 and "gly" on 50. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line, to 150.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of focus events</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.2 Focus Event Order</div>
+  <h1>The order of focus events</h1>
+  <p class=pr-lede><q>The focus events defined in this specification occur in a set order relative to one another.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-event-order">UI Events §3.3.2</a></span></p>
+</header>
+<section>
+  <h2>Focus shifted between elements</h2>
+  <p><q>The following is the typical sequence of events when a focus is shifted between elements</q>: focus and
+  focusin as the first element receives the focus, then blur and focusout as it loses it, then focus and focusin as
+  the second receives it. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-event-order">§3.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus focusin blur focusout" data-fields="target relatedTarget" data-lines=6></ol>
+    </div>
+    <figcaption>Click an empty part of the page, so that nothing has the focus, then click <code>one</code>, then
+    <code>two</code>, or Tab from one to the other. The log shows focus and focusin at <code>one</code>, with
+    <code>relatedTarget=null</code>; then blur and focusout at <code>one</code>, each naming <code>two</code> as
+    <code>relatedTarget</code>, and focus and focusin at <code>two</code>, naming <code>one</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

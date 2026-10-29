@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>alpha()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.10 Relative Alpha Colors</div>
+  <h1>alpha()</h1>
+  <p class=pr-lede><q>Relative alpha colors refer to an origin color, and only change the alpha channel.</q> <q>The color
+  components of the origin color are unchanged, the alpha component is modified or replaced.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-alpha">CSS Color 5
+  §4.10</a></span> On checkerboards. Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Replaced and modified</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: alpha(from oklch(60% 0.25 315 / 0.3) / 80%)"></div><div class=sw style="background: oklch(60% 0.25 315 / 0.8)"></div></div>
+    <figcaption><code>alpha(from oklch(60% 0.25 315 / 0.3) / 80%)</code>: <q>the alpha is changed to 80%</q>, a purple. <span class=pr-flag>Safari</span> Has no <code>alpha()</code>: draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: alpha(from oklch(60% 0.25 315 / 0.8) / calc(alpha * 0.5))"></div><div class=sw style="background: oklch(60% 0.25 315 / 0.4)"></div></div>
+    <figcaption><code>calc(alpha * 0.5)</code> from 0.8: <q>half of that in the origin color</q>, 0.4. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: alpha(from teal / 0.7)"></div><div class=sw style="background: rgb(0 128 128 / 0.7)"></div></div>
+    <figcaption><code>alpha(from teal / 0.7)</code>: teal at 0.7. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

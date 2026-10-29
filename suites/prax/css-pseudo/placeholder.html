@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::placeholder</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  input, textarea { display: block; margin: 10px; width: 160px; box-sizing: border-box; font: 14px/20px "PR Arimo"; }
+  textarea { height: 80px; resize: none; }
+  .color::placeholder { color: #d68a3c; opacity: 1; }
+  .font::placeholder { color: #2c5a8f; opacity: 1; font-family: "PR Literata"; font-style: italic; }
+  .text::placeholder { color: #2c5a8f; opacity: 1; text-transform: uppercase; letter-spacing: 3px; text-decoration: underline; }
+  .bg::placeholder { color: white; opacity: 1; background-color: #8e44ad; }
+  .lh::placeholder { color: #2c5a8f; opacity: 1; line-height: 40px; }
+  .va::placeholder { color: #2c5a8f; opacity: 1; vertical-align: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 4.3 Placeholder Input: the ::placeholder pseudo-element</div>
+  <h1>::placeholder</h1>
+  <p class=pr-lede><q>All properties that apply to the ::first-line pseudo-element also apply to the ::placeholder
+  pseudo-element, except those defined in CSS Inline Layout 3.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#placeholder-pseudo">CSS Pseudo-Elements 4 §4.3</a></span>
+  Each field is 160px wide, in Arimo at 14px on 20px lines; how a field itself is drawn is each browser's.</p>
+</header>
+
+<section>
+  <h2>Color, font, text, background</h2>
+  <figure>
+    <div class=pr-stage><input class=color placeholder="Name"></div>
+    <figcaption><code>color</code>: "Name" in orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><input class=font placeholder="Name"></div>
+    <figcaption>Font properties: "Name" in Literata italic, blue.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><input class=text placeholder="Name"></div>
+    <figcaption>Text and decoration: "N A M E", spaced 3px, underlined.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><input class=bg placeholder="Name"></div>
+    <figcaption><code>background-color</code>: white "Name" on purple, behind the text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not the inline layout properties</h2>
+  <p><code>line-height</code> and <code>vertical-align</code> are CSS Inline Layout 3's, so they do not apply, as
+  <a href="https://github.com/w3c/csswg-drafts/issues/5379">csswg-drafts#5379</a> resolved.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><textarea class=lh placeholder="First line&#10;Second line"></textarea></div>
+    <figcaption><code>line-height: 40px</code>: no effect; the two lines 20px apart, as the field's own.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 40px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><input class=va placeholder="Name"></div>
+    <figcaption><code>vertical-align: 10px</code>: no effect; "Name" where it would be without it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting a document</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+  .ol { position: relative; width: 80px; height: 30px; background: #4f81bd; outline: 6px solid #8e44ad; }
+  .over { width: 80px; height: 30px; margin: -20px 0 0 40px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 4 Painting Order and Stacking Contexts</div>
+  <h1>Painting a document</h1>
+  <p class=pr-lede>To paint a document: <q>Paint a stacking context given doc's root element and canvas.</q> Then, for
+  each element in the top layer, its ::backdrop and then the element. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#painting-order">CSS Positioned Layout 4 §4</a></span>
+  CSS 2's Appendix E pages show the order within a stacking context; the top layer's pages, what follows the
+  root.</p>
+</header>
+
+<section>
+  <h2>The canvas</h2>
+  <p><q>The canvas is transparent if contained within another</q>. <q>If root is a root element's principal box,
+  paint root's background over the entire canvas</q>. Each frame is a document.</p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style> body { margin: 0 } p { margin: 20px; width: 80px; height: 30px; background: #d68a3c }</style><p></p>"></iframe></div>
+    <figcaption>No background on the root or body: the canvas is transparent, and the stage's grid shows through.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style>html { background: #b9cde6; height: 50px; outline: 1px dashed #6b7381; outline-offset: -1px } body { margin: 0 } p { margin: 20px; width: 80px; height: 30px; background: #d68a3c }</style><p></p>"></iframe></div>
+    <figcaption>The root 50px tall, dashed, with a light blue background: it covers the whole canvas, not only the root's box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outlines in band or out of band</h2>
+  <p>Outlines are drawn in band, <q>painted along each element</q>, or out of band, <q>painted at the end of the
+  stacking context</q>. <q>It is recommended that UAs use out-of-band outlines</q>. Blue has a purple
+  outline; orange, the next block, is pulled up over it.</p>
+  <figure>
+    <div class="pr-stage" style="height: 80px; padding: 20px 0 0 20px; box-sizing: border-box"><div class=ol style="position: static"></div><div class=over></div></div>
+    <figcaption>Orange covers blue. Out of band, blue's outline is over orange; in band, under it. Chrome, Safari
+    and Firefox draw it out of band.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

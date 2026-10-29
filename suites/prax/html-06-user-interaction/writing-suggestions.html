@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Writing suggestions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 40px; margin: 0 0 10px; padding: 0 6px;
+        background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px; resize: none }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.6 Writing suggestions</div>
+  <h1>Writing suggestions</h1>
+  <p class=pr-lede><q>User agents offer writing suggestions as users type into editable regions, either in form controls (e.g.,
+  the textarea element) or in elements in an editing host.</q> <q>This specification does not define the user
+  interface for writing suggestions.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#writing-suggestions">HTML §6.8.6</a></span></p>
+</header>
+<section>
+  <h2>Turned off on the element or an ancestor</h2>
+  <p>User agents should offer none <q>If element has an inclusive ancestor with a writingsuggestions content attribute
+  that's not in the Default and the nearest such ancestor's writingsuggestions content attribute is in the False
+  state</q>. <q>The attribute's invalid value default and empty value default are both the True state.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#writing-suggestions">§6.8.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <textarea class=ed>no attribute: </textarea>
+        <textarea class=ed writingsuggestions=false>writingsuggestions=false: </textarea>
+        <div writingsuggestions=false><textarea class=ed writingsuggestions>parent false, own empty: </textarea></div>
+      </div>
+    </div>
+    <figcaption>In each, type <code>Thank you for your</code> and pause. Where the browser offers suggestions, such as
+    Safari's inline predictions in grey, it may offer them in the first and the third, whose empty value is True and
+    overrides its parent; never in the second.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

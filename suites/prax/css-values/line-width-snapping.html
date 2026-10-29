@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border widths snap to device pixels</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 60px; }
+  .b { width: 160px; height: 10px; margin: 20px; background: #f4f5f7; border: 0 solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6 Distance Units: the &lt;length&gt; type</div>
+  <h1>Border widths snap to device pixels</h1>
+  <p class=pr-lede><q>&lt;length&gt;s in 'border-width' and a few other properties are rounded in a specific fashion
+  to ensure reasonable visual display.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#lengths">CSS Values and Units 4 §6</a></span></p>
+</header>
+
+<section>
+  <h2>Snap a length as a line width</h2>
+  <p><q>If the absolute value of len is greater than zero, but less than 1 device pixel, round it away from zero to 1
+  or -1 device pixel.</q> <q>If the absolute value of len is greater than 1 device pixel, round it towards zero to the
+  nearest integer number of device pixels.</q> Each box is a light 10px strip with a top border.</p>
+  <figure>
+    <div class=pr-stage><div class=b style="border-top-width: 0.1px"></div></div>
+    <figcaption><code>0.1px</code>: a hairline one device pixel thick, not nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=b style="border-top-width: 4.9px"></div></div>
+    <figcaption><code>4.9px</code>: rounded down, 4px at one device pixel per px, 4.5px at two.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=b style="border-top-width: 4px"></div></div>
+    <figcaption><code>4px</code>, for comparison.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=b style="border-top-width: 5px"></div></div>
+    <figcaption><code>5px</code>, for comparison.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

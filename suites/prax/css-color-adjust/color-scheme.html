@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0 0; font: 15px/20px "PR Arimo"; }
+  .chip { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; box-sizing: border-box; background: Canvas; color: CanvasText; border: 1px solid GrayText; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color Adjustment 1 · 2.2 Overriding the Page Color Scheme: the color-scheme property</div>
+  <h1>color-scheme</h1>
+  <p class=pr-lede><q>The 'color-scheme' property allows this, manually setting the element color scheme for an element
+  and its descendants.</q> Each chip has a <code>Canvas</code> background and <code>CanvasText</code> text, which follow
+  its scheme. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-prop">CSS Color
+  Adjustment 1 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>light, dark and normal</h2>
+  <p><q>Indicates that the element supports a light and/or dark color scheme, as appropriate.</q> <q>The element color
+  scheme is the same as the page color scheme.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><span class=chip style="color-scheme: light">light</span></div>
+    <figcaption><code>light</code>: dark text on light.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><span class=chip style="color-scheme: dark">dark</span></div>
+    <figcaption><code>dark</code>: light text on dark.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=chip style="color-scheme: normal">normal</span></div>
+    <figcaption><code>normal</code>: the page's scheme. This page supports both, so the chip follows the reader's
+    preference: light under a light one, dark under a dark one.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited; other names mean nothing</h2>
+  <p>The property is inherited, so a chip inside a dark box is dark, unless it sets <code>normal</code>, which takes the
+  page's scheme rather than its parent's. <q>&lt;custom-ident&gt; values are meaningless, and exist only for future
+  compatibility</q>.</p>
+  <figure>
+    <div class=pr-stage style="color-scheme: dark"><span class=chip>inherits</span><span class=chip style="color-scheme: normal">normal</span></div>
+    <figcaption>In a stage with <code>color-scheme: dark</code>: the first chip is dark; the second follows the reader's
+    preference.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=chip style="color-scheme: sepia">sepia</span><span class=chip style="color-scheme: dark sepia">dark sepia</span></div>
+    <figcaption><code>sepia</code> names no scheme the browser supports, so the chip is light, the default, under
+    either preference. <code>dark sepia</code> is dark.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

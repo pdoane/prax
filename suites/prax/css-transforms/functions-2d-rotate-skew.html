@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>2D transform functions: rotate and skew</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 20px; width: 40px; height: 40px; }
+  .s { left: 70px; top: 30px; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 7.1 2D Transform Functions</div>
+  <h1>2D transform functions: rotate and skew</h1>
+  <p class=pr-lede><q>rotate(90deg) would cause elements to appear rotated one-quarter of a turn in the clockwise
+  direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#two-d-transform-functions">CSS Transforms 1 §7.1</a></span>
+  Each blue box is a 40px square at (40, 20), where the dashed outline is, about its center, (60, 40), its "A" at
+  its top left.</p>
+</header>
+
+<section>
+  <h2>rotate()</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate(90deg)">A</div></div>
+    <figcaption><code>rotate(90deg)</code>: clockwise, the "A" at the top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate(-90deg)">A</div></div>
+    <figcaption><code>rotate(-90deg)</code>: counterclockwise, the "A" at the bottom left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: rotate(45deg)">A</div></div>
+    <figcaption><code>rotate(45deg)</code>: a diamond, its corners 28px from (60, 40).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>skewX(), skewY(), skew()</h2>
+  <p><q>the behavior of skew() is different from multiplying skewX() with skewY().</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: skewX(45deg)">A</div></div>
+    <figcaption><code>skewX(45deg)</code>: the top edge at 20 to 60, the bottom at 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: skewY(45deg)">A</div></div>
+    <figcaption><code>skewY(45deg)</code>: the left edge at 0 to 40, the right at 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: skew(45deg)">A</div></div>
+    <figcaption><code>skew(45deg)</code>: as <code>skewX(45deg)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g s"></div><div class="pr-a pr-fit p s" style="transform: skewX(45deg) skewY(45deg)"></div></div>
+    <figcaption>A 20px square, <code>skewX(45deg) skewY(45deg)</code>: corners (50, 20), (90, 40), (110, 60),
+    (70, 40).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g s"></div><div class="pr-a pr-fit p s" style="transform: skew(45deg, 45deg)"></div></div>
+    <figcaption><code>skew(45deg, 45deg)</code> maps it to a line: <a href="function-lists.html">not
+    displayed</a>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

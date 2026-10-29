@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The min and max attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 50px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.7 The min and max attributes</div>
+  <h1>The min and max attributes</h1>
+  <p class=pr-lede><q>The min and max attributes indicate the allowed range of values for the element.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-min-and-max-attributes">HTML §4.10.5.3.7</a></span></p>
+</header>
+
+<section>
+  <h2>Underflow and overflow</h2>
+  <p>A value less than the minimum is <q>suffering from an underflow</q>, one more than the maximum <q>suffering from an
+  overflow</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-min-and-max-attributes">§4.10.5.3.7</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=number min=1 max=10 value=0 style="width: 80px"> <code>1 to 10</code></div>
+        <div><input type=number min=1 max=10 value=5 style="width: 80px"></div>
+        <div><input type=number min=1 max=10 value=11 style="width: 80px"></div>
+      </div>
+    </div>
+    <figcaption>0, red; 5, green; 11, red. Step the first up, or the last down, by its arrows or ArrowUp and
+    ArrowDown: each turns green on entering 1 to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=date max="1979-12-31" value="1980-01-01"></div>
+      </div>
+    </div>
+    <figcaption>The standard's birthday, <q>before the 1980s</q>: 1 January 1980 is red. Open its picker: days after
+    the maximum cannot be chosen.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A time range across midnight</h2>
+  <p><q>An element has a reversed range if it has a periodic domain and its maximum is less than its minimum.</q> Then a
+  value is out of range only if it is <q>more than the maximum and less than the minimum</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-min-and-max-attributes">§4.10.5.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>23:00</code><input type=time min="21:00" max="06:00" value="23:00"></div>
+        <div><code>02:00</code><input type=time min="21:00" max="06:00" value="02:00"></div>
+        <div><code>12:00</code><input type=time min="21:00" max="06:00" value="12:00"></div>
+      </div>
+    </div>
+    <figcaption><code>min="21:00" max="06:00"</code>, the night: 11 PM and 2 AM are green, noon is red.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

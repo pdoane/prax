@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient(): the starting and ending points</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 40px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.1.1 linear-gradient() syntax</div>
+  <h1>linear-gradient(): the starting and ending points</h1>
+  <p class=pr-lede><q>The ending point is the point on the gradient line where a line drawn perpendicular to the
+  gradient line would intersect the corner of the gradient box in the specified direction. The starting point is
+  determined identically, but in the opposite direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#linear-gradient-syntax">CSS Images 3 §3.1.1</a></span>
+  Each dashed box is 140 by 40.</p>
+</header>
+
+<section>
+  <h2>0% and 100% at the corners</h2>
+  <p>Blue to 20px and from 20px before the end, orange between: the blue marks where the line starts and ends.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(90deg, #4f81bd 20px, #d68a3c 20px calc(100% - 20px), #4f81bd calc(100% - 20px))"></div></div>
+    <figcaption><code>90deg</code>: a line 140px long, from the left side to the right; blue 20px at each
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(45deg, #4f81bd 20px, #d68a3c 20px calc(100% - 20px), #4f81bd calc(100% - 20px))"></div></div>
+    <figcaption><code>45deg</code>: the line starts at the bottom left corner and ends at the top right one, so
+    the same blue triangle sits in each, 28px along each side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(80deg, #4f81bd 20px, #d68a3c 20px calc(100% - 20px), #4f81bd calc(100% - 20px))"></div></div>
+    <figcaption><code>80deg</code>: the line runs from the bottom left corner to the top right one, so the left
+    band is 20px wide at the bottom and 13px at the top, the right band the reverse.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positions measured from the starting point</h2>
+  <p><q>the starting point defining where 0%, 0px, etc are located when specifying color-stops, and the ending point
+  defines where 100% is located. Color-stops are allowed to have positions before 0% or after 100%.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to left, #4f81bd 30px, #d68a3c 30px)"></div></div>
+    <figcaption><code>to left</code>, blue to <code>30px</code>: measured from the right side, so blue in the
+    right 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to right, #4f81bd -20%, #d68a3c -20% 50%, #4f81bd 50% 120%, #d68a3c 120%)"></div></div>
+    <figcaption>Stops at <code>-20%</code> and <code>120%</code>, before and after the box: orange in the left
+    half, blue in the right; neither blue at the left nor orange at the right shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

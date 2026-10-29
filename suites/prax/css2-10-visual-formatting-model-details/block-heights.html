@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block heights: lines and the last child's margin</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.3 Block-level non-replaced elements in normal flow when 'overflow' computes to 'visible'</div>
+  <h1>Block heights: lines and the last child's margin</h1>
+  <p class=pr-lede>An auto height reaches from the block's top content edge down to the first applicable of four edges.
+  The tinted, outlined box in each stage is the block measured.</p>
+</header>
+
+<section>
+  <h2>Auto vertical margins are 0</h2>
+  <p><q>If 'margin-top', or 'margin-bottom' are 'auto', their used value is 0.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#normal-block">CSS 2
+  §10.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-a style="margin: auto 0">A: margin auto</div><div class=pr-b>B</div></div>
+    <figcaption>A with <code>margin: auto 0</code> in a 60px stage: A is at the top and B right below it, at
+    20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The last line box, or the last child's bottom margin</h2>
+  <p><q>The element's height is the distance from its top content edge to the first applicable of the following:</q>
+  <q>the bottom edge of the last line box, if the box establishes a inline formatting context with one or more
+  lines</q> <q>the bottom edge of the bottom (possibly collapsed) margin of its last in-flow child, if the child's
+  bottom margin does not collapse with the element's bottom margin</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#normal-block">CSS 2 §10.6.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-parent pr-text">first line<br>second line</div></div>
+    <figcaption>Two 20px lines: the block is 40px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=pr-parent style="border-bottom: 1px solid #6b7381"><div class=pr-a style="margin-bottom: 20px">A: mb 20</div></div></div>
+    <figcaption>The block has a bottom border, so A's 20px bottom margin stays inside it: its content is 20 + 20 =
+    40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

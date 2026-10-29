@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Read-only controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 60px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.3 The readonly attribute</div>
+  <h1>Read-only controls</h1>
+  <p class=pr-lede><q>The readonly attribute is a boolean attribute that controls whether or not the user can edit the
+  form control. When specified, the element is not mutable.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-readonly-attribute">HTML §4.10.5.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Not editable, still a control</h2>
+  <p><q>The difference between disabled and readonly is that read-only controls can still function, whereas disabled
+  controls generally do not function as controls until they are enabled.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-readonly-attribute">§4.10.5.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>readonly</code><input id=fixed readonly value="read only text" size=14></div>
+        <div><code>disabled</code><input id=off disabled value="disabled text" size=14></div>
+        <div><code>readonly</code><input id=day type=date readonly value="2026-10-25"></div>
+      </div>
+      <ol class=pr-log data-log="focus input" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click into the first: <code>focus</code> and a caret, and its text can be selected, but typing changes
+    nothing. The disabled one takes no focus. The date takes the focus, but no key or picker changes it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Barred from constraint validation</h2>
+  <p><q>If the readonly attribute is specified on an input element, the element is barred from constraint
+  validation.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-readonly-attribute">§4.10.5.3.3</a></span>
+  Each field is outlined green while it is valid, red while it is not, and not at all while it is neither.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input required size=14 placeholder="required"></div>
+        <div><input required readonly size=14 placeholder="required readonly"></div>
+      </div>
+    </div>
+    <figcaption>Both required and empty: the first is red; the read-only one is neither valid nor invalid, so it has no
+    outline.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

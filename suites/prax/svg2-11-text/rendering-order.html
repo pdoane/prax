@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text rendering order</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 48px "PR Arimo"; letter-spacing: -20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.9 Text rendering order</div>
+  <h1>Text rendering order</h1>
+  <p class=pr-lede><q>A ‘text’ element is rendered in one or more chunks.</q> <q>Each rendered chunk, which consists of one or more
+  glyphs, is filled and stroked as if it were a single path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextRenderingOrder">SVG 2 §11.9</a></span>
+  Each stage is an SVG 160 by 70 holding "OOO" in 48px bold PR Arimo with <code>letter-spacing: -20px</code>, so that
+  the O's overlap, filled blue and stroked orange 3 wide.</p>
+</header>
+
+<section>
+  <h2>One chunk, one path</h2>
+  <p><q>This means that all glyphs in the chunk should be filled, then all glyphs stroked at once, or the reverse
+  according to the value of the paint-order property.</q> A recommendation.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><text class=big x="20" y="52" stroke="#d68a3c" stroke-width="3">OOO</text></svg></div>
+    <figcaption>One chunk, filled then stroked: every orange ring over every blue fill, the rings crossing inside
+    the O's. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><text class=big x="20" y="52" stroke="#d68a3c" stroke-width="3" paint-order="stroke">OOO</text></svg></div>
+    <figcaption><code>paint-order="stroke"</code>: every ring first, then every fill over them, so the rings show
+    only outside all three O's. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Chunk after chunk</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><text class=big x="20 37.3 54.6" y="52" stroke="#d68a3c" stroke-width="3">OOO</text></svg></div>
+    <figcaption><code>x="20 37.3 54.6"</code>, the same places, three chunks: each O filled and stroked in turn, so
+    each O's fill covers the ring of the O before it, and only the last O's ring is whole. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span>
+    One path, as above: every ring over every fill.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

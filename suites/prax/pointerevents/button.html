@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The button that changed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.1.2 The button property</div>
+  <h1>The button that changed</h1>
+  <p class=pr-lede><q>To identify button state transitions in any pointer event (and not just pointerdown and pointerup),
+  the button property indicates the device button whose state change fired the event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-button-property">Pointer Events §3.1.1.2</a></span></p>
+</header>
+<section>
+  <h2>A number for each button</h2>
+  <p>Left mouse, touch contact or pen contact: 0. Middle mouse: 1. Right mouse or pen barrel button: 2. X1 (back):
+  3. X2 (forward): 4. Pen eraser: 5. <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-button-property">§3.1.1.2</a></span>
+  The page cancels the context menu, the back and forward buttons' navigation, and the middle button's scrolling
+  over the boxes.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press each button here, one at a time.</div>
+      <ol class=pr-log data-log="pointerdown" data-fields="pointerType button" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Click each mouse button over the box in turn: <code>button</code> 0, 1, 2, 3 and 4 for left, middle,
+    right, back and forward. Touch it: 0. With a pen: 0 for its tip, 2 holding its barrel button, 5 for its
+    eraser.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>No change: −1</h2>
+  <p><q>Neither buttons nor touch/pen contact changed since last event</q>: −1.
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-button-property">§3.1.1.2</a></span>
+  A mouse event's is set only for mousedown and mouseup: <q>Set event.button to 0</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#initialize-a-mouseevent">§11.2.6</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=drag>Drag here with the right button held.</div>
+      <ol class=pr-log data-log="pointermove mousemove" data-fields="button buttons" data-on="#drag" data-lines=4></ol>
+    </div>
+    <figcaption>Drag the right button across the box: each <code>pointermove</code> has <code>button=-1</code>, each
+    <code>mousemove</code> <code>button=0</code>; both <code>buttons=2</code>. (A note in <a href="https://w3c.github.io/pointerevents/#the-button-property">§3.1.1.2</a> gives such a
+    <code>mousemove</code> 2; the algorithm, which is normative, gives it 0.)</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu, history navigation and middle-button scrolling from taking over the boxes.
+  for (const box of [document.getElementById("pad"), document.getElementById("drag")]) {
+    box.addEventListener("contextmenu", event => event.preventDefault());
+    for (const type of ["mousedown", "mouseup", "auxclick"])
+      box.addEventListener(type, event => { if (event.button !== 0) event.preventDefault(); });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

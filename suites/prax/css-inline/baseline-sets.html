@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baselines of glyphs and boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/70px "PR Arimo"; white-space: nowrap; }
+  .big { font-size: 40px; }
+  .sq { display: inline-block; width: 10px; height: 10px; background: #4f81bd; vertical-align: text-top; }
+  .ib { display: inline-block; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 3.3 Baselines of Glyphs and Boxes</div>
+  <h1>Baselines of glyphs and boxes</h1>
+  <p class=pr-lede><q>Each font, glyph, and inline-level box is assumed to have a baseline coordinate for each
+  baseline type indicating that baseline’s position on its block axis. The set of such baselines is called its
+  baseline set.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-tables">CSS Inline Layout 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>An inline box's set from its first available font</h2>
+  <p><q>For an inline box, it derives from its first available font regardless of whether the box actually contains
+  any glyphs from that font.</q> A blue square at <code>vertical-align:
+  text-top</code> in a 40px span of Japanese marks the span's ascent.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Ag <span class=big style="font-family: 'PR Noto Sans JP'"><span class=sq></span>永あ</span></div>
+    <figcaption><code>font-family: "PR Noto Sans JP"</code>: the square at the top of that font's ascent,
+    about the top of 永.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Ag <span class=big style="font-family: 'PR Noto Sans Arabic', 'PR Noto Sans JP'"><span class=sq></span>永あ</span></div>
+    <figcaption><code>"PR Noto Sans Arabic", "PR Noto Sans JP"</code>: the Arabic font has no Japanese, but it is the
+    first available font: the square at its ascent, 55px above the red baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An atomic inline's set from its contents, or its margin box</h2>
+  <p>Another box's set <q>is nominally derived from its contents</q>. <q>For an atomic inline box with no baseline set
+  in the inline formatting context’s inline axis its alignment baselines are synthesized from its margin box</q>,
+  its alphabetic baseline at its bottom margin edge.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Ag <span class="ib pr-chip" style="height: auto">Ag</span> <span class="ib pr-a pr-fit"></span></div>
+    <figcaption>An inline-block of text on the red line by its text's baseline; an empty one, with no baseline
+    set, by its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Ag <span class="ib pr-a pr-fit" style="margin-bottom: 10px"></span> <span class="ib pr-b pr-fit" style="margin-bottom: -10px"></span></div>
+    <figcaption>A 10px bottom margin: the blue box 10px above the red line. A margin of -10px: the orange one 10px
+    below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

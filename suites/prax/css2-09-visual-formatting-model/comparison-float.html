@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Comparing positioning schemes: floating a box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { font-size: 12px; line-height: 200%; }
+  .doc p { margin: 0; }
+  .outer { color: red; }
+  .inner { float: right; width: 130px; color: blue; }
+  .sibling { color: red; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.8 Comparison of normal flow, floats, and absolute positioning</div>
+  <h1>Comparing positioning schemes: floating a box</h1>
+  <p class=pr-lede>The specification's examples, on a paragraph with an <code>outer</code> span, red, holding an
+  <code>inner</code> one, blue, at <code>font-size: 12px; line-height: 200%</code>: 24px lines.</p>
+</header>
+
+<section>
+  <h2>Floating the inner box</h2>
+  <p><q>Text flows normally up to the inner box, which is pulled out of the flow and floated to the right margin (its
+  'width' has been assigned explicitly). Line boxes to the left of the float are shortened, and the document's
+  remaining text flows into them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-float">CSS 2 §9.8.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide doc"><p>Beginning of body contents. <span class=outer> Start of outer contents. <span class=inner> Inner contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#inner { float: right; width: 130px; color: blue }</code></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With a sibling</h2>
+  <p>A sibling after the inner box: <q>cause the inner box to float to the right as before and the document's
+  remaining text to flow into the vacated space</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-float">CSS 2 §9.8.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide doc"><p>Beginning of body contents. <span class=outer> Start of outer contents. <span class=inner> Inner contents.</span> <span class=sibling> Sibling contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#sibling { color: red }</code>: the sibling's text flows beside the float.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

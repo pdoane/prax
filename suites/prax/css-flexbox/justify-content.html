@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-content: along the main axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 40px; flex-shrink: 0; }
+  figure { margin-bottom: 8px; }
+  .pr-vertical > div { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.2 Axis Alignment: the justify-content property</div>
+  <h1>justify-content: along the main axis</h1>
+  <p class=pr-lede><q>The justify-content property aligns flex items along the main axis of the current line of the
+  flex container. This is done after any flexible lengths and any auto margins have been resolved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#justify-content-property">CSS Flexible Box Layout 2 §8.2</a></span></p>
+</header>
+
+<section>
+  <h2>The five values</h2>
+  <p>Items 40px wide in a 200px stage.</p>
+  <figure>
+    <div class=pr-stage style="justify-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>flex-start</code>, initial: <q>packed toward the start of the line</q>, 0 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: flex-end"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>flex-end</code>: <q>packed toward the end of the line</q>, 80 to 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>center</code>: flush with each other, 40px either side: 40 to 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: space-between"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>space-between</code>: 40px between each pair: A at 0, B at 80px, C at 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: space-around"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>space-around</code>, two items: 60px between them and half that, 30px, at either end: A at
+    30px, B at 130px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: space-between"><div class="pr-a pr-fit">A</div></div>
+    <figcaption><code>space-between</code>, <q>only a single flex item</q>: <code>safe flex-start</code>, A at 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Start and end follow the flex flow</h2>
+  <figure>
+    <div class=pr-stage style="flex-direction: row-reverse; justify-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>row-reverse</code>, <code>flex-start</code>: A at 160 to 200px, B at 120 to 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical" style="justify-content: flex-end; height: 60px"><div class="pr-a pr-fit"></div><div class="pr-b pr-fit"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>row</code>, <code>flex-end</code>: the main axis runs down the
+    60px stage: A, B 20px each, at 20 and 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

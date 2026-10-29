@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-mode: alpha or luminance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; mask-repeat: no-repeat; }
+  .halves { mask-image: url(support/halves.svg); }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <mask id="lum" maskContentUnits="objectBoundingBox"><rect width="0.34" height="1" fill="black" /><rect x="0.34" width="0.33" height="1" fill="rgb(50% 50% 50%)" /><rect x="0.67" width="0.33" height="1" fill="white" /></mask>
+  <mask id="alpha" mask-type="alpha" maskContentUnits="objectBoundingBox"><rect width="0.34" height="1" fill="black" /><rect x="0.34" width="0.33" height="1" fill="rgb(50% 50% 50%)" /><rect x="0.67" width="0.33" height="1" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.2 Mask Image Interpretation: the mask-mode property</div>
+  <h1>mask-mode: alpha or luminance</h1>
+  <p class=pr-lede><q>The mask-mode property indicates whether the &lt;mask-reference&gt; is treated as luminance
+  mask or alpha mask.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-mode">CSS Masking 1 §7.2</a></span>
+  Each box is 100 by 70 at 10, 10. Each mask is opaque throughout, in thirds: black from 10 to 44, mid grey to 77,
+  white to 110.</p>
+</header>
+
+<section>
+  <h2>An image</h2>
+  <p><q>If the &lt;mask-reference&gt; of the mask-image property is of type &lt;image&gt; the alpha values of the
+  mask layer image should be used as the mask values.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="subj halves"></div></div>
+    <figcaption>The initial <code>match-source</code>, so alpha: opaque everywhere, so the whole box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="subj halves" style="mask-mode: alpha"></div></div>
+    <figcaption><code>alpha</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="subj halves" style="mask-mode: luminance"></div></div>
+    <figcaption><code>luminance</code>: nothing at the left, the middle third at half strength, the right
+    third whole.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A mask element</h2>
+  <p><q>If the &lt;mask-reference&gt; of the mask-image property is of type &lt;mask-source&gt; the value specified
+  by the referenced mask element's mask-type property must be used.</q> Each <code>mask</code> holds the same three
+  thirds.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-image: url(#lum)"></div></div>
+    <figcaption><code>match-source</code>, a <code>mask</code> with the initial <code>mask-type: luminance</code>:
+    nothing, half, whole. <span class=pr-flag>Safari</span> The whole box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-image: url(#alpha)"></div></div>
+    <figcaption><code>match-source</code>, <code>mask-type="alpha"</code>: the whole box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-image: url(#alpha); mask-mode: luminance"></div></div>
+    <figcaption><code>mask-mode: luminance</code> over <code>mask-type="alpha"</code>: luminance: nothing, half,
+    whole. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed mode: the first row decides</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { table-layout: fixed; border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; height: 20px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.5.1 The Table-Layout property, fixed mode</div>
+  <h1>Fixed mode: the first row decides</h1>
+  <p class=pr-lede><q>the aggregation algorithm for column sizing considers only table-cells belonging to the first row
+  track, such that layout only depends on the values explicitly specified for the table-columns or cells of the first
+  row of the table; columns with indefinite widths are attributed their fair share of the remaining space after the
+  columns with a definite width have been considered, or 0px if there is no remaining space</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-layout-property">CSS Table 3 §3.5.1</a></span>
+  Tables are <code>table-layout: fixed</code>, outlined; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>The first row is the first one drawn</h2>
+  <p>Column measures use <q>only cells which originate in the first row of the table (after reordering the header and
+  footer)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">§3.8.3</a></span>.
+  Each table is 200px, with two rows: one of cells 150px and auto in a row group, then a header group of cells 50px and
+  auto.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tbody><tr><td style="width: 150px">b</td><td>b</td></tr></tbody><thead><tr><td style="width: 50px">h</td><td>h</td></tr></thead></table></div>
+    <figcaption>The header is drawn first, so its row is the first: the columns are 50px and 150px, the body's
+    150px ignored.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A fair share, or 0px</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 80px">a</td><td>b</td><td>c</td></tr></table></div>
+    <figcaption>200px, first column 80px: the two without widths share the other 120px, 60px each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 100px"><tr><td style="width: 100px">a</td><td>bbbb</td></tr></table></div>
+    <figcaption>100px, first column 100px: nothing remains, so the second column is 0px, and "bbbb" overflows the
+    table to its right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

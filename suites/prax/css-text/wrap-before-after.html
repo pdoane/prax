@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>wrap-before and wrap-after</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .flex { display: flex; flex-wrap: wrap; }
+  .flex > span { width: 40px; }
+  .m .pr-stage { width: 150px; }
+  .m figcaption { max-width: 155px; }
+  .m { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.3 Controlling Breaks Between Boxes: the wrap-before/wrap-after properties</div>
+  <h1>wrap-before and wrap-after</h1>
+  <p class=pr-lede><q>These properties specify modifications to break opportunities in line breaking (and flex line
+  breaking [CSS3-FLEXBOX]).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#wrap-before">CSS Text 4 §5.3</a></span>
+  No browser has them. Letters are 10px wide; the box they are set on is highlighted.</p>
+</header>
+
+<section>
+  <h2>Forcing a break</h2>
+  <p><code>line</code>: <q>Force a line break immediately before/after the box if the box is an inline-level box.</q>
+  <code>flex</code>: <q>Force a flex line break immediately before/after the box if the box is a flex item in a
+  multi-line flex container.</q></p>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure">one <span class=t style="wrap-before: line">two</span> six</div>
+    <figcaption><code>wrap-before: line</code> on "two": "one", then "two six". <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure">one <span class=t style="wrap-after: line">two</span> six</div>
+    <figcaption><code>wrap-after: line</code>: "one two", then "six". <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage flex pr-row"><span class="pr-a pr-fit">1</span><span class="pr-b pr-fit" style="wrap-before: flex">2</span><span class="pr-c pr-fit">3</span></div>
+    <figcaption>Three 40px flex items, <code>wrap-before: flex</code> on 2: 1 alone, then 2 and 3. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Avoiding a break</h2>
+  <p><code>avoid</code>: <q>Line breaking is suppressed immediately before/after the box: the UA may only break there if
+  there are no other valid break points in the line.</q> Each stage is 70px wide, and holds "aa bb cc", "cc" in the
+  box.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 70px">aa bb <span class=t>cc</span></div>
+    <figcaption><code>auto</code>: "aa bb", then "cc".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="width: 70px">aa bb <span class=t style="wrap-before: avoid">cc</span></div>
+    <figcaption><code>wrap-before: avoid</code>: the break moves to before "bb": "aa", then "bb cc". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As
+    <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

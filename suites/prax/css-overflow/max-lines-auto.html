@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>max-lines: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px 0; background: #f4f5f7; continue: collapse; block-ellipsis: ellipsis; }
+  .stage { height: 110px; }
+  .in { background: #b9cde6; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.2 Forcing a Break After a Set Number of Lines, auto</div>
+  <h1>max-lines: auto</h1>
+  <p class=pr-lede><code>max-lines: auto || &lt;integer [1,∞]&gt;</code>. <q>Given an integer N, if the box is a
+  line-clamp container, it has an line-based clamp point, set to the first possible clamp point after its Nth
+  descendant in-flow line box.</q> <q>Only line boxes in the same block formatting context are counted: the contents
+  of descendants that establish independent formatting contexts are skipped over while counting line boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#max-lines">CSS Overflow 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>auto, and both</h2>
+  <p><code>auto</code> sets the clamp point to the last one at which the box's automatic block size still fits the
+  size it would have. <q>If both exist, then whichever comes earlier takes precedence.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#max-lines">CSS Overflow 4 §5.2</a></span></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="height: 90px"><div class="pr-frame pr-measure c" style="max-lines: auto; height: 60px">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>auto</code>, <code>height: 60px</code>: three lines fit: "line three…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="height: 90px"><div class="pr-frame pr-measure c" style="max-lines: auto 2; max-height: 60px">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>auto 2</code>, <code>max-height: 60px</code>: 2 comes first: "line two…", 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

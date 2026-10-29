@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Processing URL references</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7 Processing of URL references</div>
+  <h1>Processing URL references</h1>
+  <p class=pr-lede><q>For [same-document URL references] in a dynamic document, modifications or animations of attributes
+  or properties, or removal of elements from the DOM, may cause an URL reference to return to the unresolved state. The
+  user agent must once again attempt to resolve the URI to identify the referenced resource.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL">SVG 2 §16.1.7</a></span>
+  Each stage is an SVG 160 by 60. The page's script changes each one after it is first drawn.</p>
+</header>
+
+<section>
+  <h2>Resolved again as the document changes</h2>
+  <p>For ‘href’ attributes, a URL is processed <q>at the time the element is connected to a document, or at the time
+  when the attribute is set, whichever is later.</q> For properties, <q>at the time the property is required for
+  rendering an element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use id=later href="#late-square" x="60" y="10" /><defs id=later-home></defs></svg></div>
+    <figcaption>A <code>use</code> of <code>#late-square</code>, which the script then adds: the blue square at 60,
+    10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><linearGradient id="swapped"><stop stop-color="#d68a3c" /></linearGradient><linearGradient id="other"><stop stop-color="#4f81bd" /></linearGradient><rect id=repainted x="20" y="10" width="120" height="40" fill="url(#swapped)" /></svg></div>
+    <figcaption>A fill of <code>url(#swapped)</code>, orange; the script moves the id <code>swapped</code> to a blue
+    gradient: blue. <span class=pr-flag>Safari</span> Orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect id="removed" x="60" y="10" width="40" height="40" fill="#4f81bd" /><use href="#removed" x="0" y="0" /><rect class=pr-ghost x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>A <code>use</code> of a square, which the script then removes: nothing in the outline.</figcaption>
+  </figure>
+</section>
+
+<script>
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const square = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    square.id = "late-square";
+    square.setAttribute("width", "40");
+    square.setAttribute("height", "40");
+    square.setAttribute("fill", "#4f81bd");
+    document.getElementById("later-home").append(square);
+    document.getElementById("swapped").id = "old";
+    document.getElementById("other").id = "swapped";
+    document.getElementById("removed").remove();
+  }));
+</script>
+</body>
+</html>

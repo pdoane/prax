@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The img element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+  .line { padding: 0 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.3 The img element</div>
+  <h1>The img element</h1>
+  <p class=pr-lede><q>What an img element represents depends on the src
+  attribute and the alt attribute.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element">HTML §4.8.3</a></span>
+  <code>missing.png</code> does not exist. Brackets show where each img is.</p>
+</header>
+
+<section>
+  <h2>Without the image: the alt text, or nothing</h2>
+  <p>Alt text is drawn as <q>a non-replaced phrasing element whose content is the text, optionally with an icon
+  indicating that an image is missing</q>; nothing, as <q>a replaced element whose natural dimensions are 0</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#images-3">§15.4.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-text line">[<img src="support/missing.png" alt="Lost flag">]</div>
+    <figcaption><code>alt="Lost flag"</code>: [Lost flag], in the line's text, an icon allowed before it.
+    <span class=pr-flag>Safari</span> an icon in a box, and no text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text line">[<img src="support/missing.png" alt="">]</div>
+    <figcaption><code>alt=""</code>: [], nothing between the brackets.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text line">[<img src="support/missing.png">]</div>
+    <figcaption>No alt: an indicator <q>that there is an image that is not being rendered</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text line">[<img src="">]</div>
+    <figcaption><code>src=""</code>, no alt: [].</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text line">[<img alt="No src">]</div>
+    <figcaption>No src, <code>alt="No src"</code>: [No src].</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-text line">[<img>]</div>
+    <figcaption>Neither: [].</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alt text is text, not a box</h2>
+  <p>A non-replaced phrasing element takes no width or height from the dimension attributes. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#images-3">§15.4.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text line">[<img src="support/missing.png" alt="Lost flag" width="80" height="60">]</div>
+    <figcaption><code>width=80 height=60</code>: still [Lost flag] on one 20px line, the stage 20 tall.
+    <span class=pr-flag>Safari</span> a box 80 by 60 holding the text and an icon.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

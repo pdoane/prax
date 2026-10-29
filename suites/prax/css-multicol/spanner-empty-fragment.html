@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An empty fragment before a spanner</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+  .sec { border: 2px solid #c0392b; margin-top: 10px; padding-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, empty fragments</div>
+  <h1>An empty fragment before a spanner</h1>
+  <p class=pr-lede><q>If the fragment before the spanner is empty, nothing special happens; the top margin/border/padding is above
+  the spanning element, as an empty fragment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage has three columns of 60px; A has <code>column-span: all</code>.</p>
+</header>
+
+<section>
+  <h2>An empty fragment before the spanner</h2>
+  <p>The red section has <code>margin-top: 10px</code>, a 2px border and
+  <code>padding-top: 6px</code>, and A is its first child.</p>
+  <figure>
+    <div class="pr-stage pr-measure mc"><div class=sec><div class="pr-a all">A</div>four five six</div></div>
+    <figcaption>Above A, the section's empty first fragment, in the first column: 10px of margin, the top border
+    and the padding; then A; then the rest of the section, its words one to a column, in the line of columns
+    below.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc"><div class=sec>one<div class="pr-a all">A</div>four five six</div></div>
+    <figcaption>With "one" before A, the first fragment is not empty: the section's top border, padding and "one"
+    above A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

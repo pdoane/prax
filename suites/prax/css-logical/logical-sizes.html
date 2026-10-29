@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>inline-size and block-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .pr-stage.w { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.1 Logical Height and Logical Width</div>
+  <h1>inline-size and block-size</h1>
+  <p class=pr-lede><q>These properties correspond to the 'height' and 'width' properties. The mapping depends on the element's 'writing-mode'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#dimension-properties">CSS Logical Properties and Values 1 §4.1</a></span> Each stage is 160 by 100px.</p>
+</header>
+
+<section>
+  <h2>Lengths</h2>
+  <p>Each A has <code>inline-size: 100px; block-size: 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="inline-size: 100px; block-size: 40px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 100px wide, 40px tall.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="inline-size: 100px; block-size: 40px">A</div></div>
+    <figcaption><code>rtl</code>: the same, at the right, where its line starts.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="inline-size: 100px; block-size: 40px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 100px tall, 40px wide, at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages</h2>
+  <p><q>Percentages: As for the corresponding physical property</q>: a width's of the containing block's width, a height's of its height. Each A has <code>inline-size: 50%; block-size: 50%</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="inline-size: 50%; block-size: 50%">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 80px wide, half the 160px width; 50px tall, half the 100px height.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="inline-size: 50%; block-size: 50%">A</div></div>
+    <figcaption><code>rtl</code>: the same, at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="inline-size: 50%; block-size: 50%">A</div></div>
+    <figcaption><code>vertical-rl</code>: 50px tall, half the height; 80px wide, half the width.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

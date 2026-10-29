@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>user-select: contain</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 6.1 Controlling content selection, contain</div>
+  <h1>user-select: contain</h1>
+  <p class=pr-lede>For <code>contain</code>, <q>UAs must not allow a selection which is started in this element to be extended outside of this element. A selection started outside of this element must not end in this element. If the user attempts to create such a selection, the UA must instead end the selection range at the element boundary.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#content-selection">CSS Basic User Interface 4 §6.1</a></span></p>
+  <p class=pr-note>A script in each frame makes the selection, highlighted orange. Safari draws no selection in these stills.</p>
+</header>
+
+<section>
+  <h2>Kept out, and kept in</h2>
+  <p>Each frame's script places the start of a selection and extends it two words forward, as Shift and Option and the right arrow key would. The middle span has <code>user-select: contain</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;abc &lt;span style=&#x27;user-select: contain&#x27;&gt;held words&lt;/span&gt; end&lt;script&gt;var t = document.body.firstChild; getSelection().collapse(t, 0);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);&lt;/script&gt;"></iframe></div>
+    <figcaption>Started before the span: the selection ends at its boundary, only “abc” highlighted. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Chrome and Firefox go on into the span, “abc held”. <span class=pr-flag>Safari</span> has no <code>contain</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;abc &lt;span style=&#x27;user-select: contain&#x27;&gt;held words&lt;/span&gt; end and more&lt;script&gt;var t = document.querySelector(&#x27;span&#x27;).firstChild; getSelection().collapse(t, 5);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);&lt;/script&gt;"></iframe></div>
+    <figcaption>Started at “words”, in the span: it cannot leave the span, only “words” highlighted. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Chrome and Firefox go on out of it, “words end and”. <span class=pr-flag>Safari</span> has no <code>contain</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Editable elements</h2>
+  <p>The used value is <q>always contain</q> <q>on editable elements</q>, so an editing host acts the same.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;abc &lt;span contenteditable&gt;held words&lt;/span&gt; end&lt;script&gt;var t = document.body.firstChild; getSelection().collapse(t, 0);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;word&#x27;);&lt;/script&gt;"></iframe></div>
+    <figcaption>Started before the <code>contenteditable</code> span: only “abc” highlighted. <span class=pr-flag>Firefox</span> goes on into the span, “abc held”.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

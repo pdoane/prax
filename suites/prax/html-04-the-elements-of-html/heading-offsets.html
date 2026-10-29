@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Heading offsets</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .t :is(h1, h2, h3, h4, h5, h6) { margin: 10px 0; line-height: 1; background: rgba(79, 129, 189, 0.16); }
+  .t [headingoffset], .t [headingreset] { outline: 1px dashed var(--pr-line); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.3.11.1 Heading levels &amp; offsets</div>
+  <h1>Heading offsets</h1>
+  <p class=pr-lede><q>The headingoffset content attribute allows authors to offset heading levels for descendants.</q>
+  A heading's level is its number plus the offsets of its inclusive ancestors, <q>If level is greater than 9, then
+  return 9.</q> The user agent's style sheet sizes it by its level: 2em, 1.5em, 1.17em, 1em, 0.83em, then 0.67em.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/sections.html#heading-levels-&-offsets">HTML §4.3.11.1</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#sections-and-headings">§15.3.6</a></span></p>
+</header>
+<section>
+  <h2>Offsets add up</h2>
+  <p>The stages' text is 10px; each heading is tinted, with <code>line-height: 1</code>, so its tint is as tall as its
+  font size, and its margins are set to 10px. Elements with the attributes are outlined.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><h1>h1, no offset</h1><section headingoffset=1><h1>h1, offset 1</h1><div headingoffset=1><h1>h1, offset 2</h1></div></section></div>
+    <figcaption>20px, then the size of level 2, 15px, then level 3's, 11.7px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No offset: all three
+    20px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><div headingoffset=8><h1>h1, offset 8</h1><h4>h4, offset 8</h4></div></div>
+    <figcaption>Levels 9, and 12 held to 9: both 6.7px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 20px and 10px, an h1's and an h4's.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Where the offset stops</h2>
+  <p><q>If inclusiveAncestor is an HTML element and has a headingreset attribute, then return offset.</q> <q>If
+  inclusiveAncestor's parent is a shadow root, then set inclusiveAncestor to that shadow root's host and
+  continue.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><div headingoffset=2><section headingreset><h1>h1, reset</h1></section><section headingreset headingoffset=1><h1>h1, reset at 1</h1></section></div></div>
+    <figcaption>The outer offset of 2 is not counted: 20px, then 15px, the reset element's own offset counted.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Both 20px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><div headingoffset=1><template shadowrootmode=open><style>h1 { margin: 10px 0; line-height: 1; background: rgba(79, 129, 189, 0.16) }</style><h1>h1 in a shadow tree</h1></template></div></div>
+    <figcaption>The host's offset counts: 15px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 20px.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

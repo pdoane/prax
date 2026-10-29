@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-items and align-self: across the line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; height: 60px; }
+  .pr-stage > div { width: 40px; }
+  .h40 { height: 40px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.3 Cross-axis Alignment: the align-items and align-self properties</div>
+  <h1>align-items and align-self: across the line</h1>
+  <p class=pr-lede><q>align-items sets the default alignment for all of the flex container's items, including
+  anonymous flex items. align-self allows this default alignment to be overridden for individual flex items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">CSS Flexible Box Layout 2 §8.3</a></span>
+  Each stage is 60px tall, a single line as tall as itself; A is 20px tall and B 40px.</p>
+</header>
+
+<section>
+  <h2>flex-start, flex-end, center</h2>
+  <figure>
+    <div class=pr-stage style="align-items: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit h40">B</div></div>
+    <figcaption><code>flex-start</code>: <q>The cross-start margin edge of the flex item is placed flush with the
+    cross-start edge of the line.</q> Both at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-items: flex-end"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit h40">B</div></div>
+    <figcaption><code>flex-end</code>: both bottoms at 60px; A from 40px, B from 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="align-items: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit h40">B</div></div>
+    <figcaption><code>center</code>: A from 20 to 40px, B from 10 to 50px.</figcaption>
+  </figure>
+  <figure style="margin-top: 10px">
+    <div class=pr-stage style="align-items: center; height: 20px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="height: 40px">B</div></div>
+    <figcaption>A stage 20px tall, <code>center</code>: <q>it will overflow equally in both directions</q>; B from
+    −10 to 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>align-self overrides, auto defers</h2>
+  <p><code>auto</code> <q>Defers cross-axis alignment control to the value of align-items on the parent box.</q> <q>For
+  anonymous flex items, align-self always matches the value of align-items on their associated flex
+  container.</q></p>
+  <figure>
+    <div class=pr-stage style="align-items: flex-end"><div class="pr-a pr-fit" style="align-self: flex-start">A</div><div class="pr-b pr-fit" style="align-self: center; height: 20px">B</div><div class="pr-c pr-fit" style="align-self: auto">C</div></div>
+    <figcaption><code>align-items: flex-end</code>; A <code>align-self: flex-start</code> at 0, B <code>center</code>
+    at 20px, C <code>auto</code> at 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="align-items: flex-end"><div class="pr-a pr-fit">A</div>text</div>
+    <figcaption>"text" is an anonymous flex item, 40px wide beside A; <code>align-items: flex-end</code> puts it,
+    like A, at the bottom, 40 to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

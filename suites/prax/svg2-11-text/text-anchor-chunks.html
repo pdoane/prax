@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-anchor and text chunks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .heart { font: 24px "PR Noto Sans Mono", "PR Noto Sans Symbols 2"; text-anchor: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.1.1 Text alignment, the ‘text-anchor’ property</div>
+  <h1>text-anchor and text chunks</h1>
+  <p class=pr-lede><q>The text-anchor property is applied to each individual text chunk within a given ‘text’ element.
+  Each text chunk has an initial current text position</q>. <q>Each text chunk also has a final current text position
+  which is the current text position after placing the last glyph in the text chunk. The positions are determined
+  before applying the text-anchor property.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextAnchoringProperties">SVG 2 §11.10.1.1</a></span>
+  Anchors are solid red, baselines dashed.</p>
+</header>
+
+<section>
+  <h2>A chunk for each position</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" stroke="#c0392b" /><path d="M0 30H160 M0 60H160 M0 90H160" class=pr-baseline /><text class=heart x="80 80 80" y="30 60 90">I&#x2665;SVG</text></svg></div>
+    <figcaption><code>x="80 80 80" y="30 60 90"</code> on "I♥SVG" in 24px PR Noto Sans Mono, with
+    <code>text-anchor: middle</code>: three chunks, "I", "♥" and "SVG", each centered on x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M50 0V100 M130 0V100" stroke="#c0392b" /><path d="M0 50H160" class=pr-baseline /><text class=pr-measure x="50 130" y="50" text-anchor="end">abcd</text></svg></div>
+    <figcaption><code>x="50 130"</code> on "abcd", 10 a letter, with <code>text-anchor="end"</code>: "a" ending at
+    50, from 40, and "bcd" ending at 130, from 100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

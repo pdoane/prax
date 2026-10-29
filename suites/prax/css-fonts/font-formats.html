@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font formats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Format Opentype"; src: url(../../../third_party/fonts/Cousine.ttf) format(opentype); }
+  @font-face { font-family: "Format Truetype"; src: url(../../../third_party/fonts/Cousine.ttf) format(truetype); }
+  @font-face { font-family: "Format Svg"; src: url(../../../third_party/fonts/Cousine.ttf) format(svg), url(../../../third_party/fonts/Tinos.ttf); }
+  .fmt { display: inline-block; margin: 0 8px 8px 0; padding: 3px 8px; font: 13px/1.3 ui-monospace, Menlo, monospace;
+         background: #f4f5f7; border: 1px solid #cfd3da; color: #9aa1ad; }
+  @supports font-format(collection) { #collection { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(embedded-opentype) { #eot { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(opentype) { #opentype { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(svg) { #svg { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(truetype) { #truetype { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(woff) { #woff { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-format(woff2) { #woff2 { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 11.2 Font formats</div>
+  <h1>Font formats</h1>
+  <p class=pr-lede>The formats are <code>collection</code>, <code>embedded-opentype</code>, <code>opentype</code>,
+  <code>svg</code>, <code>truetype</code>, <code>woff</code> and <code>woff2</code>. <q>the format hints "truetype"
+  and "opentype" must be considered as synonymous</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-format-definitions">CSS Fonts 4 §11.2</a></span></p>
+</header>
+
+<section>
+  <h2>What this user agent supports</h2>
+  <p>Each format is green where <code>@supports font-format(…)</code> holds.</p>
+  <span class=fmt id=collection>collection</span><span class=fmt id=eot>embedded-opentype</span><span class=fmt id=opentype>opentype</span>
+  <span class=fmt id=svg>svg</span><span class=fmt id=truetype>truetype</span><span class=fmt id=woff>woff</span><span class=fmt id=woff2>woff2</span>
+</section>
+
+<section>
+  <h2>truetype and opentype are one</h2>
+  <p>Cousine, a TrueType file, under each hint; each stage names its family, then <code>serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Format Opentype', serif">Handgloves</div>
+    <figcaption><code>format(opentype)</code>: Cousine, a monospace.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Format Truetype', serif">Handgloves</div>
+    <figcaption><code>format(truetype)</code>: Cousine.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Format Svg', serif">Handgloves</div>
+    <figcaption><code>format(svg)</code>, deprecated SVG fonts, where unsupported: the next source, Tinos.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>outline: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 120px; height: 40px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.1 Outlines Shorthand: the outline property</div>
+  <h1>outline: auto</h1>
+  <p class=pr-lede><q>In the ambiguous case where a lone auto value is specified, or if auto is specified together
+  with an &lt;'outline-width'&gt; value, but without an explicit &lt;'outline-style'&gt; or &lt;'outline-color'&gt;
+  value, both outline-style and outline-color are set to auto.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Style and color both auto</h2>
+  <p>With both <code>auto</code>, the outline is the browser's own, in the <q>accent color</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-color">§3.4</a></span>.
+  Each box has <code>color: #c0392b</code>, red, and <code>accent-color: #27ae60</code>, green.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="color: #c0392b; accent-color: #27ae60; outline: auto"></div></div>
+    <figcaption><code>outline: auto</code>: the browser's own outline. Chrome draws it red, Safari blue, Firefox green.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=box style="color: #c0392b; accent-color: #27ae60; outline: auto 10px"></div></div>
+    <figcaption><code>outline: auto 10px</code>: the same as the first, its width ignored. <span
+    class=pr-flag>Safari</span> draws a wider ring, further out.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

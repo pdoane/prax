@@ -1,0 +1,85 @@
+00-supports-1.html
+# SVG2/struct.html#NewDocument 5.1 Defining an SVG document fragment: the ‘svg’ element: no page; its subsections have them
+SVG2/struct.html#NewDocumentOverview 5.1.1 Overview
+    svg-fragments.html
+SVG2/struct.html#Namespace 5.1.2 Namespace
+    namespace.html
+# SVG2/struct.html#Definitions 5.1.3 Definitions: no page; it defines terms the chapter's pages use
+SVG2/struct.html#SVGElement 5.1.4 The ‘svg’ element
+    svg-element.html
+# SVG2/struct.html#Groups 5.2 Grouping: the ‘g’ element: no page; its subsections have them
+SVG2/struct.html#GroupsOverview 5.2.1 Overview
+    group.html
+# SVG2/struct.html#GElement 5.2.2 The ‘g’ element: no page; it is the element's definition, which 5.2.1's page shows
+# SVG2/struct.html#Head 5.3 Defining content for reuse, and the ‘defs’ element: no page; its subsections have them
+# SVG2/struct.html#Overview 5.3.1 Overview: no page; it recommends where to put referenced elements, which draws nothing
+SVG2/struct.html#DefsElement 5.3.2 The ‘defs’ element
+    defs.html
+SVG2/struct.html#SymbolElement 5.4 The ‘symbol’ element
+    symbol.html
+    symbol-geometry.html
+SVG2/struct.html#SymbolAttributes 5.4.1 Attributes
+    symbol-ref.html
+SVG2/struct.html#SymbolNotes 5.4.2 Notes on symbols
+    symbol-notes.html
+SVG2/struct.html#UseElement 5.5 The ‘use’ element
+    use.html
+SVG2/struct.html#UseShadowTree 5.5.1 The use-element shadow tree
+    use-shadow-tree.html
+SVG2/struct.html#UseLayout 5.5.2 Layout of re-used graphics
+    use-layout.html
+SVG2/struct.html#UseStyleInheritance 5.5.3 Style Scoping and Inheritance
+    use-style.html
+SVG2/struct.html#UseAnimations 5.5.4 Animations in use-element shadow trees
+    use-animations.html
+SVG2/struct.html#UseEventHandling 5.5.5 Event handling in use-element shadow trees
+    use-events.html
+# SVG2/struct.html#ConditionalProcessing 5.6 Conditional processing: no page; its subsections have them
+SVG2/struct.html#ConditionalProcessingOverview 5.6.1 Conditional processing overview
+    conditional-processing.html
+# SVG2/struct.html#ConditionalProcessingDefinitions 5.6.2 Definitions: no page; it names the conditional processing attributes
+SVG2/struct.html#SwitchElement 5.6.3 The ‘switch’ element
+    switch.html
+SVG2/struct.html#ConditionalProcessingRequiredExtensionsAttribute 5.6.4 The ‘requiredExtensions’ attribute
+    required-extensions.html
+SVG2/struct.html#ConditionalProcessingSystemLanguageAttribute 5.6.5 The ‘systemLanguage’ attribute
+    system-language.html
+SVG2/struct.html#DescriptionAndTitleElements 5.7 The ‘desc’ and ‘title’ elements
+    descriptive-elements.html
+# SVG2/struct.html#DescriptionDefinitions 5.7.1 Definition: no page; it names the descriptive elements
+SVG2/struct.html#MetadataElement 5.8 The ‘metadata’ element
+    metadata.html
+SVG2/struct.html#HTMLMetadataElements 5.9 HTML metadata elements
+    html-metadata.html
+SVG2/struct.html#ForeignNamespaces 5.10 Foreign namespaces and private data
+    foreign-namespaces.html
+# SVG2/struct.html#CommonAttributes 5.11 Common attributes: no page; its subsections have them
+# SVG2/struct.html#CommonAttributeDefinitions 5.11.1 Definitions: no page; it names the core attributes
+# SVG2/struct.html#Core.attrib 5.11.2 Attributes common to all elements: ‘id’: no page; an id is drawn only through the references that the chapters' pages make
+SVG2/struct.html#LangSpaceAttrs 5.11.3 The ‘lang’ and ‘xml:lang’ attributes
+    lang.html
+# SVG2/struct.html#WhitespaceProcessingXMLSpaceAttribute 5.11.4 The ‘xml:space’ attribute: no page; the text chapter's xml-space.html shows it
+SVG2/struct.html#tabindexattribute 5.11.5 The ‘tabindex’ attribute
+    tabindex.html
+SVG2/struct.html#autofocusattribute 5.11.6 The ‘autofocus’ attribute
+    autofocus.html
+# SVG2/struct.html#DataAttributes 5.11.7 The ‘data-*’ attributes: no page; they draw nothing
+# SVG2/struct.html#WAIARIAAttributes 5.12 WAI-ARIA attributes: no page; it is accessibility semantics, which draw nothing
+# SVG2/struct.html#WAIARIA-definitions 5.12.1 Definitions: no page; it is accessibility semantics
+# SVG2/struct.html#roleattribute 5.12.2 Role attribute: no page; it is accessibility semantics
+# SVG2/struct.html#ARIAStateandPropertyAttributes 5.12.3 State and property attributes (all aria- attributes): no page; it is accessibility semantics
+# SVG2/struct.html#implicit-aria-semantics 5.12.4 Implicit and Allowed ARIA Semantics: no page; it is accessibility semantics
+# SVG2/struct.html#DOMInterfaces 5.13 DOM interfaces: no page; it is object model
+# SVG2/struct.html#InterfaceDocumentExtensions 5.13.1 Extensions to the Document interface: no page; it is object model
+# SVG2/struct.html#InterfaceSVGSVGElement 5.13.2 Interface SVGSVGElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGGElement 5.13.3 Interface SVGGElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGDefsElement 5.13.4 Interface SVGDefsElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGDescElement 5.13.5 Interface SVGDescElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGMetadataElement 5.13.6 Interface SVGMetadataElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGTitleElement 5.13.7 Interface SVGTitleElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGSymbolElement 5.13.8 Interface SVGSymbolElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGUseElement 5.13.9 Interface SVGUseElement: no page; it is object model
+# SVG2/struct.html#InterfaceSVGUseElementShadowRoot 5.13.10 Interface SVGUseElementShadowRoot: no page; it is object model
+# SVG2/struct.html#InterfaceShadowAnimation 5.13.11 Interface ShadowAnimation: no page; it is object model
+# SVG2/struct.html#InterfaceSVGSwitchElement 5.13.12 Interface SVGSwitchElement: no page; it is object model
+# SVG2/struct.html#InterfaceGetSVGDocument 5.13.13 Mixin GetSVGDocument: no page; it is object model

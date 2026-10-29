@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font-language-override descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Default Language"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Turkish"; src: url(../../../third_party/fonts/Literata.ttf); font-language-override: "TRK"; }
+  .pr-sample { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.10 Default font language overriding: the 'font-language-override' descriptor</div>
+  <h1>The font-language-override descriptor</h1>
+  <p class=pr-lede>The descriptor <q>defines initial settings that apply when the font defined by an @font-face rule is
+  rendered. It does not affect font selection.</q> It names the OpenType language system the face's glyphs are chosen
+  for. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-language-override-desc">CSS Fonts 4 §4.10</a></span></p>
+</header>
+
+<section>
+  <h2>Turkish forms from English text</h2>
+  <p>Literata's Turkish (<code>TRK</code>) language system keeps the dot of an i that follows an f, so "fi" is not
+  joined. Each stage is <code>lang=en</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=en style="font-family: 'Default Language'">fit fil</div>
+    <figcaption>No override: "fi" as one ligature, the i's dot merged into the f.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" lang=en style="font-family: Turkish">fit fil</div>
+    <figcaption><code>"TRK"</code>: f and i apart, the dot kept. <span class=pr-flag>Safari</span> ignores the descriptor: fi joined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=tr style="font-family: 'Default Language'">fit fil</div>
+    <figcaption><code>lang=tr</code> with no override: the same Turkish forms, from the content language.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

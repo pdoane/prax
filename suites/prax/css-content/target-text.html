@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>target-text(): the text at the target</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { counter-reset: ch; }
+  .doc h3 { margin: 0; font-size: 13px; line-height: 20px; counter-increment: ch; }
+  .doc h3::before { content: "Chapter " counter(ch) ": "; }
+  .doc h3::after { content: "."; }
+  .doc p { margin: 0; }
+  .doc a { color: #2c5a8f; }
+  .content a::after { content: ", in " target-text(attr(href)); }
+  .before a::after { content: ", in " target-text(attr(href), before); }
+  .letter h3::before { content: none; }
+  .letter a::after { content: ", under " target-text(attr(href), first-letter); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.6.3 The target-text() function</div>
+  <h1>target-text(): the text at the target</h1>
+  <p class=pr-lede><q>The 'target-text()' function retrieves the text value of the element referred to by the URL. An
+  optional second argument specifies what content is retrieved, using the same values as the 'string-set' property
+  above.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#target-text">CSS Generated Content 3 §2.6.3</a></span></p>
+</header>
+
+<section>
+  <h2>content, before and first-letter</h2>
+  <p>Each stage has a heading "Loomings", with <code>::before</code> "Chapter 1: " and <code>::after</code> ".", and a
+  link to it after: "…discussed <a style="color: #2c5a8f">later</a>".</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc content"><h3 id=e-loom>Loomings</h3><p>…discussed <a href="#e-loom">later</a>.</p></div>
+    <figcaption>No second argument: the heading's own text, "…discussed later, in Loomings."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None has
+    the function: no text after the link.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc before"><h3 id=f-loom>Loomings</h3><p>…discussed <a href="#f-loom">later</a>.</p></div>
+    <figcaption><code>before</code>: the text of its <code>::before</code>, "…discussed later, in Chapter 1: ."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No text
+    after the link.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc letter"><h3 id=g-loom>Loomings</h3><p>…discussed <a href="#g-loom">later</a>.</p></div>
+    <figcaption><code>first-letter</code>, the heading without its <code>::before</code>, whose first letter would be "C": "…discussed later, under L." <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No text after the link.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

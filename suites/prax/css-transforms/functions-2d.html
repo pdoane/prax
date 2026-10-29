@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>2D transform functions: matrix, translate, scale</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 20px; top: 30px; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 7.1 2D Transform Functions</div>
+  <h1>2D transform functions: matrix, translate, scale</h1>
+  <p class=pr-lede><q>The set of allowed transform functions is given below.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#two-d-transform-functions">CSS Transforms 1 §7.1</a></span>
+  Each blue box is 40 by 20 at (20, 30), where the dashed outline is, about its center, (40, 40).
+  <a href="functions-2d-rotate-skew.html">Rotations and skews</a> follow.</p>
+</header>
+
+<section>
+  <h2>translate() and scale()</h2>
+  <p>translate(): <q>If &lt;ty&gt; is not provided, ty has zero as a value.</q> scale(): <q>If the second parameter is
+  not provided, it takes a value equal to the first.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translate(60px)">A</div></div>
+    <figcaption><code>translate(60px)</code>: 60px right, none down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translate(60px, 20px)">A</div></div>
+    <figcaption><code>translate(60px, 20px)</code>: to 80 across, 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateY(30px)">A</div></div>
+    <figcaption><code>translateY(30px)</code>: to 60 to 80 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scale(2)">A</div></div>
+    <figcaption><code>scale(2)</code>: 80 by 40, 0 to 80 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scale(2, 0.5)">A</div></div>
+    <figcaption><code>scale(2, 0.5)</code>: 80 by 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scaleY(3)">A</div></div>
+    <figcaption><code>scaleY(3)</code>: 60 tall, 10 to 70 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>matrix()</h2>
+  <p><q>specifies a 2D transformation in the form of a transformation matrix of the six values a, b, c, d, e, f</q>:
+  x′ = a·x + c·y + e, y′ = b·x + d·y + f.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: matrix(1, 0, 0, 1, 60, 20)">A</div></div>
+    <figcaption><code>matrix(1, 0, 0, 1, 60, 20)</code>: <code>translate(60px, 20px)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: matrix(2, 0, 0, 0.5, 0, 0)">A</div></div>
+    <figcaption><code>matrix(2, 0, 0, 0.5, 0, 0)</code>: <code>scale(2, 0.5)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: matrix(0, 1, -1, 0, 0, 0)">A</div></div>
+    <figcaption><code>matrix(0, 1, -1, 0, 0, 0)</code>: a quarter turn clockwise, 20 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

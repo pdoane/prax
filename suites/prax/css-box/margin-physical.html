@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>margin-top, margin-right, margin-bottom, margin-left</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-table-cell { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.1 Page-relative (Physical) Margin Properties</div>
+  <h1>margin-top, margin-right, margin-bottom, margin-left</h1>
+  <p class=pr-lede><q>These properties set the top, right, bottom, and left margin of a box, respectively.</q> Each
+  takes <code>&lt;length-percentage&gt; | auto</code>, and is 0 initially. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-physical">CSS Box Model 4 §3.1</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin</p>
+
+<section>
+  <h2>Each side, and auto</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-margin-area><div class=pr-a style="margin-top: 20px">A</div></div></div>
+    <figcaption><code>margin-top: 20px</code>: A 20px down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-margin-area><div class=pr-a style="margin-right: 40px; margin-bottom: 10px">A</div></div></div>
+    <figcaption><code>margin-right: 40px; margin-bottom: 10px</code>: A 60px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-margin-area><div class="pr-a pr-fit" style="width: 40px; margin-left: auto">A</div></div></div>
+    <figcaption><code>width: 40px; margin-left: auto</code>: A at the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-margin-area><div class="pr-a pr-fit" style="width: 40px; margin: 0 auto">A</div></div></div>
+    <figcaption><code>margin: 0 auto</code>: A centered, 30px from each side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative margins</h2>
+  <p><q>Negative values for margin properties are allowed, but there may be implementation-specific limits.</q></p>
+  <figure>
+    <div class=pr-stage style="height: 40px; margin-left: 20px"><div class=pr-a style="margin-left: -20px">A</div></div>
+    <figcaption><code>margin-left: -20px</code>: A starts 20px left of the stage and is 220px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 40px"><div class=pr-a style="margin-bottom: -10px; width: 100px">A</div><div class="pr-b pr-light" style="margin-left: 60px; opacity: 0.85">B</div></div>
+    <figcaption><code>margin-bottom: -10px</code> on A: B, after it, rises 10px over A's lower half.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not on internal table elements</h2>
+  <p>They apply to <q>all elements except internal table elements, ruby base containers, and ruby annotation
+  containers</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="margin: 20px">cell</div><div class=pr-table-cell>cell</div></div></div></div>
+    <figcaption><code>margin: 20px</code> on the first cell: nothing; the cells at the stage's top left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table style="margin: 20px"><div class=pr-table-row style="margin: 20px"><div class=pr-table-cell>cell</div><div class=pr-table-cell>cell</div></div></div></div>
+    <figcaption><code>margin: 20px</code> on the table and its row: only the table's applies; the cells 20px
+    in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

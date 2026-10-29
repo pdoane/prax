@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(srgb …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.2 The Predefined sRGB Color Space: the sRGB keyword</div>
+  <h1>color(srgb …)</h1>
+  <p class=pr-lede><q>The sRGB predefined color space defined below is the same as is used for legacy sRGB colors, such as
+  rgb().</q> <q>In-gamut colors have all three components in the range [0, 1].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-sRGB">CSS Color 4
+  §10.2</a></span></p>
+</header>
+
+<section>
+  <h2>The same space as rgb()</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 0.8392 0.5412 0.2353)"></div><div class=sw style="background: rgb(214 138 60)"></div><div class=sw style="background: color(srgb 83.92% 54.12% 23.53%)"></div></div>
+    <figcaption><code>color(srgb 0.8392 0.5412 0.2353)</code>, <code>rgb(214 138 60)</code>, and the first in percentages: one orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 0 1 0)"></div><div class=sw style="background: lime"></div><div class=sw style="background: color(srgb 0.5 0.5 0.5)"></div><div class=sw style="background: rgb(50% 50% 50%)"></div></div>
+    <figcaption><code>color(srgb 0 1 0)</code> and <code>lime</code>: one green. <code>color(srgb 0.5 0.5 0.5)</code> and <code>rgb(50% 50% 50%)</code>: one gray.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the sRGB gamut</h2>
+  <p>The stills are taken on an sRGB display, where this color is out of gamut: <q>for display,
+  they are css gamut mapped using a relative colorimetric intent</q> (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>), at constant OkLCh lightness and hue, its
+  chroma reduced.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(srgb 1.2 0.5 -0.2)"></div><div class=sw style="background: rgb(100% 62.2% 39%)"></div></div>
+    <figcaption><code>color(srgb 1.2 0.5 -0.2)</code>, mapped, beside <code>rgb(100% 62.2% 39%)</code>: the same peach. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips the components, to orange <code>rgb(100% 50% 0%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

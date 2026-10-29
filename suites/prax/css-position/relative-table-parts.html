@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative positioning of rows, row groups and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; }
+  td { width: 50px; height: 20px; padding: 0 6px; box-sizing: border-box; background: #f4f5f7; border: 1px solid #2c5a8f; }
+  td.span { background: #f9cc9d; }
+  .moved td { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.3 Relative Positioning</div>
+  <h1>Relative positioning of rows, row groups and columns</h1>
+  <p class=pr-lede><q>If specified on a table-row-group, table-header-group, table-footer-group, or table-row box the
+  shift affects all the contents of the box, including all table cells that originate in the affected row, but not
+  those that don't.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#relpos-insets">CSS Positioned Layout 3 §3.3</a></span>
+  Each table has three rows; the cells of the row or group that has <code>position: relative; top: 10px; left:
+  20px</code> are blue.</p>
+</header>
+
+<section>
+  <h2>A row, and a cell that spans into it</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 70px"><table><tr><td>a1<td>a2<td>a3<tr class=moved style="position: relative; top: 10px; left: 20px"><td>b1<td>b2<td>b3<tr><td>c1<td>c2<td>c3</table></div>
+    <figcaption>Row b: its three cells move 20px right and 10px down, over row c; rows a and c stay.
+    <span class=pr-flag>Safari</span> Nothing moves.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 70px"><table><tr><td class=span rowspan=2>a1<td>a2<td>a3<tr class=moved style="position: relative; top: 10px; left: 20px"><td>b2<td>b3<tr><td>c1<td>c2<td>c3</table></div>
+    <figcaption>Orange a1 spans rows a and b, but originates in row a: it stays, while b2 and b3 move.
+    <span class=pr-flag>Safari</span> Nothing moves.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A row group, and not a column</h2>
+  <p><q>Since position does not apply to table-column-group or table-column boxes, they are not affected by relative
+  positioning.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 70px"><table><tbody><tr><td>a1<td>a2<td>a3</tbody><tbody class=moved style="position: relative; top: 10px; left: 20px"><tr><td>b1<td>b2<td>b3<tr><td>c1<td>c2<td>c3</tbody></table></div>
+    <figcaption>The second <code>tbody</code>, rows b and c: all six cells move together.
+    <span class=pr-flag>Safari</span> Nothing moves.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><table><col><col style="position: relative; top: 10px; left: 20px"><col><tr><td>a1<td>a2<td>a3<tr><td>b1<td>b2<td>b3<tr><td>c1<td>c2<td>c3</table></div>
+    <figcaption>The second <code>col</code> with the same declarations: nothing moves.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

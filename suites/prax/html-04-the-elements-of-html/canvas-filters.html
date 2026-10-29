@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas filters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><filter id=swap><feColorMatrix type=matrix values="0 0 1 0 0  0 1 0 0 0  1 0 0 0 0  0 0 0 1 0"/></filter></svg>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.20 Filters</div>
+  <h1>Canvas filters</h1>
+  <p class=pr-lede><q>If the current filter is a string parseable as a
+  &lt;filter-value-list&gt;, then draw using the current filter in the same manner as SVG.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#filters">HTML §4.12.5.1.20</a></span>
+  The shapes are blue squares of 40 and the 40 by 20 flag.</p>
+</header>
+<section>
+  <h2>Filter functions, SVG filters, and the transform</h2>
+  <p>Each figure draws without a filter at the left, and with it at the right. <q>Filter coordinates are not affected by
+  the current transformation matrix.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=blur></canvas></div>
+    <figcaption><code>blur(4px)</code>: the right square's edges soft. <span class=pr-flag>Safari</span>
+    Sharp.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=gray></canvas></div>
+    <figcaption><code>grayscale(1)</code> on the flag drawn at 80 by 40: its quarters in greys. <span class=pr-flag>Safari</span> In color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=svg></canvas></div>
+    <figcaption><code>url(#swap)</code>, an SVG filter in the page swapping red and blue: the square and the flag's
+    blue turn brown-orange. <span class=pr-flag>Safari</span> Unchanged.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=scaled></canvas></div>
+    <figcaption><code>blur(3px)</code>: a square of 40, and one of 10 under <code>scale(4)</code>, equally soft.
+    <span class=pr-flag>Safari</span> Both sharp.</figcaption>
+  </figure>
+</section>
+<script>
+  const flag = new Image();
+  flag.src = "../shared/resources/flag-40x20.png";
+  const draw = {
+    blur(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(40, 10, 40, 40);
+      context.filter = "blur(4px)";
+      context.fillRect(120, 10, 40, 40);
+    },
+    gray(context) {
+      context.drawImage(flag, 10, 10, 80, 40);
+      context.filter = "grayscale(1)";
+      context.drawImage(flag, 110, 10, 80, 40);
+    },
+    svg(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(10, 10, 40, 40);
+      context.filter = "url(#swap)";
+      context.fillRect(60, 10, 40, 40);
+      context.drawImage(flag, 110, 10, 80, 40);
+    },
+    scaled(context) {
+      context.fillStyle = "#4f81bd";
+      context.filter = "blur(3px)";
+      context.fillRect(40, 10, 40, 40);
+      context.scale(4, 4);
+      context.fillRect(30, 2.5, 10, 10);
+    },
+  };
+  flag.onload = () => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  };
+</script>
+</body>
+</html>

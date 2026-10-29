@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-wrap: balance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 60px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.2 Flex Line Wrapping: the flex-wrap property</div>
+  <h1>flex-wrap: balance</h1>
+  <p class=pr-lede><q>The flex container is multi-line, and attempts to balance the lengths of the flex lines to be as
+  similar as possible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-wrap-property">CSS Flexible Box Layout 2 §5.2</a></span>
+  Each stage holds A, B, C and D, 60px wide and <code>flex: none</code>, 240px in all.</p>
+</header>
+
+<section>
+  <h2>Balanced lines, which wrap packs</h2>
+  <p><q>balance can be combined with wrap or wrap-reverse to dictate which direction the flex lines are stacked in. If
+  neither are specified, it behaves as if wrap was specified.</q></p>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>wrap</code>, for comparison: A, B and C fill the first line, D is alone on the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>balance</code>: stacked as <code>wrap</code>, A and B on the first line, C and D on the second
+    below it, each line 120px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not parse it:
+    one line, D overflowing to 240px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: wrap-reverse balance"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>wrap-reverse balance</code>: the same lines stacked in reverse, A and B at the bottom, C and D
+    above them. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not parse it: one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

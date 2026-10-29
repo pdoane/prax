@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: the example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex table { border-collapse: collapse; border: 5px solid yellow; color-scheme: light; color: var(--pr-ink); background: white; font-size: 12px; line-height: 14px; }
+  .ex #col1 { border: 3px solid black; }
+  .ex td { border: 1px solid red; padding: 0.5em 1em; }
+  .ex td.cell5 { border: 5px dashed blue; }
+  .ex td.cell6 { border: 5px solid green; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: the example</h1>
+  <p class=pr-lede><q>The following example illustrates the application of these precedence rules.</q> Its cells have
+  <code>padding: 1em</code>; here the vertical padding is halved to fit.</p>
+</header>
+
+<section>
+  <h2>A table with collapsed borders</h2>
+  <p>Five rows of three cells, and three <code>COL</code> elements. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <pre class=pr-source>table    { border-collapse: collapse;
+           border: 5px solid yellow; }
+*#col1   { border: 3px solid black; }
+td       { border: 1px solid red;
+           padding: 1em; }
+td.cell5 { border: 5px dashed blue; }
+td.cell6 { border: 5px solid green; }</pre>
+  <figure class=ex style="display: block">
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col id="col1"><col id="col2"><col id="col3"><tr id="row1"><td> 1<td> 2<td> 3</tr><tr id="row2"><td> 4<td class="cell5"> 5<td class="cell6"> 6</tr><tr id="row3"><td> 7<td> 8<td> 9</tr><tr id="row4"><td> 10<td> 11<td> 12</tr><tr id="row5"><td> 13<td> 14<td> 15</tr></table></div>
+    <figcaption>The specification's HTML source, with this style sheet.</figcaption>
+  </figure>
+  <ul class=pr-points>
+    <li>The outer border is the table's 5px yellow, wider than column 1's 3px black and the cells' 1px red; at cell
+    6, green, set on a cell, beats the table's yellow of the same width and style.</li>
+    <li>Column 1's 3px black runs down between columns 1 and 2, beating the cells' 1px red, except beside cell 5, whose
+    5px blue dashes are wider. Cell 5 is outlined in blue dashes above and below too.</li>
+    <li>Between cells 5 and 6, both 5px: <code>solid</code> beats <code>dashed</code>, so it is green.</li>
+    <li>Everywhere else, the cells' 1px red.</li>
+  </ul>
+</section>
+
+</body>
+</html>

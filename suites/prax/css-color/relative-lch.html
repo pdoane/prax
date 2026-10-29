@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative lch()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.8 Relative LCH Colors</div>
+  <h1>Relative lch()</h1>
+  <p class=pr-lede><q>l is a &lt;number&gt; that corresponds to the origin color's CIE Lightness</q>, <q>c [...] LCH chroma</q>,
+  <q>h [...] LCH hue, in degrees</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-LCH">CSS Color 5
+  §4.8</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Darker, and the complement</h2>
+  <p><q>lch(from peru calc(l * 0.8) c h) produces a color that is 20% darker than
+  peru or lch(62.2532% 54.0114 63.6769), with its chroma and hue left unchanged</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: peru"></div><div class=sw style="background: lch(from peru calc(l * 0.8) c h)"></div><div class=sw style="background: lch(49.80256 54.0114 63.6769)"></div></div>
+    <figcaption>Peru, then darker, beside <code>lch(49.80256 54.0114 63.6769)</code>: one brown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(from lightseagreen l c calc(h + 180))"></div><div class=sw style="background: lch(65.4937 39.4484 10.1013)"></div></div>
+    <figcaption>lightseagreen's complement in LCH, hue 370.1, beside hue 10.1: one pink.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The hue kept through gray</h2>
+  <p>orchid: <code>--mygray: lch(from var(--mycolor) l 0 h)</code>, then <q>since the
+  hue was preserved) <em>re-saturating</em> again</q>: <code>lch(from var(--mygray) l 30 h)</code> <q>is lch(62.753 30
+  326.973) which is rgb(72.710% 53.293% 71.224%)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(from orchid l 0 h)"></div><div class=sw style="background: lch(from lch(from orchid l 0 h) l 30 h)"></div><div class=sw style="background: rgb(72.71% 53.293% 71.224%)"></div></div>
+    <figcaption>The gray, then resaturated beside <code>rgb(72.71% 53.293% 71.224%)</code>: a muted orchid twice.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

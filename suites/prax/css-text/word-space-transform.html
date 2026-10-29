@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-space-transform</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 2.2 Expanding Between Words: the word-space-transform property</div>
+  <h1>word-space-transform</h1>
+  <p class=pr-lede><q>This property allows authors to change the rendering from one style to another without needing
+  to change the markup.</q> <q>For the purpose of this property, expandable separators are any of: U+200B ZERO WIDTH
+  SPACE characters, &lt;wbr&gt; elements, virtual expandable separators</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-space-transform">CSS Text 4 §2.2</a></span>
+  Japanese is 20px PR Noto Sans JP, 20px a character.</p>
+</header>
+
+<section>
+  <h2>space and ideographic-space</h2>
+  <p><code>space</code>: <q>Expandable separators within the child text of this element are replaced by U+0020
+  SPACE.</q> <code>ideographic-space</code>: <q>... are replaced by U+3000 IDEOGRAPHIC SPACE.</q> The Japanese
+  stages are <code>むかしむかし、&lt;wbr&gt;あるところに、&lt;wbr&gt;おじいさんと</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="word-space-transform: ideographic-space">むかしむかし、<wbr>あるところに、<wbr>おじいさんと</div>
+    <figcaption><code>ideographic-space</code>: a 20px space after each "、", so "ある" ends the first
+    line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    space: "あると" ends it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="word-space-transform: space">one&#x200B;two&#x200B;three</div>
+    <figcaption><code>space</code>, words joined by U+200B: "one two three", 10px between them, 130px in all.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "onetwothree",
+    110px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not beside a forced break</h2>
+  <p><q>The user agent must not replace expandable separators immediately preceding or following a forced line
+  break</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="word-space-transform: space">one&#x200B;two&#x200B;<br>&#x200B;three</div>
+    <figcaption>U+200B before and after a <code>&lt;br&gt;</code>: "one two" with one space, and "three" at the
+    start of the next line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> "onetwo": no space.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

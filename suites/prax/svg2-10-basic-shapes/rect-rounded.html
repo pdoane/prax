@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rect: rounded corners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .round { rx: 30px; ry: 15px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.2 The ‘rect’ element</div>
+  <h1>rect: rounded corners</h1>
+  <p class=pr-lede><q>For rounded rectangles, the computed values of the ‘rx’ and ‘ry’ properties define the x- and
+  y-axis radii of elliptical arcs used to round off the corners of the rectangle.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">SVG 2 §10.2</a></span>
+  Each stage is an SVG 160 by 60 holding a blue rectangle 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>Elliptical arcs, the same at every corner</h2>
+  <p><q>The arc are always symmetrical along both horizontal and vertical axis; to create a rectangle with uneven
+  corner rounding, define the shape explicitly with a ‘path’.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="20" ry="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="20" ry="20"</code>: each corner a quarter circle of radius 20; the straight top runs from
+    x 40 to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="40" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="40" ry="10"</code>: each corner a quarter ellipse, 40 across and 10 down; the straight
+    sides run from y 20 to 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=round x="20" y="10" width="120" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>From a style sheet, <code>rx: 30px; ry: 15px</code>: quarter ellipses 30 across and 15 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No rounding</h2>
+  <p><q>A computed value of zero for either dimension, or a computed value of <code>auto</code> for <em>both</em>
+  dimensions, results in a rectangle without corner rounding.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="20" ry="0" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="20" ry="0"</code>: square corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="0" ry="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="0" ry="20"</code>: square corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" style="rx: auto; ry: auto" /></svg></div>
+    <figcaption><code>rx: auto; ry: auto</code>, the initial values: square corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

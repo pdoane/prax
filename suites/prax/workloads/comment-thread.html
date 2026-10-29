@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Nested comments with vote columns, indentation rules, and collapsed replies. Leans on: recursive indentation with a border on the start side, flex rows of a narrow vote column beside wrapping text, badges after names, a collapsed-thread summary, and a reply bar at the end. -->
+<title>Comment thread</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.thread { background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:12px 14px; color:#22282f; font-size:12px; line-height:1.55 }
+.post { border-bottom:1px solid #eef1f4; padding-bottom:9px; margin-bottom:9px }
+.post h2 { font-size:15px; margin:0 0 2px }
+.post .meta { font-size:10.5px; color:#8a93a0 }
+.sortbar { display:flex; gap:8px; font-size:10px; color:#8a93a0; margin-bottom:10px }
+.sortbar span { border:1px solid #e2e6eb; border-radius:99px; padding:2px 9px }
+.sortbar span.on { background:#22303f; border-color:#22303f; color:#fff; font-weight:bold }
+.c { display:flex; gap:8px; margin-bottom:10px }
+.c .vote { flex:none; width:20px; text-align:center; font-size:10px; color:#8a93a0; line-height:1.25 }
+.c .vote .up { color:#e08a2e; font-size:11px }
+.c .vote b { display:block; color:#3f4954; font-size:11px }
+.c .body { flex:1; min-width:0 }
+.c .who { font-size:11px }
+.c .who b { color:#1c5b96 }
+.c .who .op { font-size:9px; background:#eef4fa; color:#1c5b96; border-radius:3px; padding:0 4px; margin-left:3px }
+.c .who .staff { font-size:9px; background:#e7f3ea; color:#2f7d4f; border-radius:3px; padding:0 4px; margin-left:3px }
+.c .who .t { color:#a0a8b2; font-size:10px }
+.c p { margin:2px 0 3px }
+.c .acts { font-size:10px; color:#9aa3ad }
+.c .acts span { margin-right:9px }
+.kids { border-left:2px solid #e6e9ed; margin-left:9px; padding-left:11px }
+.kids .kids { border-left-color:#eef1f4 }
+.folded { font-size:10.5px; color:#8a93a0; background:#f7f9fb; border:1px dashed #dde2e8; border-radius:6px; padding:4px 8px; margin-bottom:10px }
+.folded b { color:#4a5561 }
+.dim { color:#8a93a0 }
+.reply { display:flex; gap:8px; align-items:center; border-top:1px solid #eef1f4; padding-top:9px; margin-top:2px }
+.reply .field { flex:1; border:1px solid #ccd3da; border-radius:6px; padding:5px 9px; font-size:11px; color:#9aa3ad }
+.reply .send { font-size:11px; font-weight:bold; background:#3d82c4; border:1px solid #2f6ba6; color:#fff; border-radius:6px; padding:5px 12px }
+</style>
+</head>
+<body>
+<div class="thread">
+  <div class="post">
+    <h2>We rebuilt the fish pass and counted every trout for two years</h2>
+    <div class="meta">posted by <b>marthe_c</b> to r/rivers &#183; 14 hours ago &#183; 412 points &#183; 63 comments</div>
+  </div>
+
+  <div class="sortbar"><span class="on">Best</span><span>New</span><span>Controversial</span><span>Old</span></div>
+
+  <div class="c">
+    <div class="vote"><span class="up">&#9650;</span><b>218</b><span>&#9660;</span></div>
+    <div class="body">
+      <div class="who"><b>hydro_ana</b> <span class="t">&#183; 11 hours ago</span></div>
+      <p>The number that matters is not the 1,180 fish, it is that you counted
+      before the rebuild as well. Most of these projects have no baseline, so
+      nobody can say what changed.</p>
+      <div class="acts"><span>Reply</span><span>Share</span><span>Save</span></div>
+
+      <div class="kids">
+        <div class="c">
+          <div class="vote"><span class="up">&#9650;</span><b>96</b><span>&#9660;</span></div>
+          <div class="body">
+            <div class="who"><b>marthe_c</b><span class="op">OP</span> <span class="t">&#183; 10 hours ago</span></div>
+            <p>The baseline was an accident. We started counting in 2021 to argue
+            with the licence office and kept going.</p>
+            <div class="acts"><span>Reply</span><span>Share</span></div>
+
+            <div class="kids">
+              <div class="c">
+                <div class="vote"><span class="up">&#9650;</span><b>41</b><span>&#9660;</span></div>
+                <div class="body">
+                  <div class="who"><b>t_ryen</b> <span class="t">&#183; 9 hours ago</span></div>
+                  <p>Did the office accept the counts in the end, or did they
+                  want a consultant to redo them?</p>
+                  <div class="acts"><span>Reply</span></div>
+                  <div class="kids">
+                    <div class="folded"><b>&#9656; 8 replies</b> <span class="dim">collapsed, mostly about consultant fees</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="c">
+          <div class="vote"><span class="up">&#9650;</span><b>34</b><span>&#9660;</span></div>
+          <div class="body">
+            <div class="who"><b>gwen.fisheries</b><span class="staff">mod</span> <span class="t">&#183; 8 hours ago</span></div>
+            <p>Pinned the method comment above. Please keep the licence argument
+            in the weekly thread.</p>
+            <div class="acts"><span>Reply</span><span>Distinguish</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="c">
+    <div class="vote"><span class="up">&#9650;</span><b>77</b><span>&#9660;</span></div>
+    <div class="body">
+      <div class="who"><b>lowflowlarry</b> <span class="t">&#183; 7 hours ago</span></div>
+      <p>How much water does the pass take at low flow? That is the trade every
+      mill on a small river has to make, and nobody writes it down.</p>
+      <div class="acts"><span>Reply</span><span>Share</span><span>Report</span></div>
+      <div class="kids">
+        <div class="folded"><b>&#9656; 12 replies</b> <span class="dim">collapsed</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reply">
+    <div class="field">Add a comment&#8230;</div>
+    <span class="send">Comment</span>
+  </div>
+</div>
+</body>
+</html>

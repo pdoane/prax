@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: percentages</h1>
+  <p class=pr-lede><code>text-indent</code> takes <code>&lt;length&gt; | &lt;percentage&gt;</code>. Initial
+  <code>0</code>, inherited. The blue box starts each first line.</p>
+</header>
+
+<section>
+  <h2>&lt;percentage&gt;</h2>
+  <p><q>The indentation is a percentage of the containing block width.</q> Percentages <q>refer to width of containing
+  block</q>, and the computed value is <q>the percentage as specified or the absolute length</q>, so a child inherits
+  the percentage. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 20%"><span class=pr-a>first</span> line, then more.</div>
+    <figcaption><code>text-indent: 20%</code> of the 200px stage: 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-text pr-frame" id=half style="width: 100px; text-indent: 20%"><span class=pr-a>first</span> line</div></div>
+    <figcaption>The dashed block is 100px wide in the 200px stage, its containing block: 20% is 40px, not 20px. <span class="pr-flag
+    pr-since">Since CSS 2</span> Text 3 resolves against the block's own width: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 20%"><div class=pr-frame id=kid style="width: 100px"><span class=pr-a>first</span> line</div></div>
+    <figcaption>The dashed child inherits the percentage, 20%, and resolves it against its own containing block, the 200px stage: 40px. <span class="pr-flag pr-since">Since CSS
+    2</span> Text 3: against its own 100px, 20px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></div>
+  <h2>A percentage of the block's own width</h2>
+  <p>Percentages now <q>refers to block container’s own inline-axis inner size</q>: <q>Gives the amount of the indent
+  as a percentage of the block container’s own logical width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></span> The
+  containing block no longer matters.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-text pr-frame" style="width: 100px; text-indent: 20%"><span class=pr-a>first</span> line</div></div>
+    <figcaption>The 100px dashed block with <code>text-indent: 20%</code>: the box starts 20px into it, 20% of its
+    own width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 20%"><div class=pr-frame style="width: 100px"><span class=pr-a>first</span> line</div></div>
+    <figcaption>The 100px dashed child inherits 20% from the stage: its box starts 20px into it. The stage's own
+    first line would start 40px in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

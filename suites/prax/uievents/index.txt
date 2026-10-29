@@ -1,0 +1,270 @@
+00-supports-1.html
+00-supports-2.html
+# uievents/#ui-events-intro 1 Introduction: no page; it introduces the specification
+# uievents/#ui-events-overview 1.1 Overview: no page; it states the specification's goals
+# uievents/#previous-events 1.1.1 Mouse and Wheel Events: no page; it says that they moved to Pointer Events, which the pointerevents directory walks
+# uievents/#ui-events-conformance 1.2 Conformance: no page; it defines the classes of products
+# uievents/#conf-interactive-ua 1.2.1 Web browsers and other dynamic or interactive user agents: no page; it defines a class of products
+# uievents/#conf-author-tools 1.2.2 Authoring tools: no page; it defines a class of products
+# uievents/#conf-authors 1.2.3 Content authors and content: no page; it defines a class of products
+# uievents/#conf-specs 1.2.4 Specifications and host languages: no page; it defines a class of products
+# uievents/#style-conventions 2 Stylistic Conventions: no page; it explains the document's notation
+# uievents/#event-interfaces 3 Basic Event Interfaces: no page; it lists the interfaces of DOM that the events build on
+uievents/#event-types-list 3.1 List of Event Types
+    event-types.html
+# uievents/#events-uievents 3.2 User Interface Events: no page; it introduces the module
+# uievents/#interface-uievent 3.2.1 Interface UIEvent: no page; view and detail are the object model, the same for every event of the pages
+# uievents/#idl-uievent 3.2.1.1 UIEvent: no page; it is the interface's IDL
+# uievents/#idl-uieventinit 3.2.1.2 UIEventInit: no page; a dictionary for constructing events
+# uievents/#uievent-algorithms 3.2.2 UIEvent Algorithms: no page; it holds an algorithm that initializes an event object
+# uievents/#initialize-a-uievent-id 3.2.2.1 initialize a UIEvent: no page; it sets an event object's attributes
+# uievents/#events-uievent-types 3.2.3 UIEvent Types: no page; it introduces the types that follow
+# uievents/#event-type-load 3.2.3.1 load: no page; a resource's loading fires it, not a user's input
+# uievents/#event-type-unload 3.2.3.2 unload: no page; a document's unloading fires it, and the page that would show it is gone
+# uievents/#event-type-abort 3.2.3.3 abort: no page; a figure cannot hold a load in progress for the reader to stop
+# uievents/#event-type-error 3.2.3.4 error: no page; a resource's failure fires it, not a user's input
+uievents/#event-type-select 3.2.3.5 select
+    select-event.html
+# uievents/#events-focusevent 3.3 Focus Events: no page; it holds a note on the guidelines followed
+uievents/#interface-focusevent 3.3.1 Interface FocusEvent
+    focus-related-target.html
+# uievents/#idl-focusevent 3.3.1.1 FocusEvent: no page; it is the interface's IDL
+# uievents/#idl-focuseventinit 3.3.1.2 FocusEventInit: no page; a dictionary for constructing events
+uievents/#events-focusevent-event-order 3.3.2 Focus Event Order
+    focus-event-order.html
+uievents/#events-focusevent-doc-focus 3.3.3 Document Focus and Focus Context
+    focus-context.html
+uievents/#events-focus-types 3.3.4 Focus Event Types
+    focus-bubbling.html
+uievents/#event-type-blur 3.3.4.1 blur
+    blur.html
+uievents/#event-type-focus 3.3.4.2 focus
+    focus.html
+# uievents/#event-type-focusin 3.3.4.3 focusin: no page; that it follows focus is on focus-event-order.html, and that it bubbles on focus-bubbling.html
+# uievents/#event-type-focusout 3.3.4.4 focusout: no page; that it follows blur is on focus-event-order.html, and that it bubbles on focus-bubbling.html
+# uievents/#events-inputevents 3.4 Input Events: no page; it introduces the module
+uievents/#interface-inputevent 3.4.1 Interface InputEvent
+    input-event.html
+# uievents/#idl-inputevent 3.4.1.1 InputEvent: no page; it is the interface's IDL, whose attributes input-event.html shows
+# uievents/#idl-inputeventinit 3.4.1.2 InputEventInit: no page; a dictionary for constructing events
+uievents/#events-inputevent-event-order 3.4.2 Input Event Order
+    input-event-order.html
+# uievents/#events-input-types 3.4.3 Input Event Types: no page; it introduces the types that follow
+uievents/#event-type-beforeinput 3.4.3.1 beforeinput
+    beforeinput.html
+uievents/#event-type-input 3.4.3.2 input
+    input.html
+# uievents/#events-keyboardevents 3.5 Keyboard Events: no page; it introduces the module
+uievents/#interface-keyboardevent 3.5.1 Interface KeyboardEvent
+    keyboard-event.html
+# uievents/#idl-keyboardevent 3.5.1.1 KeyboardEvent: no page; it is the interface's IDL, whose attributes keyboard-event.html shows
+# uievents/#idl-keyboardeventinit 3.5.1.2 KeyboardEventInit: no page; a dictionary for constructing events
+uievents/#events-keyboard-key-location 3.5.2 Keyboard Event Key Location
+    key-location.html
+# uievents/#event-modifier-initializers 3.5.3 Event Modifier Initializers: no page; a dictionary for constructing events
+# uievents/#keyboardevent-algorithms 3.5.4 KeyboardEvent Algorithms: no page; it holds the global state that follows
+# uievents/#keyboardevent-global-state 3.5.4.1 Global State for KeyboardEvent: no page; it holds the state that follows
+# uievents/#keyboardevent-global-ua 3.5.4.1.1 User Agent-Level State: no page; the key modifier state is what modifier-keys.html and modifier-shortcuts.html show
+uievents/#events-keyboard-event-order 3.5.5 Keyboard Event Order
+    keyboard-event-order.html
+    keyboard-event-target.html
+# uievents/#events-keyboard-types 3.5.6 Keyboard Event Types: no page; it introduces the types that follow
+uievents/#event-type-keydown 3.5.6.1 keydown
+    keydown-default-actions.html
+# uievents/#event-type-keyup 3.5.6.2 keyup: no page; that it comes last is on keyboard-event-order.html, and that a canceled keydown keeps it on cancelable-keys.html
+# uievents/#events-compositionevents 3.6 Composition Events: no page; what a session is, is on composition-event-order.html
+# uievents/#interface-compositionevent 3.6.1 Interface CompositionEvent: no page; its data is on the pages of the composition events
+# uievents/#idl-compositionevent 3.6.1.1 CompositionEvent: no page; it is the interface's IDL
+# uievents/#idl-compositioneventinit 3.6.1.2 CompositionEventInit: no page; a dictionary for constructing events
+uievents/#events-composition-order 3.6.2 Composition Event Order
+    composition-event-order.html
+uievents/#events-composition-handwriting 3.6.3 Handwriting Recognition Systems
+    handwriting.html
+uievents/#events-composition-canceling 3.6.4 Canceling Composition Events
+    composition-canceling.html
+uievents/#events-composition-key-events 3.6.5 Key Events During Composition
+    composition-key-events.html
+uievents/#events-composition-input-events 3.6.6 Input Events During Composition
+    composition-input-events.html
+# uievents/#events-composition-types 3.6.7 Composition Event Types: no page; it introduces the types that follow
+uievents/#event-type-compositionstart 3.6.7.1 compositionstart
+    compositionstart.html
+uievents/#event-type-compositionupdate 3.6.7.2 compositionupdate
+    compositionupdate.html
+uievents/#event-type-compositionend 3.6.7.3 compositionend
+    compositionend.html
+# uievents/#keys 4 Keyboard events and key values: no page; it introduces the sections that follow
+# uievents/#keyboard-input 4.1 Keyboard Input: no page; it is informative, and names the aspects of a keyboard
+# uievents/#key-legends 4.1.1 Key Legends: no page; it is informative, and what a key's legend has no bearing on is on key-and-code.html
+# uievents/#keys-codevalues 4.2 Key codes: no page; it introduces the sections that follow
+uievents/#code-motivation 4.2.1 Motivation for the code Attribute
+    code-wasd.html
+uievents/#relationship-between-key-code 4.2.2 The Relationship Between key and code
+    key-and-code.html
+uievents/#code-examples 4.2.3 code Examples
+    code-examples.html
+uievents/#code-virtual-keyboards 4.2.4 code and Virtual Keyboards
+    code-virtual-keyboards.html
+uievents/#keys-keyvalues 4.3 Keyboard Event key Values
+    key-values.html
+uievents/#keys-modifiers 4.3.1 Modifier keys
+    modifier-keys.html
+    modifier-shortcuts.html
+    modifier-fn.html
+uievents/#keys-dead 4.3.2 Dead keys
+    dead-keys.html
+    dead-keys-aborted.html
+uievents/#keys-IME 4.3.3 Input Method Editors
+    ime.html
+uievents/#keys-IME-keys 4.3.3.1 Input Method Editor mode keys
+    ime-mode-keys.html
+uievents/#keys-cancelable-keys 4.3.4 Default actions and cancelable keyboard events
+    cancelable-keys.html
+    cancelable-dead-keys.html
+# uievents/#external-algorithms 5 External Algorithms: no page; it introduces the algorithms that follow
+# uievents/#external-dom-algorithms 5.1 Core DOM Algorithms: no page; it holds only a note
+# uievents/#external-pointerlock-algorithms 5.2 PointerLock Algorithms: no page; it introduces the algorithms that follow
+# uievents/#pointer-lock-global-state 5.2.1 Global State for PointerLock: no page; it holds the state that follows
+# uievents/#pointer-lock-global-window 5.2.1.1 Window-Level State: no page; the last mouse move is what mouse-movement.html subtracts
+# uievents/#initialize-pointerlock-attributes-for-mouseevent-id 5.2.2 initialize PointerLock attributes for MouseEvent: no page; it sets an event object's attributes to 0
+uievents/#set-pointerlock-attributes-for-mousemove-id 5.2.3 set PointerLock attributes for mousemove
+    mouse-movement.html
+# uievents/#legacy-event-initializers 6 Legacy Event Initializers: no page; initializers construct event objects
+# uievents/#legacy-event-initializer-interfaces 6.1 Legacy Event Initializer Interfaces: no page; initializers construct event objects
+# uievents/#idl-interface-UIEvent-initializers 6.1.1 Initializers for interface UIEvent: no page; an initializer constructs event objects
+# uievents/#idl-interface-KeyboardEvent-initializers 6.1.2 Initializers for interface KeyboardEvent: no page; an initializer constructs event objects
+# uievents/#idl-interface-CompositionEvent-initializers 6.1.3 Initializers for interface CompositionEvent: no page; an initializer constructs event objects
+# uievents/#legacy-key-attributes 7 Legacy Key & Mouse Event Attributes: no page; it introduces the sections that follow
+# uievents/#legacy-UIEvent 7.1 Legacy UIEvent supplemental interface: no page; it introduces the interface that follows
+uievents/#legacy-interface-UIEvent 7.1.1 Interface UIEvent (supplemental)
+    which.html
+# uievents/#legacy-dictionary-UIEventInit 7.1.2 Interface UIEventInit (supplemental): no page; a dictionary for constructing events
+# uievents/#legacy-KeyboardEvent 7.2 Legacy KeyboardEvent supplemental interface: no page; it introduces the interface that follows
+uievents/#legacy-interface-KeyboardEvent 7.2.1 Interface KeyboardEvent (supplemental)
+    char-code.html
+# uievents/#legacy-dictionary-KeyboardEventInit 7.2.2 Interface KeyboardEventInit (supplemental): no page; a dictionary for constructing events
+# uievents/#legacy-key-models 7.3 Legacy key models: no page; its two models are on keypress-key-code.html
+uievents/#determine-keydown-keyup-keyCode 7.3.1 How to determine keyCode for keydown and keyup events
+    key-code.html
+uievents/#determine-keypress-keyCode 7.3.2 How to determine keyCode for keypress events
+    keypress-key-code.html
+uievents/#fixed-virtual-key-codes 7.3.3 Fixed virtual key codes
+    fixed-key-codes.html
+uievents/#optionally-fixed-virtual-key-codes 7.3.4 Optionally fixed virtual key codes
+    punctuation-key-codes.html
+# uievents/#legacy-event-types 8 Legacy Event Types: no page; it introduces the sections that follow
+# uievents/#legacy-uievent-events 8.1 Legacy UIEvent events: no page; it introduces the types that follow
+# uievents/#legacy-uievent-event-types 8.1.1 Legacy UIEvent event types: no page; it introduces the type that follows
+uievents/#event-type-DOMActivate 8.1.1.1 DOMActivate
+    dom-activate.html
+uievents/#legacy-uievent-event-order 8.1.2 Activation event order
+    activation-event-order.html
+# uievents/#legacy-focusevent-events 8.2 Legacy FocusEvent events: no page; it introduces the types that follow
+# uievents/#legacy-focusevent-event-types 8.2.1 Legacy FocusEvent event types: no page; it introduces the types that follow
+uievents/#event-type-DOMFocusIn 8.2.1.1 DOMFocusIn
+    dom-focus-in.html
+uievents/#event-type-DOMFocusOut 8.2.1.2 DOMFocusOut
+    dom-focus-out.html
+uievents/#legacy-focusevent-event-order 8.2.2 Legacy FocusEvent event order
+    legacy-focus-event-order.html
+# uievents/#legacy-keyboardevent-events 8.3 Legacy KeyboardEvent events: no page; it introduces the type that follows
+# uievents/#legacy-keyboardevent-event-types 8.3.1 Legacy KeyboardEvent event types: no page; it introduces the type that follows
+uievents/#event-type-keypress 8.3.1.1 keypress
+    keypress.html
+uievents/#keypress-event-order 8.3.2 keypress event order
+    keypress-order.html
+# uievents/#legacy-textevent-events 8.4 Legacy TextEvent events: no page; it gives TextEvent's IDL, and defines textInput in another document
+# uievents/#extending-events 9 Extending Events: no page; it is informative, on events that others define
+# uievents/#extending-events-intro 9.1 Introduction: no page; it is informative
+# uievents/#extending-events-Custom_Events 9.2 Custom Events: no page; events that scripts dispatch, not a user's input
+# uievents/#extending-events-Impl_Extensions 9.3 Implementation-Specific Extensions: no page; it is informative
+# uievents/#extending-events-prefixes 9.3.1 Known Implementation-Specific Prefixes: no page; it lists prefixes
+# uievents/#security-considerations 10 Security Considerations: no page; nothing to see or act on
+# uievents/#acknowledgements-contributors 11 Acknowledgements: no page
+# uievents/#glossary 12 Glossary: no page; it defines terms
+# uievents-key/#introduction 1 Introduction: no page; it introduces the specification
+# uievents-key/#style-conventions 1.1 Stylistic Conventions: no page; it explains the document's notation
+uievents-key/#key-attr-values 2 Keyboard Event key Attribute Values
+    key-attribute-values.html
+uievents-key/#keys-unicode 2.1 Unicode Values
+    key-strings.html
+uievents-key/#control 2.1.1 Control Characters
+    control-keys.html
+# uievents-key/#selecting-key-attribute-values 2.2 Selecting key Attribute Values: no page; it defines glyph modifier keys, which key-selection.html shows
+uievents-key/#h-clipboard-read 2.2.1 select an appropriate key attribute value
+    key-selection.html
+# uievents-key/#named-key-attribute-values 3 Named key Attribute Values: no page; it introduces the tables that follow
+# uievents-key/#keys-special 3.1 Special Keys: no page; which key a browser cannot identify depends on the system, and a figure cannot ask for one
+uievents-key/#keys-modifier 3.2 Modifier Keys
+    key-values-modifier.html
+uievents-key/#keys-whitespace 3.3 Whitespace Keys
+    key-values-whitespace.html
+uievents-key/#keys-navigation 3.4 Navigation Keys
+    key-values-navigation.html
+uievents-key/#keys-editing 3.5 Editing Keys
+    key-values-editing.html
+uievents-key/#keys-ui 3.6 UI Keys
+    key-values-ui.html
+uievents-key/#keys-device 3.7 Device Keys
+    key-values-device.html
+uievents-key/#keys-composition 3.8 IME and Composition Keys
+    key-values-composition.html
+uievents-key/#keys-function 3.9 General-Purpose Function Keys
+    key-values-function.html
+uievents-key/#keys-multimedia 3.10 Multimedia Keys
+    key-values-multimedia.html
+# uievents-key/#keys-multimedia-numpad 3.11 Multimedia Numpad Keys: no page; the keys of phones' and remote controls' keypads, which a computer lacks
+uievents-key/#keys-audio 3.12 Audio Keys
+    key-values-audio.html
+# uievents-key/#keys-speech 3.13 Speech Keys: no page; keys of devices that a computer keyboard lacks
+uievents-key/#keys-apps 3.14 Application Keys
+    key-values-application.html
+uievents-key/#keys-browser 3.15 Browser Keys
+    key-values-browser.html
+# uievents-key/#keys-mobile 3.16 Mobile Phone Keys: no page; keys of phones, which a computer keyboard lacks
+# uievents-key/#keys-tv 3.17 TV Keys: no page; keys of televisions' remote controls
+# uievents-key/#keys-media-controller 3.18 Media Controller Keys: no page; keys of media remote controls
+# uievents-key/#accessibility 4 Accessibility: no page; nothing to see or act on
+# uievents-key/#i18n 5 I18n: no page; nothing to see or act on
+# uievents-key/#security 6 Security Considerations: no page; nothing to see or act on
+# uievents-key/#privacy 7 Privacy Considerations: no page; nothing to see or act on
+# uievents-key/#acknowledgements-contributors 8 Acknowledgements: no page
+# uievents-code/#introduction 1 Introduction: no page; it introduces the specification
+# uievents-code/#style-conventions 1.1 Stylistic Conventions: no page; it explains the document's notation
+# uievents-code/#keyboard-layout 2 Keyboard Layout: no page; it is informative, and the keys' codes are on the pages of §3
+# uievents-code/#keyboard-common-layouts 2.1 Standard Keyboard Layouts: no page; it is informative
+# uievents-code/#keyboard-sections 2.1.1 Keyboard Sections: no page; it is informative, and each section has a page under §3
+# uievents-code/#keyboard-101 2.1.2 Standard "101" Keyboard Layout: no page; it is informative, and its keys' codes are on code-writing-system.html
+# uievents-code/#keyboard-101alt 2.1.3 Alternate "101" Keyboard Layout: no page; it is informative, and its keys' codes are on code-writing-system.html
+# uievents-code/#keyboard-102 2.1.4 Standard "102" Keyboard Layout: no page; it is informative, and its keys' codes are on code-writing-system.html
+# uievents-code/#keyboard-103 2.1.5 Korean "103" Keyboard Layout: no page; it is informative, and its keys' codes are on code-functional.html
+# uievents-code/#keyboard-104 2.1.6 Brazilian "104" Keyboard Layout: no page; it is informative, and its keys' codes are on code-writing-system.html and code-numpad.html
+# uievents-code/#keyboard-106 2.1.7 Japanese "106" Keyboard Layout: no page; it is informative, and its keys' codes are on code-writing-system.html and code-functional.html
+# uievents-code/#keyboard-mac 2.1.8 Apple Keyboard Layout: no page; it is informative
+# uievents-code/#keyboard-laptops 2.1.9 Laptop Keyboard Layouts: no page; it is informative
+# uievents-code/#other-locales 2.1.10 Keyboard Layouts For Other Locales: no page; it is informative
+# uievents-code/#keyboard-mobile 2.2 Mobile Keypads: no page; it is informative, on phones' keypads
+# uievents-code/#remote-control 2.3 Media Remote Controls: no page; it is informative, on remote controls
+# uievents-code/#keyboard-chording-virtual 2.4 Virtual Keyboards and Chording Keyboards: no page; what an on-screen keyboard reports is on code-virtual-keyboards.html
+# uievents-code/#code-value-tables 3 Keyboard Event code Value Tables: no page; it introduces the tables that follow
+# uievents-code/#key-alphanumeric-section 3.1 Alphanumeric Section: no page; it introduces the two groups of keys that follow
+uievents-code/#key-alphanumeric-writing-system 3.1.1 Writing System Keys
+    code-writing-system.html
+uievents-code/#key-alphanumeric-functional 3.1.2 Functional Keys
+    code-functional.html
+uievents-code/#key-controlpad-section 3.2 Control Pad Section
+    code-control-pad.html
+uievents-code/#key-arrowpad-section 3.3 Arrow Pad Section
+    code-arrow-pad.html
+uievents-code/#key-numpad-section 3.4 Numpad Section
+    code-numpad.html
+uievents-code/#key-function-section 3.5 Function Section
+    code-function.html
+uievents-code/#key-media 3.6 Media Keys
+    code-media.html
+# uievents-code/#key-legacy 3.7 Legacy, Non-Standard and Special Keys: no page; keys that modern keyboards lack
+# uievents-code/#accessibility 4 Accessibility: no page; nothing to see or act on
+# uievents-code/#i18n 5 I18n: no page; nothing to see or act on
+# uievents-code/#security 6 Security Considerations: no page; nothing to see or act on
+# uievents-code/#privacy 7 Privacy Considerations: no page; nothing to see or act on
+# uievents-code/#acknowledgements-contributors 8 Acknowledgements: no page

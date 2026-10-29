@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>counter-set and counter-increment</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage h3, .pr-stage p { margin: 0; font-size: 13px; line-height: 20px; font-weight: normal; }
+  .doc { counter-reset: chapter section; }
+  .doc h3::before { content: "Chapter " counter(chapter) ". "; counter-increment: chapter; counter-set: section; }
+  .doc p::before { content: counter(chapter) "." counter(section) " "; counter-increment: section; }
+  .seven { counter-reset: n 3; }
+  .seven .s::before { counter-set: n 7; content: counter(n) " "; }
+  .seven .k::before { content: counter(n) " "; }
+  .seven .z::before { counter-set: n; content: counter(n) " "; }
+  .twice { counter-reset: n 1; }
+  .twice div::before { counter-increment: n 2 n 3; content: counter(n) " "; }
+  .last { counter-reset: n 1; }
+  .last div::before { counter-set: n 5 n 9; content: counter(n) " "; }
+  .fresh div::before { counter-increment: m 4; content: counter(m) " "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.2 Manipulating Counter Values: the counter-increment and counter-set properties</div>
+  <h1>counter-set and counter-increment</h1>
+  <p class=pr-lede><q>Sets (for 'counter-set') or increments (for 'counter-increment') the value of the named counter on
+  the element to/by the specified &lt;integer&gt;. If the &lt;integer&gt; is omitted, it defaults to '1' (for
+  'counter-increment') or '0' (for 'counter-set').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#increment-set">CSS Lists and Counters 3 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Setting a value</h2>
+  <figure>
+    <div class="pr-stage pr-text seven"><div class=k>a</div><div class=s>b</div><div class=k>c</div><div class=z>d</div></div>
+    <figcaption>From a reset to 3: "3 a"; <code>counter-set: n 7</code>, "7 b"; "7 c" keeps it; <code>counter-set:
+    n</code>, "0 d".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text doc"><h3>Loomings</h3><p>First</p><p>Second</p><h3>The Carpet-Bag</h3><p>Third</p></div>
+    <figcaption>The example, in a stage that resets both counters: each chapter sets <code>section</code> to 0. "Chapter 1. Loomings", "1.1", "1.2",
+    "Chapter 2. The Carpet-Bag", "2.1".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A name given twice; a name not yet there</h2>
+  <p><q>If multiple instances of the same &lt;counter-name&gt; occur in the property value, they are all processed, in
+  order. Thus increments will compound, but only the last set value will take effect.</q> <q>If there is not currently
+  a counter of the given name on the element, the element instantiates a new counter of the given name with a starting
+  value of '0' before setting or incrementing its value.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text twice"><div>a</div><div>b</div></div>
+    <figcaption><code>n 2 n 3</code> from 1: "6 a", "11 b".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text last"><div>a</div></div>
+    <figcaption><code>counter-set: n 5 n 9</code>: "9 a".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text fresh"><div>a</div><div>b</div></div>
+    <figcaption>No reset of <code>m</code>; <code>m 4</code>: "4 a", and "4 b": each <code>::before</code> makes its
+    own.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

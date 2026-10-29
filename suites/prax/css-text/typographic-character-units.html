@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Typographic character units</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ko { font: 20px/30px "PR Noto Sans KR"; padding: 0 4px; }
+  .s { padding: 0 6px; font: 20px/30px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 1.4 Characters and Letters</div>
+  <h1>Typographic character units</h1>
+  <p class=pr-lede><q>A UA must use the extended grapheme cluster (not legacy grapheme cluster), as defined in UAX29,
+  as the basis for its typographic character unit.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#characters">CSS Text 4 §1.4</a></span></p>
+</header>
+
+<section>
+  <h2>Spacing goes between clusters, not inside them</h2>
+  <p>Each stage has <code>letter-spacing: 10px</code>, added between units.</p>
+  <figure>
+    <div class="pr-stage s" style="letter-spacing: 10px">e&#x301;e&#x301;e</div>
+    <figcaption>"e" and U+0301 COMBINING ACUTE, twice, then "e": three units, the accents on their letters, the
+    three letters evenly apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ko" style="letter-spacing: 10px">&#x1112;&#x1161;&#x11AB;&#x1112;&#x1161;&#x11AB;</div>
+    <figcaption>The conjoining jamo ᄒ, ᅡ and ᆫ, twice: two syllables, "한한", 10px apart, not six letters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" style="letter-spacing: 10px; font-family: 'PR Noto Sans Devanagari'">&#x0915;&#x094D;&#x0937;&#x0915;</div>
+    <figcaption>Devanagari क्ष (ka, virama, ssa), then क: the conjunct is drawn whole.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No break inside one</h2>
+  <p><q>CSS never allows soft wrap opportunities within typographic character units.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-details">§6.5</a></span> The stage is 30px
+  wide, with <code>word-break: break-all</code>, which allows a break between any two letters.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="width: 30px; word-break: break-all">e&#x301;&#x323;e&#x301;&#x323;e&#x301;&#x323;e&#x301;&#x323;</div>
+    <figcaption>Four letters each with two marks, three to a line: every mark stays above or below its letter.
+    <span class=pr-flag>Chrome</span> does not break between them at all: the four run past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

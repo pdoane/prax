@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-content in table cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .pr-table { width: 200px; height: 80px; }
+  .pr-table-cell { height: 80px; width: 25%; font-size: 13px; line-height: 20px; }
+  .big { font-size: 26px; line-height: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.1.1 Block Containers (Including Table Cells), table cells</div>
+  <h1>align-content in table cells</h1>
+  <p class=pr-lede><q>For table cells, the behavior of align-content: normal depends on the computed value of
+  'vertical-align': top makes it behave as start and bottom makes it behave as end; otherwise middle makes it behave as
+  center, and all other values make it behave as baseline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-block">CSS Box Alignment 3 §5.1.1</a></span>
+  Each stage is one row 80px tall.</p>
+</header>
+
+<section>
+  <h2>normal follows vertical-align</h2>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="vertical-align: top">top</div><div class=pr-table-cell style="vertical-align: middle">mid</div><div class=pr-table-cell style="vertical-align: bottom">bot</div><div class=pr-table-cell style="vertical-align: baseline">base</div></div></div></div>
+    <figcaption><code>vertical-align</code> top, middle, bottom, baseline: text at the top, middle and bottom, and
+    the last at the top, on the row's baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="vertical-align: baseline">Ag</div><div class="pr-table-cell big" style="vertical-align: sub">Ag</div><div class=pr-table-cell style="vertical-align: text-top">Ag</div><div class=pr-table-cell style="vertical-align: middle">Ag</div></div></div></div>
+    <figcaption><code>baseline</code>, <code>sub</code> and <code>text-top</code> all as <code>baseline</code>: the
+    first three on one baseline; the last centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other values override vertical-align</h2>
+  <p>Each cell has <code>vertical-align: middle</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="vertical-align: middle; align-content: start">start</div><div class=pr-table-cell style="vertical-align: middle">mid</div><div class=pr-table-cell style="vertical-align: middle; align-content: end">end</div><div class="pr-table-cell" style="vertical-align: middle; align-content: baseline">base</div></div></div></div>
+    <figcaption><code>align-content</code> <code>start</code>, <code>normal</code>, <code>end</code>,
+    <code>baseline</code>: top, middle, bottom, and the last at the top on the row's baseline. <span class=pr-flag>Firefox</span> All
+    four in the middle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="vertical-align: top; align-content: baseline">Ag</div><div class="pr-table-cell big" style="vertical-align: bottom; align-content: baseline">Ag</div><div class=pr-table-cell style="vertical-align: top; align-content: last baseline">Ag<br>Ag</div><div class="pr-table-cell big" style="vertical-align: top; align-content: last baseline">Ag</div></div></div></div>
+    <figcaption><code>baseline</code> over <code>top</code> and <code>bottom</code>: the first two on one baseline;
+    <code>last baseline</code>: the last two on another, at the bottom. <span class=pr-flag>Chrome</span> The last
+    two at the top, not on one baseline. <span class=pr-flag>Firefox</span> As <code>vertical-align</code>: the second
+    at the bottom, the last two at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

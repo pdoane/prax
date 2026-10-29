@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Animating the 3D attributes with set and animate</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .g { fill: none; stroke: #6b7381; stroke-dasharray: 2 2; }
+  .flip { transform-box: fill-box; transform-origin: center; transform: rotateY(180deg); }
+  .far { transform-box: fill-box; transform-origin: center; transform: translateZ(-100px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 18.1 The animate and set element</div>
+  <h1>Animating the 3D attributes with set and animate</h1>
+  <p class=pr-lede><q>The introduce presentation attributes perspective, perspective-origin, transform-style and
+  backface-visibility are animatable. transform-style and backface-visibility are non-additive.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#svg-animate-element">CSS Transforms 2 §18.1</a></span>
+  Each stage is an <code>svg</code>, 160 by 100, with a blue 80 by 40 rect at (40, 30), where the dashed outline
+  is. The attributes are ones the module says it will introduce, and no figure here is flagged.</p>
+</header>
+
+<section>
+  <h2>set</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><rect class=flip x=40 y=30 width=80 height=40 fill="#4f81bd"><set attributeName="backface-visibility" to="hidden" /></rect></svg></div>
+    <figcaption>The rect with <code>rotateY(180deg)</code> and <code>&lt;set attributeName="backface-visibility"
+    to="hidden"&gt;</code>, from the start: hidden. No browser animates it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><g><set attributeName="perspective" to="100px" /><rect class=far x=40 y=30 width=80 height=40 fill="#4f81bd" /></g></svg></div>
+    <figcaption>The rect with <code>translateZ(-100px)</code> in a group with <code>&lt;set attributeName="perspective"
+    to="100px"&gt;</code>: half its size, 60 to 100 across. No browser animates it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

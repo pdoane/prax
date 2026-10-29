@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerenter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .area { position: relative; height: 80px; margin: 10px 20px; }
+  .stack { position: absolute; top: 10px; left: 80px; width: 100px; height: 60px; box-sizing: border-box; }
+  #a { border: 1px solid #2c5a8f; background: #b9cde6; }
+  #b { top: -1px; left: -1px; border: 1px dashed #9c5f22; }
+  #c { top: -1px; left: -1px; border: 1px dotted #3f7a3f; font-size: 12px; text-align: center; line-height: 58px; }
+  .host { height: 40px; margin: 10px 20px 40px; width: 120px; box-sizing: border-box; position: relative;
+          background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; padding: 0 6px; line-height: 38px; }
+  .away { position: absolute; left: 140px; top: 10px; width: 100px; height: 40px; box-sizing: border-box;
+          background: #f6d7b4; border: 1px solid #9c5f22; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.2 pointerenter</div>
+  <h1>pointerenter</h1>
+  <p class=pr-lede><q>This event type is similar to pointerover but with two differences: pointerenter does not bubble,
+  and its dispatch considers the hit test boundaries of even descendant elements.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerenter">Pointer Events §3.3.2</a></span></p>
+</header>
+<section>
+  <h2>Once for each element entered</h2>
+  <p><q>The step to determine the target of a pointer detects that the pointer has moved into an element or one of its
+  descendants.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerenter">§3.3.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=area><div class=stack id=a><div class=stack id=b><div class=stack id=c>a, b, c</div></div></div></div>
+      <ol class=pr-log data-log="pointerover pointerenter" data-fields="target" data-on=".area" data-lines=4></ol>
+    </div>
+    <figcaption><code>a</code>, its child <code>b</code> and its grandchild <code>c</code> are one box, stacked.
+    Move onto it from the stage: one <code>pointerover</code>, at <code>c</code>, and a <code>pointerenter</code> at
+    each of <code>a</code>, <code>b</code> and <code>c</code>, in that order.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A descendant outside the element</h2>
+  <p><q>its dispatch considers the hit test boundaries of even descendant elements.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerenter">§3.3.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=host id=host>host<div class=away id=away>its child</div></div>
+      <ol class=pr-log data-log="pointerenter pointerleave" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The orange box is the blue box's child, drawn beside it. Move from the stage onto the orange box:
+    <code>pointerenter</code> at <code>host</code>, then at <code>away</code>, though the pointer never crossed the
+    blue box.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

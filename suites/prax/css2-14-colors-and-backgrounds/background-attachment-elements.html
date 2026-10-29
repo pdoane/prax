@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background attachment: elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px; overflow: auto; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>") 10px 10px no-repeat scroll; }
+  .scroller p { margin: 0; padding: 0 0 0 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background attachment: elements</h1>
+  <p class=pr-lede><q>Note that there is only one viewport per view. If an element has a scrolling mechanism (see
+  'overflow'), a 'fixed' background does not move with the element, and a 'scroll' background does not move with the
+  scrolling mechanism.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>An element that scrolls, and a document that scrolls</h2>
+  <p>The image is a 30px blue square, drawn once. Dashed outlines are the elements that have it.</p>
+  <figure>
+    <div class=pr-stage><div id=scrolled class="scroller pr-ghost pr-text"><p>line 1<p>line 2<p>line 3<p>line 4<p>line 5<p>line 6<p>line 7<p>line 8<p>line 9<p>line 10</div></div>
+    <figcaption>An <code>overflow: auto</code> element scrolled 60px, to line 4. Its <code>scroll</code> square at
+    <code>10px 10px</code> stays 10px inside its corner.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px } div { margin: 60px 0 0 40px; width: 120px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) 50px 50px no-repeat fixed }</style><div></div><script>scrollTo(0, 20)</script>"></iframe></div>
+    <figcaption>A frame scrolled 20px: an element 60px down is 40px from its top. A <code>fixed</code> square at
+    <code>50px 50px</code> is 50px from the frame's top and left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only within the element</h2>
+  <p><q>Even if the image is fixed, it is still only visible when it is in the content, padding or border area of the
+  element. Thus, unless the image is tiled ('background-repeat: repeat'), it may be invisible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { margin: 40px 0 0 40px; width: 120px; height: 50px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%234f81bd'/></svg>&quot;) 0 0 no-repeat fixed }</style><div></div>"></iframe></div>
+    <figcaption>An element 40px from the frame's top and left, with a <code>fixed</code> square at <code>0 0</code>, in
+    the frame's corner: outside the element, so nothing shows.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { margin: 40px 0 0 40px; width: 120px; height: 50px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10' fill='%234f81bd'/></svg>&quot;) 0 0 repeat fixed }</style><div></div>"></iframe></div>
+    <figcaption>Tiled 10px squares every 20px from the frame's corner: they show only inside the element, starting at
+    its top left corner.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("scrolled").scrollTop = 60</script>
+</body>
+</html>

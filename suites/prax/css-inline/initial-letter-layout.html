@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline and atomic initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .il, .fl::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .ib { display: inline-block; background: #b9cde6; font: 11px/14px "PR Arimo"; width: 40px; padding: 2px; }
+  img.il { width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.5 Initial Letter Layout</div>
+  <h1>Inline and atomic initial letters</h1>
+  <p class=pr-lede><q>There are two types of initial letter boxes: those that arise from non-replaced inline boxes and
+  those that arise from atomic inlines.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-layout">CSS Inline Layout 3 §7.5</a></span>
+  Each paragraph is 13px PR Literata on 20px lines; the first box has <code>initial-letter: 3</code>.</p>
+</header>
+
+<section>
+  <h2>An inline initial letter</h2>
+  <p><q>For the non-atomic inline initial letter, the box and its contents participate in the same inline formatting
+  context as the line on which it occurs, and a lot of special rules apply to give the expected sizing and
+  alignment.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p fl">With a ::first-letter: its W is sized from the font so it spans three lines.</p></div>
+    <figcaption><code>::first-letter</code>: the W three lines tall, its font size found to fit. <span
+    class=pr-flag>Safari</span> Supports only <code>-webkit-initial-letter</code>: a plain W. <span
+    class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p><span class=il>W</span>ith a span: its W is sized from the font so it spans three lines, cap height to baseline.</p></div>
+    <figcaption>A span: the same. <span class=pr-flag>Chrome</span>
+    Only a <code>::first-letter</code> becomes one: a plain W. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> A plain W.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An atomic initial letter</h2>
+  <p><q>For an atomic initial letter, however, which is either a replaced element or which establishes an independent
+  formatting context for its contents, the sizing of the box (aside from its automatic size in the block axis) and
+  layout of the contents within the box follows the usual rules: it is primarily the positioning of the box which is
+  special.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p><img class=il alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10' fill='%238e44ad'/></svg>">An image 30px wide: its height, auto, is the three lines' span, so it is no longer square.</p></div>
+    <figcaption>An image 30px wide: three lines tall, from the first line's cap height to the third baseline.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A 30px square on the first line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p><span class="il ib">two lines here</span> An inline-block: its text laid out as usual, at 11px.</p></div>
+    <figcaption>An inline-block: its own 11px text unchanged, the box three lines tall. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> An inline-block
+    on the first line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

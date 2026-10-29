@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Decorating boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/30px "PR Arimo"; }
+  .j { padding: 0 6px; font: 20px/40px "PR Noto Sans JP"; }
+  .u { text-decoration: underline #c0392b 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2 Line Decoration: Underline, Overline, and Strike-Through</div>
+  <h1>Decorating boxes</h1>
+  <p class=pr-lede><q>When specified on or propagated to an inline box, that box becomes a decorating box for that
+  decoration, applying the decoration to all its box fragments.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#line-decoration">CSS Text Decoration 4 §2</a></span>
+  Each underline here is red and 2px thick.</p>
+</header>
+
+<section>
+  <h2>All its fragments</h2>
+  <p>A decorating box's decoration is drawn under each of its fragments, on every line it reaches.</p>
+  <figure>
+    <div class="pr-stage t"><span class=u>an inline box broken over lines</span></div>
+    <figcaption>One span on two lines: each line underlined in red from its first letter to its last.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t u" style="text-decoration-style: wavy">a block's lines, then<div>a child block</div></div>
+    <figcaption>On a block, through its anonymous inline box and its in-flow child block: a red wavy line under
+    both lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only to boxes: a ruby base, and nothing under display: contents</h2>
+  <p><q>When specified on or propagated to a ruby container, the decorations are propagated only to the ruby
+  base.</q> <q>Line decorations are propagated through the box tree, not through inheritance, and thus have no effect
+  on descendants when specified on an element with display: contents.</q></p>
+  <figure>
+    <div class="pr-stage j" lang=ja><ruby class=u>漢字<rt>かんじ</rt></ruby>です</div>
+    <figcaption>The underline is on <code>ruby</code>: under 漢字, the base, and not under かんじ, the annotation
+    above it, nor under です.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class=u style="display: contents"><span>no box, no line</span></div></div>
+    <figcaption>The underlined element is <code>display: contents</code>: its child's text has no underline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

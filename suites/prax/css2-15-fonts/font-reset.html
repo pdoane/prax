@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font shorthand resets</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lines { padding: 0 6px; white-space: nowrap; }
+  .lines > div { background: rgba(79, 129, 189, 0.25); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.8 Shorthand font property: the 'font' property</div>
+  <h1>The font shorthand resets</h1>
+  <p class=pr-lede><q>All font-related properties are first reset to their initial values, including those listed in the
+  preceding paragraph. Then, those properties that are given explicit values in the 'font' shorthand are set to those
+  values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-shorthand.html">The font shorthand</a>.</p>
+</header>
+
+<section>
+  <h2>What is not given is normal</h2>
+  <p><q>In the first three rules above, the 'font-style', 'font-variant' and 'font-weight' are not explicitly
+  mentioned, which means they are all three set to their initial value ('normal').</q> Each stage is bold, italic and
+  small-caps, on 40px lines, and its child sets <code>font</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <figure>
+    <div class="pr-stage lines" style="font: italic small-caps bold 16px/40px Georgia, serif">Parent <div>the parent</div></div>
+    <figcaption>The second line inherits: bold italic small capitals, on a 40px line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines" style="font: italic small-caps bold 16px/40px Georgia, serif">Parent <div id=reset style="font: 16px Georgia, serif">font: 16px</div></div>
+    <figcaption><code>font: 16px Georgia, serif</code>: upright, not bold, lower case letters, and the line height
+    back to <code>normal</code>, its line shorter.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-prop">CSS Fonts 4 §2.7</a></div>
+  <h2>What the shorthand sets, resets, and leaves alone</h2>
+  <p>In the shorthand, font-variant takes only <q>&lt;font-variant-css2&gt; = normal | small-caps</q>. Properties such
+  as font-variant-ligatures and font-kerning are <q>reset-only sub-properties</q>, while font-palette and the
+  font-synthesis longhands <q>are not longhand properties of the font and thus are neither set nor reset by the font
+  property</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-prop">CSS Fonts 4 §2.7</a></span></p>
+  <figure>
+    <div class="pr-stage lines"><div id=css3 style="font: 20px monospace; font: all-small-caps 20px Georgia">all-small-caps</div></div>
+    <figcaption><code>font: 20px monospace; font: all-small-caps 20px Georgia</code>: the text stays in monospace: <code>all-small-caps</code> is no &lt;font-variant-css2&gt;.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines"><div id=synth style="font-synthesis: none; font: bold 24px/40px 'Apple Chancery'">Handgloves</div></div>
+    <figcaption><code>font-synthesis: none</code>, then <code>font: bold</code> Apple Chancery: the shorthand leaves <code>font-synthesis</code> alone, so no bold is synthesized.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

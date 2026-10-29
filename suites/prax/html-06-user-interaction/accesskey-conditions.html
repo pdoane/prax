@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>When an access key does nothing</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.7.3 Processing model</div>
+  <h1>When an access key does nothing</h1>
+  <p class=pr-lede><q>When the user presses the key combination corresponding to the assigned access key for an element, if the
+  element defines a command, the command's Hidden State facet is false (visible), the command's Disabled State facet is
+  also false (enabled), the element is in a document that has a non-null browsing context, and neither the element nor
+  any of its ancestors has a hidden attribute specified, then the user agent must trigger the Action of the
+  command.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#keyboard-shortcuts-processing-model">HTML §6.7.3</a></span></p>
+</header>
+<section>
+  <h2>Disabled, inert, or hidden</h2>
+  <p>A button's Disabled State <q>is true if the element or one of its ancestors is inert, or if the element's
+  disabled state is set</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#using-the-button-element-to-define-a-command">§4.11.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=enabled accesskey=e>enabled, accesskey=e</button>
+        <button class=pr-target id=disabled accesskey=d disabled>disabled, accesskey=d</button>
+        <div inert style="opacity: 0.5"><button class=pr-target id=inert accesskey=i>in an inert div, accesskey=i</button></div>
+        <div hidden><button class=pr-target id=hidden accesskey=h>in a hidden div, accesskey=h</button></div>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Press the access key (Alt, Alt+Shift, or Control+Option, by browser) with <code>e</code>: a click at
+    <code>enabled</code>. With <code>d</code> or <code>i</code>: nothing. With <code>h</code>, for the button in a
+    hidden <code>div</code>, which is not drawn: nothing.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Shown again</h2>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <label class=pr-target><input type=checkbox id=show> show the button below</label>
+        <div id=wrap hidden><button class=pr-target id=shown accesskey=w>accesskey=w</button></div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=1 data-on="#wrap"></ol>
+    </div>
+    <figcaption>Press the access key with <code>w</code>: nothing. Check the checkbox, which removes
+    <code>hidden</code> from the button's parent, and press it again: a click at <code>shown</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The checkbox removes and sets hidden on the button's parent.
+  document.getElementById("show").addEventListener("change", event => {
+      document.getElementById("wrap").hidden = !event.target.checked;
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Untagged images and HTML colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw, .pr-stage img { display: inline-block; vertical-align: top; width: 60px; height: 60px; margin-left: 10px; }
+  .word { font: bold 24px/40px "PR Arimo"; padding: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.5 Color Spaces of Untagged Colors</div>
+  <h1>Untagged images and HTML colors</h1>
+  <p class=pr-lede><q>For compatibility, colors specified in HTML, and untagged images must be treated as being in
+  the sRGB color space unless otherwise specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#untagged">CSS Color 4 §3.5</a></span></p>
+</header>
+
+<section>
+  <h2>An untagged image is sRGB</h2>
+  <p>The image <code>009900.png</code> has pixels of <code>#009900</code> and no profile, gamma or sRGB chunk;
+  <code>009900-sRGB.png</code> has the same pixels, tagged sRGB.</p>
+  <figure>
+    <div class=pr-stage><img alt="" src="../../../third_party/wpt/css/css-color/support/009900.png"><div class=sw style="background: #009900"></div></div>
+    <figcaption>The untagged image beside <code>background: #009900</code>: the same green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" src="../../../third_party/wpt/css/css-color/support/009900.png"><img alt="" src="../../../third_party/wpt/css/css-color/support/009900-sRGB.png"></div>
+    <figcaption>The untagged image beside the one tagged sRGB: the same green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A color in an HTML attribute is sRGB</h2>
+  <figure>
+    <div class="pr-stage word"><font color="#009900">HTML</font> <span style="color: #009900">CSS</span></div>
+    <figcaption><code>&lt;font color="#009900"&gt;</code> beside CSS's <code>color: #009900</code>: both words
+    the same green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table bgcolor="#009900" style="display: inline-table; vertical-align: top; width: 60px; height: 60px; margin-left: 10px; border-spacing: 0"><tr><td></td></tr></table><div class=sw style="background: #009900"></div></div>
+    <figcaption>A table with <code>bgcolor="#009900"</code> beside <code>background: #009900</code>: the same
+    green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

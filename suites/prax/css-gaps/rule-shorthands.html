@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule, row-rule and rule</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .f { display: flex; gap: 10px; }
+  .f > div { width: 30px; padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.4 Gap decoration shorthands</div>
+  <h1>column-rule, row-rule and rule</h1>
+  <p class=pr-lede><q>These shorthand properties set values for the 'column-rule-width', 'column-rule-style', and
+  'column-rule-color' properties, or the 'row-rule-width', 'row-rule-style', and 'row-rule-color' properties,
+  respectively.</q> <code>rule</code> <q>sets 'column-rule' and 'row-rule' to the same values.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-decoration-shorthands">CSS Gaps 1 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Width, style and color in any order</h2>
+  <p>A <q>&lt;gap-rule&gt;</q> is <q>&lt;line-width&gt; || &lt;line-style&gt; || &lt;color&gt;</q>; what it leaves out
+  is reset to the initial value.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="column-rule: 4px dashed #27ae60; row-rule: #8e44ad solid 6px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule: 4px dashed #27ae60; row-rule: #8e44ad solid 6px</code>: green dashes down, a
+    purple line across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="color: #c0392b; rule: dotted"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule: dotted</code>, in a grid whose color is red: every rule dotted, <code>medium</code>,
+    3px, and <code>currentcolor</code>, red. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="rule: 6px solid #d68a3c; row-rule-style: none"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule: 6px solid #d68a3c</code>, then <code>row-rule-style: none</code>: orange rules down,
+    none across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A list of rules</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule: 2px solid #c0392b, 6px dashed #27ae60"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption><code>column-rule: 2px solid #c0392b, 6px dashed #27ae60</code>: thin red and wide green dashed rules
+    in turn. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="column-rule: repeat(2, 6px solid #27ae60), 2px solid #c0392b"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption><code>repeat(2, 6px solid #27ae60), 2px solid #c0392b</code>: two wide green rules, then a thin red
+    one, then green again. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The columns shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 3.3 The column-width and column-count Shorthand: The columns Property</div>
+  <h1>The columns shorthand</h1>
+  <p class=pr-lede><q>This is a shorthand property for setting column-width and column-count. Omitted values are set
+  to their initial values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#columns">CSS Multi-column Layout 1 §3.3</a></span>
+  Each stage is 200px wide, with 10px gaps marked by dashed rules.</p>
+</header>
+
+<section>
+  <h2>A width, a count, or both</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 60px">one two three four five six</div>
+    <figcaption><code>columns: 60px</code>: three columns of 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 2">one two three four</div>
+    <figcaption><code>columns: 2</code>: two columns of 95px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 3 80px">one two three four</div>
+    <figcaption><code>columns: 3 80px</code>: at most three, at least 80px wide: two of 95px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: auto">one two three four</div>
+    <figcaption><code>columns: auto</code>: no columns; the words on one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What it omits, it resets</h2>
+  <p>Each stage first declares <code>column-count: 1</code>, then the shorthand.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-count: 1; columns: 60px">one two three four five six</div>
+    <figcaption><code>columns: 60px</code> sets column-count back to auto: three columns of 60px, not
+    one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-count: 1; column-width: 60px">one two three four five six</div>
+    <figcaption>The longhand <code>column-width: 60px</code> leaves the count at 1: one column, 200px
+    wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

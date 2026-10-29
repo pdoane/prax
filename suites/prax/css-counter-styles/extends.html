@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The extends system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style decimal-paren { system: extends decimal; suffix: ") "; }
+  @counter-style roman-bracket { system: extends upper-roman; prefix: "["; suffix: "] "; }
+  @counter-style ghost { system: extends no-such-style; suffix: "> "; }
+  @counter-style loop-a { system: extends loop-b; suffix: "~ "; }
+  @counter-style loop-b { system: extends loop-a; }
+  @counter-style disc-dash { system: extends disc; suffix: " - "; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol, .pr-stage ul { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.7 Building from Existing Counter Styles: the extends system</div>
+  <h1>The extends system</h1>
+  <p class=pr-lede><q>The extends system allows an author to use the algorithm of another counter style, but alter other
+  aspects, such as the negative sign or the suffix. If a counter style uses the extends system, any unspecified
+  descriptors must be taken from the extended counter style specified, rather than taking their initial values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#extends-system">CSS Counter Styles 3 §3.1.7</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Another style's algorithm, other descriptors</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: decimal-paren"><li>first item<li>second item<li>third item</ol></div>
+    <figcaption>The example's <code>decimal-paren</code>: "1)", "2)", "3)".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: roman-bracket; list-style-position: inside; padding: 0" start=3998><li>3998<li>3999<li>4000</ol></div>
+    <figcaption>Extending <code>upper-roman</code>, its range 1 to 3999 and its fallback come along; inside: "[MMMCMXCVIII]",
+    "[MMMCMXCIX]", "[4000]".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A name that is not a style, and a cycle</h2>
+  <p><q>If the specified counter style name isn't the name of any defined counter style, it must be treated as if it was
+  extending the 'decimal' counter style. If one or more @counter-style rules form a cycle with their extends values,
+  all of the counter styles participating in the cycle must be treated as if they were extending the 'decimal' counter
+  style instead.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: ghost"><li>a<li>b</ol></div>
+    <figcaption>Extending a name no rule defines: "1&gt;", "2&gt;".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: loop-a"><li>a<li>b</ol></div>
+    <figcaption>Two styles extending each other: "1~", "2~".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ul style="list-style-type: disc-dash"><li>a<li>b</ul></div>
+    <figcaption>Extending <code>disc</code>: its standard • with the suffix " - ".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

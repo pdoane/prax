@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex items paint like inline blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; align-items: flex-start; }
+  .box { width: 60px; height: 40px; }
+  section figure .pr-stage { width: 150px; }
+  section figcaption { max-width: 150px; }
+  .ov { width: 60px; height: 40px; background: #b9cde6; }
+  .ov span { display: block; width: 100px; color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.3 Flex Item Z-Ordering</div>
+  <h1>Flex items paint like inline blocks</h1>
+  <p class=pr-lede><q>Flex items paint exactly the same as inline blocks, except that order-modified document order is
+  used in place of raw document order, and z-index values other than auto create a stacking context even if position
+  is static (behaving exactly as if position were relative).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#painting">CSS Flexible Box Layout 2 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Each item paints whole, in order-modified document order</h2>
+  <p>A and B are 60 by 40 and overlap by 20px with <code>margin-left: -20px</code> on the second.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box" style="margin-left: -20px">B</div></div>
+    <figcaption>In document order: B over A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit box" style="order: 1; margin-left: -20px">A</div><div class="pr-b pr-fit box">B</div></div>
+    <figcaption>A <code>order: 1</code>: A is laid out second and paints second, over B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=ov><span>abcdefghij</span></div><div class="pr-b pr-fit box" style="margin-left: -20px"></div></div>
+    <figcaption>Blue's red text runs 40px past it. As an inline block, blue paints all of itself, text too, before
+    orange: orange covers "efghij".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>z-index on a static item</h2>
+  <p>Each stage is a stacking context; A has <code>z-index</code> and <code>position: static</code>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="pr-a pr-fit box" style="z-index: 1">A</div><div class="pr-b pr-fit box" style="margin-left: -20px">B</div></div>
+    <figcaption>A <code>z-index: 1</code>: A over B, though B comes later.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="pr-a pr-fit box" style="z-index: 0">A<div class="pr-c pr-fit" style="position: relative; z-index: -1; width: 30px; margin-left: 10px">C</div></div></div>
+    <figcaption>A <code>z-index: 0</code> holds C <code>z-index: -1</code>: A is a stacking context, so C paints over
+    A's background, not under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking" style="display: flow-root"><div class="pr-a pr-fit box" style="z-index: 1">A</div><div class="pr-b pr-fit box" style="margin-top: -20px; margin-left: 20px; position: relative">B</div></div>
+    <figcaption>For comparison, a block with <code>z-index: 1</code>: it does not apply, and the positioned B
+    paints over A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Synthesized baselines for text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .rule { display: inline-block; width: 200px; height: 0; margin: 0 -194px 0 -6px; border-top: 1px solid; }
+  .r1 { color: #c0392b; } .r2 { color: #2c5a8f; } .r3 { color: #3f7a3f; }
+  .key { font-weight: 600; }
+  .deva { font: 40px/64px "PR Noto Sans Devanagari"; }
+  .ar { font: 40px/64px "PR Arimo"; }
+  .jp { font: 40px/64px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · A.2 A.2: Synthesizing Baselines (and Other Font Metrics) for Text</div>
+  <h1>Synthesized baselines for text</h1>
+  <p class=pr-lede><q>User agents may use the following strategies in the absence of a required metric</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-synthesis-fonts">CSS Inline Layout 3 §A.2</a></span>
+  Each line is a rule with no height, aligned by <code>vertical-align</code> to the baseline it names, of a font
+  that lacks it.</p>
+</header>
+
+<section>
+  <h2>Measured from the glyphs</h2>
+  <p><q>The top edge of the center of the letter Ka can be taken as the hanging baseline.</q> <q>The center of the
+  minus sign (U+2212) can be taken as the mathematical baseline.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage deva"><span class="rule r1" style="vertical-align: hanging"></span><span class="rule r3" style="vertical-align: alphabetic"></span>कमल</div>
+    <figcaption>PR Noto Sans Devanagari: <span class="key r1">hanging</span> along the top of क, its headstroke;
+    <span class="key r3">alphabetic</span> below, if a UA synthesizes so. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Both on alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar"><span class="rule r2" style="vertical-align: mathematical"></span><span class="rule r3" style="vertical-align: alphabetic"></span>x−+=</div>
+    <figcaption>PR Arimo: <span class="key r2">mathematical</span> through the middle of − and +, if a UA
+    synthesizes so. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Both on
+    alphabetic.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From related metrics</h2>
+  <p><q>The central baseline is defined to be halfway between the ideographic-over and ideographic-under
+  baselines</q>; <q>In CJK fonts the ascent and descent typically match the ideographic-over and ideographic-under
+  baselines, so can be used as a fallback when both are missing.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar"><span class="rule r2" style="vertical-align: central"></span><span class="rule r1" style="vertical-align: ideographic"></span>Hx永</div>
+    <figcaption>PR Arimo, a font with no ideographic metrics: <span class="key r1">ideographic</span> and <span
+    class="key r2">central</span> derived from its ascent and descent, central halfway between them. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Both on alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage jp"><span class="rule r2" style="vertical-align: central"></span><span class="rule r1" style="vertical-align: ideographic"></span>Hx永</div>
+    <figcaption>PR Noto Sans JP, which has <code>ideo</code> but no <code>idtp</code>: <span class="key
+    r2">central</span> 0.5em above <span class="key r1">ideographic</span>, which <q>are typically 1em apart</q>,
+    across the middle of 永. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Both on
+    alphabetic.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

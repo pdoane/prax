@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Replaced elements with neither a ratio nor a size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 80px; overflow: hidden; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.1 Intrinsic Sizes, no ratio</div>
+  <h1>Replaced elements with neither a ratio nor a size</h1>
+  <p class=pr-lede><q>If it has no preferred aspect ratio: For both the min-content size and max-content size: If the
+  box has a &lt;length&gt; as its computed minimum size (min-width/min-height) in that dimension, use that size.
+  Otherwise, use 300px for the width and/or 150px for the height as needed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span>
+  Each image is an SVG with no size and no ratio; each stage, 150 by 80, clips what overflows it, and the image's size
+  reads back below.</p>
+</header>
+
+<section>
+  <h2>300 by 150</h2>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" id=n1 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>Auto: 300 by 150, filling the stage. Reads <code class=pr-computed data-of=n1 data-dom=width></code>
+    by <code class=pr-computed data-of=n1 data-dom=height></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=n2 style="width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: min-content</code>: also 300px. Reads <code class=pr-computed data-of=n2 data-dom=width></code>. <span
+    class=pr-flag>Firefox</span> 0, so nothing shows.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Or the length minimum</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=n3 style="min-width: 50px; min-height: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>min-width: 50px; min-height: 30px</code>: 50 by 30. Reads <code class=pr-computed data-of=n3
+    data-dom=width></code> by <code class=pr-computed data-of=n3 data-dom=height></code>. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 300 by 150.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=n4 style="width: max-content; min-width: 50px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: max-content; min-width: 50px</code>: 50px wide. Reads <code class=pr-computed data-of=n4
+    data-dom=width></code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 300px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" id=n5 style="min-width: 20%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>min-width: 20%</code> is not a &lt;length&gt;: 300px. Reads <code class=pr-computed data-of=n5 data-dom=width></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

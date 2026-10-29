@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/60px "PR Literata"; white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .big { font-size: 44px; }
+  .deva { font-family: "PR Noto Sans Devanagari"; }
+  .jp { font-family: "PR Noto Sans JP"; }
+  .rule { display: inline-block; width: 200px; height: 0; margin-right: -200px; margin-left: -6px; border-top: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 3.1 Introduction to Baselines</div>
+  <h1>Baselines</h1>
+  <p class=pr-lede><q>A baseline is a line along the inline axis of a line box along which individual glyphs of text
+  are aligned.</q> Baselines <q>guide the alignment of glyphs from different fonts or font sizes when
+  typesetting.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-intro">CSS Inline Layout 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Two sizes on one baseline</h2>
+  <p>Each stage is 20px text on 60px lines; the red line is the line's alphabetic baseline.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline style="margin-left: -6px"></span>Ap <span class=big>Ap</span> Hx</div>
+    <figcaption>20px and 44px Latin: A, p's bowl and H rest on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline style="margin-left: -6px"></span>Ap <span class="big jp">Ap漢字</span></div>
+    <figcaption>A second font, Noto Sans JP, at 44px: its Latin rests on the same red line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each script its baseline</h2>
+  <p><q>Different writing systems prefer different baselines.</q> <q>A well-constructed font contains a baseline
+  table, which indicates the position of one or more baselines within the font's design coordinate space.</q> In each
+  stage the parent's <code>dominant-baseline</code> names the baseline its text and a 44px span are aligned by; the
+  red line is that baseline, marked by a rule with <code>vertical-align</code> set to it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage deva" style="dominant-baseline: hanging"><span class=rule style="vertical-align: hanging"></span>कमल <span class=big>कमल</span></div>
+    <figcaption>Devanagari, <code>hanging</code>: both sizes hang from the red line by their headstrokes, a
+    baseline the font lacks and the UA synthesizes. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> Both sizes stand on the alphabetic baseline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage jp" style="dominant-baseline: ideographic"><span class=rule style="vertical-align: ideographic"></span>漢字 <span class=big>漢字</span></div>
+    <figcaption>Japanese, <code>ideographic</code>: the bottoms of both sizes' em boxes on the red line, at
+    <code>ideo</code> in the font's table, 0.12em below the alphabetic baseline. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Alphabetic: the 44px characters reach lower.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

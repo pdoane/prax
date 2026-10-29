@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default alignment in page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 6.2 Page-margin boxes and default values</div>
+  <h1>Default alignment in page-margin boxes</h1>
+  <p class=pr-lede><q>Properties used within page or margin contexts take their initial values from their respective property definitions; however, user agents must behave as though the values in the following table were established by rules in the UA default style sheet.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#margin-text-alignment">CSS Paged Media 3 §6.2</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Toward the page area, or centered</h2>
+  <p>Each box holds an 'x'. Corners: <code>text-align: right</code> at the left, <code>left</code> at the right. Top and bottom boxes: <code>left</code>, <code>center</code>, <code>right</code>. All of these are <code>vertical-align: middle</code>. Left and right boxes: <code>text-align: center</code>, and <code>top</code>, <code>middle</code>, <code>bottom</code>.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-left-corner { content: 'x'; color: white; background: #8e44ad } @top-left { content: 'x'; color: white; background: #4f81bd } @top-center { content: 'x'; color: white; background: #6aa36a } @top-right { content: 'x'; color: white; background: #4f81bd } @top-right-corner { content: 'x'; color: white; background: #8e44ad } @bottom-right-corner { content: 'x'; color: white; background: #8e44ad } @bottom-right { content: 'x'; color: white; background: #4f81bd } @bottom-center { content: 'x'; color: white; background: #6aa36a } @bottom-left { content: 'x'; color: white; background: #4f81bd } @bottom-left-corner { content: 'x'; color: white; background: #8e44ad } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>The 'x' of the top left corner is at its right, of top-left at its left, of top-center in the middle, of top-right at its right, of the top right corner at its left; each halfway down. The same at the bottom. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px 40px; @left-top { content: 'x'; color: white; background: #4f81bd } @left-bottom { content: 'x'; color: white; background: #d68a3c } @right-middle { content: 'x'; color: white; background: #6aa36a } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Left-top and left-bottom, 60px tall each: the 'x' at the top of one and the bottom of the other. Right-middle, 120px tall: the 'x' halfway down. Each centered across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Headings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .t :is(h1, h2, h3, h4, h5, h6) { line-height: 1; background: rgba(79, 129, 189, 0.16); }
+  .t section, .t article, .t aside, .t nav { outline: 1px dashed var(--pr-line); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.3.6 The h1, h2, h3, h4, h5, and h6 elements</div>
+  <h1>Headings</h1>
+  <p class=pr-lede><q>These elements represent headings for their sections.</q> <q>These elements have a heading level
+  given by the number in their name.</q> The look of each level is the user agent's style sheet's.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/sections.html#the-h1,-h2,-h3,-h4,-h5,-and-h6-elements">HTML §4.3.6</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#sections-and-headings">§15.3.6</a></span></p>
+</header>
+<section>
+  <h2>A size and margins for each level, wherever it is</h2>
+  <p><q>:heading { font-weight: bold; }</q> <q>:heading(1) { margin-block: 0.67em; font-size: 2.00em; }</q> and so
+  on: 1.5em, 1.17em, 1em, 0.83em, and 0.67em for levels 6 to 9. The stage's text is 10px, and each heading is tinted,
+  with <code>line-height: 1</code>, so that its tint is as tall as its font size.</p>
+  <figure>
+    <div class="pr-stage t"><h1>h1 Heading</h1><h2>h2 Heading</h2><h3>h3 Heading</h3><h4>h4 Heading</h4><h5>h5 Heading</h5><h6>h6 Heading</h6></div>
+    <figcaption>Bold, and 20px, 15px, 11.7px, 10px, 8.3px and 6.7px tall; between each two, the larger of their
+    margins: 13.4px between h1 and h2, then 12.45px, 13.3px, 13.86px and 15.61px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><h1>h1 in the body</h1><section><h1>h1 in a section</h1></section><article><aside><h1>h1, two deep</h1></aside></article></div>
+    <figcaption>An h1 is level 1 wherever it is: in the body, in a section, and in an aside in an article, each
+    outlined, all three 20px.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG 1.1 writing-mode attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  svg { display: block; font-family: "PR Noto Sans JP"; font-size: 16px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2.1.2 Supporting SVG1.1 writing-mode values in presentational attributes</div>
+  <h1>SVG 1.1 writing-mode attributes</h1>
+  <p class=pr-lede><q>In order to support legacy content with presentational attributes, and to allow authors to
+  create documents that support older clients, SVG UAs must add the following style sheet rules to their default UA
+  stylesheet</q>: <code>tb</code> and <code>tb-rl</code> to <code>vertical-rl</code>, and <code>lr</code>,
+  <code>lr-tb</code>, <code>rl</code> and <code>rl-tb</code> to <code>horizontal-tb</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#svg-writing-mode-markup">CSS Writing Modes 4 §3.2.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>The attribute on SVG text</h2>
+  <p>Each stage is an inline <code>svg</code> 100 by 100 holding a <code>text</code> element centered on its middle.
+  The last uses CSS: <q>Authors who wish to create forwards and backwards-compatible SVG content in CSS syntax can use
+  the CSS forwards-compatible parsing rules to do so</q>.</p>
+  <figure class=s>
+    <div class=pr-stage style="width: 100px"><svg width=100 height=100><text x=50 y=50 text-anchor=middle writing-mode=tb>縦書き</text></svg></div>
+    <figcaption><code>writing-mode="tb"</code>: a column, read downward.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="width: 100px"><svg width=100 height=100><text x=50 y=50 text-anchor=middle writing-mode=tb-rl>縦書き</text></svg></div>
+    <figcaption><code>writing-mode="tb-rl"</code>: the same.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="width: 100px; writing-mode: vertical-rl"><svg width=100 height=100><text x=50 y=50 text-anchor=middle writing-mode=lr>横書き</text></svg></div>
+    <figcaption><code>writing-mode="lr"</code> in a <code>vertical-rl</code> stage: a row.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="width: 100px"><svg width=100 height=100><text x=50 y=50 text-anchor=middle style="writing-mode: tb; writing-mode: vertical-rl">縦書き</text></svg></div>
+    <figcaption><code>writing-mode: tb; writing-mode: vertical-rl</code>: a column either way.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

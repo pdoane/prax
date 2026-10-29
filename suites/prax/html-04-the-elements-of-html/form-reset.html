@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resetting a form</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button, .pad select, .pad input { margin: 0 0 10px; font-size: 12px; vertical-align: top; }
+  .pad textarea { resize: none; }
+  output { padding: 0 4px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.23 Resetting a form</div>
+  <h1>Resetting a form</h1>
+  <p class=pr-lede><q>Let reset be the result of firing an event named reset at form, with the bubbles and cancelable
+  attributes initialized to true.</q> <q>If reset is true, then invoke the reset algorithm of each resettable element
+  whose form owner is form.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#resetting-a-form">HTML §4.10.23</a></span></p>
+</header>
+
+<section>
+  <h2>Each control back to its default</h2>
+  <p><q>Changes made to form controls as part of these algorithms do not count as changes caused by the user (and thus,
+  e.g., do not cause input events to fire).</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#resetting-a-form">§4.10.23</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad oninput="count.value = Number(count.value) + 1">
+        <textarea cols=8 rows=1>default</textarea>
+        <select><option>One<option selected>Two<option>Three</select>
+        <label><input type=checkbox checked> box</label><br>
+        inputs: <output id=count>0</output>
+        <button type=reset>Reset</button>
+      </form>
+      <ol class=pr-log data-log="reset input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Edit the text, pick Three, clear the box: each change logs and counts. Click Reset: "default", Two and
+    the check mark are back, the count is "0", its own default, and only <code>reset</code> is logged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Canceled</h2>
+  <p>The page's script cancels this form's <code>reset</code> event. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#resetting-a-form">§4.10.23</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad id=kept>
+        <textarea cols=8 rows=1>default</textarea>
+        <button type=reset>Reset</button>
+      </form>
+      <ol class=pr-log data-log="reset" data-fields="target cancelable" data-lines=1></ol>
+    </div>
+    <figcaption>Edit the text and click Reset: <code>reset</code> is logged, and the text stays as edited.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the second form's reset.
+  document.getElementById("kept").addEventListener("reset", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

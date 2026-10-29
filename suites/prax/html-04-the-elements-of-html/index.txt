@@ -1,0 +1,692 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+00-supports-4.html
+00-supports-5.html
+00-supports-6.html
+00-supports-7.html
+# html/semantics.html#the-root-element 4.1 The document element: no page; its one element is 4.1.1's
+# html/semantics.html#the-html-element 4.1.1 The html element: no page; the root draws only what it holds, and its lang attribute is a global attribute's
+# html/semantics.html#document-metadata 4.2 Document metadata: no page; its elements are 4.2.1 to 4.2.6
+html/semantics.html#the-head-element 4.2.1 The head element
+    head.html
+# html/semantics.html#the-title-element 4.2.2 The title element: no page; the title is shown in the user agent's own interface, outside the document
+html/semantics.html#the-base-element 4.2.3 The base element
+    base.html
+html/semantics.html#the-link-element 4.2.4 The link element
+    link.html
+    link-title.html
+html/semantics.html#processing-the-media-attribute 4.2.4.1 Processing the media attribute
+    link-media.html
+html/semantics.html#processing-the-type-attribute 4.2.4.2 Processing the type attribute
+    link-type.html
+# html/semantics.html#fetching-and-processing-a-resource-from-a-link-element 4.2.4.3 Fetching and processing a resource from a link element: no page; what a fetched style sheet draws is on link-stylesheet.html, under 4.6.8.23
+# html/semantics.html#processing-link-headers 4.2.4.4 Processing `Link` headers: no page; a header's links preload and preconnect, and its style sheet links do nothing
+# html/semantics.html#early-hints 4.2.4.5 Early hints: no page; resources fetched ahead from a 103 response, which draws nothing
+# html/semantics.html#providing-users-with-a-means-to-follow-hyperlinks-created-using-the-link-element 4.2.4.6 Providing users with a means to follow hyperlinks created using the link element: no page; an interface of the user agent's own, which it may offer
+# html/semantics.html#the-meta-element 4.2.5 The meta element: no page; its kinds of metadata are 4.2.5.1 to 4.2.5.4
+html/semantics.html#standard-metadata-names 4.2.5.1 Standard metadata names
+    meta-color-scheme.html
+# html/semantics.html#other-metadata-names 4.2.5.2 Other metadata names: no page; names for other software, which draw nothing
+html/semantics.html#pragma-directives 4.2.5.3 Pragma directives
+    pragma-directives.html
+    meta-refresh.html
+# html/semantics.html#charset 4.2.5.4 Specifying the document's character encoding: no page; parsing
+html/semantics.html#the-style-element 4.2.6 The style element
+    style.html
+    style-update.html
+# html/semantics.html#interactions-of-styling-and-scripting 4.2.7 Interactions of styling and scripting: no page; when scripts see style sheets, which draws nothing
+html/sections.html#sections 4.3 Sections
+    sections.html
+# html/sections.html#the-body-element 4.3.1 The body element: no page of its own; its margins are on sections.html
+# html/sections.html#the-article-element 4.3.2 The article element: no page of its own; a block, on sections.html
+# html/sections.html#the-section-element 4.3.3 The section element: no page of its own; a block, on sections.html
+# html/sections.html#the-nav-element 4.3.4 The nav element: no page of its own; a block, on sections.html
+# html/sections.html#the-aside-element 4.3.5 The aside element: no page of its own; a block, on sections.html
+html/sections.html#the-h1,-h2,-h3,-h4,-h5,-and-h6-elements 4.3.6 The h1, h2, h3, h4, h5, and h6 elements
+    headings.html
+# html/sections.html#the-hgroup-element 4.3.7 The hgroup element: no page of its own; a block, on sections.html
+# html/sections.html#the-header-element 4.3.8 The header element: no page of its own; a block, on sections.html
+# html/sections.html#the-footer-element 4.3.9 The footer element: no page of its own; a block, on sections.html
+html/sections.html#the-address-element 4.3.10 The address element
+    address.html
+# html/sections.html#headings-and-outlines-2 4.3.11 Headings and outlines: no page; the outline is for tables of contents and the user agent's own interface, and the heading levels it rests on are 4.3.11.1's
+html/sections.html#heading-levels-&-offsets 4.3.11.1 Heading levels & offsets
+    heading-offsets.html
+# html/sections.html#sample-outlines 4.3.11.2 Sample outlines: no page; examples
+# html/sections.html#exposing-outlines-to-users 4.3.11.3 Exposing outlines to users: no page; an interface the user agent is encouraged to offer, outside the document
+# html/sections.html#usage-summary-2 4.3.12 Usage summary: no page; advice to authors
+# html/sections.html#article-or-section 4.3.12.1 Article or section?: no page; advice to authors
+# html/grouping-content.html#grouping-content 4.4 Grouping content: no page; its elements are 4.4.1 to 4.4.16
+html/grouping-content.html#the-p-element 4.4.1 The p element
+    p.html
+html/grouping-content.html#the-hr-element 4.4.2 The hr element
+    hr.html
+html/grouping-content.html#the-pre-element 4.4.3 The pre element
+    pre.html
+html/grouping-content.html#the-blockquote-element 4.4.4 The blockquote element
+    blockquote.html
+html/grouping-content.html#the-ol-element 4.4.5 The ol element
+    ol.html
+html/grouping-content.html#the-ul-element 4.4.6 The ul element
+    ul.html
+html/grouping-content.html#the-menu-element 4.4.7 The menu element
+    menu.html
+html/grouping-content.html#the-li-element 4.4.8 The li element
+    li.html
+html/grouping-content.html#the-dl-element 4.4.9 The dl element
+    dl.html
+# html/grouping-content.html#the-dt-element 4.4.10 The dt element: no page of its own; drawn on dl.html
+# html/grouping-content.html#the-dd-element 4.4.11 The dd element: no page of its own; drawn on dl.html
+html/grouping-content.html#the-figure-element 4.4.12 The figure element
+    figure.html
+# html/grouping-content.html#the-figcaption-element 4.4.13 The figcaption element: no page of its own; drawn on figure.html
+html/grouping-content.html#the-main-element 4.4.14 The main element
+    main.html
+html/grouping-content.html#the-search-element 4.4.15 The search element
+    search.html
+html/grouping-content.html#the-div-element 4.4.16 The div element
+    div.html
+# html/text-level-semantics.html#text-level-semantics 4.5 Text-level semantics: no page; its elements are 4.5.1 to 4.5.28
+html/text-level-semantics.html#the-a-element 4.5.1 The a element
+    a.html
+html/text-level-semantics.html#the-em-element 4.5.2 The em element
+    em.html
+html/text-level-semantics.html#the-strong-element 4.5.3 The strong element
+    strong.html
+html/text-level-semantics.html#the-small-element 4.5.4 The small element
+    small.html
+html/text-level-semantics.html#the-s-element 4.5.5 The s element
+    s.html
+html/text-level-semantics.html#the-cite-element 4.5.6 The cite element
+    cite.html
+html/text-level-semantics.html#the-q-element 4.5.7 The q element
+    q.html
+html/text-level-semantics.html#the-dfn-element 4.5.8 The dfn element
+    dfn.html
+html/text-level-semantics.html#the-abbr-element 4.5.9 The abbr element
+    abbr.html
+html/text-level-semantics.html#the-ruby-element 4.5.10 The ruby element
+    ruby.html
+# html/text-level-semantics.html#the-rt-element 4.5.11 The rt element: no page of its own; its display, ruby-text, is on ruby.html
+html/text-level-semantics.html#the-rp-element 4.5.12 The rp element
+    rp.html
+# html/text-level-semantics.html#the-data-element 4.5.13 The data element: no page; its value is for machines, and it draws only its contents
+# html/text-level-semantics.html#the-time-element 4.5.14 The time element: no page; its datetime value is for machines, and it draws only its contents
+html/text-level-semantics.html#the-code-element 4.5.15 The code element
+    code.html
+html/text-level-semantics.html#the-var-element 4.5.16 The var element
+    var.html
+html/text-level-semantics.html#the-samp-element 4.5.17 The samp element
+    samp.html
+html/text-level-semantics.html#the-kbd-element 4.5.18 The kbd element
+    kbd.html
+html/text-level-semantics.html#the-sub-and-sup-elements 4.5.19 The sub and sup elements
+    sub-sup.html
+html/text-level-semantics.html#the-i-element 4.5.20 The i element
+    i.html
+html/text-level-semantics.html#the-b-element 4.5.21 The b element
+    b.html
+html/text-level-semantics.html#the-u-element 4.5.22 The u element
+    u.html
+html/text-level-semantics.html#the-mark-element 4.5.23 The mark element
+    mark.html
+html/text-level-semantics.html#the-bdi-element 4.5.24 The bdi element
+    bdi.html
+html/text-level-semantics.html#the-bdo-element 4.5.25 The bdo element
+    bdo.html
+# html/text-level-semantics.html#the-span-element 4.5.26 The span element: no page; it draws only its children
+html/text-level-semantics.html#the-br-element 4.5.27 The br element
+    br.html
+html/text-level-semantics.html#the-wbr-element 4.5.28 The wbr element
+    wbr.html
+# html/text-level-semantics.html#usage-summary 4.5.29 Usage summary: no page; advice to authors
+# html/links.html#links 4.6 Links: no page; its parts are 4.6.1 to 4.6.8
+# html/links.html#introduction-2 4.6.1 Introduction: no page; it names the kinds of links, which the later sections show
+html/links.html#links-created-by-a-and-area-elements 4.6.2 Links created by a and area elements
+    hyperlink-activation.html
+# html/links.html#api-for-hyperlink-elements 4.6.3 API for hyperlink elements: no page; the object model
+# html/links.html#api-for-a-and-area-elements 4.6.4 API for a and area elements: no page; the object model
+html/links.html#following-hyperlinks 4.6.5 Following hyperlinks
+    following-hyperlinks.html
+html/links.html#downloading-resources 4.6.6 Downloading resources
+    downloading.html
+# html/links.html#hyperlink-auditing 4.6.7 Hyperlink auditing: no page; pings sent over the network, which draw nothing
+# html/links.html#the-ping-headers 4.6.7.1 The `Ping-From` and `Ping-To` headers: no page; HTTP headers
+# html/links.html#linkTypes 4.6.8 Link types: no page; the types are 4.6.8.1 to 4.6.8.27
+html/links.html#rel-alternate 4.6.8.1 Link type "alternate"
+    alternate-stylesheet.html
+# html/links.html#link-type-author 4.6.8.2 Link type "author": no page; a relationship, which draws nothing
+# html/links.html#link-type-bookmark 4.6.8.3 Link type "bookmark": no page; a relationship, which draws nothing
+# html/links.html#link-type-canonical 4.6.8.4 Link type "canonical": no page; for search engines, which draws nothing
+# html/links.html#link-type-dns-prefetch 4.6.8.5 Link type "dns-prefetch": no page; a lookup ahead of time, which draws nothing
+# html/links.html#link-type-expect 4.6.8.6 Link type "expect": no page; it delays the first rendering until an element is parsed, which a still cannot tell from no delay
+# html/links.html#link-type-external 4.6.8.7 Link type "external": no page; a relationship, which draws nothing
+# html/links.html#link-type-help 4.6.8.8 Link type "help": no page; a relationship, and the cursor that some browsers show for it is a note's
+# html/links.html#rel-icon 4.6.8.9 Link type "icon": no page; the icon is shown in the user agent's interface, outside the document
+# html/links.html#link-type-license 4.6.8.10 Link type "license": no page; a relationship, which draws nothing
+# html/links.html#link-type-manifest 4.6.8.11 Link type "manifest": no page; the manifest is for installing the application, outside the document
+# html/links.html#link-type-modulepreload 4.6.8.12 Link type "modulepreload": no page; a fetch ahead of time, which draws nothing
+# html/links.html#link-type-nofollow 4.6.8.13 Link type "nofollow": no page; for search engines, which draws nothing
+# html/links.html#link-type-noopener 4.6.8.14 Link type "noopener": no page; whether a new window's script can reach its opener, which draws nothing
+# html/links.html#link-type-noreferrer 4.6.8.15 Link type "noreferrer": no page; the Referer header and the opener, which draw nothing
+# html/links.html#link-type-opener 4.6.8.16 Link type "opener": no page; whether a new window's script can reach its opener, which draws nothing
+# html/links.html#link-type-pingback 4.6.8.17 Link type "pingback": no page; a server's address, which draws nothing
+# html/links.html#link-type-preconnect 4.6.8.18 Link type "preconnect": no page; a connection ahead of time, which draws nothing
+# html/links.html#link-type-prefetch 4.6.8.19 Link type "prefetch": no page; a fetch ahead of time, which draws nothing
+# html/links.html#link-type-preload 4.6.8.20 Link type "preload": no page; a fetch ahead of time, which draws nothing
+# html/links.html#link-type-privacy-policy 4.6.8.21 Link type "privacy-policy": no page; a relationship, which draws nothing
+# html/links.html#link-type-search 4.6.8.22 Link type "search": no page; a search interface that the user agent may offer, outside the document
+html/links.html#link-type-stylesheet 4.6.8.23 Link type "stylesheet"
+    link-stylesheet.html
+# html/links.html#link-type-tag 4.6.8.24 Link type "tag": no page; a relationship, which draws nothing
+# html/links.html#link-type-terms-of-service 4.6.8.25 Link Type "terms-of-service": no page; a relationship, which draws nothing
+# html/links.html#sequential-link-types 4.6.8.26 Sequential link types: no page; relationships, which draw nothing
+# html/links.html#link-type-next 4.6.8.26.1 Link type "next": no page; a relationship, which draws nothing
+# html/links.html#link-type-prev 4.6.8.26.2 Link type "prev": no page; a relationship, which draws nothing
+# html/links.html#other-link-types 4.6.8.27 Other link types: no page; extensions registered for other software
+# html/edits.html#edits 4.7 Edits: no page; its elements are 4.7.1 and 4.7.2
+html/edits.html#the-ins-element 4.7.1 The ins element
+    ins.html
+html/edits.html#the-del-element 4.7.2 The del element
+    del.html
+# html/edits.html#attributes-common-to-ins-and-del-elements 4.7.3 Attributes common to ins and del elements: no page; cite and datetime are for machines, and draw nothing
+# html/edits.html#edits-and-paragraphs 4.7.4 Edits and paragraphs: no page; advice to authors
+# html/edits.html#edits-and-lists 4.7.5 Edits and lists: no page; advice to authors
+# html/edits.html#edits-and-tables 4.7.6 Edits and tables: no page; advice to authors
+# html/embedded-content.html#embedded-content 4.8 Embedded content: no page; its subsections are walked below
+html/embedded-content.html#the-picture-element 4.8.1 The picture element
+    picture.html
+html/embedded-content.html#the-source-element 4.8.2 The source element
+    source-picture.html
+    source-dimensions.html
+html/embedded-content.html#the-img-element 4.8.3 The img element
+    img.html
+    img-lazy.html
+# html/images.html#images 4.8.4 Images: no page; its subsections are walked below
+# html/images.html#introduction-3 4.8.4.1 Introduction: no page; it is informative
+# html/images.html#adaptive-images 4.8.4.1.1 Adaptive images: no page; it is informative
+# html/images.html#attributes-common-to-source-and-img-elements 4.8.4.2 Attributes common to source, img, and link elements: no page; its subsections are walked below
+html/images.html#srcset-attributes 4.8.4.2.1 Srcset attributes
+    srcset.html
+html/images.html#sizes-attributes 4.8.4.2.2 Sizes attributes
+    sizes.html
+    sizes-auto.html
+# html/images.html#images-processing-model 4.8.4.3 Processing model: no page; its subsections are walked below
+# html/images.html#when-to-obtain-images 4.8.4.3.1 When to obtain images: no page; obtaining images on demand is the user's option, and nothing is drawn differently
+html/images.html#reacting-to-dom-mutations 4.8.4.3.2 Reacting to DOM mutations
+    img-mutations.html
+    img-animation.html
+# html/images.html#the-list-of-available-images 4.8.4.3.3 The list of available images: no page; it is caching, and draws nothing of its own
+# html/images.html#decoding-images 4.8.4.3.4 Decoding images: no page; synchronous and asynchronous decoding present the same final content after the same time
+# html/images.html#updating-the-image-data 4.8.4.3.5 Updating the image data: no page; what it draws is shown with img, srcset and lazy loading
+html/images.html#preparing-an-image-for-presentation 4.8.4.3.6 Preparing an image for presentation
+    image-resolution-exif.html
+html/images.html#selecting-an-image-source 4.8.4.3.7 Selecting an image source
+    image-source.html
+html/images.html#creating-a-source-set-from-attributes 4.8.4.3.8 Creating a source set from attributes
+    default-source.html
+html/images.html#updating-the-source-set 4.8.4.3.9 Updating the source set
+    source-set.html
+# html/images.html#parsing-a-srcset-attribute 4.8.4.3.10 Parsing a srcset attribute: no page; it is parsing
+# html/images.html#parsing-a-sizes-attribute 4.8.4.3.11 Parsing a sizes attribute: no page; it is parsing, and the size it picks is shown on sizes.html
+# html/images.html#normalizing-the-source-densities 4.8.4.3.12 Normalizing the source densities: no page; the densities it gives are shown on srcset.html and sizes.html
+# html/images.html#reacting-to-environment-changes 4.8.4.3.13 Reacting to environment changes: no page; user agents may run it but are not required to
+# html/images.html#alt 4.8.4.4 Requirements for providing text to act as an alternative for images: no page; its subsections are requirements on authors, and what alt text draws is on img.html
+# html/images.html#general-guidelines 4.8.4.4.1 General guidelines: no page; it is guidance for authors
+# html/images.html#a-link-or-button-containing-nothing-but-the-image 4.8.4.4.2 A link or button containing nothing but the image: no page; it is guidance for authors
+# html/images.html#a-phrase-or-paragraph-with-an-alternative-graphical-representation:-charts,-diagrams,-graphs,-maps,-illustrations 4.8.4.4.3 A phrase or paragraph with an alternative graphical representation: charts, diagrams, graphs, maps, illustrations: no page; it is guidance for authors
+# html/images.html#a-short-phrase-or-label-with-an-alternative-graphical-representation:-icons,-logos 4.8.4.4.4 A short phrase or label with an alternative graphical representation: icons, logos: no page; it is guidance for authors
+# html/images.html#text-that-has-been-rendered-to-a-graphic-for-typographical-effect 4.8.4.4.5 Text that has been rendered to a graphic for typographical effect: no page; it is guidance for authors
+# html/images.html#a-graphical-representation-of-some-of-the-surrounding-text 4.8.4.4.6 A graphical representation of some of the surrounding text: no page; it is guidance for authors
+# html/images.html#ancillary-images 4.8.4.4.7 Ancillary images: no page; it is guidance for authors
+# html/images.html#a-purely-decorative-image-that-doesn't-add-any-information 4.8.4.4.8 A purely decorative image that doesn't add any information: no page; it is guidance for authors
+# html/images.html#a-group-of-images-that-form-a-single-larger-picture-with-no-links 4.8.4.4.9 A group of images that form a single larger picture with no links: no page; it is guidance for authors
+# html/images.html#a-group-of-images-that-form-a-single-larger-picture-with-links 4.8.4.4.10 A group of images that form a single larger picture with links: no page; it is guidance for authors
+# html/images.html#a-key-part-of-the-content 4.8.4.4.11 A key part of the content: no page; it is guidance for authors
+# html/images.html#an-image-not-intended-for-the-user 4.8.4.4.12 An image not intended for the user: no page; it is guidance for authors
+# html/images.html#an-image-in-an-e-mail-or-private-document-intended-for-a-specific-person-who-is-known-to-be-able-to-view-images 4.8.4.4.13 An image in an email or private document intended for a specific person who is known to be able to view images: no page; it is guidance for authors
+# html/images.html#guidance-for-markup-generators 4.8.4.4.14 Guidance for markup generators: no page; it is guidance for markup generators
+# html/images.html#guidance-for-conformance-checkers 4.8.4.4.15 Guidance for conformance checkers: no page; it is guidance for conformance checkers
+html/iframe-embed-object.html#the-iframe-element 4.8.5 The iframe element
+    iframe.html
+    iframe-sandbox.html
+    iframe-sandbox-links.html
+    iframe-lazy.html
+html/iframe-embed-object.html#the-embed-element 4.8.6 The embed element
+    embed.html
+html/iframe-embed-object.html#the-object-element 4.8.7 The object element
+    object.html
+    object-nested.html
+html/media.html#the-video-element 4.8.8 The video element
+    video.html
+    video-fit.html
+html/media.html#the-audio-element 4.8.9 The audio element
+    audio.html
+html/media.html#the-track-element 4.8.10 The track element
+    track.html
+# html/media.html#media-elements 4.8.11 Media elements: no page; its subsections are walked below
+# html/media.html#error-codes 4.8.11.1 Error codes: no page; it is object model
+# html/media.html#location-of-the-media-resource 4.8.11.2 Location of the media resource: no page; which resource loads is shown on media-loading.html
+# html/media.html#mime-types 4.8.11.3 MIME types: no page; a type that is skipped is shown on media-loading.html
+# html/media.html#network-states 4.8.11.4 Network states: no page; it is object model
+html/media.html#loading-the-media-resource 4.8.11.5 Loading the media resource
+    media-loading.html
+# html/media.html#offsets-into-the-media-resource 4.8.11.6 Offsets into the media resource: no page; it is the timeline that the object model reports
+# html/media.html#ready-states 4.8.11.7 Ready states: no page; what a video draws in each is shown on video.html
+html/media.html#playing-the-media-resource 4.8.11.8 Playing the media resource
+    media-playing.html
+# html/media.html#seeking 4.8.11.9 Seeking: no page; the frame a seek shows is on media-loading.html, and seeking from the controls on media-controls.html
+# html/media.html#media-resources-with-multiple-media-tracks 4.8.11.10 Media resources with multiple media tracks: no page; its subsections are object model and markup a user does not see
+# html/media.html#audiotracklist-and-videotracklist-objects 4.8.11.10.1 AudioTrackList and VideoTrackList objects: no page; it is object model
+# html/media.html#selecting-specific-audio-and-video-tracks-declaratively 4.8.11.10.2 Selecting specific audio and video tracks declaratively: no page; it is media fragment syntax for which tracks play
+# html/media.html#timed-text-tracks 4.8.11.11 Timed text tracks: no page; which tracks show is on track.html
+# html/media.html#text-track-model 4.8.11.11.1 Text track model: no page; it is the model that track.html draws
+# html/media.html#sourcing-in-band-text-tracks 4.8.11.11.2 Sourcing in-band text tracks: no page; it needs media with tracks of their own
+# html/media.html#sourcing-out-of-band-text-tracks 4.8.11.11.3 Sourcing out-of-band text tracks: no page; which track elements show is on track.html
+# html/media.html#guidelines-for-exposing-cues-in-various-formats-as-text-track-cues 4.8.11.11.4 Guidelines for exposing cues in various formats as text track cues: no page; it is object model
+# html/media.html#text-track-api 4.8.11.11.5 Text track API: no page; it is object model
+# html/media.html#cue-events 4.8.11.11.6 Event handlers for objects of the text track APIs: no page; it is object model
+# html/media.html#best-practices-for-metadata-text-tracks 4.8.11.11.7 Best practices for metadata text tracks: no page; it is guidance for authors
+# html/media.html#identifying-a-track-kind-through-a-url 4.8.11.12 Identifying a track kind through a URL: no page; it is media fragment syntax
+html/media.html#user-interface 4.8.11.13 User interface
+    media-controls.html
+    media-controls-overlay.html
+# html/media.html#time-ranges 4.8.11.14 Time ranges: no page; it is object model
+# html/media.html#the-trackevent-interface 4.8.11.15 The TrackEvent interface: no page; it is object model
+# html/media.html#mediaevents 4.8.11.16 Events summary: no page; it lists the events that media-playing.html and media-controls.html log
+# html/media.html#security-and-privacy-considerations 4.8.11.17 Security and privacy considerations: no page; it draws nothing
+# html/media.html#best-practices-for-authors-using-media-elements 4.8.11.18 Best practices for authors using media elements: no page; it is guidance for authors
+# html/media.html#best-practices-for-implementers-of-media-elements 4.8.11.19 Best practices for implementers of media elements: no page; it is informative
+html/image-maps.html#the-map-element 4.8.12 The map element
+    map.html
+html/image-maps.html#the-area-element 4.8.13 The area element
+    area.html
+    area-default.html
+# html/image-maps.html#image-maps 4.8.14 Image maps: no page; its subsections are walked below
+# html/image-maps.html#authoring 4.8.14.1 Authoring: no page; it is requirements on authors, and finding a map by name is on map.html
+html/image-maps.html#image-map-processing-model 4.8.14.2 Processing model
+    image-maps.html
+    image-map-coordinates.html
+html/embedded-content-other.html#mathml 4.8.15 MathML
+    mathml.html
+    mathml-invalid.html
+html/embedded-content-other.html#svg-0 4.8.16 SVG
+    svg-in-html.html
+html/embedded-content-other.html#dimension-attributes 4.8.17 Dimension attributes
+    dimension-attributes.html
+# html/tables.html#tables 4.9 Tabular data: no page; it introduces the subsections
+html/tables.html#the-table-element 4.9.1 The table element
+    table.html
+# html/tables.html#table-descriptions-techniques 4.9.1.1 Techniques for describing tables: no page; it advises authors on describing a table in words
+# html/tables.html#table-layout-techniques 4.9.1.2 Techniques for table design: no page; it advises authors, and its example styles are CSS's
+html/tables.html#the-caption-element 4.9.2 The caption element
+    table-caption.html
+html/tables.html#the-colgroup-element 4.9.3 The colgroup element
+    table-colgroup.html
+html/tables.html#the-col-element 4.9.4 The col element
+    table-col.html
+html/tables.html#the-tbody-element 4.9.5 The tbody element
+    table-row-groups.html
+# html/tables.html#the-thead-element 4.9.6 The thead element: no page; a header group is drawn as any row group, which table-row-groups.html shows under 4.9.5
+html/tables.html#the-tfoot-element 4.9.7 The tfoot element
+    table-tfoot.html
+# html/tables.html#the-tr-element 4.9.8 The tr element: no page; rows are drawn by the CSS table model, and the figures of 4.9.11 and 4.9.12.1 place cells in them
+# html/tables.html#the-td-element 4.9.9 The td element: no page; a data cell is drawn as every figure of 4.9 draws one, and its attributes are 4.9.11's
+html/tables.html#the-th-element 4.9.10 The th element
+    table-th.html
+html/tables.html#attributes-common-to-td-and-th-elements 4.9.11 Attributes common to td and th elements
+    table-spans.html
+# html/tables.html#table-processing-model 4.9.12 Processing model: no page; it defines the grid, which 4.9.12.1's page forms
+html/tables.html#forming-a-table 4.9.12.1 Forming a table
+    table-forming.html
+# html/tables.html#header-and-data-cell-semantics 4.9.12.2 Forming relationships between data cells and header cells: no page; header cells are assigned for assistive technology, and nothing is drawn
+# html/tables.html#table-examples 4.9.13 Examples: no page; it holds examples of markup
+# html/forms.html#forms 4.10 Forms: no page; it introduces the subsections
+# html/forms.html#introduction-4 4.10.1 Introduction: no page; informative, an author's tutorial whose examples the sections below show
+# html/forms.html#writing-a-form's-user-interface 4.10.1.1 Writing a form's user interface: no page; informative, its controls are shown in 4.10.3 to 4.10.5
+# html/forms.html#implementing-the-server-side-processing-for-a-form 4.10.1.2 Implementing the server-side processing for a form: no page; about the server, nothing drawn
+# html/forms.html#configuring-a-form-to-communicate-with-a-server 4.10.1.3 Configuring a form to communicate with a server: no page; informative, submission is shown in 4.10.3 and 4.10.5.1.18
+# html/forms.html#client-side-form-validation 4.10.1.4 Client-side form validation: no page; informative, validation is shown in 4.10.5.3
+# html/forms.html#enabling-client-side-automatic-filling-of-form-controls 4.10.1.5 Enabling client-side automatic filling of form controls: no page; informative, and autofill draws from the user's data, which a page cannot fix
+# html/forms.html#improving-the-user-experience-on-mobile-devices 4.10.1.6 Improving the user experience on mobile devices: no page; informative, about virtual keyboards, not drawn in a desktop browser
+# html/forms.html#the-difference-between-the-field-type,-the-autofill-field-name,-and-the-input-modality 4.10.1.7 The difference between the field type, the autofill field name, and the input modality: no page; informative, it defines no behavior
+# html/forms.html#input-author-notes 4.10.1.8 Date, time, and number formats: no page; informative, its requirement on what is shown is in 4.10.5.2
+# html/forms.html#categories 4.10.2 Categories: no page; it defines categories of elements, which draw nothing; labelable elements are shown in 4.10.4 and 4.10.5.1.1
+html/forms.html#the-form-element 4.10.3 The form element
+    form.html
+html/forms.html#the-label-element 4.10.4 The label element
+    label.html
+html/input.html#the-input-element 4.10.5 The input element
+    input-types.html
+    input-checkedness.html
+# html/input.html#states-of-the-type-attribute 4.10.5.1 States of the type attribute: no page; it introduces the subsections
+html/input.html#hidden-state-(type=hidden) 4.10.5.1.1 Hidden state (type=hidden)
+    input-hidden.html
+html/input.html#text-(type=text)-state-and-search-state-(type=search) 4.10.5.1.2 Text (type=text) state and Search state (type=search)
+    input-text.html
+html/input.html#telephone-state-(type=tel) 4.10.5.1.3 Telephone state (type=tel)
+    input-tel.html
+html/input.html#url-state-(type=url) 4.10.5.1.4 URL state (type=url)
+    input-url.html
+html/input.html#email-state-(type=email) 4.10.5.1.5 Email state (type=email)
+    input-email.html
+html/input.html#password-state-(type=password) 4.10.5.1.6 Password state (type=password)
+    input-password.html
+html/input.html#date-state-(type=date) 4.10.5.1.7 Date state (type=date)
+    input-date.html
+html/input.html#month-state-(type=month) 4.10.5.1.8 Month state (type=month)
+    input-month.html
+html/input.html#week-state-(type=week) 4.10.5.1.9 Week state (type=week)
+    input-week.html
+html/input.html#time-state-(type=time) 4.10.5.1.10 Time state (type=time)
+    input-time.html
+html/input.html#local-date-and-time-state-(type=datetime-local) 4.10.5.1.11 Local Date and Time state (type=datetime-local)
+    input-datetime-local.html
+html/input.html#number-state-(type=number) 4.10.5.1.12 Number state (type=number)
+    input-number.html
+html/input.html#range-state-(type=range) 4.10.5.1.13 Range state (type=range)
+    input-range.html
+    input-range-direction.html
+    input-range-input.html
+html/input.html#color-state-(type=color) 4.10.5.1.14 Color state (type=color)
+    input-color.html
+html/input.html#checkbox-state-(type=checkbox) 4.10.5.1.15 Checkbox state (type=checkbox)
+    input-checkbox.html
+html/input.html#radio-button-state-(type=radio) 4.10.5.1.16 Radio Button state (type=radio)
+    input-radio.html
+html/input.html#file-upload-state-(type=file) 4.10.5.1.17 File Upload state (type=file)
+    input-file.html
+html/input.html#submit-button-state-(type=submit) 4.10.5.1.18 Submit Button state (type=submit)
+    input-submit.html
+html/input.html#image-button-state-(type=image) 4.10.5.1.19 Image Button state (type=image)
+    input-image.html
+html/input.html#reset-button-state-(type=reset) 4.10.5.1.20 Reset Button state (type=reset)
+    input-reset.html
+html/input.html#button-state-(type=button) 4.10.5.1.21 Button state (type=button)
+    input-button.html
+html/input.html#input-impl-notes 4.10.5.2 Implementation notes regarding localization of form controls
+    input-localization.html
+html/input.html#common-input-element-attributes 4.10.5.3 Common input element attributes
+    input-attributes-apply.html
+html/input.html#the-maxlength-and-minlength-attributes 4.10.5.3.1 The maxlength and minlength attributes
+    input-maxlength.html
+html/input.html#the-size-attribute 4.10.5.3.2 The size attribute
+    input-size.html
+html/input.html#the-readonly-attribute 4.10.5.3.3 The readonly attribute
+    input-readonly.html
+html/input.html#the-required-attribute 4.10.5.3.4 The required attribute
+    input-required.html
+html/input.html#the-multiple-attribute 4.10.5.3.5 The multiple attribute
+    input-multiple.html
+html/input.html#the-pattern-attribute 4.10.5.3.6 The pattern attribute
+    input-pattern.html
+html/input.html#the-min-and-max-attributes 4.10.5.3.7 The min and max attributes
+    input-min-max.html
+html/input.html#the-step-attribute 4.10.5.3.8 The step attribute
+    input-step.html
+html/input.html#the-list-attribute 4.10.5.3.9 The list attribute
+    input-list.html
+html/input.html#the-placeholder-attribute 4.10.5.3.10 The placeholder attribute
+    input-placeholder.html
+html/input.html#common-input-element-apis 4.10.5.4 Common input element APIs
+    input-step-up.html
+html/input.html#common-input-element-events 4.10.5.5 Common event behaviors
+    input-events.html
+html/form-elements.html#the-button-element 4.10.6 The button element
+    button.html
+    button-layout.html
+    button-layout-abspos.html
+    button-command.html
+html/form-elements.html#the-select-element 4.10.7 The select element
+    select.html
+    select-sizing.html
+    select-selectedness.html
+    select-picking.html
+    select-base.html
+html/form-elements.html#the-datalist-element 4.10.8 The datalist element
+    datalist.html
+html/form-elements.html#the-optgroup-element 4.10.9 The optgroup element
+    optgroup.html
+html/form-elements.html#the-option-element 4.10.10 The option element
+    option.html
+    option-selected.html
+html/form-elements.html#the-textarea-element 4.10.11 The textarea element
+    textarea.html
+    textarea-editing.html
+html/form-elements.html#the-output-element 4.10.12 The output element
+    output.html
+html/form-elements.html#the-progress-element 4.10.13 The progress element
+    progress.html
+html/form-elements.html#the-meter-element 4.10.14 The meter element
+    meter.html
+    meter-regions.html
+html/form-elements.html#the-fieldset-element 4.10.15 The fieldset element
+    fieldset.html
+html/form-elements.html#the-legend-element 4.10.16 The legend element
+    legend.html
+html/form-elements.html#the-selectedcontent-element 4.10.17 The selectedcontent element
+    selectedcontent.html
+# html/form-control-infrastructure.html#form-control-infrastructure 4.10.18 Form control infrastructure: no page; it introduces its subsections
+html/form-control-infrastructure.html#a-form-control's-value 4.10.18.1 A form control's value
+    control-value.html
+# html/form-control-infrastructure.html#mutability 4.10.18.2 Mutability: no page; it defines a term, whose effect the textarea's pages show (readonly and disabled controls take no edits)
+html/form-control-infrastructure.html#association-of-controls-and-forms 4.10.18.3 Association of controls and forms
+    form-owner.html
+# html/form-control-infrastructure.html#attributes-common-to-form-controls 4.10.19 Attributes common to form controls: no page; it introduces its subsections
+# html/form-control-infrastructure.html#naming-form-controls:-the-name-attribute 4.10.19.1 Naming form controls: the name attribute: no page; that a control without a name submits nothing, and that two of a name submit two entries, is shown under 4.10.22.4
+html/form-control-infrastructure.html#submitting-element-directionality:-the-dirname-attribute 4.10.19.2 Submitting element directionality: the dirname attribute
+    dirname.html
+html/form-control-infrastructure.html#limiting-user-input-length:-the-maxlength-attribute 4.10.19.3 Limiting user input length: the maxlength attribute
+    maxlength.html
+html/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute 4.10.19.4 Setting minimum input length requirements: the minlength attribute
+    minlength.html
+html/form-control-infrastructure.html#enabling-and-disabling-form-controls:-the-disabled-attribute 4.10.19.5 Enabling and disabling form controls: the disabled attribute
+    disabled.html
+html/form-control-infrastructure.html#form-submission-attributes 4.10.19.6 Form submission attributes
+    submit-attributes.html
+# html/form-control-infrastructure.html#autofill 4.10.19.7 Autofill: no page; it introduces its subsections
+# html/form-control-infrastructure.html#autofilling-form-controls:-the-autocomplete-attribute 4.10.19.7.1 Autofilling form controls: the autocomplete attribute: no page; it defines the tokens, whose effect on what the browser offers is shown under 4.10.19.7.2
+html/form-control-infrastructure.html#autofill-processing-model 4.10.19.7.2 Processing model
+    autocomplete.html
+html/form-control-infrastructure.html#textFieldSelection 4.10.20 APIs for the text control selections
+    text-selection.html
+# html/form-control-infrastructure.html#constraints 4.10.21 Constraints: no page; it introduces its subsections
+# html/form-control-infrastructure.html#definitions 4.10.21.1 Definitions: no page; it defines the validity states, which 4.10.21.2's and 4.10.21.3's pages report; the custom error's message is shown under 4.10.21.3
+html/form-control-infrastructure.html#constraint-validation 4.10.21.2 Constraint validation
+    interactive-validation.html
+html/form-control-infrastructure.html#the-constraint-validation-api 4.10.21.3 The constraint validation API
+    report-validity.html
+# html/form-control-infrastructure.html#security-forms 4.10.21.4 Security: no page; advice to servers
+# html/form-control-infrastructure.html#form-submission-2 4.10.22 Form submission: no page; it introduces its subsections
+# html/form-control-infrastructure.html#introduction-5 4.10.22.1 Introduction: no page; a non-normative overview, which 4.10.22.3's page quotes
+html/form-control-infrastructure.html#implicit-submission 4.10.22.2 Implicit submission
+    implicit-submission.html
+html/form-control-infrastructure.html#form-submission-algorithm 4.10.22.3 Form submission algorithm
+    form-submission.html
+html/form-control-infrastructure.html#constructing-form-data-set 4.10.22.4 Constructing the entry list
+    entry-list.html
+# html/form-control-infrastructure.html#selecting-a-form-submission-encoding 4.10.22.5 Selecting a form submission encoding: no page; the encoding of the bytes sent, which is serialization
+# html/form-control-infrastructure.html#converting-an-entry-list-to-a-list-of-name-value-pairs 4.10.22.6 Converting an entry list to a list of name-value pairs: no page; serialization
+# html/form-control-infrastructure.html#url-encoded-form-data 4.10.22.7 URL-encoded form data: no page; serialization
+# html/form-control-infrastructure.html#multipart-form-data 4.10.22.8 Multipart form data: no page; serialization
+# html/form-control-infrastructure.html#plain-text-form-data 4.10.22.9 Plain text form data: no page; serialization
+# html/form-control-infrastructure.html#the-submitevent-interface 4.10.22.10 The SubmitEvent interface: no page; the interface, whose submitter the pages of 4.10.22.2 and 4.10.22.3 log
+# html/form-control-infrastructure.html#the-formdataevent-interface 4.10.22.11 The FormDataEvent interface: no page; the interface, whose formData the page of 4.10.22.4 adds to
+html/form-control-infrastructure.html#resetting-a-form 4.10.23 Resetting a form
+    form-reset.html
+# html/interactive-elements.html#interactive-elements 4.11 Interactive elements: its subsections hold the pages
+html/interactive-elements.html#the-details-element 4.11.1 The details element
+    details.html
+    details-name.html
+html/interactive-elements.html#the-summary-element 4.11.2 The summary element
+    summary.html
+# html/interactive-elements.html#commands 4.11.3 Commands: facets of an abstraction that user agents may expose in their own menus; nothing a page draws
+# html/interactive-elements.html#facets-2 4.11.3.1 Facets: definitions only
+# html/interactive-elements.html#using-the-a-element-to-define-a-command 4.11.3.2 Using the a element to define a command: facets of a command a user agent may expose; nothing drawn
+# html/interactive-elements.html#using-the-button-element-to-define-a-command 4.11.3.3 Using the button element to define a command: facets of a command a user agent may expose; nothing drawn
+# html/interactive-elements.html#using-the-input-element-to-define-a-command 4.11.3.4 Using the input element to define a command: facets of a command a user agent may expose; nothing drawn
+# html/interactive-elements.html#using-the-option-element-to-define-a-command 4.11.3.5 Using the option element to define a command: facets of a command a user agent may expose; nothing drawn
+# html/interactive-elements.html#using-the-accesskey-attribute-on-a-legend-element-to-define-a-command 4.11.3.6 Using the accesskey attribute on a legend element to define a command: facets of a command a user agent may expose; nothing drawn
+# html/interactive-elements.html#using-the-accesskey-attribute-to-define-a-command-on-other-elements 4.11.3.7 Using the accesskey attribute to define a command on other elements: facets of a command a user agent may expose; nothing drawn
+html/interactive-elements.html#the-dialog-element 4.11.4 The dialog element
+    dialog.html
+    dialog-modal.html
+    dialog-closedby.html
+    dialog-commands.html
+    dialog-focus.html
+html/interactive-elements.html#dialog-light-dismiss 4.11.5 Dialog light dismiss
+    dialog-light-dismiss.html
+# html/scripting.html#scripting-3 4.12 Scripting: no page; it introduces the subsections
+html/scripting.html#the-script-element 4.12.1 The script element
+    script.html
+# html/scripting.html#script-processing-model 4.12.1.1 Processing model: no page; it fetches and runs scripts, and draws nothing
+# html/scripting.html#scriptingLanguages 4.12.1.2 Scripting languages: no page; it names the script types
+# html/scripting.html#restrictions-for-contents-of-script-elements 4.12.1.3 Restrictions for contents of script elements: no page; it is syntax
+# html/scripting.html#inline-documentation-for-external-scripts 4.12.1.4 Inline documentation for external scripts: no page; it is syntax
+# html/scripting.html#scriptTagXSLT 4.12.1.5 Interaction of script elements and XSLT: no page; it is about XSLT processors, and draws nothing
+html/scripting.html#the-noscript-element 4.12.2 The noscript element
+    noscript.html
+html/scripting.html#the-template-element 4.12.3 The template element
+    template.html
+    template-shadow-root.html
+    template-patching.html
+# html/scripting.html#template-XSLT-XPath 4.12.3.1 Interaction of template elements with XSLT and XPath: no page; it is about XSLT and XPath, and draws nothing
+html/scripting.html#the-slot-element 4.12.4 The slot element
+    slot.html
+    slot-assign.html
+html/canvas.html#the-canvas-element 4.12.5 The canvas element
+    canvas-element.html
+    canvas-fallback.html
+html/canvas.html#2dcontext 4.12.5.1 The 2D rendering context
+    canvas-coordinates.html
+# html/canvas.html#implementation-notes 4.12.5.1.1 Implementation notes: no page; it advises implementers, and nothing it says is drawn
+html/canvas.html#the-canvas-settings 4.12.5.1.2 The canvas settings
+    canvas-alpha.html
+html/canvas.html#the-canvas-state 4.12.5.1.3 The canvas state
+    canvas-state.html
+html/canvas.html#line-styles 4.12.5.1.4 Line styles
+    canvas-line-styles.html
+    canvas-line-joins.html
+    canvas-line-dash.html
+html/canvas.html#text-styles 4.12.5.1.5 Text styles
+    canvas-text-align.html
+    canvas-text-styles.html
+html/canvas.html#building-paths 4.12.5.1.6 Building paths
+    canvas-paths.html
+    canvas-arcs.html
+    canvas-round-rect.html
+html/canvas.html#path2d-objects 4.12.5.1.7 Path2D objects
+    canvas-path2d.html
+html/canvas.html#transformations 4.12.5.1.8 Transformations
+    canvas-transforms.html
+html/canvas.html#image-sources-for-2d-rendering-contexts 4.12.5.1.9 Image sources for 2D rendering contexts
+    canvas-image-sources.html
+html/canvas.html#fill-and-stroke-styles 4.12.5.1.10 Fill and stroke styles
+    canvas-gradients.html
+    canvas-patterns.html
+html/canvas.html#drawing-rectangles-to-the-bitmap 4.12.5.1.11 Drawing rectangles to the bitmap
+    canvas-rects.html
+html/canvas.html#drawing-text-to-the-bitmap 4.12.5.1.12 Drawing text to the bitmap
+    canvas-fill-text.html
+html/canvas.html#drawing-paths-to-the-canvas 4.12.5.1.13 Drawing paths to the canvas
+    canvas-fill-stroke.html
+    canvas-clip.html
+    canvas-point-in-path.html
+html/canvas.html#drawing-focus-rings-and-scrolling-paths-into-view 4.12.5.1.14 Drawing focus rings
+    canvas-focus-ring.html
+html/canvas.html#drawing-images 4.12.5.1.15 Drawing images
+    canvas-draw-image.html
+html/canvas.html#pixel-manipulation 4.12.5.1.16 Pixel manipulation
+    canvas-image-data.html
+html/canvas.html#compositing 4.12.5.1.17 Compositing
+    canvas-compositing.html
+html/canvas.html#image-smoothing 4.12.5.1.18 Image smoothing
+    canvas-image-smoothing.html
+html/canvas.html#shadows 4.12.5.1.19 Shadows
+    canvas-shadows.html
+html/canvas.html#filters 4.12.5.1.20 Filters
+    canvas-filters.html
+# html/canvas.html#working-with-externally-defined-svg-filters 4.12.5.1.21 Working with externally-defined SVG filters: no page; it advises authors on waiting for a filter to load
+html/canvas.html#drawing-model 4.12.5.1.22 Drawing model
+    canvas-drawing-model.html
+# html/canvas.html#best-practices 4.12.5.1.23 Best practices: no page; it advises authors
+# html/canvas.html#examples 4.12.5.1.24 Examples: no page; it holds examples of scripts
+# html/canvas.html#the-imagebitmap-rendering-context 4.12.5.2 The ImageBitmap rendering context: no page; it introduces the subsections
+# html/canvas.html#introduction-6 4.12.5.2.1 Introduction: no page; it introduces the context
+html/canvas.html#the-imagebitmaprenderingcontext-interface 4.12.5.2.2 The ImageBitmapRenderingContext interface
+    canvas-bitmaprenderer.html
+html/canvas.html#the-offscreencanvas-interface 4.12.5.3 The OffscreenCanvas interface
+    canvas-offscreen.html
+# html/canvas.html#the-offscreen-2d-rendering-context 4.12.5.3.1 The offscreen 2D rendering context: no page; it draws as the 2D context does, whose pages 4.12.5.1's are, and canvas-offscreen.html draws with it
+html/canvas.html#colour-spaces-and-colour-correction 4.12.5.4 Color spaces and color space conversion
+    canvas-color-spaces.html
+html/canvas.html#serialising-bitmaps-to-a-file 4.12.5.5 Serializing bitmaps to a file
+    canvas-serialization.html
+# html/canvas.html#security-with-canvas-elements 4.12.5.6 Security with canvas elements: no page; the origin-clean flag throws exceptions, and draws nothing
+# html/canvas.html#premultiplied-alpha-and-the-2d-rendering-context 4.12.5.7 Premultiplied alpha and the 2D rendering context: no page; it is how a bitmap stores its colors, which no figure can tell apart
+# html/custom-elements.html#custom-elements 4.13 Custom elements: no page; it introduces the subsections
+# html/custom-elements.html#custom-elements-intro 4.13.1 Introduction: no page; it introduces custom elements
+# html/custom-elements.html#custom-elements-autonomous-example 4.13.1.1 Creating an autonomous custom element: no page; an example, whose subject custom-element-autonomous.html shows under 4.13.3
+# html/custom-elements.html#custom-elements-face-example 4.13.1.2 Creating a form-associated custom element: no page; an example, whose subject custom-element-form-associated.html shows under 4.13.7.3
+# html/custom-elements.html#custom-elements-accessibility-example 4.13.1.3 Creating a custom element with default accessible roles, states, and properties: no page; it is about accessibility semantics, and nothing is drawn
+# html/custom-elements.html#custom-elements-customized-builtin-example 4.13.1.4 Creating a customized built-in element: no page; an example, whose subject custom-element-built-in.html shows under 4.13.3
+# html/custom-elements.html#custom-elements-autonomous-drawbacks 4.13.1.5 Drawbacks of autonomous custom elements: no page; it advises authors, and custom-element-autonomous.html shows what it describes
+# html/custom-elements.html#custom-elements-upgrades-examples 4.13.1.6 Upgrading elements after their creation: no page; an example, whose subject custom-element-upgrade.html shows under 4.13.5
+# html/custom-elements.html#scoped-custom-element-registries 4.13.1.7 Scoped custom element registries: no page; an example of which registry defines an element, and nothing is drawn
+# html/custom-elements.html#exposing-custom-element-states 4.13.1.8 Exposing custom element states: no page; an example, whose subject custom-element-states.html shows under 4.13.7.5
+# html/custom-elements.html#custom-element-conformance 4.13.2 Requirements for custom element constructors and reactions: no page; it binds authors' code
+# html/custom-elements.html#preserving-custom-element-state-when-moved 4.13.2.1 Preserving custom element state when moved: no page; it is about callbacks, and nothing is drawn
+html/custom-elements.html#custom-elements-core-concepts 4.13.3 Core concepts
+    custom-element-autonomous.html
+    custom-element-built-in.html
+    custom-element-disabled.html
+# html/custom-elements.html#custom-elements-api 4.13.4 The CustomElementRegistry interface: no page; define() draws nothing of its own, and the upgrades it starts are 4.13.5's
+html/custom-elements.html#upgrades 4.13.5 Upgrades
+    custom-element-upgrade.html
+# html/custom-elements.html#custom-element-reactions 4.13.6 Custom element reactions: no page; it queues callbacks, which the pages of 4.13.3 and 4.13.7.3 use
+# html/custom-elements.html#element-internals 4.13.7 Element internals: no page; it introduces attachInternals(), which the pages of 4.13.7.3 and 4.13.7.5 use
+# html/custom-elements.html#the-elementinternals-interface 4.13.7.1 The ElementInternals interface: no page; it is the interface's IDL
+# html/custom-elements.html#shadow-root-access 4.13.7.2 Shadow root access: no page; it returns a shadow root to the element's code, and draws nothing of its own
+html/custom-elements.html#form-associated-custom-elements 4.13.7.3 Form-associated custom elements
+    custom-element-form-associated.html
+# html/custom-elements.html#accessibility-semantics 4.13.7.4 Accessibility semantics: no page; it is for assistive technology, and nothing is drawn
+html/custom-elements.html#custom-state-pseudo-class 4.13.7.5 Custom state pseudo-class
+    custom-element-states.html
+# html/semantics-other.html#common-idioms 4.14 Common idioms without dedicated elements: advice to authors on markup; the user agent draws nothing of its own
+# html/semantics-other.html#rel-up 4.14.1 Breadcrumb navigation: advice to authors on markup; nothing the user agent draws
+# html/semantics-other.html#tag-clouds 4.14.2 Tag clouds: advice to authors on markup and style; nothing the user agent draws
+# html/semantics-other.html#conversations 4.14.3 Conversations: advice to authors on markup; nothing the user agent draws
+# html/semantics-other.html#footnotes 4.14.4 Footnotes: advice to authors on markup; nothing the user agent draws
+html/semantics-other.html#disabled-elements 4.15 Disabled elements
+    disabled-elements.html
+# html/semantics-other.html#selectors 4.16 Matching HTML elements using selectors and CSS: its subsections hold the pages
+html/semantics-other.html#case-sensitivity-of-the-css-'attr()'-function 4.16.1 Case-sensitivity of the CSS 'attr()' function
+    attr-case.html
+html/semantics-other.html#case-sensitivity-of-selectors 4.16.2 Case-sensitivity of selectors
+    selector-case.html
+html/semantics-other.html#pseudo-classes 4.16.3 Pseudo-classes
+    pseudo-defined.html
+    pseudo-link-visited.html
+    pseudo-active.html
+    pseudo-hover.html
+    pseudo-focus.html
+    pseudo-target.html
+    pseudo-popover-open.html
+    pseudo-enabled-disabled.html
+    pseudo-checked.html
+    pseudo-indeterminate.html
+    pseudo-default.html
+    pseudo-placeholder-shown.html
+    pseudo-valid-invalid.html
+    pseudo-user-valid.html
+    pseudo-range.html
+    pseudo-required-optional.html
+    pseudo-autofill.html
+    pseudo-read-write.html
+    pseudo-modal.html
+    pseudo-dir.html
+    pseudo-state.html
+    pseudo-heading.html
+    pseudo-media.html
+    pseudo-open.html

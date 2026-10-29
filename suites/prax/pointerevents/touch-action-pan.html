@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pan values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller .content { width: 540px; height: 240px; background-image: radial-gradient(circle, #8a93a1 1.5px, transparent 2px);
+                       background-size: 20px 20px; }
+  .scroller .label { position: sticky; top: 0; left: 0; display: inline-block; padding: 0 6px; background: #b9cde6; }
+  .pan-x { touch-action: pan-x; }
+  .pan-y { touch-action: pan-y; }
+  .pan-left { touch-action: pan-left; }
+  .pan-down { touch-action: pan-down; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.3 Details of touch-action values</div>
+  <h1>The pan values</h1>
+  <p class=pr-lede><q>The user agent MAY consider direct manipulation interactions that begin on the element only for the
+  purposes of panning that starts in any of the directions specified by all of the listed values.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">Pointer Events §7.3</a></span></p>
+</header>
+<section>
+  <h2>One axis</h2>
+  <p><q>when panning is restricted to a single axis (for instance, with pan-x or pan-y), the axis cannot be changed
+  during panning.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span>
+  Each box starts scrolled to its middle. All four figures need a touch screen.</p>
+  <figure>
+    <div class=pr-stage><div class="scroller pan-x"><div class=content><span class=label>pan-x</span></div></div></div>
+    <figcaption>Drag any way: the dots move only sideways.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="scroller pan-y"><div class=content><span class=label>pan-y</span></div></div></div>
+    <figcaption>Drag any way: the dots move only up and down.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>One direction to start</h2>
+  <p><q>Once panning has started, the direction may be reversed by the user even if panning that starts in the reversed
+  direction is disallowed.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="scroller pan-left"><div class=content><span class=label>pan-left</span></div></div></div>
+    <figcaption>Panning left is dragging the finger right. Drag left: nothing pans. Drag right: it pans, and may then
+    come back left within the same drag. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    do not parse <code>pan-left</code>, and pan both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="scroller pan-down"><div class=content><span class=label>pan-down</span></div></div></div>
+    <figcaption>Panning down is dragging the finger up. Drag down: nothing pans. Drag up: it pans.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not parse <code>pan-down</code>, and pan
+    both ways.</figcaption>
+  </figure>
+</section>
+<script>
+  // Starts each box scrolled to its middle, so that it can pan every way.
+  for (const scroller of document.querySelectorAll(".scroller")) {
+    scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2;
+    scroller.scrollTop = (scroller.scrollHeight - scroller.clientHeight) / 2;
+  }
+</script>
+</body>
+</html>

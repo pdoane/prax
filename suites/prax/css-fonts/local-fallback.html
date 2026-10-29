@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>local()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Local Missing"; src: local("No Such Face"), url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Local Family"; src: local("Times New Roman"), local("TimesNewRomanPSMT"), url(../../../third_party/fonts/Cousine.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.3.3.1 Local font fallback</div>
+  <h1>local()</h1>
+  <p class=pr-lede><q>When authors would prefer to use a locally available copy of a given font and download it if
+  it's not, local() can be used.</q> Its name is matched against <q>only the Postscript name or the full font name</q>
+  of an installed face. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#local-font-fallback">CSS Fonts 4 §4.3.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Installed, or downloaded</h2>
+  <p>Each stage names its family, then <code>sans-serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Local Missing', sans-serif">Handgloves</div>
+    <figcaption><code>local("No Such Face")</code>: no installed face has that name, so the download:
+    Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Local Family', sans-serif">Handgloves</div>
+    <figcaption>Times New Roman's full and PostScript names, then Cousine: Times New Roman where it is installed,
+    and otherwise Cousine, a monospace.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

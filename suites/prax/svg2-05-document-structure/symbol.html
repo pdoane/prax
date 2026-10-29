@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The symbol element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <symbol id="plain" viewBox="0 0 20 10"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.4 The ‘symbol’ element</div>
+  <h1>The symbol element</h1>
+  <p class=pr-lede><q>The ‘symbol’ element is used to define graphical templates which can be instantiated by a ‘use’
+  element but which are not rendered directly.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SymbolElement">SVG 2 §5.4</a></span>
+  Each stage is an SVG 160 by 60. Each symbol has <code>viewBox="0 0 20 10"</code> filled blue with an orange dot
+  in its middle.</p>
+</header>
+
+<section>
+  <h2>A nested viewport, sized by the use or by default 100%</h2>
+  <p><q>When a symbol is instantiated as the referenced element of a ‘use’ element, it is therefore rendered very
+  similarly to a nested ‘svg’ element.</q> <q>if width and height compute to auto (and are not over-ridden by values
+  on the instantiating ‘use’ element), then they will be treated as a value of 100%.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><use href="#plain" x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>use</code> 120 by 40 at 20, 10: the symbol scaled 4, 80 by 40, centered, from x 40 to
+    120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#plain" /></svg></div>
+    <figcaption>A <code>use</code> with no size: 100% of the stage, scaled 6, 120 by 60, from x 20 to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

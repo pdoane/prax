@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>object-fit: the scale-down flag</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 80px; height: 60px; margin: 10px; background: #f9cc9d; }
+  .small { width: 30px; height: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 5.1 Sizing Objects: the object-fit property</div>
+  <h1>object-fit: the scale-down flag</h1>
+  <p class=pr-lede>This level makes <code>scale-down</code> a flag on <code>contain</code> and <code>cover</code>:
+  <q>fill | none | [contain | cover] || scale-down</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#the-object-fit">CSS Images 4 §5.1</a></span>
+  Each image shows the 40 by 20 flag on light orange.</p>
+</header>
+
+<section>
+  <h2>cover scale-down</h2>
+  <p><q>If the scale-down flag is used, size the content as if none or cover were specified, whichever would result in
+  a smaller concrete object size.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: cover scale-down" alt=""></div>
+    <figcaption>In 80 by 60, <code>cover</code> is 120 by 60 and <code>none</code> 40 by 20: the flag at 40 by 20,
+    centered. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Stretched to 80 by 60.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img class=small src=../shared/resources/flag-40x20.png style="object-fit: cover scale-down" alt=""></div>
+    <figcaption>In 30 by 10, <code>cover</code>'s 30 by 15 is smaller than 40 by 20: 2.5px clipped top and
+    bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Stretched to 30 by 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>contain scale-down, and scale-down alone</h2>
+  <p><q>Equivalent to contain scale-down.</q> In 80 by 60, <code>contain</code> is 80 by 40, so the smaller is
+  <code>none</code>'s 40 by 20.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: scale-down" alt=""></div>
+    <figcaption><code>scale-down</code>: 40 by 20, centered.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: contain scale-down" alt=""></div>
+    <figcaption><code>contain scale-down</code>: the same. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Stretched to 80 by 60.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-fit: scale-down contain" alt=""></div>
+    <figcaption><code>scale-down contain</code>, the flag first: the same. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Stretched to 80 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

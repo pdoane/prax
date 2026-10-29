@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Backgrounds of fragments</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .dot { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><circle cx='8' cy='8' r='8' fill='%23c0392b'/></svg>") no-repeat top right #b9cde6; }
+  .grad { background: linear-gradient(white, #4f81bd); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.4 Fragmented Borders and Backgrounds: the box-decoration-break property</div>
+  <h1>Backgrounds of fragments</h1>
+  <p class=pr-lede><code>clone</code>: <q>The background is drawn independently in each fragment of the element. A no-repeat background image will thus be rendered once in each fragment of the element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-decoration">CSS Fragmentation 4 §5.4</a></span> Each stage has three columns 60px tall. The tinted box holds five lines; its background has a red dot, not repeated, at its top right.</p>
+</header>
+
+<section>
+  <h2>A no-repeat image</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=dot>one two six ten red</div></div>
+    <figcaption><code>slice</code>: one dot, at the top right of the first fragment. Safari breaks after two lines, as a UA may.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=dot style="box-decoration-break: clone">one two six ten red</div></div>
+    <figcaption><code>clone</code>: a dot at the top right of each fragment. <span class=pr-flag>Safari</span> Slices it: one dot.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A gradient</h2>
+  <p>The background is a gradient from white at the top to blue at the bottom.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=grad style="box-decoration-break: clone">one two six ten red</div></div>
+    <figcaption><code>clone</code>: the gradient restarts in each fragment: white at the top of both, blue at the bottom of both. <span class=pr-flag>Safari</span> Slices it: one gradient across the fragments, darkest in the third column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

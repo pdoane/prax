@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- An analytics dashboard with a sidebar, stat tiles, a div bar chart, and a data table. Leans on: grid with a fixed sidebar column, a three-up tile grid, flex column bars sized in percentages, zebra table rows, tabular numerals, status pills, and a pair of panels with percentage meters. -->
+<title>Dashboard</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.app { display:grid; grid-template-columns:132px 1fr; background:#fff; border:1px solid #d3d8de; border-radius:10px; overflow:hidden; color:#20262d; font-size:12px }
+.side { background:#1e2733; color:#c4ccd6; padding:12px 10px }
+.side .brand { color:#fff; font-weight:bold; font-size:13px; margin-bottom:12px }
+.side a { display:block; color:#9fabba; text-decoration:none; padding:5px 8px; border-radius:6px; margin-bottom:2px }
+.side a.on { background:#2f3d4e; color:#fff }
+.side .grp { font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:#6b7787; margin:12px 0 4px 8px }
+.main { padding:12px 14px }
+.top { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px }
+.top h2 { font-size:15px; margin:0 }
+.top .rng { font-size:10px; color:#6b7787; border:1px solid #d3d8de; border-radius:99px; padding:2px 9px }
+.tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px }
+.tile { border:1px solid #e2e6eb; border-radius:8px; padding:8px 9px }
+.tile .k { font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#7b8694 }
+.tile .v { font-size:19px; font-weight:bold; letter-spacing:-.01em }
+.tile .d { font-size:10px }
+.up { color:#1a8f52 } .dn { color:#c0392b }
+.chart { border:1px solid #e2e6eb; border-radius:8px; padding:9px 10px; margin-bottom:12px }
+.chart h3 { font-size:11px; margin:0 0 8px }
+.bars { display:flex; align-items:flex-end; gap:9px; height:96px; border-bottom:1px solid #d3d8de }
+.bars .c { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100% }
+.bars .b { width:100%; background:#3d82c4 }
+.bars .b.hot { background:#e08a2e }
+.bars .n { font-size:9px; color:#7b8694; margin-bottom:2px }
+.xax { display:flex; gap:9px; margin-top:3px }
+.xax span { flex:1; text-align:center; font-size:9px; color:#7b8694 }
+table { border-collapse:collapse; width:100%; font-size:11px }
+th { text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#7b8694; border-bottom:1px solid #d3d8de; padding:4px 6px }
+td { padding:5px 6px; border-bottom:1px solid #eef1f4 }
+td.num { text-align:right; font-variant-numeric:tabular-nums }
+tbody tr:nth-child(even) { background:#f8fafb }
+.pill { font-size:9px; border-radius:99px; padding:1px 7px }
+.duo2 { display:flex; gap:8px; margin-top:12px }
+.pan { flex:1; border:1px solid #e2e6eb; border-radius:8px; padding:8px 10px }
+.pan h3 { font-size:11px; margin:0 0 6px }
+.meter { display:flex; align-items:center; gap:7px; font-size:10px; margin-bottom:5px }
+.meter .nm { width:74px; color:#4a5561 }
+.meter .bar { flex:1; height:7px; background:#eef1f4; border-radius:99px; overflow:hidden }
+.meter .fill { display:block; height:100%; background:#3d82c4; border-radius:99px }
+.meter .v { width:30px; text-align:right; color:#7b8694; font-variant-numeric:tabular-nums }
+.rank { display:flex; justify-content:space-between; font-size:10.5px; padding:3px 0; border-bottom:1px solid #f2f4f7 }
+.rank:last-child { border-bottom:none }
+.rank .q { color:#7b8694 }
+.ok { background:#dff2e6; color:#1a6b3d } .wait { background:#fdf0d8; color:#8a6116 } .bad { background:#fbe1de; color:#96271c }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="side">
+    <div class="brand">Northwind</div>
+    <a href="#" class="on">Overview</a>
+    <a href="#">Orders</a>
+    <a href="#">Customers</a>
+    <div class="grp">Reports</div>
+    <a href="#">Revenue</a>
+    <a href="#">Fulfilment</a>
+    <a href="#">Returns</a>
+    <div class="grp">Account</div>
+    <a href="#">Team</a>
+    <a href="#">Billing</a>
+  </div>
+
+  <div class="main">
+    <div class="top">
+      <h2>Overview</h2>
+      <div class="rng">Last 7 days</div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Revenue</div><div class="v">$48,210</div><div class="d up">+12.4% vs prior week</div></div>
+      <div class="tile"><div class="k">Orders</div><div class="v">1,394</div><div class="d up">+3.1% vs prior week</div></div>
+      <div class="tile"><div class="k">Refund rate</div><div class="v">2.8%</div><div class="d dn">+0.6 pts vs prior week</div></div>
+    </div>
+
+    <div class="chart">
+      <h3>Orders per day</h3>
+      <div class="bars">
+        <div class="c"><div class="n">168</div><div class="b" style="height:62%"></div></div>
+        <div class="c"><div class="n">203</div><div class="b" style="height:75%"></div></div>
+        <div class="c"><div class="n">191</div><div class="b" style="height:70%"></div></div>
+        <div class="c"><div class="n">154</div><div class="b" style="height:57%"></div></div>
+        <div class="c"><div class="n">248</div><div class="b hot" style="height:91%"></div></div>
+        <div class="c"><div class="n">232</div><div class="b" style="height:85%"></div></div>
+        <div class="c"><div class="n">198</div><div class="b" style="height:73%"></div></div>
+      </div>
+      <div class="xax"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    </div>
+
+    <table>
+      <thead><tr><th>Order</th><th>Customer</th><th>Status</th><th class="num">Items</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        <tr><td>NW-40218</td><td>Halvorsen Bakery</td><td><span class="pill ok">Shipped</span></td><td class="num">14</td><td class="num">$1,208.40</td></tr>
+        <tr><td>NW-40219</td><td>Cedar &amp; Pine</td><td><span class="pill wait">Packing</span></td><td class="num">3</td><td class="num">$196.00</td></tr>
+        <tr><td>NW-40220</td><td>Marisol Ortega</td><td><span class="pill ok">Shipped</span></td><td class="num">1</td><td class="num">$54.25</td></tr>
+        <tr><td>NW-40221</td><td>Fjord Outfitters</td><td><span class="pill bad">Returned</span></td><td class="num">7</td><td class="num">$883.10</td></tr>
+        <tr><td>NW-40222</td><td>Delacroix Hotel</td><td><span class="pill wait">Packing</span></td><td class="num">22</td><td class="num">$2,940.75</td></tr>
+      </tbody>
+    </table>
+
+    <div class="duo2">
+      <div class="pan">
+        <h3>Fulfilment, last 7 days</h3>
+        <div class="meter"><span class="nm">Picked</span><span class="bar"><span class="fill" style="width:96%"></span></span><span class="v">96%</span></div>
+        <div class="meter"><span class="nm">Packed</span><span class="bar"><span class="fill" style="width:88%"></span></span><span class="v">88%</span></div>
+        <div class="meter"><span class="nm">Shipped</span><span class="bar"><span class="fill" style="width:81%"></span></span><span class="v">81%</span></div>
+        <div class="meter"><span class="nm">On time</span><span class="bar"><span class="fill" style="width:74%"></span></span><span class="v">74%</span></div>
+      </div>
+      <div class="pan">
+        <h3>Top products</h3>
+        <div class="rank"><span>Stone-ground wheat T65</span><span class="q">412 sacks</span></div>
+        <div class="rank"><span>Dark rye flour</span><span class="q">268 sacks</span></div>
+        <div class="rank"><span>Linen sack, printed</span><span class="q">190 pieces</span></div>
+        <div class="rank"><span>Spelt, whole grain</span><span class="q">96 sacks</span></div>
+        <div class="rank"><span>Coarse bran</span><span class="q">74 sacks</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

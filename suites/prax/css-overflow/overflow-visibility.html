@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A hidden scroll container</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; }
+  .stage { height: 60px; }
+  .kid { height: 80px; background: #4f81bd; }
+  .classic::-webkit-scrollbar { width: 12px; height: 12px; background: #cfd3da; }
+  .classic::-webkit-scrollbar-thumb { background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.1 Interaction of visibility and overflow</div>
+  <h1>A hidden scroll container</h1>
+  <p class=pr-lede>If <code>visibility</code> is <code>hidden</code> and <code>overflow</code> is <code>scroll</code>
+  or <code>auto</code>: <q>The user agent must not make any scrolling mechanism visible. To the extent that the
+  scrolling mechanism that would normally be visible in the absence of visibility: hidden affects layout, it continues
+  to do so, but is not painted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scroll-visibility">CSS Overflow 3 §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>No scroll bar, the same layout</h2>
+  <p>Each box (its border drawn by a wrapper) is 120 by 40, <code>overflow: scroll</code>, styled with
+  <code>::-webkit-scrollbar</code>, and holds a blue child, <code>visibility: visible</code>, 80px tall. Safari draws
+  classic scroll bars 12px wide here; Chrome and Firefox draw overlay ones, which take no room, so in both figures
+  their child fills the box's width.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=pr-frame style="width: 120px; margin: 10px 40px"><div class="sc classic" style="overflow: scroll; margin: 0"><div class=kid></div></div></div></div>
+    <figcaption>Visible: with classic scroll bars, a bar at the right and the bottom, and the child stops at the bar,
+    108px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class=pr-frame style="width: 120px; margin: 10px 40px"><div class="sc classic" style="overflow: scroll; visibility: hidden; margin: 0"><div class=kid style="visibility: visible"></div></div></div></div>
+    <figcaption><code>visibility: hidden</code>: no bar is painted, but its room stays: the child stops 12px short
+    of the right, as beside.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scripts still scroll it</h2>
+  <p><q>As would be the case with overflow: hidden, scrolling directly triggered by user interactions is disabled, but
+  programmatic scrolling continues to take effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scroll-visibility">CSS Overflow 3 §3.1.1</a></span>
+  The box holds A, B and C, each <code>visibility: visible</code>; a script sets <code>scrollTop = 20</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=pr-frame style="width: 120px; margin: 10px 40px"><div id=s1 class=sc style="overflow: auto; visibility: hidden; margin: 0"><div class=pr-a style="visibility: visible">A</div><div class=pr-b style="visibility: visible">B</div><div class=pr-c style="visibility: visible">C</div></div></div></div>
+    <figcaption>B and C show, A scrolled out of view.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("s1").scrollTop = 20;
+</script>
+</body>
+</html>

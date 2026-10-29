@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The other element of a focus change</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe { display: block; width: 100%; height: 30px; margin: 0 0 10px; border: 1px dashed #6b7381; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.1 Interface FocusEvent</div>
+  <h1>The other element of a focus change</h1>
+  <p class=pr-lede><q>relatedTarget: Used to identify a secondary EventTarget related to a Focus event, depending on
+  the type of event.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#interface-focusevent">UI Events §3.3.1</a></span></p>
+</header>
+<section>
+  <h2>Losing to, gaining from</h2>
+  <p>blur's is the <q>event target receiving focus</q>; focus's is the <q>event target losing focus (if any)</q>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-blur">§3.3.4.1</a></span>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-focus">§3.3.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus blur" data-fields="target relatedTarget" data-lines=3></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>: blur at <code>one</code> with
+    <code>relatedTarget=two</code>, then focus at <code>two</code> with <code>relatedTarget=one</code>. Click outside
+    the stage: blur at <code>two</code> with <code>relatedTarget=null</code>, since nothing receives the
+    focus.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Into and out of a frame</h2>
+  <p><q>For security reasons with nested browsing contexts, when tabbing into or out of a nested context, the relevant
+  EventTarget SHOULD be null.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#interface-focusevent">§3.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=outer tabindex=0>outside the frame</div>
+        <iframe title="a frame with a field" srcdoc="<!doctype html><body style='margin:4px'><input placeholder='in the frame'>"></iframe>
+      </div>
+      <ol class=pr-log data-log="focus blur" data-fields="target relatedTarget" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>outside the frame</code> and press Tab, into the frame's field: blur at
+    <code>outer</code> with <code>relatedTarget=null</code>. Press Shift+Tab, back out: focus at <code>outer</code>
+    with <code>relatedTarget=null</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

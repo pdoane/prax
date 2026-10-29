@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The height property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.5 Content height: the 'height' property</div>
+  <h1>The height property: values</h1>
+  <p class=pr-lede><code>height</code> takes <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. Initial
+  <code>auto</code>, not inherited. <q>This property specifies the content height of boxes.</q></p>
+</header>
+
+<section>
+  <h2>&lt;length&gt;, and auto</h2>
+  <p><q>Specifies the height of the content area using a length value.</q> <q>Paragraphs of which the height of the
+  contents exceeds 100 pixels will overflow according to the 'overflow' property.</q> <code>auto</code>: <q>The height
+  depends on the values of other properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2 §10.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 150px"><div class=pr-hl style="height: 100px">The specification's p { height: 100px }: this paragraph is 100px tall, whatever its text, and so these last lines of its text run on past its bottom edge, into the stage below it.</div></div>
+    <figcaption>The orange paragraph has <code>height: 100px</code>; the text that does not fit overflows below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 150px"><div class=pr-hl>The same paragraph with height: auto is as tall as its lines of text, however many there are.</div></div>
+    <figcaption>With <code>height: auto</code>, the paragraph grows to hold its text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>&lt;percentage&gt;</h2>
+  <p><q>The percentage is calculated with respect to the height of the generated box's containing block. If the height
+  of the containing block is not specified explicitly (i.e., it depends on content height), and this element is not
+  absolutely positioned, the used height is calculated as if 'auto' was specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2
+  §10.5</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 100px"><div class="pr-a pr-fit" style="height: 50%">50%</div></div>
+    <figcaption>The stage has <code>height: 100px</code>: <code>height: 50%</code> is 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="height: 50%">50%</div><div style="height: 80px"></div></div>
+    <figcaption>This stage's height is <code>auto</code>, 100px from its content: <code>height: 50%</code> is treated
+    as <code>auto</code>, 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

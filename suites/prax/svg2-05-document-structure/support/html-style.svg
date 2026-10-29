@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- An SVG document with an HTML style element, which makes its orange rect blue. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+  <style xmlns="http://www.w3.org/1999/xhtml">rect { fill: #4f81bd; }</style>
+  <rect x="20" y="10" width="120" height="40" fill="#d68a3c" />
+</svg>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>sepia() as feColorMatrix</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="sepia-equivalent-0" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.6965 0.3845 0.0945 0 0 0.1745 0.843 0.084 0 0 0.136 0.267 0.5655 0 0 0 0 0 1 0"/>
+  </filter>
+  <filter id="sepia-equivalent-1" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.393 0.769 0.189 0 0 0.349 0.686 0.168 0 0 0.272 0.534 0.131 0 0 0 0 0 1 0"/>
+  </filter>
+  <filter id="sepia-equivalent-2" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.393 0.769 0.189 0 0 0.349 0.686 0.168 0 0 0.272 0.534 0.131 0 0 0 0 0 1 0"/>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.2 sepia</div>
+  <h1>sepia() as feColorMatrix</h1>
+  <p class=pr-lede>The function is the matrix <code>(0.393 + 0.607 * [1 - amount])</code>… of the section, with a percentage as a number. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#sepiaEquivalent">Filter Effects 1 §13.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Three amounts</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function; beside it the same box with <code>filter: url()</code> to the equivalent, which sets <code>color-interpolation-filters: sRGB</code>, as <q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: sepia(50%)"></div><div class=src style="filter: url(#sepia-equivalent-0)"></div><div class=sw style="background: #d09f64"></div></div></div>
+    <figcaption><code>sepia(50%)</code> and its equivalent alike; orange becomes <code>#d09f64</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: sepia(1)"></div><div class=src style="filter: url(#sepia-equivalent-1)"></div><div class=sw style="background: #cab38c"></div></div></div>
+    <figcaption><code>sepia(1)</code> and its equivalent alike; orange becomes <code>#cab38c</code>, the swatch at the
+    right. Orange's red is past 1, and clamps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: sepia(200%)"></div><div class=src style="filter: url(#sepia-equivalent-2)"></div><div class=sw style="background: #cab38c"></div></div></div>
+    <figcaption><code>sepia(200%)</code> and its equivalent alike; orange becomes <code>#cab38c</code>, the swatch at the
+    right. Over 100% the amount is clamped to 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

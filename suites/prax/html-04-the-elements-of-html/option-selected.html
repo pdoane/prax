@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The selected attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select, .pad button { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.10 The option element</div>
+  <h1>The selected attribute</h1>
+  <p class=pr-lede><q>The selected attribute is a boolean attribute. It represents the default selectedness of the
+  element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-option-element">HTML §4.10.10</a></span></p>
+</header>
+
+<section>
+  <h2>Dirtiness</h2>
+  <p><q>The dirtiness of an option element is a boolean state, initially false. It controls whether adding or removing
+  the selected content attribute has any effect.</q> Picking an option sets its dirtiness. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-option-element">§4.10.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <select><option>Apple<option id=pear>Pear<option>Plum</select>
+      <button onclick="pear.toggleAttribute('selected')">Pear selected</button>
+    </div>
+    <figcaption>The button toggles <code>selected</code> on Pear: click it, and Pear shows; again, and Apple. Now pick
+    Plum, then Pear, in the box, and click the button twice: Pear stays.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Reset to the default</h2>
+  <p>A select's reset algorithm: <q>If optionElement has a selected attribute, then set optionElement's selectedness to
+  true; otherwise set it to false.</q> <q>Set optionElement's dirtiness to false.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure>
+    <form class="pr-stage pr-wide pad">
+      <select><option>Apple<option selected>Pear<option>Plum</select>
+      <select size=3 multiple><option selected>Apple<option>Pear<option selected>Plum</select>
+      <button type=reset>Reset</button>
+    </form>
+    <figcaption>Pick Plum in the box, and click Pear alone in the list. Click Reset: the box shows Pear again, and the
+    list highlights Apple and Plum.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

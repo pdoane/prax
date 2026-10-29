@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Repeat-to-fill: auto-fill</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.3.2 Repeat-to-fill: auto-fill and auto-fit repetitions</div>
+  <h1>Repeat-to-fill: auto-fill</h1>
+  <p class=pr-lede><q>if the grid container has a definite preferred size or maximum size in the relevant axis, then
+  the number of repetitions is the largest possible positive integer that does not cause the grid to overflow the
+  content box of its grid container taking gap into account; if any number of repetitions would overflow, then 1
+  repetition.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-repeat">CSS Grid Layout 2 §7.2.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>As many as fit</h2>
+  <p>Each grid holds six items, auto-placed; the dashed grids have a size of their own.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fill, 40px)"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div><div class="pr-b pr-fit">6</div></div></div>
+    <figcaption><code>repeat(auto-fill, 40px)</code> in 200px: five columns, 1 to 5 on the first row, 6 on the
+    second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fill, 40px); column-gap: 10px"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div><div class="pr-b pr-fit">6</div></div></div>
+    <figcaption>With <code>column-gap: 10px</code>: four columns, 190px; five would be 240px. 5 and 6 on the
+    second row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="grid-template-columns: repeat(auto-fill, 40px); max-width: 130px"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div><div class="pr-b pr-fit">6</div></div></div>
+    <figcaption><code>max-width: 130px</code>: three columns, 120px, in two rows of three.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With other tracks, and too wide for one</h2>
+  <p>The other tracks of the list take their room first.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 50px repeat(auto-fill, 30px) 50px"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div><div class="pr-b pr-fit">6</div></div></div>
+    <figcaption><code>50px repeat(auto-fill, 30px) 50px</code>: three 30px columns between, 190px in all; 6 alone
+    on the second row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="grid-template-columns: repeat(auto-fill, 60px [x] 60px); width: 100px"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div></div></div>
+    <figcaption>A dashed grid 100px wide, <code>repeat(auto-fill, 60px [x] 60px)</code>: one repetition overflows,
+    so one: two columns, 1 and 2 across 120px, 3 under 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

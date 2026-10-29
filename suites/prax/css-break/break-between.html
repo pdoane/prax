@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which boxes break-before and break-after apply to</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .pr-table-cell { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1 Breaks Between Boxes: the break-before and break-after properties</div>
+  <h1>Which boxes break-before and break-after apply to</h1>
+  <p class=pr-lede><q>These properties specify page/column/region break behavior before/after the generated box.</q>
+  <q>User agents must apply these properties to boxes in the normal flow of the fragmentation root. User agents should
+  also apply these properties to floated boxes whose containing block is in the normal flow of the root fragmented
+  element. User agents may also apply these properties to other boxes. User agents must not apply these properties to
+  absolutely-positioned boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-between">CSS Fragmentation 4 §3.1</a></span>
+  Each stage has three columns 60px tall; B has <code>break-before: column</code>.</p>
+</header>
+
+<section>
+  <h2>In the normal flow, floated, and positioned</h2>
+  <p>Blocks in the normal flow are shown in <a href="../css-multicol/break-between.html">break-before and
+  break-after in columns</a>.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="float: left; width: 20px; break-before: column">B</div></div>
+    <figcaption>B floats: it should start the second column, A alone in the first. None of the three browsers breaks there: B under A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="position: absolute; width: 20px; margin-left: 30px; break-before: column">B</div></div>
+    <figcaption>B is absolutely positioned: no break. B at its static position, under A in the first column, 30px
+    in.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Table rows</h2>
+  <p>The properties apply to <q>block-level boxes, grid items, flex items, table row groups, table rows (but see
+  prose)</q>. A table of three rows; the second has <code>break-before: column</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>1</div></div><div class=pr-table-row style="break-before: column"><div class=pr-table-cell>2</div></div><div class=pr-table-row><div class=pr-table-cell>3</div></div></div></div>
+    <figcaption>Row 1 in the first column; rows 2 and 3 in the second. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No break: the three rows in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-table><div class=pr-table-row-group><div class=pr-table-row><div class=pr-table-cell>1</div></div></div><div class=pr-table-row-group style="break-before: column"><div class=pr-table-row><div class=pr-table-cell>2</div></div><div class=pr-table-row><div class=pr-table-cell>3</div></div></div></div></div>
+    <figcaption>The same rows in two row groups, the second with <code>break-before: column</code>: the same
+    result. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No break.</figcaption>
+  </figure>
+</section>
+
+<p class=pr-note>Flex and grid items: <a href="../css-flexbox/fragmentation-breaks.html">forced breaks in flex
+layout</a>, <a href="../css-grid/fragmentation.html">grid containers across columns</a>.</p>
+
+</body>
+</html>

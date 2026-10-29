@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Controls in the page's locale</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 50px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.2 Implementation notes regarding localization of form controls</div>
+  <h1>Controls in the page's locale</h1>
+  <p class=pr-lede><q>The formats shown to the user in date, time, and number controls is independent of the format
+  used for form submission.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#input-impl-notes">HTML §4.10.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>The element's language, or the user's</h2>
+  <p><q>Browsers are encouraged to use user interfaces that present dates, times, and numbers according to the
+  conventions of either the locale implied by the input element's language or the user's preferred locale.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#input-impl-notes">§4.10.5.2</a></span>
+  Each row's <code>lang</code> is its label; every value is the same.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><code>en-US</code><input lang=en-US type=date value="2026-02-03"></div>
+        <div><code>en-GB</code><input lang=en-GB type=date value="2026-02-03"></div>
+        <div><code>de</code><input lang=de type=date value="2026-02-03"></div>
+        <div><code>ja</code><input lang=ja type=date value="2026-02-03"></div>
+      </div>
+    </div>
+    <figcaption>3 February 2026: by language, 02/03/2026, 03/02/2026, 03.02.2026, 2026/02/03; or, by the
+    user's locale, alike. Chrome, Safari and Firefox use the
+    user's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><code>en-US</code><input lang=en-US type=time value="21:30" style="width: 120px"></div>
+        <div><code>de</code><input lang=de type=time value="21:30" style="width: 120px"></div>
+        <div><code>en-US</code><input lang=en-US type=number value="1234.5" style="width: 120px"></div>
+        <div><code>de</code><input lang=de type=number value="1234.5" style="width: 120px"></div>
+      </div>
+    </div>
+    <figcaption>9:30 PM, then 21:30; 1234.5, then 1234,5, in each element's language, or alike in the
+    user's. Chrome and Safari use the user's locale for both; Firefox, the element's language for the number.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

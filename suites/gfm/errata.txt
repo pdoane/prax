@@ -1,0 +1,15 @@
+# Cases in which the engine is right and the corpus is wrong. An entry lists its cases, a key per line, as
+# <file>:<index>, followed by the indented reason: what the sources say and why the corpus loses.
+
+spec:398
+spec:426
+spec:434
+spec:435
+spec:436
+spec:473
+spec:474
+spec:475
+spec:477
+    GFM 0.29's examples merge strong emphasis that is nested in strong emphasis into one element, as `****foo****`
+    and `__foo __bar__ baz__` show. CommonMark 0.31.2 nests the two (commonmark/#emphasis-and-strong-emphasis), and so
+    do its reference implementations. Where GFM's core and CommonMark disagree, the engine follows CommonMark.

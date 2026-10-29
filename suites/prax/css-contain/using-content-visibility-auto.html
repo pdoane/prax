@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Using content-visibility: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4.3 Using content-visibility: auto</div>
+  <h1>Using content-visibility: auto</h1>
+  <p class=pr-lede><q>Because content-visibility: auto imposes size containment when the element skips its contents, if
+  the element depends on its contents to determine its size the layout of the page (or at least, the scrollbar
+  position) can "jump around" as elements go off-screen and start skipping.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#using-cv-auto">CSS Containment 2 §4.3</a></span>
+  The section is informative.</p>
+</header>
+
+<section>
+  <h2>An estimate in place of the contents</h2>
+  <p>One fix is <q>using 'contain-intrinsic-size' to set an <em>estimate</em> of the element's size</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override">CSS Box Sizing 4 §5.2</a></span>
+  Each frame is a document 200 by 100: an orange box with 5px padding around three items with
+  <code>content-visibility: auto</code>, each 30px tall when laid out. In the last two, the items are shifted 5000px
+  right, far from the viewport.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; background: #b9cde6; outline: 1px solid #2c5a8f;  } .cv div { height: 30px }</style><div class=p><div class=cv><div></div></div><div class=cv><div></div></div><div class=cv><div></div></div></div>"></iframe></div>
+    <figcaption>In view: three items 30 tall; the orange box is 100 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; background: #b9cde6; outline: 1px solid #2c5a8f; position: relative; left: 5000px } .cv div { height: 30px }</style><div class=p><div class=cv><div></div></div><div class=cv><div></div></div><div class=cv><div></div></div></div>"></iframe></div>
+    <figcaption>Far away, with no estimate: each item is skipped and sized as if empty, and the orange box is 10 tall: the page around them jumps.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px 'PR Arimo' } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; background: #b9cde6; outline: 1px solid #2c5a8f; position: relative; left: 5000px; contain-intrinsic-size: auto 200px 30px } .cv div { height: 30px }</style><div class=p><div class=cv><div></div></div><div class=cv><div></div></div><div class=cv><div></div></div></div>"></iframe></div>
+    <figcaption>Far away, with <code>contain-intrinsic-size: auto 200px 30px</code>: each is sized by the estimate, and the orange box is 100 tall, as in view.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

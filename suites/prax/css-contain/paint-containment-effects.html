@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paint containment: containing block, stacking context, formatting context</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 70px; }
+  .k { contain: paint; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .sq { width: 10px; height: 10px; background: #d68a3c; }
+  .of { float: left; width: 40px; height: 40px; background: #d68a3c; }
+  .box { width: 100px; height: 40px; margin: 10px; background: #4f81bd; }
+  .neg { position: relative; z-index: -1; left: 30px; top: 10px; width: 40px; height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.5 Paint Containment, its other effects</div>
+  <h1>Paint containment: containing block, stacking context, formatting context</h1>
+  <p class=pr-lede><q>The paint containment box establishes an absolute positioning containing block and a fixed
+  positioning containing block.</q> <q>The paint containment box creates a stacking context.</q> <q>The paint
+  containment box establishes an independent formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-paint">CSS Containment 2 §3.5</a></span>
+  Each blue box has <code>contain: paint</code>.</p>
+</header>
+
+<section>
+  <h2>A containing block</h2>
+  <p>The box is 100 by 40, not positioned; the orange square, 10 by 10, has <code>right: 0; bottom: 0</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 70px"><div class="b k" style="width: 100px; height: 40px"><i class=sq style="position: absolute; right: 0; bottom: 0"></i></div></div>
+    <figcaption><code>position: absolute</code> in a positioned stage: at the box's corner, 90, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 70px" srcdoc="<style>body { margin: 0 } div { contain: paint; width: 100px; height: 40px; background: #b9cde6; outline: 1px dashed #2c5a8f } i { position: fixed; right: 0; bottom: 0; width: 10px; height: 10px; background: #d68a3c }</style><div><i></i></div>"></iframe></div>
+    <figcaption><code>position: fixed</code>, in a frame of its own: at the box's corner too, not the
+    viewport's.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 70px"><div class="b k" style="width: 100px; height: 40px"><i class=sq style="position: absolute; left: 95px; top: 35px; width: 20px; height: 20px"></i></div></div>
+    <figcaption>A square 20 by 20 at 95, 35 in it: positioned in the box, and so cut by it to 5 by 5.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stacking context, and a formatting context</h2>
+  <p>The orange child in the first box has <code>z-index: -1</code>, in a stage that is a stacking context; without
+  containment it would paint behind the blue box, as on <a href="layout-containment-stacking.html">the layout
+  containment page</a>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="box k"><div class=neg></div></div></div>
+    <figcaption><code>contain: paint</code>: the box is the child's stacking context, so the child paints over its background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=of></div><div class="b k">beside the float</div></div>
+    <figcaption>After an orange float 40 wide: the box sits beside it, 110 wide, its text on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="b k"><div style="margin-top: 20px; background: #f6d7b4">child</div></div></div>
+    <figcaption>A child's 20px top margin stays inside: the box starts at the top, the child 20px below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

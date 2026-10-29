@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>currentcolor, inherited as a keyword</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .word { font: bold 24px/44px "PR Arimo"; padding: 6px 8px 0; }
+  .fl::first-line { color: yellowgreen; }
+  .shadow { font: 20px/30px "PR Arimo"; padding: 4px 8px; width: 200px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 15.5 Resolving other colors</div>
+  <h1>currentcolor, inherited as a keyword</h1>
+  <p class=pr-lede><q>The currentcolor keyword computes to itself. In the 'color' property, the used value of
+  currentcolor is the resolved inherited value. In any other property, its used value is the used value of the
+  'color' property on the same element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#resolving-other-colors">CSS Color 4 §15.5</a></span></p>
+</header>
+
+<section>
+  <h2>In color, the parent's; elsewhere, inherited as the keyword</h2>
+  <p><q>if the currentcolor value is inherited, it’s inherited as a keyword</q>. Each stage sets <code>color: #2c5a8f</code>
+  (blue) and <code>text-emphasis: dot currentcolor</code>, which inherits; its span sets <code>color:
+  #c0392b</code> (red).</p>
+  <figure>
+    <div class="pr-stage word" style="color: #2c5a8f; text-emphasis: dot currentcolor">blue <span style="color: #c0392b">red</span></div>
+    <figcaption>Blue dots over "blue", red dots over "red": the span resolves the keyword with its own
+    color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage word" style="color: #2c8a3c">green <span style="color: currentcolor">still</span></div>
+    <figcaption>A green stage holds a span with <code>color: currentcolor</code>: "still" is green, the inherited
+    value.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On the first line</h2>
+  <p>A forestgreen block with <code>text-shadow: 3px 3px currentcolor</code> holds a mediumseagreen paragraph whose
+  <code>::first-line</code> is yellowgreen: <q>The used value of the inherited property text-shadow on the first line
+  fragment would be yellowgreen.</q></p>
+  <figure>
+    <div class=pr-stage><div class=shadow style="color: forestgreen; text-shadow: 3px 3px currentcolor"><p class=fl style="margin: 0; color: mediumseagreen">This text is long enough to wrap.</p></div></div>
+    <figcaption>The first line's text and shadow yellowgreen; the second line's mediumseagreen.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

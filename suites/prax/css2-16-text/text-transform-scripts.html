@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-transform property: scripts and languages</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.5 Capitalization: the 'text-transform' property</div>
+  <h1>The text-transform property: scripts and languages</h1>
+  <p class=pr-lede><code>text-transform</code> takes <code>capitalize | uppercase | lowercase | none</code>. Initial
+  <code>none</code>, inherited, applies to all elements. <q>This property controls capitalization effects of an
+  element's text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caps-prop">CSS 2 §16.5</a></span></p>
+</header>
+
+<section>
+  <h2>Only bicameral scripts, by language</h2>
+  <p><q>The actual transformation in each case is written language dependent.</q> <q>Only characters belonging to
+  "bicameral scripts" are affected.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caps-prop">CSS 2 §16.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-transform: uppercase">greek: αβγ<br>hebrew: שלום<br>digits: 123</div>
+    <figcaption><code>uppercase</code>: the Latin and Greek, which have two cases, become "GREEK: ΑΒΓ"; the Hebrew,
+    which has one, and the digits are unchanged.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-transform: uppercase"><span lang=en>en: i</span><br><span lang=tr>tr: i</span></div>
+    <figcaption><code>uppercase</code> of "i": "I" in English, and in Turkish (<code>lang=tr</code>) the dotted
+    "İ".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

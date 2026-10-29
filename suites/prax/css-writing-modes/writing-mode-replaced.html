@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>writing-mode: replaced elements stay upright</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/20px "PR Noto Sans JP"; }
+  .v { writing-mode: vertical-rl; }
+  img { vertical-align: top; }
+  figure.s figcaption { max-width: 116px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2 Block Flow Direction: the writing-mode property, replaced elements</div>
+  <h1>writing-mode: replaced elements stay upright</h1>
+  <p class=pr-lede><q>The content of replaced elements do not rotate due to the writing mode: images and external
+  content such as from &lt;iframe&gt;s, for example, remain upright, and the default object size of 300px×150px does
+  not re-orient.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#block-flow">CSS Writing Modes 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Images and frames</h2>
+  <p>Each stage is <code>vertical-rl</code>. The image is an arrow pointing right; the <code>iframe</code>, of no
+  given size, is green with a red band along its top.</p>
+  <figure class=s>
+    <div class="pr-stage v" style="width: 100px; height: 60px"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='30'><rect width='40' height='30' fill='%23b9cde6'/><circle cx='8' cy='8' r='4' fill='%23c0392b'/><path d='M4 22h26l-6-5m6 5l-6 5' stroke='%232c5a8f' stroke-width='2' fill='none'/></svg>"></div>
+    <figcaption>The arrow still points right; 40 wide and 30 tall, at the top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide v" style="height: 150px"><iframe style="border: 0; vertical-align: top" srcdoc="<body style='margin:0;background:#78c078;border-top:20px solid #c0392b'></body>"></iframe></div>
+    <figcaption>The frame is 300px wide and 150px tall, the red band along its top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Form controls</h2>
+  <p><q>embedded replaced content involving text (such as MathML content or form elements) should match the replaced
+  element's writing mode and line orientation</q>.</p>
+  <figure>
+    <div class="pr-stage v" style="width: auto; height: 130px">名前<input value="縦書き" size=6 style="font: inherit"></div>
+    <figcaption>A text field in <code>vertical-rl</code>: laid lengthwise, its value read downward.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

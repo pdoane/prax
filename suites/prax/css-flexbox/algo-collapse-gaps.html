@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 10: collapsed items and gaps</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; align-items: flex-start; column-gap: 10px; }
+  .w40 { width: 40px; }
+  figure figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 10</div>
+  <h1>Step 10: collapsed items and gaps</h1>
+  <p class=pr-lede><q>For the rest of the algorithm following that step, ignore the collapsed items entirely (as if
+  they were display:none)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span>
+  A gap is placed between items; a collapsed item, ignored, has none beside it. Each stage is 160px wide with
+  <code>column-gap: 10px</code>, over A, B and C of 40px.</p>
+</header>
+
+<section>
+  <h2>One gap where an item collapses</h2>
+  <figure>
+    <div class=pr-stage style="width: 160px"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40">B</div><div class="pr-c pr-fit w40">C</div></div>
+    <figcaption>As is: two gaps, B from 50px and C from 100px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="width: 160px"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40" style="visibility: collapse">B</div><div class="pr-c pr-fit w40">C</div></div>
+    <figcaption>B collapsed: one gap, C from 50px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> B hidden in its place: two gaps, C from 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40" style="display: none">B</div><div class="pr-c pr-fit w40">C</div></div>
+    <figcaption>B <code>display: none</code>, for comparison: one gap, C from 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

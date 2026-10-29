@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-composite: combining mask layers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.small { width: 120px; }
+  .small + figcaption { max-width: 120px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; mask-repeat: no-repeat; }
+  /* The disc over the rectangle on the right half. */
+  .two { mask-image: radial-gradient(circle 30px at 40px 35px, black 99%, transparent 100%), linear-gradient(black, black);
+         mask-size: auto, 50px 70px; mask-position: 0 0, 100% 0; }
+  /* The disc over two rectangles, the left half and the right half. */
+  .three { mask-image: radial-gradient(circle 30px at 40px 35px, black 99%, transparent 100%), linear-gradient(black, black),
+           linear-gradient(black, black);
+           mask-size: auto, 50px 70px, 50px 70px; mask-position: 0 0, 0 0, 100% 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.8 Compositing mask layers: the mask-composite property</div>
+  <h1>mask-composite: combining mask layers</h1>
+  <p class=pr-lede><q>Each keyword represents a Porter-Duff compositing operator which defines the compositing
+  operation used on the current mask layer with the mask layers below it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-composite">CSS Masking 1 §7.8</a></span>
+  Each box is 100 by 70 at 10, 10. The top layer, the source, is a disc of radius 30 at 50, 45; below it, the
+  destination, a rectangle over the right half, 60 to 110.</p>
+</header>
+
+<section>
+  <h2>The four operators</h2>
+  <figure>
+    <div class="pr-stage small"><div class="subj two"></div></div>
+    <figcaption>The initial <code>add</code>, source over: the disc and the rectangle, joined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj two" style="mask-composite: subtract"></div></div>
+    <figcaption><code>subtract</code>, source out: the disc from 20 to 60, its left two thirds.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj two" style="mask-composite: intersect"></div></div>
+    <figcaption><code>intersect</code>, source in: the disc right of 60, 60 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj two" style="mask-composite: exclude"></div></div>
+    <figcaption><code>exclude</code>, XOR: the disc from 20 to 60, and the rectangle with the disc's right third cut
+    out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The layers below, composited first</h2>
+  <p><q>If there is no further mask layer, the compositing operator must be ignored.</q> <q>All mask layers below the
+  current mask layer must be composited before applying the compositing operation for the current mask layer.</q></p>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: radial-gradient(circle 30px at 40px 35px, black 99%, transparent 100%); mask-composite: subtract"></div></div>
+    <figcaption>The disc alone, <code>subtract</code>: nothing below, so ignored; the disc.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj three" style="mask-composite: subtract, add"></div></div>
+    <figcaption>The disc <code>subtract</code>, over the left half <code>add</code> the right half: the halves join
+    into the whole box first, and the disc outside it is nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

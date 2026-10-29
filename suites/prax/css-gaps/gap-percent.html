@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentage gaps</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .f { display: flex; }
+  .f > div, .g2 > div, .mc > div { width: 40px; padding: 0; box-sizing: border-box; }
+  .g2 { display: grid; grid-template-columns: auto auto; float: left; }
+  .mc { column-count: 3; }
+  .pr-narrow .f > div { width: 20px; }
+  .tall { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2.3 Percentages In gap Properties</div>
+  <h1>Percentage gaps</h1>
+  <p class=pr-lede><q>'gap' always resolves percentages against the corresponding size of the content box of the
+  element. When this size is definite, the behavior is well-defined and consistent across layout modes.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-percent">CSS Gaps 1 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Against a definite size</h2>
+  <p>Each container is the stage's 100px width; the last is 60px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=g style="column-gap: 10%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Grid, <code>column-gap: 10%</code>: 10px gaps.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=f style="column-gap: 10%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Flex, <code>column-gap: 10%</code>: 10px gaps.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=mc style="column-gap: 10%; column-rule: 1px dashed #6b7381"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Multicol, <code>column-gap: 10%</code>: 10px gaps.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g tall" style="grid-template-rows: 20px 20px; row-gap: 20%; align-content: start"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>Grid 60px tall, <code>row-gap: 20%</code>: 12px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Against a size that depends on the gap</h2>
+  <p><q>In Grid Layout ... cyclic percentage sizes resolve against zero for determining intrinsic size contributions,
+  but resolve against the box’s content box when laying out the box’s contents.</q> <q>In Flex Layout ... Cyclic
+  percentage sizes resolve against zero in all cases.</q> The dashed frames float, sized by their 40px items.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="g2 pr-frame" style="gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>Grid, <code>gap: 20%</code>: 80 by 40 with no gaps; then gaps of 16px across, 8px down, and B, C
+    and D overflow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f pr-frame" style="float: left; flex-wrap: wrap; width: 100px; gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <div class="f pr-frame" style="float: left; clear: left; margin-top: 8px; column-gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>Flex. Above, 100px wide: 20px column gaps; its height comes from its lines, so the row gap is 0, C
+    right under A. Below, floated: the column gap is 0, so A and B touch. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> give it 16px, as
+    in grid.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="mc pr-frame" style="float: left; column-count: 2; column-gap: 20%"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>Multicol: the section names no rule. Chrome, Safari and Firefox do as for grid: 80px, then a 16px
+    gap, B at 48px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>spelling-error and grammar-error</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/40px "PR Arimo"; }
+  figure { margin-right: 10px; }
+  figure.n figcaption { max-width: 160px; }
+  .n .pr-stage { width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.1 Text Decoration Lines: the text-decoration-line property</div>
+  <h1>spelling-error and grammar-error</h1>
+  <p class=pr-lede><q>This value indicates the type of text decoration used by the user agent to highlight spelling
+  mistakes. Its appearance is UA-defined, and may be platform-dependent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-line-property">CSS Text Decoration 4 §2.1</a></span>
+  <code>grammar-error</code> is the same for grammar mistakes.</p>
+</header>
+
+<section>
+  <h2>The user agent's own look</h2>
+  <p>A note: <q>It is often rendered as a red wavy underline.</q> <q>It is often rendered as a green wavy
+  underline.</q></p>
+  <figure class=n>
+    <div class="pr-stage t"><span style="text-decoration-line: spelling-error">speling</span></div>
+    <figcaption>"speling" marked as the browser marks a misspelled word.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t"><span style="text-decoration-line: grammar-error">they was</span></div>
+    <figcaption>"they was" marked as the browser marks a grammar mistake.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nothing else changes it</h2>
+  <p><q>When spelling-error or grammar-error apply, the user agent must disregard the other sub-properties of
+  'text-decoration', as well any other properties typically affecting the appearance of line decorations (such as
+  'text-underline-position', 'color', 'stroke', or 'fill') when rendering these decorations.</q></p>
+  <figure class=n>
+    <div class="pr-stage t"><span style="text-decoration-line: spelling-error; text-decoration-style: double; text-decoration-color: #2c5a8f; text-decoration-thickness: 6px">speling</span></div>
+    <figcaption>With a blue, double, 6px decoration set: marked as the first figure is.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t"><span style="text-decoration-line: spelling-error; color: #d68a3c; text-underline-position: under; text-underline-offset: 8px">speling</span></div>
+    <figcaption>With orange text, <code>under</code> and an 8px offset: the mark is as in the first figure.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t"><span style="text-decoration-line: grammar-error; text-decoration-style: dotted; text-decoration-color: #8e44ad">they was</span></div>
+    <figcaption>Purple and dotted set on a grammar error: marked as the second figure is.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

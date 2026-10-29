@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of keyboard events</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.5.5 Keyboard Event Order</div>
+  <h1>The order of keyboard events</h1>
+  <p class=pr-lede><q>The keyboard events defined in this specification occur in a set order relative to one another, for any given
+  key</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">UI Events §3.5.5</a></span></p>
+</header>
+<section>
+  <h2>keydown, beforeinput, input, keyup</h2>
+  <p>keydown; then beforeinput, for a key that produces a character value; then the key's default actions, such as
+  inserting a character into the document; then input, for a key that updated the document; then keyup. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">§3.5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown beforeinput input keyup" data-fields="key data" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>Click the field and type <code>a</code>: keydown, beforeinput with <code>data="a"</code>, input,
+    then keyup, and <code>a</code> is in the field. An arrow key moves the caret and changes nothing: keydown and
+    keyup alone.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

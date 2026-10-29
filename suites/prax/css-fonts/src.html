@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The src descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Src First"; src: url(../../../third_party/fonts/Literata.ttf), url(../../../third_party/fonts/Cousine.ttf); }
+  @font-face { font-family: "Src Next"; src: url(no-such-font.ttf), url(../../../third_party/fonts/Cousine.ttf); }
+  @font-face { font-family: "Src Not Font"; src: url(04.03.00.00-a-src.html), url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Src None"; src: url(no-such-font.ttf), url(also-missing.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.3 Font reference: the 'src' descriptor</div>
+  <h1>The src descriptor</h1>
+  <p class=pr-lede>'src' is <q>a prioritized, comma-separated list of external references or locally-installed font face
+  names. When a font is needed the user agent iterates over the set of references listed, using the first one it can
+  successfully parse and activate.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#src-desc">CSS Fonts 4 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>The first source that activates</h2>
+  <p>Each stage names its family, then <code>sans-serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Src First', sans-serif">Handgloves</div>
+    <figcaption>Literata, then Cousine: the first loads, so Literata, a serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Src Next', sans-serif">Handgloves</div>
+    <figcaption>A missing file, then Cousine: Cousine, a monospace.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Src Not Font', sans-serif">Handgloves</div>
+    <figcaption>This page, which is not a font, then Literata: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Src None', sans-serif">Handgloves</div>
+    <figcaption>Two missing files: the face fails, so sans-serif.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

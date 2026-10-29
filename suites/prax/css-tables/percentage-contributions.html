@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentage contributions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; width: 200px; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.2 Computing Cell Measures, percentages</div>
+  <h1>Percentage contributions</h1>
+  <p class=pr-lede>The percentage contribution of a cell, column or column group is <q>min(percentage 'width',
+  percentage 'max-width')</q>. <q>If the computed values are not percentages, then 0% is used for 'width', and an
+  infinite percentage is used for 'max-width'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></span>
+  Each table is 200px: a blue cell "a" and an orange cell "bbb", <code>.pr-measure</code>. With no percentages they
+  share the 200px in proportion to their max-content widths, 50px and 150px.</p>
+</header>
+
+<section>
+  <h2>width and max-width</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 50%">a</td><td>bbb</td></tr></table></div>
+    <figcaption>Blue <code>width: 50%</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 50%; max-width: 30%">a</td><td>bbb</td></tr></table></div>
+    <figcaption>Blue <code>width: 50%; max-width: 30%</code>: the smaller, 30%, 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage min-width is ignored</h2>
+  <p>A note draws the consequence: <q>Please note that 'min-width' is not included in this computation. As a result, a
+  percentage 'min-width' is ignored.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><tr><td style="min-width: 75%">a</td><td>bbb</td></tr></table></div>
+    <figcaption>Blue <code>min-width: 75%</code>: as if absent, 50px. <span class=pr-flag>Firefox</span> makes it
+    75%, 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cover and contain constraints</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .png { background-image: url(../shared/resources/flag-40x20.png); }
+  .grad { background-image: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.3.2 Cover and Contain Constraint Sizing</div>
+  <h1>Cover and contain constraints</h1>
+  <p class=pr-lede><q>Two other common specified sizes are the contain constraint and the cover constraint, both of
+  which are resolved against a specified constraint rectangle using the object’s preferred aspect ratio</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#cover-contain">CSS Images 3 §4.3.2</a></span>
+  Each dashed box is 140 by 60, the constraint rectangle, with a background drawn once at its top left by
+  <code>background-size</code>.</p>
+</header>
+
+<section>
+  <h2>Largest inside, smallest outside</h2>
+  <p><q>A contain constraint is resolved by setting the concrete object size to the largest rectangle that has the
+  object’s natural aspect ratio and additionally has neither width nor height larger than the constraint rectangle's
+  width and height</q>; a cover constraint, <q>the smallest rectangle</q> with <q>neither width nor height smaller</q>.
+  The flag is a PNG of 2:1.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost png" style="background-size: contain"></div></div>
+    <figcaption><code>contain</code>: 120 by 60, the box's height; 20px of the box empty at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost png" style="background-size: cover"></div></div>
+    <figcaption><code>cover</code>: 140 by 70, the box's width; the bottom 10px clipped, so the lower quarters are 20
+    tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No ratio: the rectangle</h2>
+  <p><q>In both cases, if the object doesn't have a natural aspect ratio, the concrete object size is the specified
+  constraint rectangle.</q> The image is a gradient from blue to orange, which has no natural dimensions.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost grad" style="background-size: contain"></div></div>
+    <figcaption><code>contain</code>: 140 by 60, the gradient filling the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost grad" style="background-size: cover"></div></div>
+    <figcaption><code>cover</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

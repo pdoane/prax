@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-miterlimit</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.5 Controlling line joins: the ‘stroke-linejoin’ and ‘stroke-miterlimit’ properties</div>
+  <h1>stroke-miterlimit</h1>
+  <p class=pr-lede><q>The 'stroke-miterlimit' imposes a limit on the extent of the line join.</q> <q>given the angle θ
+  between the segments in user coordinate system, the miter length is calculated by: miter length = stroke-width /
+  sin(theta / 2)</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#LineJoin">SVG 2 §13.5.5</a></span>
+  Each stage is an SVG 160 by 60; the joins are <code>miter</code>, and a white line 1 wide over each stroke is the
+  path itself.</p>
+</header>
+
+<section>
+  <h2>Past the limit, a bevel</h2>
+  <p><q>If the miter length divided by the stroke width exceeds the 'stroke-miterlimit' then for the value: miter the
+  join is converted to a bevel</q>. The initial limit is 4.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 60 54.64 L 80 20 L 100 54.64" fill="none" stroke="#4f81bd" stroke-width="8" /><path d="M 60 54.64 L 80 20 L 100 54.64" fill="none" stroke="white" /></svg></div>
+    <figcaption>60° at 80, 20, 8 wide: 1 / sin 30° = 2, within 4, so a point at y 12.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 73.05 54.39 L 80 15 L 86.95 54.39" fill="none" stroke="#4f81bd" stroke-width="4" /><path d="M 73.05 54.39 L 80 15 L 86.95 54.39" fill="none" stroke="white" /></svg></div>
+    <figcaption>20° at 80, 15, 4 wide: 1 / sin 10° ≈ 5.8, over 4, so cut flat at the corner, at y
+    15.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 73.05 54.39 L 80 15 L 86.95 54.39" fill="none" stroke="#4f81bd" stroke-width="4" stroke-miterlimit="6" /><path d="M 73.05 54.39 L 80 15 L 86.95 54.39" fill="none" stroke="white" /></svg></div>
+    <figcaption>The same, <code>stroke-miterlimit="6"</code>: within it, so a point 11.5 above the corner, at y
+    3.5.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A limit of 1, and curves</h2>
+  <p>The join is built on the tangents: <q>Let A be the line parallel to the tangent at the end of the segment. Let B
+  be the line parallel to the tangent at the start of the following segment.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeShape">§13.5.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="#4f81bd" stroke-width="16" stroke-miterlimit="1" /><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="white" /></svg></div>
+    <figcaption>A right angle, 16 wide, <code>stroke-miterlimit="1"</code>: √2 is over 1, so cut flat at y
+    9.3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 40 Q 70 37.32 80 20 Q 90 37.32 120 40" fill="none" stroke="#4f81bd" stroke-width="8" /><path d="M 40 40 Q 70 37.32 80 20 Q 90 37.32 120 40" fill="none" stroke="white" /></svg></div>
+    <figcaption>Two curves meeting at 80, 20 with the tangents of the first figure's lines: the same point, at y
+    12.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

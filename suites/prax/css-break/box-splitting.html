@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Boxes split at breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+  .sb { border: 4px solid #2c5a8f; background: #b9cde6; }
+  .sb .pr-a { break-inside: avoid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.3 Splitting Boxes</div>
+  <h1>Boxes split at breaks</h1>
+  <p class=pr-lede><q>When a box breaks, its content box extends to fill any remaining fragmentainer extent (leaving room for any margins/borders/padding applied by box-decoration-break: clone) before the content resumes on the next fragmentainer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#box-splitting">CSS Fragmentation 4 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>To the end of the fragmentainer</h2>
+  <p>Three columns 60px tall. The tinted box has a 4px border and holds three As, each kept whole.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=sb><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption>Two As fit under the top border; the box fills the first column below them, 16px, down to the break. The third A and the bottom border in the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=sb style="box-decoration-break: clone"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div></div></div>
+    <figcaption><code>box-decoration-break: clone</code>: the box fills the first column down to 4px above the break, room for its cloned bottom border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On pages</h2>
+  <p>The tinted box holds three blocks 50px tall, each kept whole.</p>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure><div class=k><div class=pr-a style='height: 50px; break-inside: avoid'>A</div><div class=pr-b style='height: 50px; break-inside: avoid'>B</div><div class=pr-c style='height: 50px; break-inside: avoid'>C</div></div>"></iframe>
+    <figcaption>A and B on the first page, and the box tinted below them to the foot of the page, 40px; C on the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

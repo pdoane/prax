@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Addressable characters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .math { font-family: "PR Noto Sans Mono", "PR Noto Sans Math"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.1 Definitions</div>
+  <h1>Addressable characters</h1>
+  <p class=pr-lede>An addressable character is <q>A character that is addressable by text positioning attributes and
+  SVG DOM text methods.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#Definitions">SVG 2 §11.1.1</a></span>
+  Each stage holds a <code>text</code> with <code>x="20 60 100"</code>, ticked in red, in PR Noto Sans Mono 10 a
+  letter.</p>
+</header>
+
+<section>
+  <h2>Counted in code points</h2>
+  <p><q>For the purposes of mapping text positioning attributes, the index is measured in Unicode code points (thus a
+  'u' followed by the combining diaeresis ' ̈' is counted as two characters while the precomposed character 'ü' is
+  counted as one character).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">&#xFC;ab</text></svg></div>
+    <figcaption>"üab", precomposed: three characters, ü at 20, a at 60, b at 100.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">u&#x308;ab</text></svg></div>
+    <figcaption>"u" and U+0308: four characters, and the 60 is the diaeresis's, which goes with the u. ü at 20, a
+    at 100, b after it at 110. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The u at 20, its diaeresis alone at 60, a at 100.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class="pr-measure math" x="20 60 100" y="35">&#x1D400;ab</text></svg></div>
+    <figcaption>"𝐀ab", 𝐀 being U+1D400, two UTF-16 code units but one code point: 𝐀 at 20, a at 60, b at
+    100. <span class=pr-flag>Firefox</span> Counts 𝐀 as two: a at 100.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Characters that are not addressable</h2>
+  <p><q>Characters discarded during layout such as collapsed white space characters are not addressable, neither are
+  characters within an element with a value of none for the display property.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">a<tspan display="none">zz</tspan>bc</text></svg></div>
+    <figcaption>"a", a <code>tspan</code> of "zz" with <code>display="none"</code>, then "bc": a at 20, b at
+    60, c at 100. <span class=pr-flag>Firefox</span> Counts "zz": b at 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">a   bc</text></svg></div>
+    <figcaption>"a", three spaces, "bc": two spaces collapse away; a at 20, the space left at 60, b at 100, c
+    110.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

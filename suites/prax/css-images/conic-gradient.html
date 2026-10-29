@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>conic-gradient(): colors around a center</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 180px; height: 80px; margin: 10px; }
+  .quarters { background: conic-gradient(#4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.3 Conic Gradients: the conic-gradient() notation</div>
+  <h1>conic-gradient(): colors around a center</h1>
+  <p class=pr-lede><q>Rays are then drawn emerging from the
+  center and pointing in all directions, with the color of each ray equal to the color of the gradient-line where they
+  intersect it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#conic-gradients">CSS Images 4 §3.3</a></span>
+  Each box is 180 by 80, its center at 100, 50 on the guides.</p>
+</header>
+
+<section>
+  <h2>Each ray one color</h2>
+  <p>Stops two to a position change color at once, so each quarter of the turn is one color.</p>
+  <figure>
+    <div class=pr-stage><div class="box quarters"></div></div>
+    <figcaption><code>blue 25%, orange 0 50%, green 0 75%, purple 0</code>: clockwise from the top, blue, orange,
+    green, purple, split at x 100 and y 50.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="background: conic-gradient(#4f81bd 12.5%, #d68a3c 0)"></div></div>
+    <figcaption><code>blue 12.5%, orange 0</code>: an angle, not a share of the box: the 45deg ray meets the top edge at
+    x 150, 50px right of the center.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A cone seen from above</h2>
+  <p><q>if the color stops are chosen to be significantly lighter on one side than the other, it produces a pattern
+  that looks like a cone observed from above.</q></p>
+  <figure>
+    <div class=pr-stage><div class=box style="background: conic-gradient(white, black)"></div></div>
+    <figcaption><code>white, black</code>: white just right of straight up, darkening clockwise to black just left of
+    it, a seam running up from the center.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="background: conic-gradient(at 25% 30%, white, black 60%)"></div></div>
+    <figcaption>The section's example, <code>at 25% 30%, white, black 60%</code>: the center at 55, 34; black from
+    216deg, down and to the left, round to the seam.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

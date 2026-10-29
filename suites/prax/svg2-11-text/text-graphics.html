@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text as a graphics element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 40px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs>
+  <defs>
+    <linearGradient id="ramp"><stop offset="0" stop-color="#d68a3c" /><stop offset="1" stop-color="#2c5a8f" /></linearGradient>
+    <clipPath id="top"><rect x="0" y="0" width="160" height="30" /></clipPath>
+    <linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="white" /><stop offset="1" stop-color="black" /></linearGradient>
+    <mask id="left" maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="60"><rect x="0" y="0" width="80" height="60" fill="white" /></mask>
+  </defs>
+</svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1 Introduction</div>
+  <h1>Text as a graphics element</h1>
+  <p class=pr-lede><q>SVG's ‘text’ elements are rendered like other graphics elements. Thus, coordinate system
+  transformations, painting, clipping and masking features apply to ‘text’ elements in the same way as they apply to
+  shapes such as paths and rectangles.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#Introduction">SVG 2 §11.1</a></span>
+  Each stage is an SVG 160 by 60 holding "Text" in 40px bold PR Arimo, its baseline at y 45 dashed in red.</p>
+</header>
+
+<section>
+  <h2>Transformations and painting</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M0 45H160" class=pr-baseline /><text class=big x="20" y="45" fill="#2c5a8f" transform="rotate(-20 20 45)">Text</text></svg></div>
+    <figcaption><code>transform="rotate(-20 20 45)"</code>: the word turned 20° up about its start at 20, 45,
+    rising off the baseline to the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M0 45H160" class=pr-baseline /><text class=big x="20" y="45" fill="none" stroke="#2c5a8f" stroke-width="2">Text</text></svg></div>
+    <figcaption><code>fill="none" stroke-width="2"</code>: the letters' outlines stroked in blue, hollow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M0 45H160" class=pr-baseline /><text class=big x="20" y="45" fill="url(#ramp)">Text</text></svg></div>
+    <figcaption>Filled with a gradient from orange to blue across the word's bounding box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clipping and masking</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M0 45H160" class=pr-baseline /><text class=big x="20" y="45" fill="#2c5a8f" clip-path="url(#top)">Text</text></svg></div>
+    <figcaption>Clipped to a rectangle above y 30: the letters' tops only, cut straight at y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M0 45H160" class=pr-baseline /><text class=big x="20" y="45" fill="#2c5a8f" mask="url(#left)">Text</text></svg></div>
+    <figcaption>Masked by a white rectangle left of x 80: the letters left of x 80 only, cut straight
+    there.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

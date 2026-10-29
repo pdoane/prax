@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>beforetoggle and toggle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.12 The popover attribute</div>
+  <h1>beforetoggle and toggle</h1>
+  <p class=pr-lede>Showing a popover fires beforetoggle, <q>with the cancelable attribute initialized to true, the oldState
+  attribute initialized to "closed", the newState attribute initialized to "open", and the source attribute
+  initialized to source</q>, then queues a toggle event. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">HTML §6.12</a></span></p>
+</header>
+<section>
+  <h2>The source, and a canceled show</h2>
+  <p>When that beforetoggle is canceled, the steps <q>run cleanupShowingSteps and return</q>, and nothing is shown.
+  With the box checked, the page's script cancels beforetoggle. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">§6.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0">
+        <label class=pr-target><input type=checkbox id=refuse> cancel beforetoggle to open</label>
+        <button class=pr-target id=opener popovertarget=pop>show the popover</button>
+        <div popover id=pop>a popover</div>
+      </div>
+      <ol class=pr-log data-log="beforetoggle toggle" data-fields="oldState newState source" data-lines=3 data-on="#pop"></ol>
+    </div>
+    <figcaption>Click the button: beforetoggle and toggle, from <code>closed</code> to <code>open</code>, with
+    <code>source=opener</code>. Click outside: both again, to <code>closed</code>. Check the box and click the
+    button: beforetoggle only, and the popover stays hidden.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Toggles coalesced</h2>
+  <p>Queuing a toggle while one is pending will <q>Set oldState to element's popover toggle task tracker's old
+  state</q> and remove the pending task. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">§6.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=flicker>show and hide at once</button>
+        <div popover id=pop2>another popover</div>
+      </div>
+      <ol class=pr-log data-log="beforetoggle toggle" data-fields="oldState newState" data-lines=2 data-on="#pop2"></ol>
+    </div>
+    <figcaption>Click the button, whose script shows the popover and hides it in the same task: two beforetoggles, and
+    one toggle, from <code>closed</code> to <code>closed</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the opening beforetoggle while the box is checked; shows and hides the second popover at once.
+  document.getElementById("pop").addEventListener("beforetoggle", event => {
+      if (event.newState === "open" && document.getElementById("refuse").checked)
+          event.preventDefault();
+  });
+  document.getElementById("flicker").addEventListener("click", () => {
+      const pop2 = document.getElementById("pop2");
+      pop2.showPopover();
+      pop2.hidePopover();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

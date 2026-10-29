@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Processing modes and their features</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img, iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 2.2.1 Features</div>
+  <h1>Processing modes and their features</h1>
+  <p class=pr-lede><q>The features that can be enabled or disabled depending on the processing mode are as follows</q>:
+  declarative animation, references to external resources, script execution and interaction. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#features">SVG 2 §2.2.1</a></span>
+  Each stage shows <code>support/features.svg</code>, four squares in dashed outlines: a script's, orange until the
+  script turns it blue; an animation's, a <code>set</code> from 0s that turns it blue; the suite's flag, an external
+  file; and a blue data URL, which no mode disables.</p>
+</header>
+
+<section>
+  <h2>Dynamic interactive, and secure animated</h2>
+  <p>Dynamic interactive mode <q>imposes no restrictions on any feature of the SVG language.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#dynamic-interactive-mode">§2.2.2</a></span>
+  Secure animated mode: script execution <q>no</q>, external references <q>no</q>, declarative animation <q>yes</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#secure-animated-mode">§2.2.4</a></span>
+  <q>When declarative animations are disabled in an SVG document, any animation elements or CSS Transitions or
+  Animations must not be applied or run.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/features.svg"></iframe></div>
+    <figcaption>In an <code>iframe</code>, viewed as a document: all four, blue, blue, the flag, blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/features.svg" alt=""></div>
+    <figcaption>In an <code>img</code>, secure animated: the script's square orange; the animation's blue; no flag;
+    the data URL blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

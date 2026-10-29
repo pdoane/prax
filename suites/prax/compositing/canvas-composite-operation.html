@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>globalCompositeOperation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 4 Specifying Compositing and Blending in Canvas 2D</div>
+  <h1>globalCompositeOperation</h1>
+  <p class=pr-lede><q>The canvas 2d context defines the globalCompositeOperation attribute that is used to set the
+  current compositing and blending operator.</q> It takes <q>&lt;blend-mode&gt; | &lt;composite-mode&gt;</q>, initially
+  source-over. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#canvascompositingandblending">Compositing and Blending 2 §4</a></span>
+  Each canvas, 100 by 60, is drawn by the page: a red square 40 by 40 at (10, 10), then, with the operation given, a
+  lime one at (40, 10). They overlap from x 40 to 50.</p>
+</header>
+
+<section>
+  <h2>The initial value, a composite mode, a blend mode</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op=""></canvas></div>
+    <figcaption>Not set, <code>source-over</code>: lime over red.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op="destination-over"></canvas></div>
+    <figcaption><code>destination-over</code>: red over lime.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op="xor"></canvas></div>
+    <figcaption><code>xor</code>: the overlap cleared, the stage showing.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op="screen"></canvas></div>
+    <figcaption><code>screen</code>, a blend mode: the overlap yellow.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op="multiply"></canvas></div>
+    <figcaption><code>multiply</code>: the overlap black.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><canvas width=100 height=60 data-op="plus-lighter"></canvas></div>
+    <figcaption><code>plus-lighter</code>, a &lt;composite-mode&gt;: the overlap yellow, red plus lime. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Lime, as <code>source-over</code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const canvas of document.querySelectorAll("canvas")) {
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ff0000";
+    context.fillRect(10, 10, 40, 40);
+    if (canvas.dataset.op)
+      context.globalCompositeOperation = canvas.dataset.op;
+    context.fillStyle = "#00ff00";
+    context.fillRect(40, 10, 40, 40);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-wrap: normal relaxes word-break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ja { width: 100px; font: 20px/30px "PR Noto Sans JP"; }
+  .ib { display: inline-block; width: min-content; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.4 Overflow Wrapping: the overflow-wrap (word-wrap) property</div>
+  <h1>overflow-wrap: normal relaxes word-break</h1>
+  <p class=pr-lede><code>normal</code>: <q>Lines may break only at allowed break points. However, the restrictions
+  introduced by 'word-break: keep-all' may be relaxed to match 'word-break: normal' if there are no
+  otherwise-acceptable break points in the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#overflow-wrap-property">CSS Text 4 §6.4</a></span>
+  Japanese is 20px a character; each stage is 100px wide, five to a line.</p>
+</header>
+
+<section>
+  <h2>keep-all, which may be relaxed</h2>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="word-break: keep-all"><span class=t>日本語の文章です</span></div>
+    <figcaption><code>keep-all</code>, no other break point: the UA may relax it and break, five then three, or
+    keep the run whole past the edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto-phrase, which must be relaxed</h2>
+  <p><code>auto-phrase</code>: <q>If suppressing soft wrap opportunities within a particular phrase would cause that phrase to overflow even
+  when placed on an otherwise empty line, the user agent must fall back to the same soft wrap opportunities as
+  'normal' within that phrase.</q> <q>The soft wrap opportunities obtained by relaxing the restrictions introduced by
+  'word-break: keep-all' and 'word-break: auto-phrase' are not considered when calculating min-content intrinsic
+  sizes.</q></p>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわのトットちゃん</span></div>
+    <figcaption><code>auto-phrase</code>: the phrase "トットちゃん", six, is longer than the line, so it breaks
+    within: "窓ぎわの", "トットちゃ", "ん". Safari and Firefox, which do not detect phrases, break as
+    <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja"><span class="pr-frame ib" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわのトットちゃん</span></span></div>
+    <figcaption>A <code>min-content</code> box: the relaxed breaks do not count, so it is as wide as the longest
+    phrase in a UA that detects phrases, 120px, as in Chrome. Safari and Firefox size it by
+    <code>normal</code>'s breaks.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Form controls sized to their text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  input, textarea { font: 15px/20px "PR Cousine"; padding: 0 4px; border: 1px solid #2c5a8f; margin: 0; vertical-align: top; resize: none; }
+  .s { width: 150px; height: 70px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.1 Intrinsic Sizes, text inputs</div>
+  <h1>Form controls sized to their text</h1>
+  <p class=pr-lede><q>The min-content and max-content keywords of the sizing properties thus represent content-based
+  sizes for form controls which render their value as text contained within their box</q>. <q>If the input control has
+  designated placeholder text to be overlaid in its value display area, then that text is also measured</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span>
+  Text is PR Cousine, 9px a character; each control has 4px of padding and a 1px border each side, 10px in all.</p>
+</header>
+
+<section>
+  <h2>An input's value</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><input style="width: max-content" value="abc def"></div>
+    <figcaption><code>width: max-content</code>, value "abc def": 63px of text, 73px in all. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> keep the
+    input's default width.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><input style="width: max-content" value="ab" placeholder="abc def ehg"></div>
+    <figcaption>Value "ab", placeholder "abc def ehg": the larger, 99px of text, 109px in all. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> the default
+    width.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A textarea's value, wrapped</h2>
+  <p>A textarea wraps at spaces, so <q>soft wrap opportunities</q> fall there.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><textarea style="width: min-content; height: 60px">abc def ehg</textarea></div>
+    <figcaption><code>width: min-content</code>: 27px, its widest word, 37px in all. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> the default
+    width.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><textarea style="width: max-content; height: 60px">abc def ehg</textarea></div>
+    <figcaption><code>width: max-content</code>: 99px, one line, 109px in all. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> the default
+    width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

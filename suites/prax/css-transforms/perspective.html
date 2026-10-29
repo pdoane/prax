@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Perspective: d / (d − Z)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 20px; }
+  .two { position: absolute; top: 30px; width: 20px; height: 20px; }
+  .turn { position: absolute; left: 40px; top: 20px; width: 80px; height: 40px; transform: rotateY(60deg);
+          animation: turn 6s linear -1s infinite; }
+  @keyframes turn { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.1 Perspective</div>
+  <h1>Perspective: d / (d − Z)</h1>
+  <p class=pr-lede><q>The scaling is proportional to d/(d − Z) where d, the value of perspective, is the distance from
+  the drawing plane to the assumed position of the viewer's eye.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#perspective">CSS Transforms 2 §4.1.1</a></span>
+  Each blue box is 40 by 20 at the stage's center, on the dashed outline, where the perspective is centered.</p>
+</header>
+
+<section>
+  <h2>The scale</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(50px)">A</div></div>
+    <figcaption><i>d</i> 100, <i>Z</i> 50: 100/50, twice, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 200px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(100px)">A</div></div>
+    <figcaption><i>d</i> 200, <i>Z</i> 100: 200/100, twice, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(-100px)">A</div></div>
+    <figcaption><i>d</i> 100, <i>Z</i> −100: 100/200, half, 20 by 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>For one element, or its children; and turning</h2>
+  <p>perspective() is in the element's own transform; the perspective property gives <q>its 3d-transformed children
+  ... a shared perspective</q>. Two orange 20px squares, at 30 and 110 across, go 100px back.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div class="pr-ghost two" style="left: 30px"></div><div class="pr-ghost two" style="left: 110px"></div><div class="pr-b pr-fit two" style="left: 30px; transform: translateZ(-100px)"></div><div class="pr-b pr-fit two" style="left: 110px; transform: translateZ(-100px)"></div></div>
+    <figcaption>The stage's <code>perspective: 100px</code>: each halves toward its center, to 55 and 95.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost two" style="left: 30px"></div><div class="pr-ghost two" style="left: 110px"></div><div class="pr-b pr-fit two" style="left: 30px; transform: perspective(100px) translateZ(-100px)"></div><div class="pr-b pr-fit two" style="left: 110px; transform: perspective(100px) translateZ(-100px)"></div></div>
+    <figcaption>Each <code>perspective(100px) translateZ(-100px)</code>: toward its own center, to 35 and
+    115.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion" style="perspective: 200px"><div class="pr-ghost" style="position: absolute; left: 40px; top: 20px; width: 80px; height: 40px"></div><div class="pr-a pr-fit turn">AB</div></div>
+    <figcaption>An 80 by 40 plane, <code>perspective: 200px</code>, turning about its vertical center line. Still:
+    <code>rotateY(60deg)</code>, its near left edge 48 tall at 56 across, its right 34 tall at 97. As it turns, the
+    nearer edge grows, the farther shrinks, and its back shows mirrored.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

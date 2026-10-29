@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flexible tracks in indefinite space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: inline-grid; vertical-align: top; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+  .s { grid-column: span 2; background: #cfe6c4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.7 Expand Flexible Tracks, indefinite free space</div>
+  <h1>Flexible tracks in indefinite space</h1>
+  <p class=pr-lede><q>Otherwise, if the free space is an indefinite length: The used flex fraction is the maximum
+  of:</q> <q>For each flexible track, if the flexible track's flex factor is greater than one, the result of dividing
+  the track's base size by its flex factor; otherwise, the track's base size.</q> <q>For each grid item that crosses a
+  flexible track, the result of finding the size of an fr using all the grid tracks that the item crosses and a space
+  to fill of the item's max-content contribution.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-flex-tracks">CSS Grid Layout 2 §12.7</a></span>
+  Each grid is an <code>inline-grid</code>, sized under a <code>max-content</code> constraint, its edges dashed.</p>
+</header>
+
+<section>
+  <h2>The largest fr any track or item needs</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 2fr"><div class=a>ab</div><div class=b>abc</div></div></div>
+    <figcaption><code>1fr 2fr</code>, "ab" and "abc": "ab" needs an fr of 20px, "abc" 15px. 20px: 20 and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 2fr"><div class=a>abcd</div><div></div><div class=s>abcdefgh</div></div></div>
+    <figcaption><code>1fr 2fr</code>, "abcd" in the first, green "abcdefgh" across both: "abcd" needs 40px, green
+    less. 40 and 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 0.5fr"><div class=a>abcd</div></div></div>
+    <figcaption><code>0.5fr</code> holding "abcd": a factor under one gives its base size, 40px, as the fr; 0.5fr is
+    20px, under the base size, which it keeps: 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Redone for a minimum or maximum width</h2>
+  <p><q>If using this flex fraction would cause the grid to be smaller than the grid container's min-width/height (or
+  larger than the grid container's max-width/height), then redo this step, treating the free space as definite and the
+  available grid space as equal to the grid container's inner size when it's sized to its min-width/height
+  (max-width/height).</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 1fr; min-width: 100px"><div class=a>ab</div><div class=b>ab</div></div></div>
+    <figcaption><code>1fr 1fr</code>, "ab" in each, <code>min-width: 100px</code>: 40px is too narrow, so the fr is
+    found in 100px: 50 and 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 1fr; max-width: 80px"><div class=a>abcdef</div><div class=b>ab</div></div></div>
+    <figcaption>"abcdef" and "ab", <code>max-width: 80px</code>: 120px is too wide; in 80px, the first keeps its
+    60px and the second gets the other 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

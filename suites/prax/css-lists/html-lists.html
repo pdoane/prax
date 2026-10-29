@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>HTML's lists in CSS</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .pr-stage ol, .pr-stage ul { padding-left: 30px; }
+  .sides ul { padding: 0 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · A Sample Style Sheet For HTML</div>
+  <h1>HTML's lists in CSS</h1>
+  <p class=pr-lede><q>This section is informative, not normative. The [HTML] Rendering chapter defines the normative
+  default properties that apply to HTML lists; this sample style sheet is provided to illustrate the CSS features using
+  familiar markup conventions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#ua-stylesheet">CSS Lists and Counters 3 §A</a></span></p>
+</header>
+
+<section>
+  <h2>type, start and value</h2>
+  <p><q>ol[type="a"] { list-style-type: lower-alpha; }</q> <q>ol[start] { counter-reset: list-item calc(attr(start
+  integer, 1) - 1); }</q> <q>li[value] { counter-set: list-item attr(value integer, 1); }</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol type=a><li>one<li>two</ol><ol type=I><li>one<li>two</ol></div>
+    <figcaption><code>type=a</code>: a., b.; <code>type=I</code>: I., II.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol start=7><li>one<li>two</ol><ol><li>one<li value=20>two<li>three</ol></div>
+    <figcaption><code>start=7</code>: 7., 8.; <code>value=20</code>: 1., 20., 21.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol reversed start=10><li>one<li>two<li>three</ol></div>
+    <figcaption><code>reversed start=10</code>: 10., 9., 8.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>marker-side and text-align</h2>
+  <p><q>ol, ul { display: block; margin-block: 1em; marker-side: match-parent; padding-inline-start: 40px; }</q>
+  <q>li { text-align: match-parent; }</q> Items with <code>dir=rtl</code> in a left-to-right list.</p>
+  <figure>
+    <div class="pr-stage pr-text sides"><ul><li>one<li dir=rtl>OWT<li>three</ul></div>
+    <figcaption>The sample's <code>match-parent</code> would put every disc on the left; browsers' own style sheets
+    put the right-to-left item's disc on its right. In Safari and Firefox its text stays at the left, aligned as its parent; Chrome sets it at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

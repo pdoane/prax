@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid items stretch, unless aligned</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 100px 100px; grid-template-rows: 40px 40px; }
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .base { display: grid; grid-template-columns: 100px 100px; font-family: "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11 Alignment and Spacing</div>
+  <h1>Grid items stretch, unless aligned</h1>
+  <p class=pr-lede><q>By default, grid items stretch to fill their grid area. However, if justify-self or align-self
+  compute to a value other than stretch or margins are auto, grid items will auto-size to fit their contents.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#alignment">CSS Grid Layout 2 §11</a></span></p>
+</header>
+
+<section>
+  <h2>Stretched, or sized to fit</h2>
+  <p>Each stage is a grid of two 100px columns and two 40px rows; each item holds "abcd", 40px of text.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=t>abcd</div><div class=u style="justify-self: start">abcd</div><div class=u style="align-self: start">abcd</div><div class=t style="justify-self: center; align-self: end">abcd</div></div></div>
+    <figcaption>Top left, <code>normal</code>: fills its 100 by 40 area. Top right, <code>justify-self:
+    start</code>: 40 by 40. Bottom left, <code>align-self: start</code>: 100 by 20. Bottom right,
+    <code>center</code>/<code>end</code>: 40 by 20, centered on 150px at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=u style="margin-left: auto">abcd</div><div class=u style="margin: auto">abcd</div><div class=t style="margin-top: auto; justify-self: stretch">abcd</div></div></div>
+    <figcaption><code>margin-left: auto</code>: 40 by 40, at the right of its area. <code>margin: auto</code>: 40 by
+    20, in the middle of the second area. Blue, <code>margin-top: auto</code>: 100 by 20, at the bottom of its
+    row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Subgrid items align with their parent grid's</h2>
+  <p><q>The grid items of subgrids participate in alignment, including baseline alignment, together with their parent
+  grid's items</q>. Both items are <code>align-self: baseline</code> in one row: blue, 26px text, is in the parent grid;
+  the dashed orange item is a <code>grid-template-rows: subgrid</code> with "Ab" in 13px text. The red line is blue's
+  baseline.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=base><div class=t style="align-self: baseline; font-size: 26px; line-height: 40px"><span class=pr-baseline></span>Ab</div><div class=pr-frame style="display: grid; grid-template-rows: subgrid"><div class=u style="align-self: baseline; font-size: 13px; line-height: 20px">Ab</div></div></div></div>
+    <figcaption>The orange "Ab" sits on the red line, about 29px down, not at the top of the row. <span class=pr-flag>Firefox</span> leaves it at the top, aligned
+    only within the subgrid.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=base><div class=t style="align-self: baseline; font-size: 26px; line-height: 40px"><span class=pr-baseline></span>Ab</div><div class=pr-frame style="display: grid"><div class=u style="align-self: baseline; font-size: 13px; line-height: 20px">Ab</div></div></div></div>
+    <figcaption>The same in a nested grid: its item aligns only in its own grid, so the orange "Ab" is at the top
+    of the row, above the red line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

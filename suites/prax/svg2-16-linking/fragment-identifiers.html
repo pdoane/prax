@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG fragment identifiers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.3.1 SVG fragment identifiers</div>
+  <h1>SVG fragment identifiers</h1>
+  <p class=pr-lede><q>An SVG fragment identifier can come in the following forms</q>: a bare name, <q>An SVG view
+  specification</q>, and <q>Basic media fragments identifiers of type spatial or temporal</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#SVGFragmentIdentifiers">SVG 2 §16.3.1</a></span>
+  Each stage is an <code>img</code> 160 by 60 of <code>support/quadrants.svg</code>: blue, orange, green and purple
+  quadrants from the top left, 80 by 30 each, with white dots in their middles.</p>
+</header>
+
+<section>
+  <h2>A space segment, and a view that does not match</h2>
+  <p><q>If the SVG fragment identifier addresses a space segment (e.g., MyDrawing.svg#xywh=0,0,100,100),then the initial
+  view into the SVG document is established using the view specification attributes on the outermost svg element where
+  the ‘viewBox’ is overriden by the x, y, width and height values provided by the fragment identifier.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#xywh=80,30,80,30" alt=""></div>
+    <figcaption><code>#xywh=80,30,80,30</code>: the purple quadrant, scaled 2, from x 20 to 140.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The whole.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#xywh=percent:0,50,50,50" alt=""></div>
+    <figcaption><code>#xywh=percent:0,50,50,50</code>: the green quadrant, scaled 2. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> The whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#nothing" alt=""></div>
+    <figcaption>A bare name that is no <code>view</code>, <code>#nothing</code>: the whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

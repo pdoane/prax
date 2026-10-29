@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>foreignObject: content outside its rectangle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>foreignObject: content outside its rectangle</h1>
+  <p class=pr-lede><q>Again, the overflow property determines whether content that extends outside the positioning
+  rectangle will be hidden.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60 with a <code>foreignObject</code> at 20, 10, 120 by 20, outlined dashed grey,
+  holding the HTML boxes A and B, each a line 20 tall.</p>
+</header>
+
+<section>
+  <h2>Content outside the positioning rectangle</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="20" style="overflow: hidden"><div class=pr-a>A</div><div class=pr-b>B</div></foreignObject><rect x="20.5" y="10.5" width="119" height="19" class=pr-ghost /></svg></div>
+    <figcaption><code>overflow: hidden</code>: A alone, 10 to 30; B is cut off.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="20" style="overflow: visible"><div class=pr-a>A</div><div class=pr-b>B</div></foreignObject><rect x="20.5" y="10.5" width="119" height="19" class=pr-ghost /></svg></div>
+    <figcaption><code>overflow: visible</code>: A, and B below the rectangle, from 30 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="20"><div class=pr-a>A</div><div class=pr-b>B</div></foreignObject><rect x="20.5" y="10.5" width="119" height="19" class=pr-ghost /></svg></div>
+    <figcaption>No <code>overflow</code> declared. The user agent style sheet <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#UAStyleSheet">§6.8</a></span>
+    sets <code>hidden</code> on <code>image</code> but not on <code>foreignObject</code>, which leaves it
+    <code>visible</code>, but the table in <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#OverflowAndClipProperties">§3.11</a></span>
+    gives <code>foreignObject</code> <code>hidden</code> from it: the text disagrees with itself.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

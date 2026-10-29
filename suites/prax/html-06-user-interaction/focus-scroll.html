@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>focus() scrolls, blur() unfocuses</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 0 0 10px; overflow: auto; background: var(--pr-plain) }
+  .spacer { height: 150px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.6 Focus management APIs</div>
+  <h1>focus() scrolls, blur() unfocuses</h1>
+  <p class=pr-lede><q>By default, this method also scrolls element into view. Providing the preventScroll option and setting it to
+  true prevents this behavior.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">HTML §6.6.6</a></span></p>
+</header>
+<section>
+  <h2>Into view, centered</h2>
+  <p><q>If options["preventScroll"] is false, then scroll a target into view given this, "auto", "center", and
+  "center".</q> The buttons keep the focus from moving to themselves when pressed. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">§6.6.6</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=pr-target id=scroll>target.focus()</button>
+      <div class=scroller id=box1><div class=spacer></div><div class=pr-target id=target1 tabindex=-1>target</div><div class=spacer></div></div>
+    </div>
+    <figcaption>The target is 150px down the box, out of view. Click the button: the box scrolls so that the
+    target is in the middle of it, 30px from its top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=pr-target id=still>focus({preventScroll: true})</button>
+      <div class=scroller id=box2><div class=spacer></div><div class=pr-target id=target2 tabindex=-1>target</div><div class=spacer></div></div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1 data-on="#target2" style="margin: 0 -20px"></ol>
+    </div>
+    <figcaption>The same box. Click the button: the target takes the focus, which the log shows, but the box does not
+    scroll and it stays out of view.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>blur()</h2>
+  <p><q>The user agent should run the unfocusing steps given this.</q> <q>User agents may instead selectively or
+  uniformly do nothing, for usability reasons.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">§6.6.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=pr-target id=field value="a field">
+        <button class=pr-target id=blur>field.blur()</button>
+      </div>
+    </div>
+    <figcaption>Click the field, then the button: the field loses its caret and focus, and the focus moves to the
+    viewport.</figcaption>
+  </figure>
+</section>
+<script>
+  // Each button acts without taking the focus itself.
+  const actions = {
+      scroll: () => document.getElementById("target1").focus(),
+      still: () => document.getElementById("target2").focus({preventScroll: true}),
+      blur: () => document.getElementById("field").blur(),
+  };
+  for (const [id, action] of Object.entries(actions)) {
+      const button = document.getElementById(id);
+      button.addEventListener("mousedown", event => event.preventDefault());
+      button.addEventListener("click", action);
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

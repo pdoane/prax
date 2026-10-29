@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright: which runs combine</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 130px; padding: 0 6px; }
+  .tcy { text-combine-upright: all; background: #f9cc9d; }
+  .inner { background: #b9cde6; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1.1 Text Run Rules</div>
+  <h1>text-combine-upright: which runs combine</h1>
+  <p class=pr-lede><q>To avoid complexity in the rendering and layout, text-combine-upright can only combine plain
+  text: consecutive typographic character units that are not interrupted by a box boundary.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-runs">CSS Writing Modes 4 §9.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>A sequence interrupted by a box boundary</h2>
+  <p><q>if the boundary of a potentially-combinable run is due only to one or more inline box boundaries, the UA must
+  inspect any characters that appear immediately before and immediately after the run, and if these characters would,
+  without the intervening box, form a sequence that would (if it were not too long) combine, then the candidate run
+  does not combine.</q> <q>The above paragraph is at-risk.</q> The orange box is the <code>tcy</code> element, with
+  <code>text-combine-upright: all</code>; the blue box a span inside it.</p>
+  <figure class="s pr-erratum">
+    <div class=pr-stage>年<span class=tcy>12<span class=inner>34</span></span>月</div>
+    <figcaption><code>&lt;tcy&gt;12&lt;span&gt;34&lt;/span&gt; &lt;/tcy&gt;</code>: <q>no text would combine</q>, 1234
+    is one sequence split by a box boundary: all four digits turned. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> combine "12" and "34" apart.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年12<span class=tcy><span class=inner>34</span></span>月</div>
+    <figcaption><code>12&lt;tcy&gt;&lt;span&gt;34&lt;/span&gt;&lt;/tcy&gt;</code>: <q>The 34 would combine</q>; the
+    "12" outside does not share its <code>text-combine-upright</code>. "12" turned, "34" upright in one
+    square.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年12<span class=tcy><span class=inner></span>34</span>月</div>
+    <figcaption><code>12&lt;tcy&gt;&lt;span&gt;&lt;/span&gt;34&lt;/tcy&gt;</code>: the same.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年12<span class=tcy>34<span class=inner></span></span>月</div>
+    <figcaption><code>12&lt;tcy&gt;34&lt;span&gt;&lt;/span&gt;&lt;/tcy&gt;</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

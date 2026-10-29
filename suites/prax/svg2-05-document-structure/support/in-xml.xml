@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="xml.css" type="text/css"?>
+<!-- An XML document of another namespace holding an SVG document fragment, whose elements a prefix puts in the SVG
+     namespace: a blue rect 120 by 40 at 20, 10. -->
+<parent xmlns="http://example.org" xmlns:svg="http://www.w3.org/2000/svg">
+  <svg:svg width="160" height="60">
+    <svg:rect x="20" y="10" width="120" height="40" fill="#4f81bd" />
+  </svg:svg>
+</parent>

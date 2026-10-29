@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks of inline boxes, across lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .host { position: relative; background: #f9cc9d; }
+  .fill { position: absolute; inset: 0; outline: 2px solid #2c5a8f; outline-offset: -2px; background: rgba(79, 129, 189, 0.25); }
+  .pr-stage { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2.1 Containing Blocks of Positioned Boxes</div>
+  <h1>Containing blocks of inline boxes, across lines</h1>
+  <p class=pr-lede>For an inline ancestor, <q>the containing block is formed by forming a rectangle from the
+  start-most content edges (in both axes) of the first box fragment of the ancestor, and the end-most content edges of
+  the end-most box fragment(s) of the ancestor in each axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span>
+</p>
+</header>
+
+<section>
+  <h2>From the first fragment's start to the last one's end</h2>
+  <p>The tinted span is relative and runs over two lines of 10px letters; it holds an absolute box with <code>inset:
+  0</code>, outlined in blue. <q>The containing block formed by a fragmented inline box was undefined in CSS2.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure">xxxxx <span class=host>bbbbbbb cccccccccc<span class=fill></span></span></div>
+    <figcaption>Left to right: from the first fragment's top left, at 60, 0, to the last one's bottom right, at
+    100, 40: a box 40 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="direction: rtl">xxxxx <span class=host>bbbbbbb cccccccccc<span class=fill></span></span></div>
+    <figcaption>Right to left, where the start is the right; the Latin letters keep their order, so "bbbbbbb" ends the
+    first line. From that fragment's right, at 200, to the last one's left, at 100: a box 100 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Content edges, not padding edges</h2>
+  <p>The rectangle is made of <q>content edges</q>, where CSS 2 had <q>the padding boxes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2 §10.1</a></span>
+  Here the span has 10px of padding.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 80px; padding-top: 10px; box-sizing: border-box">xxxxx <span class=host style="padding: 10px">bbbbbbb cccccccccc<span class=fill></span></span></div>
+    <figcaption>By the draft, the box covers the content area alone, inside the tinted padding.</figcaption>
+  </figure>
+  <p>Chrome, Safari and Firefox cover the padding too, as CSS 2 did. The
+    containing block of a split inline box is an open issue (<a href="https://github.com/w3c/csswg-drafts/issues/8284">csswg-drafts#8284</a>), so no browser is
+    flagged.</p>
+</section>
+
+</body>
+</html>

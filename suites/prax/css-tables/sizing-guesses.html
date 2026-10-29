@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Width distribution: sizing types and guesses</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #c3d08b; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.3 Distribution algorithm</div>
+  <h1>Width distribution: sizing types and guesses</h1>
+  <p class=pr-lede>Each column is a <dfn>percent-column</dfn>, a <dfn>pixel-column</dfn> or an <dfn>auto-column</dfn>.
+  Four sizing-guesses follow: min-content (every column its min-content width); min-content-percentage (percent-columns
+  <q>the larger of: its intrinsic percentage width times the assignable width and its min-content width</q>);
+  min-content-specified (also <q>any other column that is constrained is assigned its max-content width</q>); and
+  max-content. <q>If the assignable table width is less than or equal to the max-content sizing-guess, the used widths
+  of the columns must be the linear combination (with weights adding to 1) of the two consecutive sizing-guesses whose
+  width sums bound the available width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#width-distribution-algorithm">CSS Table 3 §3.9.3</a></span></p>
+</header>
+
+<section>
+  <h2>Three columns, four guesses</h2>
+  <p>Green "a" is <code>width: 25%</code>, a percent-column; orange "b" <code>width: 50px</code>, a pixel-column;
+  blue "aa bbbb" an auto-column, 40px at least and 70px on one line (<code>.pr-measure</code>). At a table width W,
+  the guesses are 10 + 10 + 40 = 60px; W/4 + 10 + 40; W/4 + 50 + 40; and W/4 + 50 + 70.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 80px"><tr><td style="width: 25%">a</td><td style="width: 50px">b</td><td>aa bbbb</td></tr></table></div>
+    <figcaption>W = 80px: between min-content-percentage, 70px, and min-content-specified, 110px, a quarter of the
+    way: green 20px, orange 10 + 10 = 20px, blue 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 120px"><tr><td style="width: 25%">a</td><td style="width: 50px">b</td><td>aa bbbb</td></tr></table></div>
+    <figcaption>W = 120px: exactly min-content-specified, 30 + 50 + 40: blue still on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 140px"><tr><td style="width: 25%">a</td><td style="width: 50px">b</td><td>aa bbbb</td></tr></table></div>
+    <figcaption>W = 140px: halfway from min-content-specified, 125px, to max-content, 155px: green 35px, orange 50px,
+    blue 55px, on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 25%">a</td><td style="width: 50px">b</td><td>aa bbbb</td></tr></table></div>
+    <figcaption>W = 200px, past max-content, 170px: the 30px excess (<a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">§3.9.3.2</a>)
+    goes to blue: 50, 50 and 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolutely positioned buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px 0; }
+  .stage button { margin: 0; padding: 0; box-sizing: border-box; border: 1px solid #2c5a8f; border-radius: 0;
+                  background: var(--pr-plain); appearance: none; font-size: 12px; line-height: 18px; }
+  .stage button > span { display: block; padding: 0 6px; }
+  .stage button > .pr-b { line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.6 The button element</div>
+  <h1>Absolutely positioned buttons</h1>
+  <p class=pr-lede>A button element is <q>expected to depict a button and to use button layout.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#button-layout">HTML §15.5.3</a></span></p>
+</header>
+
+<section>
+  <h2>Absolutely positioned</h2>
+  <p><q>If the element is absolutely-positioned, then for the purpose of the CSS visual formatting model, act as if the
+  element is a replaced element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#button-layout">§15.5.3</a></span>
+  Since, the CSS Working Group resolved that <q>Semi-replaced elements stretch in both directions in abspos</q>
+  (<a href="https://github.com/w3c/csswg-drafts/issues/6789">csswg-drafts#6789</a>).</p>
+  <figure>
+    <div class="pr-stage stage" style="position: relative; height: 20px">
+      <button style="position: absolute; left: 20px; right: 20px; top: 10px"><span>stretched</span></button>
+    </div>
+    <figcaption><code>left: 20px; right: 20px</code> and an auto width: 160px wide, from 20px to 180px, not as wide
+    as "stretched".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

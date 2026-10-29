@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box offsets: negative lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.2 Box offsets: 'top', 'right', 'bottom', 'left'</div>
+  <h1>Box offsets: negative lengths</h1>
+  <p class=pr-lede><code>top</code>, <code>right</code>, <code>bottom</code> and <code>left</code> take <code>&lt;length&gt;
+  | &lt;percentage&gt; | auto</code>. Initial <code>auto</code>, not inherited, and they apply to positioned elements.
+  Each stage is 200 by 100 and the containing block of the absolutely positioned box in it, 60 by 20.</p>
+</header>
+
+<section>
+  <h2>Negative lengths</h2>
+  <p><q>The offset is a fixed distance from the reference edge. Negative values are allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#position-props">CSS 2
+  §9.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="top: -10px; left: -20px">box</div></div>
+    <figcaption><code>top: -10px; left: -20px</code>: past the stage's top left corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="bottom: -10px; right: -20px">box</div></div>
+    <figcaption><code>bottom: -10px; right: -20px</code>: past the bottom right corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

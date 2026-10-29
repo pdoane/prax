@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-orientation: upright is left to right</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 18px/30px "PR Arimo"; writing-mode: vertical-rl; width: auto; height: 90px; padding: 0 6px; }
+  .f { float: inline-start; width: 20px; height: 20px; background: #d68a3c; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1 Orienting Text: the text-orientation property, upright</div>
+  <h1>text-orientation: upright is left to right</h1>
+  <p class=pr-lede><code>upright</code> <q>causes the used value of direction to be ltr, and for the purposes of bidi
+  reordering, causes all characters to be treated as strong LTR.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-orientation">CSS Writing Modes 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The used direction is ltr</h2>
+  <p>Each stage is <code>vertical-rl</code> and <code>direction: rtl</code>, and holds an orange float
+  <code>inline-start</code> and the letters "ab".</p>
+  <figure class=s>
+    <div class=pr-stage style="direction: rtl"><div class=f></div>ab</div>
+    <figcaption><code>mixed</code>: <code>rtl</code>, so the float and "ab" at the bottom.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="direction: rtl; text-orientation: upright"><div class=f></div>ab</div>
+    <figcaption><code>upright</code>: used <code>ltr</code>, so the float and "a", "b" at the top. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> keep <code>rtl</code>: the bottom.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="direction: rtl; text-orientation: upright"><span style="display: inline-block; writing-mode: horizontal-tb; width: 80px; background: #b9cde6">ab</span></div>
+    <figcaption>A horizontal inline-block: at the line's top; "ab" at its right, as it inherits
+    <code>rtl</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> At the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Every character strong LTR</h2>
+  <p>The Hebrew word אבג in <code>vertical-rl</code>, <code>ltr</code>.</p>
+  <figure class=s>
+    <div class=pr-stage>אבג</div>
+    <figcaption><code>mixed</code>: turned, א at the bottom.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-orientation: upright">אבג</div>
+    <figcaption><code>upright</code>: strong LTR, so in logical order: א at the top, ג at the bottom. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> reorder them: ג at the top.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: upright; unicode-bidi: bidi-override">אבג</div>
+    <figcaption>The note's <code>unicode-bidi: bidi-override</code>: א at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

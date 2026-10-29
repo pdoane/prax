@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Vertex markers: which vertices</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="start" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#6aa36a" fill-opacity="0.6" /></marker>
+  <marker id="mid" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#4f81bd" fill-opacity="0.6" /></marker>
+  <marker id="end" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#d68a3c" fill-opacity="0.6" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.2 Vertex markers: the ‘marker-start’, ‘marker-mid’ and ‘marker-end’ properties</div>
+  <h1>Vertex markers: which vertices</h1>
+  <p class=pr-lede><q>For all shapes, the path that must be used when calculating marker positions is the equivalent
+  path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#VertexMarkerProperties">SVG 2 §13.7.2</a></span>
+  Each stage is an SVG 160 by 60. The markers are dots 14 across at 60% opacity: green for the start, blue for the
+  middle, orange for the end.</p>
+</header>
+
+<section>
+  <h2>The first and last vertices of shapes</h2>
+  <p><q>For all shape elements, except ‘polyline’ and ‘path’, the last vertex is the same as the first vertex. In this
+  case, if the value of 'marker-start' and 'marker-end' are both not none, then two markers will be rendered on that
+  final vertex.</q> <a href="https://github.com/w3c/svgwg/issues/753">svgwg#753</a> made them at risk.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 60,10 100,50 140,10" fill="none" stroke="#1f2430" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>A <code>polyline</code>: green at 20, 50, blue at 60, 10 and 100, 50, orange at 140, 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="15" width="100" height="30" fill="none" stroke="#1f2430" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>A <code>rect</code>: orange over green at 30, 15; blue at the other corners. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    No markers.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="none" stroke="#1f2430" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>A <code>circle</code>: orange over green at 100, 30; blue at 80, 50, 60, 30 and 80, 10. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    No markers.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A path's closed subpaths</h2>
+  <p><q>'marker-start' must only be rendered on the first vertex of the path data. 'marker-end' must only be rendered
+  on the final vertex of the path data. 'marker-mid' must be rendered on every vertex other than the first vertex of
+  the path data and the last vertex of the path data.</q> <q>If the reference is not valid, then no marker will be
+  drawn at the given vertex or vertices.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 45 10 L 70 50 Z M 90 50 L 115 10 L 140 50 Z" fill="none" stroke="#1f2430" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>Two closed triangles: blue over green at 20, 50, orange over blue at 90, 50, blue at the
+    other corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 60,10 100,50 140,10" fill="none" stroke="#1f2430" marker-start="url(#start)" marker-mid="url(#nowhere)" marker-end="url(#end)" /></svg></div>
+    <figcaption>The <code>polyline</code>, <code>marker-mid="url(#nowhere)"</code>: green and orange at the ends
+    only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Button layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px 0; }
+  .stage button { margin: 0; padding: 0; box-sizing: border-box; border: 1px solid #2c5a8f; border-radius: 0;
+                  background: var(--pr-plain); appearance: none; font-size: 12px; line-height: 18px; }
+  .stage button > span { display: block; padding: 0 6px; }
+  .stage button > .pr-b { line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.6 The button element</div>
+  <h1>Button layout</h1>
+  <p class=pr-lede>A button element is <q>expected to depict a button and to use button layout.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#button-layout">HTML §15.5.3</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element">§4.10.6</a></span></p>
+</header>
+
+<section>
+  <h2>As wide as its content</h2>
+  <p><q>If the computed value of 'inline-size' is 'auto', then the used value is the fit-content inline size.</q>
+  <q>Otherwise, if the computed value of 'display' is a value such that the outer display type is 'inline', then
+  behave as 'inline-block'.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#button-layout">§15.5.3</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <button style="display: block"><span>block</span></button>
+    </div>
+    <figcaption><code>display: block</code>: a box 20px tall as wide as "block", not the stage's 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <button style="display: inline; width: 100px; height: 40px"><span>inline</span></button>
+    </div>
+    <figcaption><code>display: inline</code> acts as <code>inline-block</code>, so its <code>width</code> and
+    <code>height</code> apply: 100px by 40px.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Flex and grid lay out its content</h2>
+  <p><q>The element is expected to establish a new formatting context for its contents.</q> <q>If the computed value of 'display' is 'inline-grid', 'grid', 'inline-flex', 'flex', 'none', or 'contents',
+  then behave as the computed value.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#button-layout">§15.5.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <button style="display: inline-flex; flex-direction: column; gap: 10px; width: 80px"><span class=pr-a>A</span><span class=pr-b>B</span></button>
+    </div>
+    <figcaption><code>inline-flex</code> in a column, gap 10px: A over B, each 80px wide less the border, 10px
+    apart.</figcaption>
+  </figure><figure>
+    <div class="pr-stage pr-medium stage">
+      <button style="display: grid; grid-template-columns: 30px 60px; width: 90px"><span class=pr-a>A</span><span class=pr-b>B</span></button>
+    </div>
+    <figcaption><code>grid</code> of 30px and 60px columns: A and B side by side, B starting 30px in.</figcaption>
+  </figure><figure>
+    <div class="pr-stage pr-medium stage">
+      <div style="display: flex; gap: 10px"><span class=pr-a>A</span><button style="display: contents"><span class=pr-b>B</span></button><span class=pr-c>C</span></div>
+    </div>
+    <figcaption><code>display: contents</code>: the button draws no border, and B is a flex item between A and C,
+    10px from each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

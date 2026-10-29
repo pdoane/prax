@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: opposite corners kept apart</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.5 Constraining opposite radii</div>
+  <h1>corner-shape: opposite corners kept apart</h1>
+  <p class=pr-lede><q>When concave 'corner-shape' values are present (the superellipse parameter is negative), diagonally opposite corners might overlap each other.</q> <q>The used values of all border radii must be proportionally reduced by multiplying them by the minimum of the opposite corner scale factor and the adjacent corner scale factor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shape-constrain-radii">CSS Borders and Box Decorations 4 §3.9.5</a></span> Each blue box is 120 by 60.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop; border-top-left-radius: 80%; border-bottom-right-radius: 80%"></div></div>
+    <figcaption><code>scoop</code>, 80% at the top left and bottom right: the two scoops reduced until their hulls meet, leaving a band between them. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: round; border-top-left-radius: 80%; border-bottom-right-radius: 80%"></div></div>
+    <figcaption><code>round</code>, the same radii: convex, no reduction, the corners meet at the diagonal.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

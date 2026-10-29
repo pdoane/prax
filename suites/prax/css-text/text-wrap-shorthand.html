@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-wrap shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.5 Joint Wrapping Control: the text-wrap shorthand property</div>
+  <h1>The text-wrap shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for the 'text-wrap-mode' and 'text-wrap-style' properties. Any
+  omitted longhand is set to its initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-wrap-shorthand">CSS Text 4 §5.5</a></span>
+  Each stage is 150px wide, of 10px letters, and holds "aa bb cc dd ee ff gg hh", 230px of text.</p>
+</header>
+
+<section>
+  <h2>Either longhand, or both</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap: nowrap; overflow: hidden"><span class=t>aa bb cc dd ee ff gg hh</span></div>
+    <figcaption><code>text-wrap: nowrap</code>: one line, clipped at the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap: balance"><span class=t>aa bb cc dd ee ff gg hh</span></div>
+    <figcaption><code>text-wrap: balance</code>: two even lines, "aa bb cc dd", "ee ff gg hh".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap: nowrap balance; overflow: hidden"><span class=t>aa bb cc dd ee ff gg hh</span></div>
+    <figcaption><code>text-wrap: nowrap balance</code>: no wrapping, so nothing to balance: one line, clipped.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Omitted longhands are reset</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap; text-wrap: balance"><span class=t>aa bb cc dd ee ff gg hh</span></div>
+    <figcaption><code>text-wrap-mode: nowrap</code>, then <code>text-wrap: balance</code>: the mode is reset to
+    <code>wrap</code>, and the lines are balanced.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-style: balance; text-wrap: wrap"><span class=t>aa bb cc dd ee ff gg hh</span></div>
+    <figcaption><code>text-wrap-style: balance</code>, then <code>text-wrap: wrap</code>: the style is reset to
+    <code>auto</code>: "aa bb cc dd ee", then "ff gg hh".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

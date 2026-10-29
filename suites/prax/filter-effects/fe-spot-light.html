@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feSpotLight: a cone of light</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <filter id="cone45" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feSpotLight x="80" y="30" z="30" pointsAtX="80" pointsAtY="30" limitingConeAngle="45"/></feDiffuseLighting></filter>
+  <filter id="cone20" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feSpotLight x="80" y="30" z="30" pointsAtX="80" pointsAtY="30" limitingConeAngle="20"/></feDiffuseLighting></filter>
+  <filter id="no-cone" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feSpotLight x="80" y="30" z="30" pointsAtX="80" pointsAtY="30"/></feDiffuseLighting></filter>
+  <filter id="focused" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feSpotLight x="80" y="30" z="30" pointsAtX="80" pointsAtY="30" specularExponent="20"/></feDiffuseLighting></filter>
+  <filter id="tilted" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feSpotLight x="80" y="30" z="30" pointsAtX="130" pointsAtY="30" limitingConeAngle="30"/></feDiffuseLighting></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 11.4 Light source feSpotLight</div>
+  <h1>feSpotLight: a cone of light</h1>
+  <p class=pr-lede><q>A limiting cone which restricts the region where the light is projected. No light is projected
+  outside the cone.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feSpotLightElement">Filter Effects 1 §11.4</a></span>
+  Each stage is an SVG 160 by 60 filled by one flat, opaque rectangle; its filter is an feDiffuseLighting of a white
+  spot light, in sRGB, at (80, 30), 30 above the surface, pointing straight down at (80, 30, 0) unless the caption
+  says otherwise.</p>
+</header>
+
+<section>
+  <h2>The limiting cone</h2>
+  <p><q>limitingConeAngle represents the angle in degrees between the spot light axis (i.e. the axis between the light
+  source and the point to which it is pointing at) and the spot light cone.</q> <q>If no value is specified, then no
+  limiting cone will be applied.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#cone45)"/></svg></div>
+    <figcaption>45°: a lit disc of radius 30 · tan 45°, 30, from x 50 to 110 and the top to the bottom; black
+    outside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#cone20)"/></svg></div>
+    <figcaption>20°: radius 30 · tan 20°, about 11, from x 69 to 91.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#no-cone)"/></svg></div>
+    <figcaption>No angle: light everywhere, white under the light and fading out to the sides.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Focus and direction</h2>
+  <p><q>L<sub>r</sub> = Light<sub>r</sub>*pow((-L.S),specularExponent)</q>, with S the unit vector from the light to
+  the point it points at.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#focused)"/></svg></div>
+    <figcaption><code>specularExponent="20"</code>, no cone: a soft spot about 20 across, black beyond.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#tilted)"/></svg></div>
+    <figcaption>Pointing at (130, 30), 30°: the axis meets the surface 50 to the right, so the lit patch lies to the
+    right of x 80 and stretches toward x 130.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clip-path: a box by itself</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.small { width: 120px; }
+  .small + figcaption { max-width: 120px; }
+  .subj { width: 40px; height: 10px; padding: 10px; margin: 20px; border: 10px solid #d68a3c;
+          border-radius: 25px; background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; }
+  .square { border-radius: 0; }
+  .shadow { box-shadow: 0 0 0 10px #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 5.1 Clipping Shape: the clip-path property</div>
+  <h1>clip-path: a box by itself</h1>
+  <p class=pr-lede><q>If specified by itself, uses the edges of the specified box, including any corner shaping (e.g.
+  defined by border-radius), as clipping path.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-clip-path">CSS Masking 1 §5.1</a></span>
+  Each box is 80 by 50 at 20, 20, with a 20px margin and a 25px <code>border-radius</code>: an orange 10px border,
+  light blue padding and blue content. A green 10px shadow spreads around it, outside the border box.</p>
+</header>
+
+<section>
+  <h2>The box's edges, with its corners</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class="subj shadow" style="clip-path: border-box"></div></div>
+    <figcaption><code>border-box</code>: the box with its 25px corners, and no shadow. <span class=pr-flag>Firefox</span>
+    Square corners, the shadow in them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class="subj shadow" style="clip-path: padding-box"></div></div>
+    <figcaption><code>padding-box</code>: no border; the padding's corners 15px, the radius less the border.
+    <span class=pr-flag>Firefox</span> Square corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj shadow" style="clip-path: content-box"></div></div>
+    <figcaption><code>content-box</code>: the blue content alone, its corners 5px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj shadow" style="clip-path: margin-box"></div></div>
+    <figcaption><code>margin-box</code>: 20px out, corners 45px; the shadow drawn, rounded with it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's boxes on a CSS box</h2>
+  <p><q>For elements with associated CSS layout box, the used value for fill-box is content-box and for stroke-box
+  and view-box is border-box.</q> These boxes have square corners.</p>
+  <figure>
+    <div class="pr-stage small"><div class="subj shadow square" style="clip-path: fill-box"></div></div>
+    <figcaption><code>fill-box</code>: as <code>content-box</code>, the blue content alone.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj shadow square" style="clip-path: stroke-box"></div></div>
+    <figcaption><code>stroke-box</code>: as <code>border-box</code>, the box without its shadow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class="subj shadow square" style="clip-path: view-box"></div></div>
+    <figcaption><code>view-box</code>: as <code>border-box</code> too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

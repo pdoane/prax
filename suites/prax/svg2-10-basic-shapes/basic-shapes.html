@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The basic shapes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.1 Introduction and definitions</div>
+  <h1>The basic shapes</h1>
+  <p class=pr-lede><q>SVG contains the following set of basic shape elements</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#Introduction">SVG 2 §10.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px, so its coordinates read off the guides.</p>
+</header>
+
+<section>
+  <h2>Six elements</h2>
+  <p><q>rectangles (including optional rounded corners)</q>, <q>circles</q>, <q>ellipses</q>, <q>straight
+  lines</q>, <q>polylines</q> and <q>polygons</q>, filled blue and stroked dark blue, 2 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>rect</code>: 120 by 40, from 20, 10 to 140, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="10" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>rect</code> with <code>rx="10"</code>: its corners rounded 10 each way.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="50" cy="30" r="20" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /><ellipse cx="115" cy="30" rx="35" ry="20" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>circle</code>, radius 20 about 50, 30; <code>ellipse</code>, 35 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><line x1="20" y1="50" x2="140" y2="10" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>line</code>: from 20, 50 up to 140, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 50,10 80,50 110,10 140,50" fill="none" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>polyline</code>, unfilled: an open zigzag.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polygon points="80,10 140,50 20,50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>polygon</code>: a closed triangle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Equivalent to a path</h2>
+  <p><q>Mathematically, these shape elements are equivalent to a ‘path’ element that would construct the same
+  shape.</q> Each stage draws a shape blue, then on it the path its section gives, outlined orange, 1 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="15" ry="10" fill="#4f81bd" /><path d="M 35 10 H 125 A 15 10 0 0 1 140 20 V 40 A 15 10 0 0 1 125 50 H 35 A 15 10 0 0 1 20 40 V 20 A 15 10 0 0 1 35 10 Z" fill="none" stroke="#d68a3c" /></svg></div>
+    <figcaption>A <code>rect</code> with <code>rx="15" ry="10"</code>, and its path: the orange line runs exactly
+    along the blue edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse cx="80" cy="30" rx="50" ry="20" fill="#4f81bd" /><path d="M 130 30 A 50 20 0 0 1 80 50 A 50 20 0 0 1 30 30 A 50 20 0 0 1 80 10 A 50 20 0 0 1 130 30 Z" fill="none" stroke="#d68a3c" /></svg></div>
+    <figcaption>An <code>ellipse</code> 50 by 20 about 80, 30, and its four arcs: again along the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The collapsing border model</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f2e394; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 5px; border: 10px solid rgba(44, 90, 143, 0.6); background: #8cb6c0; background-clip: content-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2 The collapsing border model</div>
+  <h1>The collapsing border model</h1>
+  <p class=pr-lede><q>In the collapsing border model, it is possible to specify borders that surround all or part of a
+  cell, row, row group, column, and column group.</q> Cells here have a 40px content box (teal), 5px left and right
+  padding (yellow) and a 10px translucent blue border.</p>
+</header>
+
+<section>
+  <h2>Borders on the grid lines</h2>
+  <p><q>Borders are centered on the grid lines between the cells.</q> For every row, <q>row-width = (0.5 *
+  border-width<sub>0</sub>) + padding-left<sub>1</sub> + width<sub>1</sub> + padding-right<sub>1</sub> +
+  border-width<sub>1</sub> + padding-left<sub>2</sub> +...+ padding-right<sub>n</sub> + (0.5 *
+  border-width<sub>n</sub>)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-borders">CSS 2 §17.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td><td></table></div>
+    <figcaption>One 10px border between the two cells, not two. The row is 5 + 50 + 10 + 50 + 5 = 120px, and the
+    table's own border box 130px, half of each outer border outside the row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td><td><tr><td><td></table></div>
+    <figcaption>Two rows: the 10px lines between cells are continuous across the table, a single grid.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No padding, half the border</h2>
+  <p><q>Note that in this model, the width of the table includes half the table border. Also, in this model, a table
+  does not have padding (but does have margins).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-borders">CSS 2 §17.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="padding: 20px; margin-left: 20px"><tr><td><td></table></div>
+    <figcaption><code>padding: 20px</code> does nothing; <code>margin-left: 20px</code> moves the table 20px
+    right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .dotted { height: 60px; margin: 20px; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='6' fill='%234f81bd'/></svg>"); background-position: 0 50%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>The background shorthand</h1>
+  <p class=pr-lede><code>background</code> takes <code>[&lt;'background-color'&gt; || &lt;'background-image'&gt; ||
+  &lt;'background-repeat'&gt; || &lt;'background-attachment'&gt; || &lt;'background-position'&gt;] | inherit</code>: any
+  of them, once each, in any order.</p>
+</header>
+
+<section>
+  <h2>Initial values first</h2>
+  <p><q>Given a valid declaration, the 'background' property first sets all the individual background properties to
+  their initial values, then assigns explicit values given in the declaration.</q> <code>BODY { background: red
+  }</code> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>Both boxes have a style sheet's dotted <code>background-image</code> before the declaration in the caption.</p>
+  <figure>
+    <div class=pr-stage><div id=s1 class=dotted style="background: red"></div></div>
+    <figcaption><code>background: red</code>: plain red: the shorthand resets the image, and the dots are gone.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=s2 class=dotted style="background-color: red"></div></div>
+    <figcaption><code>background-color: red</code> alone: blue dots on red. The image is still set.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>All five, in any order</h2>
+  <p><q>In the second rule, all individual properties have been specified.</q> <code>P { background: url("chess.png")
+  gray 50% repeat fixed }</code> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } p { margin: 10px; height: 80px; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10'/><rect x='10' y='10' width='10' height='10'/></svg>&quot;) gray 50% repeat fixed }</style><p></p>"></iframe></div>
+    <figcaption>Black checks on gray, fixed at <code>50%</code> of the frame: a tile's top left is at 90px across and
+    40px down the frame.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } p { margin: 10px; height: 80px; background: fixed 50% gray repeat url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10'/><rect x='10' y='10' width='10' height='10'/></svg>&quot;) }</style><p></p>"></iframe></div>
+    <figcaption>The same five values in another order, <code>fixed 50% gray repeat url(...)</code>: the
+    same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

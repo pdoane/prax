@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>One line per decorating box per line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 10px 6px 0; font: 24px/50px "PR Literata"; }
+  .t u { text-decoration-color: #c0392b; text-decoration-thickness: from-font; text-decoration-skip-ink: none; }
+  .t u u { text-decoration-color: #2c5a8f; }
+  big { font-size: 40px; }
+  .pr-stage { width: 230px; }
+  figcaption { max-width: 240px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.9 Text Decoration Line Uniformity</div>
+  <h1>One line per decorating box per line</h1>
+  <p class=pr-lede><q>However, for underlines and overlines the UA must use a single thickness and position on each
+  line for the decorations deriving from a single decorating box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-line-constancy">CSS Text Decoration 4 §2.9</a></span>
+  The outer underline is red, an inner one blue; the text is PR Literata.</p>
+</header>
+
+<section>
+  <h2>Not broken by sizes and shifts</h2>
+  <p>The specification's figure: <code>&lt;u>A&lt;sup>B&lt;/sup>&lt;big>C&lt;/big>D&lt;/u></code>.</p>
+  <figure>
+    <div class="pr-stage t"><u>A<sup>B</sup><big>C</big>D</u></div>
+    <figcaption>One straight red underline of one thickness under A, B, C and D, not pieces at each one's own
+    position.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A shifted decorating box moves its own line; a shifted descendant does not move its ancestor's</h2>
+  <p><q>UAs must adjust line positions to match the shifted metrics of decorating boxes shifted with 'vertical-align'
+  values other than baseline [CSS2] or subscripted/superscripted via 'font-variant-position' [CSS-FONTS-3], but must not
+  adjust the line position or thickness in response to descendants of a decorating box that are so styled</q></p>
+  <figure>
+    <div class="pr-stage t"><u>1<sup><u>st</u></sup></u> <u>2<sub><u>nd</u></sub></u></div>
+    <figcaption>The <code>sup</code> and <code>sub</code> are decorating boxes: a blue line just under "st", raised,
+    and under "nd", lowered. The red lines stay where they are under 1 and 2.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><u>1<u style="font-variant-position: super">st</u></u> <u>2<u style="font-variant-position: sub">nd</u></u></div>
+    <figcaption>The same with <code>font-variant-position</code>, Literata's superior and inferior letters: the blue
+    lines follow the small raised and lowered letters; the red stay put. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> Draw ordinary letters, all on the baseline. <span class=pr-flag>Firefox</span> Raises
+    and lowers the letters but leaves the blue lines on the baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Display, position and float: which wins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sized { width: 60px; height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.7 Relationships between 'display', 'position', and 'float'</div>
+  <h1>Display, position and float: which wins</h1>
+  <p class=pr-lede><q>The three properties that affect box generation and layout — 'display', 'position', and 'float' —
+  interact as follows.</q> Each blue box has <code>width:
+  60px; height: 30px</code>.</p>
+</header>
+
+<section>
+  <h2>Which wins</h2>
+  <p><q>If 'display' has the value 'none', then 'position' and 'float' do not apply.</q> <q>Otherwise, if 'position'
+  has the value 'absolute' or 'fixed', the box is absolutely positioned, the computed value of 'float' is 'none'.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dis-pos-flo">CSS 2 §9.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text">text <span class="pr-a pr-fit sized" style="position: absolute; top: 40px; left: 40px; float: right">span</span> text</div>
+    <figcaption><code>position: absolute; float: right</code>: the box does not float; it is where its offsets put
+    it, 40px from the top and left, and the text runs on as if it were not there.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text">text <span class="pr-a pr-fit sized" style="display: none; float: left">span</span> text</div>
+    <figcaption><code>display: none; float: left</code>: no box at all.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The root element</h2>
+  <p><q>Otherwise, if 'float' has a value other than 'none', the box is floated and 'display' is set according to
+  the table below.</q> <q>Otherwise, if the element is the root element, 'display' is set according to the table
+  below</q>. Each frame holds a document whose root has a dashed border.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dis-pos-flo">CSS 2 §9.7</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<!doctype html><html style='display: inline-block; border: 2px dashed #2c5a8f'><body style='margin: 0; font: 13px/20px sans-serif'>root</body></html>"></iframe></div>
+    <figcaption>A root with <code>display: inline-block</code> is a block: its border spans the
+    frame, as a block's does, where an inline-block would shrink to its text.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<!doctype html><html style='float: right; padding: 0 4px; border: 2px dashed #2c5a8f'><body style='margin: 0; font: 13px/20px sans-serif'>root</body></html>"></iframe></div>
+    <figcaption>A root with <code>float: right</code> floats: it shrinks to fit its text and goes to the right of the
+    frame. <span class=pr-flag>Firefox</span> does not float it: it spans the frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

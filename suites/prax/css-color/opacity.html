@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>opacity: the element as a whole</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stripe { height: 80px; background: linear-gradient(to right, transparent 60px, #1f2430 60px, #1f2430 100px, transparent 100px); }
+  .group { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+  .group > div { width: 60px; height: 40px; margin: 10px 0 0 30px; background: #d68a3c; }
+  .glyphs { font: 64px/80px "PR Arimo"; letter-spacing: -22px; padding: 0 10px; white-space: nowrap; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin: 10px 0 10px 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.3 Transparency: the opacity property</div>
+  <h1>opacity: the element as a whole</h1>
+  <p class=pr-lede><q>The 'opacity' property applies the specified opacity to the element <em>as a whole</em>,
+  including its contents, rather than applying it to each descendant individually.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>An opaque child still occludes</h2>
+  <p><q>an opaque child occluding part of the element's background will continue to do so even when 'opacity' is
+  less than 1, but the element and child as a whole will show the underlying page through themselves.</q> A blue
+  box holds an orange child, over a dark stripe.</p>
+  <figure>
+    <div class="pr-stage stripe"><div class=group style="opacity: 0.5"><div></div></div></div>
+    <figcaption><code>opacity: 0.5</code> on the blue box: both pale, the stripe dim through both, and no blue
+    inside the orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stripe"><div class=group style="background: rgb(79 129 189 / 0.5)"><div style="background: rgb(214 138 60 / 0.5)"></div></div></div>
+    <figcaption>Each color at alpha 0.5 instead: the blue shows through the orange, which is purplish where they
+    overlap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overlapping glyphs</h2>
+  <p><q>the glyphs corresponding to all characters in the element are treated <em>as a whole</em>; any overlapping
+  portions do not increase the opacity.</q> The letters overlap by <code>letter-spacing: -22px</code>.</p>
+  <figure>
+    <div class="pr-stage glyphs"><span style="opacity: 0.5">OOO</span></div>
+    <figcaption><code>opacity: 0.5</code>: one even gray, no darker where the O's cross.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage glyphs"><span style="color: rgb(0 0 0 / 0.5)">OOO</span></div>
+    <figcaption><q>a color value which includes alpha</q>, <code>rgb(0 0 0 / 0.5)</code>: each glyph separately,
+    darker where they cross.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

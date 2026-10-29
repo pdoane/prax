@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-position property: the outside marker</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .scroller { height: 40px; overflow: auto; }
+  .clipped { overflow: hidden; }
+  .tall { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='40'><rect width='16' height='40' fill='%23d68a3c'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-position property: the outside marker</h1>
+  <p class=pr-lede><q>CSS 2.2 does not specify the precise location of the marker box or its position in the painting
+  order</q>; what it does say about an <code>outside</code> marker is below. Each principal box is tinted blue. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Scrolling and overflow</h2>
+  <p><q>The marker box is fixed with respect to the principal block box's border and does not scroll with the principal
+  block box's content.</q> <q>In CSS 2.2, a UA may hide the marker if the element's 'overflow' is other than
+  'visible'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul><li id=scrolled class=scroller>one<br>two<br>three<br>four</ul></div>
+    <figcaption>A 40px tall item with <code>overflow: auto</code>, scrolled down 40px to "three". The marker either
+    stays beside the top of its border, not moved with "one", or is hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul><li class=clipped>overflow: hidden</ul></div>
+    <figcaption><code>overflow: hidden</code>: the disc may be hidden.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The marker's effect on height</h2>
+  <p><q>The size or contents of the marker box may affect the height of the principal block box and/or the height of
+  its first line box, and in some cases may cause the creation of a new line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=tall><li>first line<br>second</ul></div>
+    <figcaption>A 16 by 40 image marker: the first line may grow to fit it, taller than the second line's
+    20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul><li></li><li>after an empty item</ul></div>
+    <figcaption>An empty item has no line of its own, but its marker may create one: a disc on a line above "after an
+    empty item".</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("scrolled").scrollTop = 40;
+</script>
+</body>
+</html>

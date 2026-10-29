@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative oklch()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.9 Relative OkLCh Colors</div>
+  <h1>Relative oklch()</h1>
+  <p class=pr-lede><q>Because OkLCh is both perceptually uniform and chroma-preserving, and because the axes correspond to easily
+  understood attributes of a color, OkLCh is a good choice for color manipulation.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-OkLCh">CSS Color 5
+  §4.9</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>A triad, out of gamut</h2>
+  <p><code>oklch(from lch(60% 90 320) l c calc(h - 120))</code>: the origin <q>is
+  oklch(0.69012 0.25077 319.893)</q>, and the result, <q>oklch(0.69012 0.25077 199.893)</q>, <q>is out of sRGB
+  gamut</q>. <q>Bring this into gamut by reducing OkLCh Chroma, yields oklch(0.69012 0.1173 199.893).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(60% 90 320)"></div><div class=sw style="background: oklch(from lch(60% 90 320) l c calc(h - 120))"></div><div class=sw style="background: oklch(0.69012 0.1173 199.893)"></div></div>
+    <figcaption>The origin, a light violet; the triad, mapped, beside <code>oklch(0.69012 0.1173 199.893)</code>: one teal. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips the triad to <code>rgb(0% 76% 84%)</code>, a brighter cyan.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Gray, the same lightness</h2>
+  <p><q>oklch(from var(--color) l 0 h) preserves the lightness, but zeroes out the chroma</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #d68a3c"></div><div class=sw style="background: oklch(from #d68a3c l 0 h)"></div><div class=sw style="background: oklch(0.6979 0 0)"></div></div>
+    <figcaption>The orange, then its gray beside <code>oklch(0.6979 0 0)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

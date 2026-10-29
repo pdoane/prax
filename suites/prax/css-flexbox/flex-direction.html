@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-direction: the main axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage.c { height: 80px; }
+  .pr-stage > div { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.1 Flex Flow Direction: the flex-direction property</div>
+  <h1>flex-direction: the main axis</h1>
+  <p class=pr-lede><q>The flex-direction property specifies how flex items are placed in the flex container, by
+  setting the direction of the flex container's main axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-direction-property">CSS Flexible Box Layout 2 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>row and row-reverse: the inline axis</h2>
+  <p><code>row</code>: <q>The main-start and main-end directions are equivalent to the inline-start and inline-end
+  directions, respectively, of the current writing mode.</q> <code>row-reverse</code>: <q>Same as row, except the
+  main-start and main-end directions are swapped.</q> Each stage is a flex container of three items 40px wide.</p>
+  <figure>
+    <div class="pr-stage" style="flex-direction: row"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row</code>: A, B, C from the left edge, 0 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="flex-direction: row-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row-reverse</code>: A at the right edge, then B and C leftward, C from 80px to 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>column and column-reverse: the block axis</h2>
+  <p><code>column</code>: <q>The main-start and main-end directions are equivalent to the block-start and block-end
+  directions, respectively, of the current writing mode.</q> Each stage is 80px tall. <q>The reverse values do not
+  reverse box ordering: like writing-mode and direction, they only change the direction of flow. Painting order, speech
+  order, and sequential navigation orders are not affected.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow c" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column</code>: A, B, C down from the top, each 20px tall, ending at 60px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow c" style="flex-direction: column-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column-reverse</code>: A at the bottom, then B, and C from 20px to 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow c" style="flex-direction: column-reverse"><div class="pr-a pr-fit" style="margin-top: -10px">A</div><div class="pr-b pr-fit" style="margin-top: -10px">B</div><div class="pr-c pr-fit" style="margin-top: -10px">C</div></div>
+    <figcaption>With <code>margin-top: -10px</code> the items overlap by 10px, and each paints over the one before it
+    in the document: B over A's top, C over B's top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow longhands: one list of shadows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.7 Layering, Layout, and Other Details</div>
+  <h1>box-shadow longhands: one list of shadows</h1>
+  <p class=pr-lede><q>Drop shadows are declared in the coordinated value list constructed from the 'box-shadow-*' properties, which form a coordinating list property group with 'box-shadow-offset' as the coordinating list base property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#shadow-layers">CSS Borders and Box Decorations 4 §6.7</a></span> Each box is 104 by 44.</p>
+</header>
+
+<section>
+  <h2>As many shadows as offsets</h2>
+  <p>Shorter lists repeat; longer lists are cut. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#linked-properties">CSS Values and Units 4 §A</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 6px, 12px, 18px; box-shadow-color: #d68a3c, #8e44ad"></div></div>
+    <figcaption>Three offsets, two colors: orange 6, purple 12, orange 18. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; box-shadow-color: #d68a3c, #8e44ad, #6aa36a"></div></div>
+    <figcaption>One offset, three colors: one orange shadow. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

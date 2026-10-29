@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:open</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows > * { display: block; box-sizing: border-box; width: 100%; margin: 0 0 10px; font-size: 12px; outline: 3px solid #d68a3c; outline-offset: 1px; }
+  .rows details { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows dialog { position: static; margin: 0 0 10px; padding: 4px 6px; border: 0; }
+  .rows details:open { outline-color: #3f9a3f; }
+  .rows dialog:open { outline-color: #3f9a3f; }
+  .rows select:open { outline-color: #3f9a3f; }
+  .rows input:open { outline-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:open</h1>
+  <p class=pr-lede><q>The :open pseudo-class must match any element falling into one of the following
+  categories</q>: details and dialog elements with an <code>open</code> attribute, <q>select elements that are a
+  drop-down box and whose drop-down boxes are open</q>, and <q>input elements that support a picker and whose
+  pickers are open</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Open, and closed again</h2>
+  <p>An outline is orange, and green while its element matches <code>:open</code>. Each rule names one kind of
+  element, so that a browser lacking one leaves the others. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <details><summary>details</summary>its content</details>
+        <dialog open id=box>an open dialog <button id=done>close()</button></dialog>
+        <select><option>select, a drop-down box<option>second option</select>
+        <input type=date value=2026-10-25>
+        <input type=color value=#4f81bd>
+      </div>
+    </div>
+    <figcaption>The dialog alone is green. Open the details: green. Click <code>close()</code>: the dialog goes. Click
+    the select: green while its drop-down is open. Open the date's picker, then the color's: each is green while its
+    picker shows.</figcaption>
+  </figure>
+</section>
+<script>
+  // The dialog's button closes it.
+  document.getElementById("done").addEventListener("click", () => document.getElementById("box").close());
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hyphenation: sizes, styles and shaping</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ib { display: inline-block; width: min-content; }
+  .ar { font: 24px/36px "PR Noto Sans Arabic"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.1 Hyphenation Control: the hyphens property</div>
+  <h1>Hyphenation: sizes, styles and shaping</h1>
+  <p class=pr-lede><q>Hyphenation opportunities are considered when calculating min-content intrinsic sizes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphens-property">CSS Text 4 §6.3.1</a></span>
+  Letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>Min-content sizes</h2>
+  <p>Each dashed box is <code>min-content</code>, around "hyphen", a soft hyphen, "ation".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" lang=en style="hyphens: manual"><span class=t>hyphen&shy;ation</span></span></div>
+    <figcaption><code>manual</code>: as wide as "hyphen-", 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" lang=en style="hyphens: none"><span class=t>hyphen&shy;ation</span></span></div>
+    <figcaption><code>none</code>: the whole word, 110px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The hyphen is the soft hyphen's</h2>
+  <p>Such glyphs <q>are represented by that character and are styled according to the properties applied to
+  it.</q> The stage is 70px wide; the soft hyphen is in a red, bold span.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="width: 70px">hyphen<span style="color: #c0392b; font-weight: bold">&shy;</span>ation</div>
+    <figcaption>So is the hyphen at the end of "hyphen-".
+    <span class=pr-flag>Safari</span> draws it black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Shaped as if whole</h2>
+  <p><q>When shaping scripts such as Arabic are allowed to break within words due to hyphenation, the characters are
+  still shaped as if the word were not broken.</q> The Uyghur word, a soft hyphen after its fourth letter.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar" dir=rtl lang=ug style="width: 70px">دامي&shy;دى</div>
+    <figcaption>The yeh before the break keeps its medial form and the dal after it its final form, joined
+    across the break. <span class=pr-flag>Safari</span> A final yeh, an isolated dal, and no hyphen.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ar" dir=rtl lang=ug>داميدى</div>
+    <figcaption>Whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grouping properties: overflow, opacity, filter, clip</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .ctx { position: absolute; left: 10px; top: 10px; width: 80px; height: 60px; transform-style: preserve-3d; }
+  .a, .b { position: absolute; width: 40px; height: 40px; }
+  .a { left: 0; top: 0; transform: translateZ(20px); }
+  .b { left: 30px; top: 20px; transform: translateZ(-20px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 7.1 Grouping property values</div>
+  <h1>Grouping properties: overflow, opacity, filter, clip</h1>
+  <p class=pr-lede><q>The following CSS property values require the user agent to create a flattened representation of
+  the descendant elements before they can be applied, and therefore force the element to have a used style of flat for
+  preserve-3d.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#grouping-property-values">CSS Transforms 2 §7.1</a></span>
+  Each stage holds a <code>preserve-3d</code> box with the declaration named, holding blue A with
+  <code>translateZ(20px)</code>, then orange B with <code>translateZ(-20px)</code>. In 3D, A, nearer, covers B;
+  flattened, B, later, covers A.</p>
+</header>
+
+<section>
+  <h2>overflow, opacity, filter and clip</h2>
+  <p><q>overflow: any value other than visible or clip.</q> <q>opacity: any value less than 1.</q> <q>filter: any value other than none.</q> <q>clip: any value other than auto.</q></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>preserve-3d</code> alone: A covers B.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="transform-style: flat"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption>For comparison, <code>flat</code>: B covers A.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="overflow: hidden"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>overflow: hidden</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="overflow: auto"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>overflow: auto</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="overflow: clip"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>overflow: clip</code>, which the list leaves out: A covers B. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> flatten it.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="opacity: 0.99"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>opacity: 0.99</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="filter: brightness(1)"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>filter: brightness(1)</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="clip: rect(0, 80px, 60px, 0)"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>clip: rect(0, 80px, 60px, 0)</code>: flat.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

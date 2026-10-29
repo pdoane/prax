@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .track { position: relative; height: 20px; margin: 30px 20px; background: var(--pr-plain);
+           border: 1px solid var(--pr-stage-border); touch-action: none; }
+  .thumb { position: absolute; top: -10px; left: 0; width: 20px; height: 40px; box-sizing: border-box;
+           background: #4f81bd; border: 1px solid #2c5a8f; border-radius: 4px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 8.1 Introduction</div>
+  <h1>Pointer capture</h1>
+  <p class=pr-lede><q>Pointer capture allows the events for a particular pointer (including any compatibility mouse
+  events) to be retargeted to a particular element other than the normal hit test result of the pointer's location.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#introduction">Pointer Events §8.1</a></span></p>
+</header>
+<section>
+  <h2>A slider's thumb</h2>
+  <p><q>Pointer capture can be set on the slider thumb element, allowing the user to slide the control back and forth
+  even if the pointer slides off of the thumb.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#introduction">§8.1</a></span>
+  Each thumb follows the <code>pointermove</code> and <code>mousemove</code> events that reach it while it is pressed;
+  the first captures the pointer when pressed, the second does not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=track><div class=thumb id=captured></div></div>
+      <ol class=pr-log data-log="pointermove mousemove" data-fields="target" data-on="#captured" data-lines=2></ol>
+    </div>
+    <figcaption>Press the thumb and drag right, letting the pointer drift up off it: the thumb keeps up, and its
+    <code>pointermove</code>s and <code>mousemove</code>s keep coming.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=track><div class=thumb id=loose></div></div>
+    </div>
+    <figcaption>The same drag on this thumb, without capture: once the mouse drifts off it, the thumb stops. A finger keeps
+    it, as touch is captured implicitly (<a href="https://w3c.github.io/pointerevents/#implicit-pointer-capture">§8.4</a>).</figcaption>
+  </figure>
+</section>
+<script>
+  // Drags each thumb along its track while it is pressed; the first captures the pointer.
+  for (const thumb of document.querySelectorAll(".thumb")) {
+    let start = null;
+    thumb.addEventListener("pointerdown", event => {
+      start = event.clientX - thumb.offsetLeft;
+      if (thumb.id === "captured")
+        thumb.setPointerCapture(event.pointerId);
+    });
+    thumb.addEventListener("pointermove", event => {
+      if (start === null || !event.buttons)
+        return;
+      const limit = thumb.parentElement.clientWidth - thumb.offsetWidth;
+      thumb.style.left = Math.max(0, Math.min(limit, event.clientX - start)) + "px";
+    });
+    for (const type of ["pointerup", "pointercancel"])
+      document.addEventListener(type, () => start = null);
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

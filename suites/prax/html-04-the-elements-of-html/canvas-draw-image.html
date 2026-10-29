@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drawing images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.15 Drawing images</div>
+  <h1>Drawing images</h1>
+  <p class=pr-lede>drawImage paints <q>the region of the image argument specified by the source rectangle on the region
+  of the rendering context's output bitmap specified by the destination rectangle</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-images">HTML §4.12.5.1.15</a></span>
+  The image is the 40 by 20 flag.</p>
+</header>
+<section>
+  <h2>The three forms, and clipped sources</h2>
+  <p><q>When the source rectangle is outside the source image, the source rectangle must be clipped to the source image
+  and the destination rectangle must be clipped in the same proportion.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=forms></canvas></div>
+    <figcaption>The flag; scaled to 80 by 40; its orange quarter. Source x 20 to 60, past the edge, into 80 by 40 at
+    (10, 55): its right half, 40 by 40. <span class=pr-flag>Safari</span> Stretched to 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=negative></canvas></div>
+    <figcaption>Width −80 from x 190: the flag fills x 110 to 190 unmirrored, blue at the left: <q>processed in the
+    original direction, even if the dimensions given are negative.</q></figcaption>
+  </figure>
+</section>
+<section>
+  <h2>No natural size, and a canvas onto itself</h2>
+  <p>No natural size: <q>the default object size being the size of the output bitmap</q>. Onto itself: <q>the source to
+  be copied before the image is drawn</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><canvas width=160 height=80 data-draw=nosize></canvas></div>
+    <figcaption>An SVG flag, a viewBox of 40 by 20 and no size: it fills the 160 by 80 canvas.
+    <span class=pr-flag>Safari</span> 40 by 20. <span class=pr-flag>Firefox</span> Larger than the canvas, mostly
+    blue.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=self></canvas></div>
+    <figcaption>Blue, orange, green, purple, 25 wide each; then x 0 to 100 drawn onto the canvas at x 50: blue, orange,
+    blue, orange, green, purple.</figcaption>
+  </figure>
+</section>
+<script>
+  function load(src) {
+    return new Promise(resolve => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.src = src;
+    });
+  }
+  Promise.all([load("../shared/resources/flag-40x20.png"), load("../shared/resources/flag-ratio.svg")]).then(([flag, svg]) => {
+    const draw = {
+      forms(context) {
+        context.drawImage(flag, 10, 10);
+        context.drawImage(flag, 60, 10, 80, 40);
+        context.drawImage(flag, 20, 0, 20, 10, 150, 10, 40, 20);
+        context.drawImage(flag, 20, 0, 40, 20, 10, 55, 80, 40);
+      },
+      negative(context) {
+        context.drawImage(flag, 0, 0, 40, 20, 190, 10, -80, 40);
+      },
+      nosize(context) {
+        context.drawImage(svg, 0, 0);
+      },
+      self(context, canvas) {
+        ["#4f81bd", "#d68a3c", "#6aa36a", "#8e44ad"].forEach((color, i) => {
+          context.fillStyle = color;
+          context.fillRect(i * 25, 0, 25, 60);
+        });
+        context.drawImage(canvas, 0, 0, 100, 60, 50, 0, 100, 60);
+      },
+    };
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

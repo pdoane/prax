@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hyphens: none, manual, auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 70px; }
+  figure { margin-right: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.1 Hyphenation Control: the hyphens property</div>
+  <h1>hyphens: none, manual, auto</h1>
+  <p class=pr-lede><q>This property controls whether hyphenation is allowed to create more soft wrap opportunities
+  within a line of text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphens-property">CSS Text 4 §6.3.1</a></span>
+  Each stage is <code>lang=en</code>, 70px wide, seven 10px letters to a line.</p>
+</header>
+
+<section>
+  <h2>A soft hyphen</h2>
+  <p>The stages hold "hyphen", U+00AD SOFT HYPHEN, "ation". <code>manual</code>, the initial
+  value: <q>Words are only hyphenated where there are characters inside the word that explicitly suggest
+  hyphenation opportunities.</q> <code>none</code>: <q>Words are not hyphenated, even if characters inside the word
+  explicitly define hyphenation opportunities.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: manual"><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>manual</code>: "hyphen-", then "ation".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: none"><span class=t>hyphen&shy;ation</span></div>
+    <figcaption><code>none</code>: no break, "hyphenation" on one line, past the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: none"><span class=t>well-known</span></div>
+    <figcaption><code>none</code> keeps the break after a hyphen-minus: "well-", "known".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto</h2>
+  <p><q>Words may be broken at hyphenation opportunities determined automatically by a language-appropriate
+  hyphenation resource in addition to those indicated explicitly by a conditional hyphen. Automatic hyphenation
+  opportunities elsewhere within a word must be ignored if the word contains a conditional hyphen</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: auto"><span class=t>typography</span></div>
+    <figcaption>"typography": broken at a syllable, with a hyphen, such as "typog-", "raphy".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: manual"><span class=t>typography</span></div>
+    <figcaption><code>manual</code>, the same: no soft hyphen, so no break.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphens: auto"><span class=t>typo&shy;graphy</span></div>
+    <figcaption>A soft hyphen after "typo": the automatic opportunities are ignored, "typo-", "graphy".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

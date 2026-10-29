@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The control pad</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.2 Control Pad Section</div>
+  <h1>The control pad</h1>
+  <p class=pr-lede><q>The control pad section of the keyboard is the set of (usually 6) keys that perform navigating and editing operations, for example, Home, PageUp and Insert.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-controlpad-section">UI Events KeyboardEvent code Values §3.2</a></span></p>
+</header>
+<section>
+  <h2>Six keys, and Help</h2>
+  <p><q>"Delete"</q>: <q>The forward delete key. Note that on Apple keyboards, the key labelled Delete on the main part of the keyboard should be encoded as "Backspace".</q> <q>"Help"</q>: <q>Not present on standard PC keyboards.</q> The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-controlpad-section">§3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="controlpad" data-unit=44></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=3></ol>
+    </div>
+    <figcaption>Click the keys and press Insert, Home, Page Up, Delete, End and Page Down on a full keyboard: each lights at its place. An Apple extended keyboard's Help key, where PC keyboards have Insert, lights <code>Help</code>.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

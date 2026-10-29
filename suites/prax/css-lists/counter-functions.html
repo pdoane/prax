@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>counter() and counters()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .paren li::marker { content: '(' counters(list-item,'.') ') '; }
+  .paren ul { padding-left: 40px; }
+  .fresh .a::before { content: "[" counter(z) "] "; }
+  .fresh .b { counter-increment: z; }
+  .fresh .b::before { content: "[" counter(z) "] "; }
+  .disc ul { list-style-type: disc; }
+  .disc .note::before { content: counter(n, disc) " "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.7 Outputting Counters: the counter() and counters() functions</div>
+  <h1>counter() and counters()</h1>
+  <p class=pr-lede><q>Counters have no visible effect by themselves, but their values can be used with the counter()
+  and counters() functions, whose used values represent counter values as strings or images.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#counter-functions">CSS Lists and Counters 3 §4.7</a></span></p>
+</header>
+
+<section>
+  <h2>counters() in a marker</h2>
+  <p>The example: <code>li::marker { content: '(' counters(list-item,'.') ') '; }</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text paren"><ul><li>one<li>two<ul><li>nested one<li>nested two</ul><li>three</ul></div>
+    <figcaption>"(1) one", "(2) two", "(2.1) nested one", "(2.2) nested two", "(3) three". <span class=pr-flag>Safari</span> Ignores <code>content</code> on <code>::marker</code>: discs and circles.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A counter that does not exist yet; a symbolic style</h2>
+  <p><q>If no counter named &lt;counter-name&gt; exists on an element where 'counter()' or 'counters()' is used, one is
+  first instantiated with a starting value of '0'.</q> <q>If the &lt;counter-style&gt; is one of the predefined symbolic
+  styles, like 'disc', it might look different than when used in 'list-style-type'.</q></p>
+  <figure>
+    <div class="pr-stage pr-text fresh"><div class=a>a</div><div class=b>b</div><div class=b>b</div></div>
+    <figcaption>No reset: <code>counter(z)</code> on the first <code>::before</code> makes a <code>z</code> of 0 there,
+    "[0] a"; the next <code>div</code> increments one of its own, "[1] b", and the third, "[2] b".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text disc"><ul><li>a list item</ul><div class=note>a note</div></div>
+    <figcaption>The list's disc marker, and <code>counter(n, disc)</code> before "a note": a bullet, perhaps
+    drawn otherwise than the marker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

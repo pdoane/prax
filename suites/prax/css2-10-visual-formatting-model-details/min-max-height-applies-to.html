@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-height and max-height: what they apply to</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.7 Minimum and maximum heights: 'min-height' and 'max-height'</div>
+  <h1>Min-height and max-height: what they apply to</h1>
+  <p class=pr-lede>Both apply to <q>all elements but non-replaced inline elements, table columns, and column groups</q>.</p>
+</header>
+
+<section>
+  <h2>Not to non-replaced inline elements</h2>
+  <p>The height of an inline, non-replaced element's box comes from its font, and neither property changes it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-heights">CSS 2 §10.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px">a <span class=pr-chip style="min-height: 60px">span</span> b</div>
+    <figcaption>A <code>span</code> with <code>min-height: 60px</code> is as tall as its text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px">a <span class=pr-chip style="display: inline-block; vertical-align: top; min-height: 56px">block</span> b</div>
+    <figcaption>An inline-block with <code>min-height: 56px</code> is 60px tall with its border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

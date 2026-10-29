@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>initial-letter-wrap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 12px/18px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .none::first-letter { initial-letter-wrap: none; }
+  .first::first-letter { initial-letter-wrap: first; }
+  .all::first-letter { initial-letter-wrap: all; }
+  .len::first-letter { initial-letter-wrap: -40%; }
+  .grid::first-letter { initial-letter-wrap: grid; }
+  .jp { font: 14px/22px "PR Noto Sans JP"; }
+  .pr-stage { width: 130px; }
+  figcaption { max-width: 130px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.7 Initial Letter Wrapping: the initial-letter-wrap property</div>
+  <h1>initial-letter-wrap</h1>
+  <p class=pr-lede><q>This property specifies whether lines impacted by an initial letter are shortened to fit the
+  rectangular shape of the initial letter box or the contour of its glyph outline.</q> <q>initial-letter-wrap is at
+  risk.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-wrapping">CSS Inline Layout 3 §7.7</a></span>
+  Each paragraph is 12px PR Literata on 18px lines; its first letter, an A, has <code>initial-letter: 3</code>. <span
+  class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports
+  <code>initial-letter-wrap</code>: every figure is as <code>none</code>, or plain text where there is no initial
+  letter.</p>
+</header>
+
+<section>
+  <h2>Box or contour</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p none">A letter with no contour fitting: every line is flush with its box.</p></div>
+    <figcaption><code>none</code>: <q>each impacted line is aligned flush to the inline-end margin edge of the initial
+    letter</q>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p all">A letter whose contour each line follows down its sloping side.</p></div>
+    <figcaption><code>all</code>: each line <q>starts at the start-most point that does not overlap the initial
+    letter’s glyph outline</q>: the first line close to the A's peak, the third farther out at its foot.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p first">And the first line, part of the same word, kerns into the letter.</p></div>
+    <figcaption><code>first</code>, with no space after the A: <code>all</code> on the first line, <code>none</code>
+    on the rest.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p first">A space follows this letter, so nothing kerns.</p></div>
+    <figcaption><code>first</code>, a space after the A, of category Zs: as <code>none</code>.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

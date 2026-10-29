@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>auxclick</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+  .link { display: block; margin: 10px 20px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.1 auxclick</div>
+  <h1>auxclick</h1>
+  <p class=pr-lede><q>The auxclick event type MUST be dispatched on the topmost event target indicated by the pointer,
+  when the user presses down and releases the non-primary pointer button, or otherwise activates the pointer in a manner
+  that simulates such an action.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#auxclick">Pointer Events §11.4.1</a></span></p>
+</header>
+<section>
+  <h2>Every button but the primary</h2>
+  <p><q>The primary button (like the left button on a standard mouse) MUST NOT fire auxclick events.</q> <q>In the case
+  of right button, the auxclick event is dispatched after any contextmenu event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#auxclick">§11.4.1</a></span>
+  The page cancels the context menu and the middle button's scrolling over the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Click each button here.</div>
+      <ol class=pr-log data-log="click auxclick contextmenu" data-fields="button detail" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Click with the left button: <code>click</code>, and no <code>auxclick</code>. With the middle:
+    <code>auxclick button=1 detail=1</code>. With the right: <code>contextmenu</code>, then <code>auxclick
+    button=2</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Its default action</h2>
+  <p><q>If the target has associated activation behavior, the default action MUST be to execute that activation
+  behavior.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#auxclick">§11.4.1</a></span>
+  A listener cancels <code>auxclick</code> on the second link.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <a class=link href="#auxclick" id=open>Middle-click this link</a>
+      <a class=link href="#auxclick" id=kept>Middle-click this one, canceled</a>
+      <ol class=pr-log data-log="auxclick" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Middle-click the first link: it opens in a new tab. Middle-click the second: <code>auxclick</code>,
+    and no tab opens.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu and middle-button scrolling from taking over the box, and cancels auxclick on one link.
+  const pad = document.getElementById("pad");
+  pad.addEventListener("contextmenu", event => event.preventDefault());
+  pad.addEventListener("mousedown", event => { if (event.button === 1) event.preventDefault(); });
+  document.getElementById("kept").addEventListener("auxclick", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

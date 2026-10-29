@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>closepath: joined, not capped</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.4 The "closepath" command</div>
+  <h1>closepath: joined, not capped</h1>
+  <p class=pr-lede><q>The "closepath" (<b>Z</b> or <b>z</b>) ends the current subpath by connecting it back to its
+  initial point.</q> <q>This path segment may be of zero length.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataClosePathCommand">SVG 2 §9.3.4</a></span>
+  Each stage is an SVG 160 by 60 holding a triangle from 20, 50 to 80, 10 to 140, 50, stroked dark blue, 10 wide,
+  and not filled.</p>
+</header>
+
+<section>
+  <h2>A closepath, or a lineto back</h2>
+  <p><q>With "closepath", the end of the final segment of the subpath is "joined" with the start of the initial
+  segment</q>; <q>If you instead "manually" close the subpath via a "lineto" command, the start of the first segment
+  and the end of the last segment are not joined but instead are each capped</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50 Z" fill="none" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>… L 140 50 Z</code>: three sides, every corner mitered to a point, 20, 50 too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50 L 20 50" fill="none" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>… L 140 50 L 20 50</code>: the ends butt-capped at 20, 50, so a notch is cut out of that
+    corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50 L 20 50 Z" fill="none" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption><code>… L 20 50 Z</code>: the closepath's segment is of zero length, and the corner at 20, 50 is
+    joined: mitered again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Closed and open subpaths</h2>
+  <p><q>A closed subpath must be closed with a "closepath" command, this "joins" the first and last path segments.
+  Any other path is an open subpath.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50 Z" fill="none" stroke="#2c5a8f" stroke-width="10" stroke-linejoin="round" stroke-linecap="square" /></svg></div>
+    <figcaption>Closed, with <code>stroke-linejoin="round"</code> and <code>stroke-linecap="square"</code>: every
+    corner round, and no caps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50 L 20 50" fill="none" stroke="#2c5a8f" stroke-width="10" stroke-linejoin="round" stroke-linecap="square" /></svg></div>
+    <figcaption>Open, back to 20, 50 by a lineto: the two corners round, and at 20, 50 two square caps, each
+    5 past the point: one along the bottom to x 15, one down and left along the side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>Open, ending at 140, 50, filled blue and stroked 4 wide: the fill is the whole triangle; the stroke
+    is on two sides only, none along the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

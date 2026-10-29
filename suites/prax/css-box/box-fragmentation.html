@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fragmented boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 13px/30px "PR Arimo"; }
+  .span { padding: 0 10px; margin: 0 20px; border: 3px solid #d68a3c; background: #f9cc9d; }
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 80px; }
+  .blk { border: 6px solid #d68a3c; padding: 6px; background: #f9cc9d; }
+  .blk div { height: 76px; background: #8cb6c0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2.2 Fragmentation</div>
+  <h1>Fragmented boxes</h1>
+  <p class=pr-lede><q>When a box fragments-- is broken, as across lines or across pages, into separate box fragments--
+  each of its boxes (content box, padding box, border box, margin box) also fragments.</q> How the areas react is <q>controlled by the
+  'box-decoration-break' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#fragmentation">CSS Box Model 4
+  §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Across lines</h2>
+  <p>A span with <code>padding: 0 10px; margin: 0 20px</code> and an orange border breaks over two lines.</p>
+  <figure>
+    <div class="pr-stage t">Text <span class=span>in a span that breaks</span> here.</div>
+    <figcaption><code>slice</code>, the initial value: the left padding, border and margin only on the first line's
+    fragment, the right ones only on the second's; the break cuts the border open.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t">Text <span class=span style="box-decoration-break: clone; -webkit-box-decoration-break: clone">in a span that breaks</span> here.</div>
+    <figcaption><code>clone</code>: each fragment has padding, border and margin on both sides, its border
+    closed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across columns</h2>
+  <p>A box with a 6px border, 6px padding and a blue child 76px tall, so 100px tall in all, in two columns 80px tall: it breaks at 80px.</p>
+  <figure>
+    <div class="pr-stage cols"><div class=blk><div></div></div></div>
+    <figcaption><code>slice</code>: the top border and padding in the first column only, the bottom ones in the second
+    column only, 20px below its top.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=blk style="box-decoration-break: clone; -webkit-box-decoration-break: clone"><div></div></div></div>
+    <figcaption><code>clone</code>: each column's fragment has its border and padding on all four
+    sides; the second is 44px tall. <span
+    class=pr-flag>Safari</span> Slices it, as on the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

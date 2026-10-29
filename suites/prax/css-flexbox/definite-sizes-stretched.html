@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definite cross sizes of stretched items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; }
+  .item { width: 60px; background: #b9cde6; }
+  .half { height: 50%; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.9 Definite and Indefinite Sizes, cases 3 and 4</div>
+  <h1>Definite cross sizes of stretched items</h1>
+  <p class=pr-lede><q>Flexbox has several additional cases where a length can be considered definite</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#definite-sizes">CSS Flexible Box Layout 2 §9.9</a></span>
+  Each stage is a row container; the blue items stretch, and hold a purple child of <code>height: 50%</code>.</p>
+</header>
+
+<section>
+  <h2>3. A single line of definite cross size</h2>
+  <p><q>If a single-line flex container has a definite cross size, the automatic preferred outer cross size of any
+  stretched flex items is the flex container's inner cross size (clamped to the flex item’s min and max cross size)
+  and is considered definite.</q></p>
+  <figure>
+    <div class="pr-stage flex" style="height: 100px"><div class=item><div class=half></div></div></div>
+    <figcaption><code>height: 100px</code>: the item is 100px tall, its child 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="height: 100px; margin-bottom: 24px"><div class=item style="max-height: 60px; margin-top: 10px"><div class=half></div></div><div class=item style="min-height: 120px"><div class=half></div></div></div>
+    <figcaption>With <code>margin-top: 10px; max-height: 60px</code>: 60px, child 30px. Beside it,
+    <code>min-height: 120px</code>: 120px, child 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>4. Once the line's cross size is known</h2>
+  <p><q>Once the cross size of a flex line has been determined, the cross sizes of items in auto-sized flex containers
+  are also considered definite for the purpose of layout</q>. These containers have no height; B sets the line.</p>
+  <figure>
+    <div class="pr-stage flex"><div class=item><div class=half></div></div><div class="pr-b pr-fit" style="width: 60px; height: 80px">B</div></div>
+    <figcaption>The line is 80px: the item stretches to 80px, its child 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical flex" style="height: 100px; width: 80px"><div class=item style="width: auto; height: 40px"><div class=half style="height: auto; width: 50%"></div></div></div>
+    <figcaption>A <code>vertical-rl</code> row container 80px wide: the item stretches to 80px, and its child of
+    <code>width: 50%</code> is 40px, at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter: a whole typographic character unit</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .fl::first-letter { background: #d68a3c; color: white; }
+  .deva { font: 20px/40px "PR Noto Sans Devanagari"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2.1 First Letters and Associated Punctuation</div>
+  <h1>::first-letter: a whole typographic character unit</h1>
+  <p class=pr-lede><q>a typographic character unit can include more than one Unicode codepoint. For example, combining
+  characters must be kept with their base character.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-pattern">CSS Pseudo-Elements 4 §2.2.1</a></span>
+  In each stage the first-letter text is white on orange.</p>
+</header>
+
+<section>
+  <h2>Combining characters and clusters</h2>
+  <figure>
+    <div class=pr-stage><p class="fl pr-measure">A&#x30A;ngstrom</p></div>
+    <figcaption>A then U+030A, a combining ring: Å on orange, the ring white with its letter, 0 to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="fl deva" lang=hi>हिन्दी</p></div>
+    <figcaption>हि, the consonant ह and the vowel sign ि that draws before it, one cluster: both on orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tailored to the language</h2>
+  <p><q>In Dutch, for example, if the letter combination "ij" appears at the beginning of an element, both letters
+  should be considered within the ::first-letter pseudo-element.</q> <q>the UA should tailor its definition of
+  typographic character unit to reflect the first-letter traditions of the ::first-letter pseudo-element’s containing
+  block’s content language.</q> Both are recommendations.</p>
+  <figure>
+    <div class=pr-stage><p class="fl pr-measure" lang=nl>IJsselmeer</p></div>
+    <figcaption><code>lang=nl</code>: IJ, 0 to 20, as recommended. Chrome and Safari take the I alone; Firefox takes
+    IJ.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="fl pr-measure" lang=en>IJsselmeer</p></div>
+    <figcaption><code>lang=en</code>: the I alone, 0 to 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 5: how many lines to balance across</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; align-items: flex-start; }
+  .pr-stage > div { flex: none; }
+  .n { padding-left: 40px; }
+  .n > .pr-a { position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.3 Main Size Determination, step 5</div>
+  <h1>Step 5: how many lines to balance across</h1>
+  <p class=pr-lede><q>If the flex container is multi-line and balancing, First determine how many flex lines will be
+  produced by the non-balancing algorithm, above. For this purpose, floor the outer hypothetical main size of each flex
+  item at zero.</q> <q>Let the balancing line count be the larger of this line count and the minimum flex line count.
+  Then, balance flex items across balancing line count number of lines.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#main-sizing">CSS Flexible Box Layout 2 §9.3</a></span>
+  Each stage is 200px wide.</p>
+</header>
+
+<section>
+  <h2>Outer sizes floored at zero</h2>
+  <p><q>This can, if the items have large negative margins, result in a higher line count than a non-balancing
+  flexbox.</q> A is 20px wide with <code>margin-right: -60px</code>, an outer size of -40px, and drawn over B; B and C
+  are 120px. These stages have 40px of padding on their left, where B can start.</p>
+  <figure>
+    <div class="pr-stage n" style="flex-wrap: wrap"><div class="pr-a pr-fit" style="width: 20px; margin-right: -60px">A</div><div class="pr-b pr-fit" style="width: 120px">B</div><div class="pr-c pr-fit" style="width: 120px">C</div></div>
+    <figcaption><code>wrap</code>: -40 + 120 + 120 is 200, one line; B starts at -40px, in the padding, under A.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage n" style="flex-wrap: balance"><div class="pr-a pr-fit" style="width: 20px; margin-right: -60px">A</div><div class="pr-b pr-fit" style="width: 120px">B</div><div class="pr-c pr-fit" style="width: 120px">C</div></div>
+    <figcaption><code>balance</code>: floored, 0 + 120 + 120 is 240, two lines; A and B on the first, C on the
+    second. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line, as
+    <code>wrap</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At least the minimum flex line count</h2>
+  <p>A, B, C and D are 40px wide, 160px in all, which make one line.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance; flex-line-count: 2"><div class="pr-a pr-fit" style="width: 40px">A</div><div class="pr-b pr-fit" style="width: 40px">B</div><div class="pr-c pr-fit" style="width: 40px">C</div><div class="pr-d pr-fit" style="width: 40px">D</div></div>
+    <figcaption><code>flex-line-count: 2</code>: the larger count is 2; A and B above C and D.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

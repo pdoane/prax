@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paths: outlines, filled and stroked</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.1 Introduction</div>
+  <h1>Paths: outlines, filled and stroked</h1>
+  <p class=pr-lede><q>A path represents the outline of a shape which can be filled or stroked.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#Introduction">SVG 2 §9.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px, so its coordinates read off the guides.</p>
+</header>
+
+<section>
+  <h2>A pen moved and dragged</h2>
+  <p><q>A path is described using the concept of a current point.</q> <q>The position of the pen can be changed,
+  and the outline of a shape (open or closed) can be traced by dragging the pen in either straight lines or
+  curves.</q> Each stage has a triangle, <code>d="M 40 50 L 120 50 L 80 10 z"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 L 120 50 L 80 10 z" fill="#4f81bd" /></svg></div>
+    <figcaption>Filled blue: a triangle with its base from 40 to 120 on y 50 and its apex at 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 L 120 50 L 80 10 z" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>Stroked dark blue, 4 wide, and not filled: its outline alone, all three sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 L 120 50 L 80 10 z" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>Both: the blue triangle, its outline dark blue, half of the stroke over the fill.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Several subpaths, and holes</h2>
+  <p><q>Compound paths (i.e., a path with multiple subpaths) are possible to allow effects such as "donut holes" in
+  objects.</q> Each path is a square from 20, 10 to 140, 50, drawn clockwise, then a second subpath, a rectangle from
+  60, 20 to 100, 40, filled blue with the initial <code>fill-rule: nonzero</code> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#WindingRule">§13.4.2</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 H 140 V 50 H 20 Z M 60 20 V 40 H 100 V 20 Z" fill="#4f81bd" /></svg></div>
+    <figcaption>The inner rectangle drawn the other way round: a hole 40 by 20 at 60, 20, the stage's guides
+    showing through.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 H 140 V 50 H 20 Z M 60 20 H 100 V 40 H 60 Z" fill="#4f81bd" /></svg></div>
+    <figcaption>The inner rectangle drawn the same way round: no hole, the whole 120 by 40 blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 H 140 V 50 H 20 Z M 60 20 H 100 V 40 H 60 Z" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>The same, stroked 2 wide: both subpaths' outlines, the inner one on the blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The th element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td, .t th { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; width: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.10 The th element</div>
+  <h1>The th element</h1>
+  <p class=pr-lede><q>The th element represents a header cell in a table.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-th-element">HTML §4.9.10</a></span>
+  Every cell here is 70px wide, wider than its word.</p>
+</header>
+<section>
+  <h2>Bold, and centered</h2>
+  <p><code>th { font-weight: bold; }</code> <q>User agents are expected to have a rule in their user agent style sheet
+  that matches th elements that have a parent node whose computed value for the 'text-align' property is its initial
+  value, whose declaration block consists of just a single declaration that sets the 'text-align' property to the value
+  'center'.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><th>Name<th>Legs<tr><td>Cat<td>4</table>
+    </div>
+    <figcaption>"Name" and "Legs" bold, each in the middle of its cell; "Cat" and "4" regular, at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr style="text-align: start"><th>Name<th>Legs</table>
+    </div>
+    <figcaption><code>text-align: start</code> on the row: the initial value, so the header cells are still
+    centered.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not when the row sets an alignment</h2>
+  <p>The rule matches only when the parent's <code>text-align</code> is its initial value; otherwise the header cell
+  inherits the parent's alignment.</p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr style="text-align: right"><th>Name<th>Legs</table>
+    </div>
+    <figcaption><code>text-align: right</code> on the row: both header words at the right of their cells.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t style="text-align: left"><tr><th>Name<th>Legs</table>
+    </div>
+    <figcaption><code>text-align: left</code> on the table, which the row inherits: both header words at the
+    left.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

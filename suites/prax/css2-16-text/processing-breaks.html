@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>White space processing: line breaking opportunities</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .in { background: #a9c4e4; }
+  .wide-room { margin-right: 90px; }
+  .dot { float: left; width: 10px; height: 10px; background: #c0392b; }
+  .abs { position: absolute; width: 10px; height: 10px; background: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.1 The 'white-space' processing model</div>
+  <h1>White space processing: line breaking opportunities</h1>
+  <p class=pr-lede>Each stage here is 100px wide, narrower than the two words in it, so that a line breaks wherever it
+  may. <q>CSS 2.2 does not fully define where line breaking opportunities occur.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2
+  §16.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Opportunities come from the text before collapsing</h2>
+  <p><q>Inlines are laid out, taking bidi reordering into account, and wrapping as specified by the 'white-space'
+  property. When wrapping, line breaking opportunities are determined based on the text prior to the white space
+  collapsing steps above.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+  <figure class=wide-room>
+    <div class="pr-stage pr-narrow pr-text">aaaaaaaa<span class=in style="white-space: nowrap">&#32;bbbbbbbb</span></div>
+    <figcaption>The only space is in the blue <code>nowrap</code> span: no opportunity, and one line runs past the
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text">aaaaaaaa&#32;<span class=in style="white-space: nowrap">&#32;bbbbbbbb</span></div>
+    <figcaption>A <code>normal</code> space before the span is an opportunity; the span's space collapses away. Two
+    lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Floats and absolutely positioned boxes</h2>
+  <p><q>Floated and absolutely-positioned elements do not introduce a line breaking opportunity.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+  <figure class=wide-room>
+    <div class="pr-stage pr-narrow pr-text">aaaaaaaa<span class=dot></span>bbbbbbbb</div>
+    <figcaption>A red float between the words: "aaaaaaaabbbbbbbb" stays one word, on one line past the
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text">aaaaaaaa<span class=abs></span>bbbbbbbb</div>
+    <figcaption>A red absolutely positioned box between them: the same, one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

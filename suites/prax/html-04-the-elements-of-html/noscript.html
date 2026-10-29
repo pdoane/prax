@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The noscript element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .forced { display: block !important; border: 1px dashed var(--pr-line); background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.2 The noscript element</div>
+  <h1>The noscript element</h1>
+  <p class=pr-lede><q>The noscript element represents nothing if scripting is enabled, and represents its children if
+  scripting is disabled.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-noscript-element">HTML §4.12.2</a></span>
+  Scripting is enabled for this page.</p>
+</header>
+<section>
+  <h2>Nothing, with scripting enabled</h2>
+  <p><code>@media (scripting) { noscript { display: none !important; } }</code> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage stage pr-text">before <noscript>Turn on scripting</noscript>after</div>
+    <figcaption>"before after" on one line: nothing of the noscript between the words.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">before <noscript class=forced>Turn on scripting</noscript>after</div>
+    <figcaption>An author's <code>display: block !important</code>, an orange background and a dashed border: still
+    nothing, since the user agent's <code>!important</code> rule wins over an author's.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

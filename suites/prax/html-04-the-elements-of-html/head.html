@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The head element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.1 The head element</div>
+  <h1>The head element</h1>
+  <p class=pr-lede><q>The head element represents a collection of metadata for the Document.</q> Metadata is not
+  content for the reader: the user agent's style sheet hides the head and every metadata element.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-head-element">HTML §4.2.1</a></span></p>
+</header>
+<section>
+  <h2>Hidden by the user agent's style sheet</h2>
+  <p><q>area, base, basefont, datalist, head, link, meta, noembed, noframes, param, rp, script, style, template, title
+  { display: none; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span>
+  Each frame's document has a head holding a title and a style element, and a body holding "Body text".</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><title>The title</title><style>html { padding: 10px; font: 13px/20px 'PR Noto Sans' } body { margin: 0 }</style><p style='margin: 0'>Body text</p>"></iframe></div>
+    <figcaption>Only "Body text", on the frame's first line: the title's text and the style sheet's text are not
+    drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><title>The title</title><style>html { padding: 10px; font: 13px/20px 'PR Noto Sans' } body { margin: 0 } head, title { display: block; color: #9c5f22 }</style><p style='margin: 0'>Body text</p>"></iframe></div>
+    <figcaption>The document's own <code>head, title { display: block }</code> wins over the user agent's rule: "The
+    title" in orange on the first line, "Body text" on the second.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

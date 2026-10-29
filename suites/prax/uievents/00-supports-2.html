@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>UI Events support, continued</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · Support</div>
+  <h1>UI Events support, continued</h1>
+  <p class=pr-lede>One interface or member for each feature that the specification's pages use, and a declaration for
+  each property they set beyond the suite's own. This checks that the engine exposes and parses them, not what they
+  do; the other pages show that.</p>
+</header>
+<section>
+  <h2>Interface support</h2>
+  <code class=pr-api>CompositionEvent</code>
+  <code class=pr-api>CompositionEvent.prototype.data</code>
+  <code class=pr-api>MouseEvent.prototype.button</code>
+  <code class=pr-api>MouseEvent.prototype.screenX</code>
+  <code class=pr-api>MouseEvent.prototype.screenY</code>
+  <code class=pr-api>MouseEvent.prototype.movementX</code>
+  <code class=pr-api>MouseEvent.prototype.movementY</code>
+  <code class=pr-api>Document.prototype.activeElement</code>
+  <code class=pr-api>HTMLInputElement.prototype.selectionStart</code>
+  <code class=pr-api>HTMLInputElement.prototype.selectionEnd</code>
+  <p class=pr-note>green is an interface or member that this engine exposes, grey is one it does not</p>
+</section>
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>left: 90px</code>
+  <code class=pr-decl>top: 30px</code>
+  <p class=pr-note>green is a declaration that this engine parses, grey is one it does not</p>
+</section>
+<script src=../shared/supports.js></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline content-alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; height: 60px; }
+  .f { display: flex; column-gap: 4px; height: 60px; }
+  .ga { display: grid; grid-template-columns: auto auto; justify-content: start; column-gap: 4px; }
+  .g > div, .f > div, .ga > div { background: #f9cc9d; line-height: 1; padding: 0 3px; }
+  .s { font-size: 13px; }
+  .l { font-size: 32px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.4 Baseline Content-Alignment</div>
+  <h1>Baseline content-alignment</h1>
+  <p class=pr-lede><q>Baseline content-alignment effectively increases the padding on the box to align the alignment
+  baseline of its contents with that of other baseline-aligned boxes in its baseline-sharing group.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-align-content">CSS Box Alignment 3 §5.4</a></span>
+  Items are highlighted; "Ag" at 13 and 32px.</p>
+</header>
+
+<section>
+  <h2>Grid and flex items: the box stays, its content moves</h2>
+  <p>A grid item <q>participates in first/last baseline content-alignment in its startmost/endmost row or column</q>;
+  a flex item <q>in its flex line</q>. Each stage is one row 60px tall.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=s style="align-content: baseline">Ag</div><div class=l style="align-content: baseline">Ag</div><div class=s style="align-self: baseline">Ag</div></div></div>
+    <figcaption>A grid: the first two <code>align-content: baseline</code>, stretched 60px tall; the third
+    <code>align-self: baseline</code>, the same group: all three on one baseline. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> The first two's text at their top.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f><div class=s style="align-content: baseline">Ag</div><div class=l style="align-content: baseline">Ag</div><div class=s style="align-content: last baseline">Ag<br>Ag</div><div class=l style="align-content: last baseline">Ag</div></div></div>
+    <figcaption>A row flexbox: the first two on one baseline at the top; the last two, <code>last baseline</code>, on
+    another at the bottom; every item 60px tall. <span class=pr-flag>Chrome</span> Every item's text at its top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only along the block axis, and it can grow the box</h2>
+  <p>It <q>can only apply if the 'align-content' axis is parallel with the box's block axis (i.e. it does not apply
+  to “column” flex containers)</q>. <q>Baseline content-alignment can increase the intrinsic size of the box.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=f style="flex-direction: column; height: auto"><div class=s style="align-content: last baseline; height: 30px">Ag</div><div class=l style="align-content: last baseline">Ag</div></div></div>
+    <figcaption>A column flexbox: <code>last baseline</code> falls back to <code>safe end</code>: the first item's
+    text at its bottom, 30px down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> At its top.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=ga><div class=s style="align-content: baseline; padding-bottom: 20px">Ag</div><div class=l style="align-content: baseline">Ag</div></div></div>
+    <figcaption>An <code>auto</code> row; the 13px item has 20px of bottom padding. Shifted down to the 32px item's
+    baseline, it makes the row taller than either item alone. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> The row as tall as the taller item, the small
+    text at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

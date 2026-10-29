@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>White space processing: breaks beside inline blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ib { display: inline-block; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.1 The 'white-space' processing model</div>
+  <h1>White space processing: breaks beside inline blocks</h1>
+  <p class=pr-lede><q>CSS 2.2 does not fully define where line breaking opportunities occur.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span> Each stage
+  here is 100px wide and holds two 60px inline-blocks, which do not fit on one line together.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#line-break-details">CSS Text 3 §5.5</a></div>
+  <h2>Before and after every atomic inline</h2>
+  <p><q>For Web-compatibility there is a soft wrap opportunity before and after each replaced element or other atomic
+  inline, even when adjacent to a character that would normally suppress them, including U+00A0 NO-BREAK SPACE.
+  However, with the exception of U+00A0 NO-BREAK SPACE, there must be no soft wrap opportunity between atomic inlines
+  and adjacent characters belonging to the Unicode GL, WJ, or ZWJ line breaking classes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#line-break-details">CSS Text 3 §5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">a</span>&nbsp;<span class="pr-b ib">b</span></div>
+    <figcaption>Joined by a no-break space: b goes to the next line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">a</span>(<span class="pr-b ib">b</span></div>
+    <figcaption>An opening bracket between them, which keeps with what follows it in text: the bracket ends the first
+    line, and b starts the next.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib" style="width: 95px">a</span>, then</div>
+    <figcaption>A 95px box, then a comma, which keeps with what comes before it in text: the comma starts the next
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">a</span>&#x2060;<span class="pr-b ib">b</span></div>
+    <figcaption>Joined by U+2060 WORD JOINER: no break, and b runs past the edge. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break, and put b on the next line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow pr-text"><span class="pr-a ib">a</span>&#x202F;<span class="pr-b ib">b</span></div>
+    <figcaption>Joined by U+202F NARROW NO-BREAK SPACE, of class GL: no break either. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

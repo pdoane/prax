@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-break: strict, normal, loose</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 100px; font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+  .k { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.2 Line Breaking Strictness: the line-break property</div>
+  <h1>line-break: strict, normal, loose</h1>
+  <p class=pr-lede><q>This property specifies the strictness of line-breaking rules applied within an element:
+  especially how wrapping interacts with punctuation and symbols.</q> <q>for these three keywords, this specification does
+  require that:</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-property">CSS Text 4 §6.2</a></span>
+  Each stage is <code>lang=ja</code>, 100px wide, five 20px characters to a line; the sixth, blue, is the one the rule is
+  about. <a href="writing-system.html">Appendix F</a> has the other writing systems.</p>
+</header>
+
+<section>
+  <h2>Small kana</h2>
+  <p><q>The following breaks are forbidden for 'normal' and 'strict' line breaking and allowed in 'loose': breaks
+  before Japanese small kana or the Katakana-Hiragana prolonged sound mark, i.e. characters from the Unicode line
+  breaking class CJ.</q> <code>normal</code> forbids them since <a href="https://github.com/w3c/csswg-drafts/issues/10363">csswg-drafts#10363</a>. The stages are あいうえお, small っ, か.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: strict"><span class=t>あいうえお<span class=k>っ</span>か</span></div>
+    <figcaption><code>strict</code>: no break before っ: four, then "おっか".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえお<span class=k>っ</span>か</span></div>
+    <figcaption><code>normal</code>: the same. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Break before っ, as <code>loose</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえお<span class=k>っ</span>か</span></div>
+    <figcaption><code>loose</code>: a break before it: five, then "っか".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえお<span class=k>ー</span>か</span></div>
+    <figcaption><code>loose</code>, the prolonged sound mark ー: five, then "ーか".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The wave dash</h2>
+  <p><q>The following breaks are allowed for 'normal' and 'loose' line breaking if the writing system is Chinese or
+  Japanese, and are otherwise forbidden: breaks before certain CJK hyphen-like characters: 〜 U+301C, ゠ U+30A0</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: strict"><span class=t>あいうえお<span class=k>〜</span>か</span></div>
+    <figcaption><code>strict</code>: no break before 〜: four, then "お〜か".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえお<span class=k>〜</span>か</span></div>
+    <figcaption><code>normal</code>: a break before it: five, then "〜か".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえお<span class=k>゠</span>か</span></div>
+    <figcaption><code>normal</code>, ゠ U+30A0: five, then "゠か".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A containing block for all descendants, and fixed backgrounds</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  iframe.pr-view { width: 160px; height: 80px; }
+  .bg { height: 50px; margin: 10px; border: 1px dashed #6b7381; background: linear-gradient(#d68a3c, #d68a3c) no-repeat 0 0 / 40px 40px fixed; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>A containing block for all descendants, and fixed backgrounds</h1>
+  <p class=pr-lede><q>any value other than none for the transform property also causes the element to establish a
+  containing block for all descendants.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  <a href="../css-position/containing-block-properties.html">CSS Positioned Layout's page</a> shows which values
+  do.</p>
+</header>
+
+<section>
+  <h2>Its padding box</h2>
+  <p><q>Its padding box will be used to layout for all of its absolute-position descendants, fixed-position
+  descendants, and descendant fixed background attachments.</q> In each frame, a box with a 10px dashed border holds
+  a 20px orange <code>fixed</code> box at <code>top: 0; left: 0</code> and a blue <code>absolute</code> one at
+  <code>bottom: 0; right: 0</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0 } p { margin: 10px; height: 20px; border: 10px dashed #6b7381; transform: translate(0) } i { width: 20px; height: 20px } .f { position: fixed; top: 0; left: 0; background: #d68a3c } .a { position: absolute; bottom: 0; right: 0; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>translate(0)</code>: both inside the border, at the padding box's corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0 } p { margin: 10px; height: 20px; border: 10px dashed #6b7381 } i { width: 20px; height: 20px } .f { position: fixed; top: 0; left: 0; background: #d68a3c } .a { position: absolute; bottom: 0; right: 0; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption>For comparison, no transform: both at the frame's corners.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fixed backgrounds scroll</h2>
+  <p><q>For elements that are effected by a transform (i.e. have a transform applied to them, or to any of their
+  ancestor elements) and do not have their background propagated to the canvas, a value of fixed for the
+  background-attachment property is treated as if it had a value of scroll.</q> Each dashed box has a 40px orange
+  square at <code>0 0</code>, <code>fixed</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bg></div></div>
+    <figcaption>No transform: the square is at the page's top left, and the box shows none.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="transform: translate(0)"><div class=bg></div></div>
+    <figcaption>The stage transformed: at the box's top left, as if <code>scroll</code>. <span class=pr-flag>Safari</span>
+    keeps it fixed, and shows none.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bg style="transform: rotate(10deg)"></div></div>
+    <figcaption>The box with <code>rotate(10deg)</code>: at its corner, turned with it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

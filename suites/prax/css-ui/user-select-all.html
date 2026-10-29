@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>user-select: all</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 6.1 Controlling content selection, all</div>
+  <h1>user-select: all</h1>
+  <p class=pr-lede>For <code>all</code>, <q>The content of the element must be selected atomically: If a selection would contain part of the element, then the selection must contain the entire element including all its descendants.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#content-selection">CSS Basic User Interface 4 §6.1</a></span></p>
+  <p class=pr-note>A script in each frame makes the selection, highlighted orange. Safari draws no selection in these stills.</p>
+</header>
+
+<section>
+  <h2>Selected whole</h2>
+  <p>Each frame's script places the start of a selection and extends it one character forward, as Shift and the right arrow key would. The span “all of it” has <code>user-select: all</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;abc &lt;span style=&#x27;user-select: all&#x27;&gt;all of it&lt;/span&gt; end&lt;script&gt;var t = document.body.firstChild; getSelection().collapse(t, 4);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;character&#x27;);&lt;/script&gt;"></iframe></div>
+    <figcaption>Started before “all”: the one character takes in the whole span, “all of it” highlighted, “abc” and “end” not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;abc &lt;span style=&#x27;user-select: all&#x27;&gt;all &lt;b style=&#x27;user-select: text&#x27;&gt;bold&lt;/b&gt; it&lt;/span&gt; end&lt;script&gt;var t = document.querySelector(&#x27;b&#x27;).firstChild; getSelection().collapse(t, 0);getSelection().modify(&#x27;extend&#x27;, &#x27;forward&#x27;, &#x27;character&#x27;);&lt;/script&gt;"></iframe></div>
+    <figcaption>Started in “bold”, which has <code>user-select: text</code>: <q>the selection is not extended to include this whole element</q>, so only the “b” is highlighted.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

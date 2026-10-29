@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stacking contexts are isolated groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { height: 60px; }
+  .bd { position: absolute; left: 10px; top: 10px; width: 180px; height: 40px; background: #00ff00; }
+  .group { position: absolute; left: 10px; top: 10px; width: 180px; height: 40px; }
+  .el { position: absolute; left: 20px; top: 0; width: 40px; height: 40px; background: #ff0000; mix-blend-mode: multiply; }
+  .half { position: absolute; left: 0; top: 0; width: 90px; height: 40px; background: #ffff00; }
+  .wide { left: 60px; width: 60px; }
+  .blue { position: absolute; left: 140px; top: 0; width: 40px; height: 40px; background: #0000ff; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.2 Behavior specific to HTML</div>
+  <h1>Stacking contexts are isolated groups</h1>
+  <p class=pr-lede><q>Everything in CSS that creates a stacking context must be considered an ‘isolated’ group.</q>
+  <q>An element that has blending applied, must blend with all the underlying content of the stacking context that
+  that element belongs to.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#csscompositingrules_CSS">Compositing and Blending 2 §3.2</a></span>
+  Each stage has a lime band 180 by 40 under a red square with <code>mix-blend-mode: multiply</code>: red times lime is black; in an
+  isolated group, the red blends with the group's transparent start and stays red.</p>
+</header>
+
+<section>
+  <h2>A stacking context in between</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=group><div class=el></div></div></div>
+    <figcaption>A plain <code>div</code> around the square: no stacking context, so the square blends with the lime,
+    black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=group style="opacity: 0.99"><div class=el></div></div></div>
+    <figcaption><code>opacity: 0.99</code> on the <code>div</code>: a stacking context, an isolated group; the square
+    stays red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=group style="z-index: 0"><div class=el></div></div></div>
+    <figcaption><code>position: absolute; z-index: 0</code>: a stacking context too; red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=group style="transform: translateX(0)"><div class=el></div></div></div>
+    <figcaption><code>transform: translateX(0)</code>: a stacking context; red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>All the underlying content</h2>
+  <p>With no stacking context between, the bar blends with the parent's background and earlier siblings too.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=group><div class=half></div><div class=blue></div><div class="el wide" style="width: 120px"></div></div></div>
+    <figcaption>A yellow half and a blue square under a red bar 120 wide from x 70: over yellow red (yellow times red),
+    over lime black, over blue black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

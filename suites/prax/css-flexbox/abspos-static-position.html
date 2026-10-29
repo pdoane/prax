@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolutely positioned children: the static position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .ab { position: absolute; width: 40px; height: 20px; }
+  .box { width: 40px; }
+  figure.n figcaption { max-width: 116px; }
+  figure.n .pr-stage { width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.1 Absolutely-Positioned Flex Children</div>
+  <h1>Absolutely positioned children: the static position</h1>
+  <p class=pr-lede><q>The cross-axis edges of the static-position rectangle of an absolutely-positioned child of a flex
+  container are the content edges of the flex container. The main-axis edges of the static-position rectangle are
+  where the margin edges of the child would be positioned if it were the sole flex item in the flex container, assuming
+  both the child and the flex container were fixed-size boxes of their used size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#abspos-items">CSS Flexible Box Layout 2 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Placed as the sole item</h2>
+  <p>Each stage, 100 by 60, is the flex container and the containing block; the purple box D is
+  <code>position: absolute</code>, 40 by 20, with every offset <code>auto</code>, so it is at its static position <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#staticpos-rect">CSS Positioned Layout 3 §3.5.3</a></span>.</p>
+  <figure class=n>
+    <div class="pr-stage pr-cb"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption>Initial values: at the top left, 0, 0.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="justify-content: center"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>justify-content: center</code>: from 30px to 70px across.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="justify-content: flex-end; align-items: flex-end"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>justify-content</code> and <code>align-items</code> <code>flex-end</code>: the bottom right
+    corner.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb"><div class="pr-d pr-fit ab" style="align-self: center">D</div></div>
+    <figcaption><code>align-self: center</code> on D: 20px down, at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out of flow</h2>
+  <p><q>As it is out-of-flow, an absolutely-positioned child of a flex container does not participate in flex
+  layout.</q> The cross edges are the container's content edges, so <code>align-content</code> does not move it;
+  <q>the child's auto margins are treated as zero.</q></p>
+  <figure class=n>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box">B</div><div class="pr-d pr-fit ab" style="height: 30px">D</div></div>
+    <figcaption>After items A and B: D at 0, 0 over A, which is not moved, and B not either.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="padding: 10px; width: 80px; height: 40px"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption>With 10px padding: at 10, 10, the content edge.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb" style="flex-wrap: wrap; align-content: flex-end"><div class="pr-d pr-fit ab">D</div></div>
+    <figcaption><code>wrap</code> and <code>align-content: flex-end</code>: still at the top.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage pr-cb"><div class="pr-d pr-fit ab" style="margin-left: auto">D</div></div>
+    <figcaption><code>margin-left: auto</code>: zero, so still at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

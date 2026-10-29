@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cursor: the keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cur { height: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; }
+  .cur:nth-child(odd) { background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.1 Cursors: the 'cursor' property</div>
+  <h1>Cursor: the keywords</h1>
+  <p class=pr-lede><q>This property specifies the type of cursor to be displayed for the pointing device.</q> A screenshot
+  shows no cursor: hover a row, which names its declaration.</p>
+</header>
+
+<section>
+  <h2>General cursors</h2>
+  <p><q>auto: The UA determines the cursor to display based on the current context.</q> The others name a cursor:
+  <q>The platform-dependent default cursor. Often rendered as an arrow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#cursor-props">CSS 2 §18.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=cur style="cursor: auto">auto</div>
+      <div class=cur style="cursor: default">default</div>
+      <div class=cur style="cursor: pointer">pointer</div>
+      <div class=cur style="cursor: crosshair">crosshair</div>
+      <div class=cur style="cursor: move">move</div>
+    </div>
+    <figcaption>On hover: the UA's choice for <code>auto</code>, an I-beam over
+    text <span class="pr-flag pr-since">Since CSS 2</span> now defined: text over text, else default; an arrow; a hand
+    for a link; a "+"; a move cursor.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=cur style="cursor: text">text</div>
+      <div class=cur style="cursor: wait">wait</div>
+      <div class=cur style="cursor: progress">progress</div>
+      <div class=cur style="cursor: help">help</div>
+    </div>
+    <figcaption>On hover: an I-beam; a busy cursor; a busy cursor the user may still interact with, often an arrow with
+    a watch; a question mark.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-ui-4/#predefined-cursors">CSS Basic User Interface 4 §5.1.1.1</a></div>
+  <h2>auto is text over text, default elsewhere</h2>
+  <p><q>The UA determines the cursor to display based on the current context: auto behaves as text over selectable
+  text or editable elements, and default otherwise.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#predefined-cursors">CSS Basic User Interface 4 §5.1.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="cursor: auto; padding: 0 6px 20px">Selectable text, then 20px of stage
+    below it.</div>
+    <figcaption><code>cursor: auto</code>. On hover: an I-beam over the text, an arrow over the empty 20px
+    below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="cursor: auto; padding: 0 6px; user-select: none">Text with
+    <code>user-select: none</code>, which cannot be selected.</div>
+    <figcaption><code>cursor: auto</code> on text that is not selectable: on hover, an arrow, as
+    <code>default</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

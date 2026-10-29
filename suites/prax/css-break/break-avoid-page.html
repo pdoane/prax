@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>avoid-page</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.2 Page Break Values</div>
+  <h1>avoid-page</h1>
+  <p class=pr-lede><q>These values only have an effect in paginated contexts; if the flow is not paginated, they have
+  no effect.</q> <code>page</code>: <q>Always force a page break before/after the principal box.</q>
+  <code>avoid-page</code>: <q>Avoid a page break before/after the principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></span>
+  B has the value.</p>
+</header>
+
+<section>
+  <h2>avoid-page</h2>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<br>six<div class=pr-b style='height: 40px; box-sizing: border-box; break-inside: avoid; break-before: avoid-page'>B</div>"></iframe>
+    <figcaption>Printed: B, 40px and kept whole (<code>break-inside: avoid</code>), does not fit under "six"; rather than break before B, the page breaks after
+    "five", and "six" goes with B. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Break before B: "six" stays on the first page, B alone on the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

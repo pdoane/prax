@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feOffset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=move filterUnits="userSpaceOnUse" x=0 y=0 width=160 height=80><feOffset dx="30" dy="10"/></filter>
+  <filter id=back filterUnits="userSpaceOnUse" x=0 y=0 width=160 height=80><feOffset dx="-40"/></filter>
+  <filter id=bbox filterUnits="userSpaceOnUse" x=0 y=0 width=160 height=80 primitiveUnits="objectBoundingBox"><feOffset dx="0.5" dy="0.5"/></filter>
+  <filter id=clipped><feOffset dx="30"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.18 Filter primitive feOffset</div>
+  <h1>feOffset</h1>
+  <p class=pr-lede><q>This filter primitive offsets the input image relative to its current position in the image
+  space by the specified vector.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feOffsetElement">Filter Effects 1 §9.18</a></span>
+  Each stage is an SVG 160 by 80 with a blue rectangle 40 by 20 at (60, 20), outlined dashed.</p>
+</header>
+
+<section>
+  <h2>dx and dy</h2>
+  <p><q>The offset amount is expressed in the coordinate system established by attribute primitiveUnits on the filter
+  element.</q> In the first two, the filter region is the whole stage.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=20 width=40 height=20 fill="#4f81bd" filter="url(#move)"/><rect x=60 y=20 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>dx="30" dy="10"</code>: at (90, 30).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=20 width=40 height=20 fill="#4f81bd" filter="url(#back)"/><rect x=60 y=20 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>dx="-40"</code>: at (20, 20); <code>dy</code> 0, its initial value.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=20 width=40 height=20 fill="#4f81bd" filter="url(#bbox)"/><rect x=60 y=20 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>In <code>objectBoundingBox</code> units, <code>0.5</code> each: half the box's 40 by 20,
+    so at (80, 30).</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Within the filter region</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=20 width=40 height=20 fill="#4f81bd" filter="url(#clipped)"/><rect x=60 y=20 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/><rect x=56 y=18 width=48 height=24 fill=none stroke="#c0392b" stroke-dasharray="2 2"/></svg></div>
+    <figcaption>The default region, outlined red, 48 by 24 at (56, 18); <code>dx="30"</code> moves the rectangle to
+    x 90, so only x 90 to 104 shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

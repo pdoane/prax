@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .mc { font: 13px/20px "PR Literata"; columns: 2; column-gap: 16px; column-fill: auto; height: 60px; }
+  .p { margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .pr-stage { width: 300px; }
+  figcaption { max-width: 300px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.9.4 Interaction with Fragmentation (Pagination)</div>
+  <h1>Initial letters across columns</h1>
+  <p class=pr-lede><q>an initial letter is considered monolithic for the purpose of block-axis fragmentation (breaking
+  across pages, columns, regions, etc.). Additionally, breaks between the in-flow lines alongside an initial letter box
+  are avoided, much as breaks between line boxes affected be widows and orphans are avoided.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-breaking">CSS Inline Layout 3 §7.9.4</a></span>
+  Each stage is two columns 60px tall, three 20px lines each, of 13px PR Literata, with <code>initial-letter: 3</code>.
+  <span class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code> and <span
+  class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>The letter and its lines stay together</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=mc><p style="margin: 0">One line before.</p><p class=p>Monolithic: the letter and the lines beside it move to the next column whole.</p></div></div>
+    <figcaption>A paragraph after one line: the M and the three lines beside it would break after two lines, so they
+    start the second column together. <span class=pr-flag>Chrome</span> The M stays in the first column,
+    overflowing it, and its lines break after two.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

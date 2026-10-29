@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>-webkit- aliases of the flex properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { display: flex; }
+  .f > div { width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · B -webkit- Legacy Properties</div>
+  <h1>-webkit- aliases of the flex properties</h1>
+  <p class=pr-lede><q>For compatibility with general Web content, UAs that are Web browsers must and other UAs may
+  implement the following legacy name aliases</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#webkit-aliases">CSS Flexible Box Layout 2 §B</a></span></p>
+</header>
+
+<section>
+  <h2>Each alias sets its standard property</h2>
+  <p>Each stage is a flex container 100px wide of A, B and C, 30px wide, and declares only the alias, and is laid out
+  as the standard property would lay it out.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w0 style="-webkit-flex-direction: row-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-direction: row-reverse</code>: A at the right edge, B, C leftward.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w1 style="-webkit-flex-wrap: wrap; width: 60px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-wrap: wrap</code>: A and B on the first line, C on the second.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w2 style="-webkit-flex-flow: column; height: 60px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-flow: column</code>: A, B, C down the left edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w3 style="-webkit-justify-content: flex-end"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-justify-content: flex-end</code>: A, B, C packed to the right, from 10px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w4 style="-webkit-align-items: center; height: 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-align-items: center</code>: A, B, C from 10px down, centered in 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style="height: 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" id=w5 style="-webkit-align-self: flex-end">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-align-self: flex-end</code>: B, on it, at the bottom; A and C stretched to 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" id=w6 style="-webkit-align-content: flex-end; width: 60px; height: 60px; flex-wrap: wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-align-content: flex-end</code>: Two lines, A and B, then C, packed at the bottom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style=""><div class="pr-a pr-fit" id=w7 style="-webkit-flex: 1">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex: 1</code>: A, on it, takes the free space: 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style=""><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" id=w8 style="-webkit-flex-grow: 1">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-grow: 1</code>: B, on it, grows to 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style="width: 60px"><div class="pr-a pr-fit" id=w9 style="-webkit-flex-shrink: 0">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-shrink: 0</code>: A, on it, stays 30px; B and C shrink to 15px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style=""><div class="pr-a pr-fit" id=w10 style="-webkit-flex-basis: 50px">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>-webkit-flex-basis: 50px</code>: A, on it, is 50px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style=""><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" id=w11 style="-webkit-order: -1">C</div></div>
+    <figcaption><code>-webkit-order: -1</code>: C, on it, first: C, A, B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

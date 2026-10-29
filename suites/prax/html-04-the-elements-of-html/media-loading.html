@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which resource, and from when</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.11.5 Loading the media resource</div>
+  <h1>Which resource, and from when</h1>
+  <p class=pr-lede><q>If either the media resource or the URL of the current media resource indicate a particular
+  start time, then set the initial playback position to that time and, if jumped is still false, seek to that
+  time.</q> <q>For example, with media formats that support media fragment syntax, the fragment can be used to
+  indicate a start position.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#loading-the-media-resource">HTML §4.8.11.5</a></span>
+  The video, <code>clip.mp4</code>, is 160 by 80 here drawn at 140 by 70, and two seconds long: blue from 0s, orange
+  from 0.5s, green from 1s, purple from 1.5s.</p>
+</header>
+
+<section>
+  <h2>A start time in the fragment</h2>
+  <p>Seeking sets <q>the media element's show poster flag to false</q>, so the paused video shows the frame at the
+  start time. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#seeking">§4.8.11.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4" width="140" height="70"></video></div>
+    <figcaption>No fragment: blue, the first frame.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=0.75" width="140" height="70"></video></div>
+    <figcaption><code>#t=0.75</code>: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video src="support/clip.mp4#t=1.75" width="140" height="70"></video></div>
+    <figcaption><code>#t=1.75</code>: purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The first source that loads</h2>
+  <p>The resource selection algorithm tries each source child in turn: one whose type attribute <q>represents a type that the user agent knows it cannot
+  render</q> is skipped
+  unfetched, and one that fails to load is passed over for the next. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#loading-the-media-resource">§4.8.11.5</a></span>
+  Each source below points to <code>clip.mp4</code> at a different start.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video width="140" height="70"><source src="support/clip.mp4#t=0.75"><source src="support/clip.mp4#t=1.25"></video></div>
+    <figcaption>Orange from 0.75s, then green from 1.25s: orange, the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video width="140" height="70"><source type="video/x-unknown" src="support/clip.mp4#t=0.75"><source src="support/clip.mp4#t=1.25"></video></div>
+    <figcaption>The first with <code>type="video/x-unknown"</code>: green, the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video width="140" height="70"><source src="support/missing.mp4"><source src="support/clip.mp4#t=1.75"></video></div>
+    <figcaption>The first missing: purple, the second.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

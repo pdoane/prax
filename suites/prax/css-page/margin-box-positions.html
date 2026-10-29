@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positions of page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.2.4 Positioning</div>
+  <h1>Positions of page-margin boxes</h1>
+  <p class=pr-lede><q>The left outer edge of A is flush with the left edge of the containing block</q> <q>The outer area of B is centered in the containing block.</q> <q>The right outer edge of C is flush with the right edge of the containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#variable-position">CSS Paged Media 3 §5.3.2.4</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Flush left, centered, flush right</h2>
+  <p>The pages have margins of 30px above and below and 20px at the sides, so the containing block of the top boxes runs from 20px to 220px.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 20px; @top-left { content: 'A'; width: 40px; background: #4f81bd } @top-center { content: 'B'; width: 60px; background: #6aa36a } @top-right { content: 'C'; width: 40px; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>A from 20 to 60, B from 90 to 150, C from 180 to 220. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 20px; @top-center { content: 'B'; width: 60px; background: #6aa36a } @top-right { content: 'C'; width: 100px; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>B stays centered, from 90 to 150, though C, from 120 to 220, overlaps it and A is not generated. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

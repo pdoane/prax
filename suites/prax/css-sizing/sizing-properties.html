@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing properties: the minimum wins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 130px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.1 Sizing Properties</div>
+  <h1>Sizing properties: the minimum wins</h1>
+  <p class=pr-lede><q>In CSS, while the minimum and maximum sizes both constrain the used size, the minimum size
+  constraint is always the strongest constraint. Furthermore, the inner size is always floored at zero.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#sizing-properties">CSS Box Sizing 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Minimum over maximum over preferred</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 150px; max-width: 100px">150, max 100</div></div>
+    <figcaption><code>width: 150px; max-width: 100px</code>: 100px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 150px; max-width: 100px; min-width: 120px">min 120</div></div>
+    <figcaption>And <code>min-width: 120px</code>: the minimum wins over the maximum, 120px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 20px; height: 20px; padding: 0 30px"></div></div>
+    <figcaption><code>box-sizing: border-box; width: 20px; padding: 0 30px</code>: the inner width floors at zero, so
+    the box is 62px wide with its 1px borders.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative variants follow the element's own writing mode</h2>
+  <p><q>The flow-relative variants (inline-size, block-size, etc.) are mapped using the writing mode of the element
+  itself</q>. Each blue box has <code>inline-size: 120px; block-size: 30px</code>.</p>
+  <figure class=f>
+    <div class="pr-stage s" style="height: 130px"><div class="pr-a pr-fit" style="inline-size: 120px; block-size: 30px">horizontal-tb</div></div>
+    <figcaption>Horizontal: 120px wide, 30px tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s" style="height: 130px"><div class="pr-a pr-fit" style="writing-mode: vertical-rl; inline-size: 120px; block-size: 30px">vertical-rl</div></div>
+    <figcaption>The box itself <code>vertical-rl</code>, in a horizontal stage: 30px wide, 120px tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s" style="height: 130px; writing-mode: vertical-rl; width: 150px"><div class="pr-a pr-fit" style="writing-mode: horizontal-tb; inline-size: 120px; block-size: 30px">horizontal</div></div>
+    <figcaption>The box horizontal in a <code>vertical-rl</code> stage: 120px wide, 30px tall, at the stage's
+    top right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

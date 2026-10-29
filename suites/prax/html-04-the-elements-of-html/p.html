@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The p element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .t p { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.1 The p element</div>
+  <h1>The p element</h1>
+  <p class=pr-lede><q>The p element represents a paragraph.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-p-element">HTML §4.4.1</a></span></p>
+</header>
+<section>
+  <h2>A block, 1em from the next</h2>
+  <p>The user agent's style sheet makes it a block, and <q>blockquote, figure, listing, p, plaintext, pre, xmp {
+  margin-block: 1em; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span> The stage's text is 10px on 20px lines.</p>
+  <figure>
+    <div class="pr-stage t"><p>First paragraph.</p><p>Second paragraph.</p></div>
+    <figcaption>Two tinted blocks across the stage, each one line: 10px below the stage's top, 10px apart, as their
+    margins collapse, and 10px above its bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

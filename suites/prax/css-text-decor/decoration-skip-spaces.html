@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-skip-spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 5px 0; white-space: pre; }
+  .u { text-decoration: underline #c0392b 3px; text-underline-offset: 3px; }
+  figure.s { margin-right: 2px; }
+  figure.s .pr-stage { width: 96px; }
+  figure.s figcaption { max-width: 98px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10.3 Skipping Spaces: the text-decoration-skip-spaces property</div>
+  <h1>text-decoration-skip-spaces</h1>
+  <p class=pr-lede><q>This property specifies whether text decoration skips any spaces. It controls all text decoration
+  lines drawn by the element and also any text decoration lines drawn by its ancestors.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-skip-spaces-property">CSS Text Decoration 4 §2.10.3</a></span>
+  Each stage holds "  ab cd  " with its spaces preserved, x=0 to 90, in monospace, 10px a character; the underline is
+  red.</p>
+</header>
+
+<section>
+  <h2>none, all, start, end</h2>
+  <p><code>none</code>: <q>Spacers are not skipped.</q> <code>all</code>: <q>Skip all spacers and all word separators
+  plus any adjacent 'letter-spacing' or 'word-spacing'.</q> <code>start</code> and <code>end</code> skip them
+  <q>when located at the start of the line</q>, and at the end. The initial value is <code>start end</code>.</p>
+  <figure class=s>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: none">  ab cd  </span></div>
+    <figcaption><code>none</code>: x=0 to 90.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: all">  ab cd  </span></div>
+    <figcaption><code>all</code>: under "ab" and "cd" only, 20 to 40 and 50 to 70. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to 90.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: start">  ab cd  </span></div>
+    <figcaption><code>start</code>: 20 to 90. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to 90.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: end">  ab cd  </span></div>
+    <figcaption><code>end</code>: 0 to 70. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to 90.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u>  ab cd  </span></div>
+    <figcaption>Initial, <code>start end</code>: 20 to 70. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to 90.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A spacer</h2>
+  <p><q>a spacer is any typographic character unit from Unicode General Category Zs except U+202F NARROW NO-BREAK
+  SPACE.</q></p>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: all">ab&#x2003;cd</span></div>
+    <figcaption><code>all</code>, U+2003 EM SPACE between: skipped, a gap between "ab" and "cd". <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> run the line on under it.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-skip-spaces: all">ab&#x202F;cd</span></div>
+    <figcaption><code>all</code>, U+202F NARROW NO-BREAK SPACE: not a spacer; the line runs on under it. <span class=pr-flag>Chrome</span> skips it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

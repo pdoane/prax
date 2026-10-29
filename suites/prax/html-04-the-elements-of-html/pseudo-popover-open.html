@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:popover-open</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  .act > .pr-target { display: inline-block; width: 120px; margin: 0 6px 10px 0; }
+  [popover] { font-size: 12px; border: 3px solid #d68a3c; }
+  [popover]:popover-open { border-color: #3f9a3f; background: #dff0df; }
+  .shown { display: block; position: static; margin: 0 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:popover-open</h1>
+  <p class=pr-lede><q>The :popover-open pseudo-class is defined to match any HTML element whose popover attribute is
+  not in the No Popover state and whose popover visibility state is showing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Showing, not merely displayed</h2>
+  <p>Here a popover has an orange border, and a green one with a pale green background while it matches
+  <code>:popover-open</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target popovertarget=tip>toggle auto</button><button class=pr-target popovertarget=manual>toggle manual</button>
+        <div popover id=tip>popover=auto</div>
+        <div popover=manual id=manual style="top: 60%">popover=manual</div>
+        <div popover class=shown>a popover that is hidden, displayed by the page's style</div>
+      </div>
+    </div>
+    <figcaption>The box below the buttons is a popover that is not showing, which the page's style displays anyway: orange.
+    Click "toggle auto": a green popover in the middle of the window. Click elsewhere: it hides. "toggle
+    manual" shows one lower down, green, until clicked again.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

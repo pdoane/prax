@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subject, container and fallback</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 3 Alignment Terminology</div>
+  <h1>Subject, container and fallback</h1>
+  <p class=pr-lede><q>Since this module defines alignment properties for all layout modes in CSS, some abstract
+  terminology is introduced</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#terms">CSS Box Alignment 3 §3</a></span>
+  Each stage is a grid 200 by 50, one column.</p>
+</header>
+
+<section>
+  <h2>The alignment subject: a margin box</h2>
+  <p><q>For 'justify-self' and 'align-self', the alignment subject is the margin box of the box the property is set
+  on</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: end; align-self: start">A</div></div></div>
+    <figcaption><code>justify-self: end</code>: A's border flush with the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: end; align-self: start; margin-right: 30px">A</div></div></div>
+    <figcaption>With <code>margin-right: 30px</code>: its margin flush with it, its border 30px in.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The alignment container, in its own writing mode</h2>
+  <p>The alignment container <q>assumes the writing mode of the box establishing the containing block.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="justify-self: start; align-self: start">A</div></div></div>
+    <figcaption><code>rtl</code> grid, <code>justify-self: start</code>: A at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="justify-self: start; align-self: start; direction: ltr">A</div></div></div>
+    <figcaption>A itself <code>ltr</code>: still at the right, for <code>start</code> is the container's.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fallback alignment</h2>
+  <p><q>space-between can only operate when there is more than one alignment subject</q>; <q>In these cases a
+  fallback alignment takes effect</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 50px 50px; justify-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>Two columns, <code>space-between</code>: A left, B right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 50px; justify-content: space-between"><div class=pr-a>A</div></div></div>
+    <figcaption>One column: its fallback, <code>start</code>: A left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

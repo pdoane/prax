@@ -1,0 +1,73 @@
+00-supports-1.html
+# css-pseudo-4/#intro 1 Introduction: no page; it introduces pseudo-elements, whose sections show them
+# css-pseudo-4/#typographic-pseudos 2 Typographic Pseudo-elements: no page; it introduces 2.1 and 2.2
+css-pseudo-4/#first-line-pseudo 2.1 First-Line Text: the ::first-line pseudo-element
+    first-line.html
+css-pseudo-4/#first-text-line 2.1.1 Finding the First Formatted Line
+    first-formatted-line.html
+    first-line-nesting.html
+css-pseudo-4/#first-line-styling 2.1.2 Styling the ::first-line Pseudo-element
+    first-line-properties.html
+    first-line-line-height.html
+css-pseudo-4/#first-line-inheritance 2.1.3 Inheritance and the ::first-line Pseudo-element
+    first-line-inheritance.html
+css-pseudo-4/#first-letter-pseudo 2.2 First-Letter Text: ::first-letter pseudo-element and its ::prefix and ::suffix children
+    first-letter.html
+    first-letter-prefix-suffix.html
+css-pseudo-4/#first-letter-pattern 2.2.1 First Letters and Associated Punctuation
+    first-letter-punctuation.html
+    first-letter-clusters.html
+css-pseudo-4/#first-letter-application 2.2.2 Finding the First-Letter Text
+    first-letter-finding.html
+    first-letter-generated.html
+css-pseudo-4/#first-letter-tree 2.2.3 Inheritance and Box Tree Structure of the First-Letter Pseudo-elements
+    first-letter-tree.html
+css-pseudo-4/#first-letter-styling 2.2.4 Styling the First-Letter Pseudo-elements
+    first-letter-properties.html
+# css-pseudo-4/#highlight-pseudos 3 Highlight Pseudo-elements: no page; it introduces the subsections
+css-pseudo-4/#highlight-selectors 3.1 Selecting Highlighted Content: the ::selection, ::search-text, ::target-text, ::spelling-error, ::grammar-error, and ::highlight() pseudo-elements
+    highlight-pseudos.html
+css-pseudo-4/#highlight-styling 3.2 Styling Highlights
+    highlight-properties.html
+css-pseudo-4/#highlight-ua-styles 3.3 Default UA Styles
+    highlight-ua-styles.html
+css-pseudo-4/#paired-defaults 3.3.1 Paired Defaults
+    paired-defaults.html
+css-pseudo-4/#highlight-bounds 3.4 Area of a Highlight
+    highlight-area.html
+css-pseudo-4/#highlight-cascade 3.5 Cascading and Per-Element Highlight Styles
+    highlight-cascade.html
+    highlight-custom-properties.html
+# css-pseudo-4/#highlight-painting 3.6 Painting the Highlight: no page; it introduces 3.6.1 to 3.6.4
+css-pseudo-4/#highlight-backgrounds 3.6.1 Backgrounds
+    highlight-backgrounds.html
+css-pseudo-4/#highlight-shadows 3.6.2 Shadows
+    highlight-shadows.html
+css-pseudo-4/#highlight-text 3.6.3 Text and Text Decorations
+    highlight-text.html
+    highlight-decorations.html
+css-pseudo-4/#highlight-replaced 3.6.4 Replaced Elements
+    highlight-replaced.html
+# css-pseudo-4/#highlight-security 3.7 Security Considerations for Highlighting: no page; nothing to see
+css-pseudo-4/#treelike 4 Tree-Abiding Pseudo-elements
+    tree-abiding.html
+css-pseudo-4/#generated-content 4.1 Generated Content Pseudo-elements: ::before and ::after
+    before-after.html
+css-pseudo-4/#marker-pseudo 4.2 List Markers: the ::marker pseudo-element
+    marker.html
+css-pseudo-4/#placeholder-pseudo 4.3 Placeholder Input: the ::placeholder pseudo-element
+    placeholder.html
+css-pseudo-4/#element-like 5 Element-backed Pseudo-Elements
+    element-backed.html
+css-pseudo-4/#file-selector-button-pseudo 5.1 File Selector Button: the ::file-selector-button pseudo-element
+    file-selector-button.html
+css-pseudo-4/#details-content-pseudo 5.2 Expandable contents of details element: the ::details-content pseudo-element
+    details-content.html
+css-pseudo-4/#interactions 6 Overlapping Pseudo-element Interactions
+    overlapping.html
+# css-pseudo-4/#cssom 7 Additions to the CSS Object Model: no page; it is object model
+# css-pseudo-4/#CSSPseudoElement-interface 7.1 CSSPseudoElement Interface: no page; it is object model
+# css-pseudo-4/#window-interface 7.2 pseudo() method of the Element interface: no page; it is object model
+# css-pseudo-4/#getComputedStyle 7.3 getComputedStyle(): no page; it is object model
+# css-pseudo-4/#css2-compat 8 Compatibility Syntax: no page; the one-colon spellings are parsing
+# The editor's draft also has 4.4, the ::interest-button pseudo-element, which webref's headings do not list yet.

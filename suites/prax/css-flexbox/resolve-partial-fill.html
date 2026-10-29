@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: factors below 1</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { min-width: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, factors below 1</div>
+  <h1>Resolving flexible lengths: factors below 1</h1>
+  <p class=pr-lede><q>Calculate the remaining free space as for initial free space, above. If the sum of the unfrozen
+  flex items’ flex factors is less than one, multiply the initial free space by this sum. If the magnitude of this
+  value is less than the magnitude of the remaining free space, use this as the remaining free space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>A share of the free space</h2>
+  <p>Each stage is 200px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .25 1 40px">A</div><div class="pr-b pr-fit" style="flex: .25 1 40px">B</div></div>
+    <figcaption>Two of basis 40px, growing .25: 120px free, times .5 is 60px, 30px each. A and B are 70px, and 60px
+    is left empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 .5 300px">A</div></div>
+    <figcaption>One of 300px, shrinking .5: 100px over, times .5 is 50px. A is 250px and overflows the stage by 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The initial free space, once an item is frozen</h2>
+  <p>A has <code>flex: .5 1 0</code> and <code>max-width: 20px</code>; B <code>flex: .25 1 0</code>. The initial
+  free space is 200px, and stays so.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .5 1 0; max-width: 20px">A</div><div class="pr-b pr-fit" style="flex: .25 1 0">B</div></div>
+    <figcaption>Sum .75: 150px, A 100px and B 50px. A is clamped to 20px and frozen. Then B alone, .25 of the
+    initial 200px is 50px, less than the 180px remaining: B is 50px, from 20 to 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: .5 1 0; max-width: 20px">A</div><div class="pr-b pr-fit" style="flex: 1 1 0">B</div></div>
+    <figcaption>B growing 1 instead: B alone sums to 1, so it takes all 180px remaining, from 20 to 200px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tab stops</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { white-space: pre; tab-size: 4; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3.2 Phase II: Trimming and Positioning</div>
+  <h1>Tab stops</h1>
+  <p class=pr-lede><q>Tab stops occur at points that are multiples of the tab size from the starting content edge of
+  the preserved tab’s nearest block container ancestor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-phase-2">CSS Text 4 §4.3.2</a></span>
+  Each stage is <code>pre</code> with <code>tab-size: 4</code>: letters are 10px wide, so the stops are every 40px.
+  CSS 2's page has <a href="../css2-16-text/processing-lines.html">the half-ch rule</a>.</p>
+</header>
+
+<section>
+  <h2>Measured from the block, not the inline box</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=t style="padding-left: 15px">a	b	c</span></div>
+    <figcaption>A span with 15px of left padding: "a" at 15px, then "b" at the stop at 40px and "c" at 80px, not
+    15px further.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="padding-left: 15px"><span class=t>a	b	c</span></div>
+    <figcaption>The 15px of padding on the stage instead: its content edge moves, so the stops are at 15 + 40 and 15
+    + 80: "b" at 55px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">a<span class=u style="display: inline-block; padding-left: 15px">b	c</span></div>
+    <figcaption>In an inline-block, a block container of its own: its stops start at its content edge, 25px in, so
+    "c" is at 65px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A tab size of zero</h2>
+  <p><q>If the tab size is zero, preserved tabs are not rendered.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="tab-size: 0"><span class=t>a	b	c</span></div>
+    <figcaption><code>tab-size: 0</code>: "abc", 30px, the tabs taking no room.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

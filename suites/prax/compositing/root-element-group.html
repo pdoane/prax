@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The root element group</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 8.3 The Root Element Group</div>
+  <h1>The root element group</h1>
+  <p class=pr-lede><q>The background of the root element (if specified) is painted into the root element group, and
+  any filter, clip-path, mask and and opacity is then applied, before compositing into the root group, if present.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#pagebackdrop">Compositing and Blending 2 §8.3</a></span>
+  Each frame, 200 by 100, holds a document whose root element has a lime background and an empty
+  <code>body</code>. Under a frame's document the root group is transparent in each browser, so the stage shows
+  where the root's background does not cover it.</p>
+</header>
+
+<section>
+  <h2>The root's effects reach its background</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #00ff00; opacity: 0.5 }</style>"></iframe></div>
+    <figcaption><code>opacity: 0.5</code>: lime at 0.5 across the frame, the stage's guides through it. <span class=pr-flag>Firefox</span> Opaque lime.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #00ff00; filter: invert(1) }</style>"></iframe></div>
+    <figcaption><code>filter: invert(1)</code>: magenta across the frame.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #00ff00; height: 100%; clip-path: inset(20px) }</style>"></iframe></div>
+    <figcaption><code>clip-path: inset(20px)</code> on a root as tall as the frame: lime 160 by 60, the stage 20px
+    around it. <span class=pr-flag>Firefox</span> Lime across the frame.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #00ff00; height: 100%; mask-image: linear-gradient(black 50%, transparent 50%) }</style>"></iframe></div>
+    <figcaption><code>mask-image</code>, black over the top half: lime above y 50, the stage below. <span class=pr-flag>Firefox</span> Lime across the frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

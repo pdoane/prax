@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Masking with the mask border image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; mask-border: url(support/frame-alpha.svg) 10 fill; }
+  .kid { position: relative; left: 60px; top: 30px; width: 60px; height: 40px; background: #d68a3c; }
+  .row { display: flex; gap: 0; margin: 10px; }
+  .row > div { flex: none; width: 70px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.8 Masking with the mask border image</div>
+  <h1>Masking with the mask border image</h1>
+  <p class=pr-lede><q>After the mask border image given by mask-border-source is sliced by the mask-border-slice values,
+  the resulting nine images are scaled, positioned, and tiled into their corresponding mask border image regions in four
+  steps as described in the section Drawing the Border Image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#masking-with-the-mask-border-image">CSS Masking 1 §8.8</a></span>
+  The mask is the frame of discs, bars and a middle square, sliced <code>10 fill</code>.</p>
+</header>
+
+<section>
+  <h2>The descendants, masked as a group</h2>
+  <p><q>all the element's descendants are rendered together as a group with the masking applied to the group as a
+  whole.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="height: 80px"><div class=box><div class=kid></div></div></div>
+    <figcaption>An orange child 60 by 40 hanging 10px below the blue box: masked with it, orange only where it crosses
+    the middle square and the bottom bar. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span>
+    Unmasked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No effect on geometry</h2>
+  <p><q>The mask-border-source property has no effect on the geometry</q> of boxes.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=row><div style="background: #4f81bd; mask-border: url(support/frame-alpha.svg) 10 fill"></div><div style="background: #6aa36a"></div></div></div>
+    <figcaption>A masked blue box 70 by 40, then a green one: it still starts at x 80.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The blue box unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

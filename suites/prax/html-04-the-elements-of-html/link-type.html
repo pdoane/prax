@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The link element's type</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.4.2 Processing the type attribute</div>
+  <h1>The link element's type</h1>
+  <p class=pr-lede><q>User agents must not consider the type attribute authoritative — upon fetching the resource, user
+  agents must not use the type attribute to determine its actual type. Only the actual type (as defined in the next
+  paragraph) is used to determine whether to apply the resource, not the aforementioned assumed type.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#processing-the-type-attribute">HTML §4.2.4.2</a></span></p>
+</header>
+<section>
+  <h2>The type served decides</h2>
+  <p>Each frame links a style sheet that turns its box green: <code>green.css</code>, served as
+  <code>text/css</code>, or the same rule in <code>green.txt</code>, served as <code>text/plain</code>.
+  <q>Once the user agent has established the type of the resource, the user agent must apply the resource if it is of
+  a supported type and the other relevant conditions apply, and must ignore the resource otherwise.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet type=text/css href=support/green.css><div class=styled>text/css, served text/css</div>"></iframe></div>
+    <figcaption><code>type=text/css</code> on <code>green.css</code>: green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet type=text/css href=support/green.txt><div class=styled>text/css, served text/plain</div>"></iframe></div>
+    <figcaption><code>type=text/css</code> on <code>green.txt</code>: plain. The attribute does not make it a style
+    sheet.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A type that is not supported</h2>
+  <p><q>If the UA does not support the given MIME type for the given link relationship, then the UA should not fetch
+  and process the linked resource</q>. Should a user agent fetch it anyway, the type served, <code>text/css</code>,
+  would apply it.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet type=text/plain href=support/green.css><div class=styled>text/plain, served text/css</div>"></iframe></div>
+    <figcaption><code>type=text/plain</code> on <code>green.css</code>: not fetched, so plain.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

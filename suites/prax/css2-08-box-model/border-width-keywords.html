@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border width: keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pair > .pr-plain { display: inline-block; width: 70px; vertical-align: top; }
+  .pair > .pr-plain + .pr-plain { margin-left: 10px; }
+  .pair + .pair { margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.1 Border width</div>
+  <h1>Border width: keywords</h1>
+  <p class=pr-lede><code>border-*-width</code> and <code>border-width</code> take <code>thin | medium | thick |
+  &lt;length&gt;</code>. Initial <code>medium</code>, not inherited; computed: an absolute length, or <code>0</code> if
+  the style is <code>none</code> or <code>hidden</code>.</p>
+</header>
+
+<section>
+  <h2>thin, medium and thick</h2>
+  <p><q>The interpretation of the first three values depends on the user agent. The following relationships must hold,
+  however: 'thin' &lt;= 'medium' &lt;= 'thick'. Furthermore, these widths must be constant throughout a document.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-width-properties">CSS 2 §8.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: thin"></div></div>
+    <figcaption><code>thin</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: medium"></div></div>
+    <figcaption><code>medium</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: thick"></div></div>
+    <figcaption><code>thick</code>: no thinner than <code>medium</code>, which is no thinner than
+    <code>thin</code>. <span class="pr-flag pr-since">Since CSS 2</span> The three are 1, 3 and 5px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: thick; font-size: 8px"></div><div class=pr-plain style="border-style: solid; border-width: thick; font-size: 40px; margin-top: 10px"></div></div>
+    <figcaption><code>thick</code> in an 8px font and in a 40px one: the same width.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></div>
+  <h2>1px, 3px and 5px</h2>
+  <p>Now fixed: <q>The thin, medium, and thick keywords are equivalent to
+  1px, 3px, and 5px, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pair><div class=pr-plain style="border-style: solid; border-width: thin"></div><div class=pr-plain style="border-style: solid; border-width: 1px"></div></div><div class=pair><div class=pr-plain style="border-style: solid; border-width: medium"></div><div class=pr-plain style="border-style: solid; border-width: 3px"></div></div><div class=pair><div class=pr-plain style="border-style: solid; border-width: thick"></div><div class=pr-plain style="border-style: solid; border-width: 5px"></div></div></div>
+    <figcaption>In each row, <code>thin</code>, <code>medium</code> and <code>thick</code> on the left, as thick as
+    <code>1px</code>, <code>3px</code> and <code>5px</code> on the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

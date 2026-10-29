@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-clip-margin on each side</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .b { width: 60px; height: 30px; margin: 30px 15px; border: 5px solid #8a93a1; overflow: clip; }
+  .fill { height: 110px; margin: -40px -40px 0; background: repeating-linear-gradient(45deg, #4f81bd 0 6px, #d68a3c 6px 12px); opacity: 0.85; }
+  .stage { height: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 3.2 Changing Clipping Bounds: the overflow-clip-margin-* properties</div>
+  <h1>overflow-clip-margin on each side</h1>
+  <p class=pr-lede><code>overflow-clip-margin-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code>,
+  <code>-block-start</code>, <code>-inline-start</code>, <code>-block-end</code>, <code>-inline-end</code>, and the
+  shorthands <code>overflow-clip-margin</code>, <code>-inline</code> and <code>-block</code>. <q>These properties and
+  their shorthands define the overflow clip edge of the box, i.e. precisely how far outside its bounds the box's
+  content is allowed to paint</q>. <q>The shorthand/longhand relationships are as for margin, but note that the
+  shorthands have a restricted syntax.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#overflow-clip-margin">CSS Overflow 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>One side at a time</h2>
+  <p>Each box is <code>overflow: clip</code>, 60 by 30 in a 5px grey border, and holds stripes that reach 40px past it
+  on the top, left and right, and further below. Each expands its clip edge 15px on some sides only.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin-top: 15px"><div class=fill></div></div></div>
+    <figcaption><code>-top: 15px</code>: the stripes reach 15px above the padding edge, and are cut at it on the
+    other sides. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> cut at the padding edge all round.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin-inline-start: 15px" dir=rtl><div class=fill></div></div></div>
+    <figcaption><code>-inline-start: 15px</code> in <code>rtl</code>: 15px past the right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> cut at the padding edge all round.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin-block: 15px"><div class=fill></div></div></div>
+    <figcaption><code>-block: 15px</code>: 15px above and below, cut at the left and right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> cut at the padding edge all round.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="overflow-clip-margin-left: border-box 5px"><div class=fill></div></div></div>
+    <figcaption><code>-left: border-box 5px</code>: 10px past the padding edge at the left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> cut at the padding edge all round.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

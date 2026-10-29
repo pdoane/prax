@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table cells break on their own</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .fl { float: left; width: 30px; background: #f6d7b4; }
+  .fl .pr-a { padding: 0 9px; }
+  .t { display: table; border-spacing: 0; }
+  .t > div { display: table-row; }
+  .t > div > div { display: table-cell; width: 30px; vertical-align: top; }
+  .t > div > div + div { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.1 Parallel Fragmentation Flows</div>
+  <h1>Table cells break on their own</h1>
+  <p class=pr-lede><q>When multiple formatting contexts are laid out parallel to each other, fragmentation is
+  performed independently in each formatting context.</q> UAs <q>may (but are not required to) adjust the placement
+  of unforced breaks in parallel formatting contexts to visually balance such side-by-side content, but must not do
+  so to match a forced break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#parallel-flows">CSS Fragmentation 4 §2.1</a></span>
+  Each stage has three columns 60px tall. In each, the second A has <code>break-before: column</code>.</p>
+</header>
+
+<section>
+  <h2>Table cells in a row</h2>
+  <p><q>The contents of each table cell in a single table row</q> fragment independently.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=t><div><div><div class=pr-a>A</div><div class=pr-a style="break-before: column">A</div></div><div>one two six ten</div></div></div></div>
+    <figcaption>One row of two cells. The first cell breaks after its first A, the tinted one after three lines:
+    "ten" beside the second A. <span class=pr-flag>Safari</span> Both As in the first column. (It breaks the tinted cell
+    after two lines, as it may.) <span class=pr-flag>Firefox</span> Does not break the table: it overflows the first column, "ten"
+    below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

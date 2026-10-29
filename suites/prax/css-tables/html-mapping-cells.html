@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>HTML's attributes: colors, hidden, captions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  td { background: #b9cde6; }
+  caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 10.1 Mapping between CSS &amp; HTML attributes, other attributes</div>
+  <h1>HTML's attributes: colors, hidden, captions</h1>
+  <p class=pr-lede>The rest of the mapping. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#mapping">CSS Table 3 §10.1</a></span>
+  Tables have <code>cellspacing=4 cellpadding=0</code>, blue cells and a green caption; text is
+  <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>bgcolor and bordercolor</h2>
+  <p><q>table[bgcolor=$color] { background-color: … }</q>; <q>table[bordercolor=$color] { border-color: … }</q>, which
+  its rows, groups and cells inherit.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table bgcolor="#d68a3c" cellspacing=4 cellpadding=0><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>bgcolor</code> orange: orange round and between the cells.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table border=2 bordercolor="#8e44ad" cellspacing=4 cellpadding=0><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>border=2 bordercolor</code> purple: the table's and the cells' borders are purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>hidden on table parts</h2>
+  <p><q>:is(colgroup,col,thead,tbody,tfoot,tr,td,th)[hidden] { visibility: collapse; }</q> (HTML's own style sheet
+  also gives <code>[hidden]</code> <code>display: none</code>, which removes it outright.)</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=4 cellpadding=0><tr><td>a</td><td>b</td></tr><tr hidden><td>c</td><td>d</td></tr><tr><td>e</td><td>f</td></tr></table></div>
+    <figcaption>The middle row <code>hidden</code>: gone, rows "a b" and "e f" only.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>caption align=bottom</h2>
+  <p><q>caption[align=bottom i] { caption-side: bottom; }</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=4 cellpadding=0><caption align=bottom>cap</caption><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption>The caption below the table.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

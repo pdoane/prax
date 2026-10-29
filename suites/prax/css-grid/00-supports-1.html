@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Grid Layout 2 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · Support</div>
+  <h1>CSS Grid Layout 2 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Grid containers and columns</h2>
+  <code class=pr-decl>display: grid</code>
+  <code class=pr-decl>display: inline-grid</code>
+  <code class=pr-decl>grid-template-columns: none</code>
+  <code class=pr-decl>grid-template-columns: 40px 25% 1fr</code>
+  <code class=pr-decl>grid-template-columns: calc(20% + 10px)</code>
+  <code class=pr-decl>grid-template-columns: 0.6fr 0.2fr</code>
+  <code class=pr-decl>grid-template-columns: auto max-content 30px</code>
+  <code class=pr-decl>grid-template-columns: min-content 1fr</code>
+  <code class=pr-decl>grid-template-columns: minmax(20px, 80px) 1fr</code>
+  <code class=pr-decl>grid-template-columns: minmax(auto, 30px)</code>
+  <code class=pr-decl>grid-template-columns: minmax(min-content, 1fr)</code>
+  <code class=pr-decl>grid-template-columns: minmax(0px, min-content)</code>
+  <code class=pr-decl>grid-template-columns: fit-content(50px) 1fr</code>
+  <code class=pr-decl>grid-template-columns: [first nav-start] 50px [main-start] 1fr [last]</code>
+  <code class=pr-decl>grid-template-columns: repeat(4, 10px [s] 30px [e]) 10px</code>
+  <code class=pr-decl>grid-template-columns: repeat(auto-fill, 40px)</code>
+  <code class=pr-decl>grid-template-columns: repeat(auto-fill, minmax(min-content, 50px))</code>
+  <code class=pr-decl>grid-template-columns: repeat(auto-fit, minmax(40px, 1fr))</code>
+  <code class=pr-decl>grid-template-columns: 40px repeat(auto-fit, 40px) 40px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

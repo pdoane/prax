@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 60px; }
+  .cols .pr-a, .cols .pr-b { margin: 10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3 Margins</div>
+  <h1>Margins</h1>
+  <p class=pr-lede><q>Margins surround the border edge of a box, providing spacing between boxes.</q> <q>Both
+  sets of properties control the same set of margins: they are just different ways of indexing each side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margins">CSS Box
+  Model 4 §3</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin</p>
+
+<section>
+  <h2>One margin, two names</h2>
+  <p>In a left-to-right box, <code>margin-left</code> and <code>margin-inline-start</code> are the same margin, so the
+  later declaration wins; in a right-to-left one, <code>margin-inline-start</code> is the right margin.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-left: 40px; margin-inline-start: 10px">left, then start</div></div></div>
+    <figcaption><code>margin-left: 40px; margin-inline-start: 10px</code>: a 10px left margin. In the other order, it would be 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="direction: rtl; margin-left: 40px; margin-inline-start: 10px">rtl</div></div></div>
+    <figcaption>The first declarations with <code>direction: rtl</code>: a 40px left margin and a 10px right
+    one.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins at a break are truncated</h2>
+  <p>The section's note: <q>margins adjoining a fragmentation break are sometimes truncated.</q> <q>When an unforced
+  break occurs between or within in-flow boxes, any margins adjoining the break are truncated to zero.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span></p>
+  <figure>
+    <div class="pr-stage cols"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-a>C</div></div>
+    <figcaption>Blocks with 10px margins in two columns 60px tall: A and B in the first, 10px apart. C breaks to the
+    second column and sits at its top, its 10px top margin gone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

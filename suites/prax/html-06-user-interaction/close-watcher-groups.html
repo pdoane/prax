@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Groups of close watchers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A watcher that is open: a chip that the page's script adds when it creates the watcher and removes on its close. */
+  .chip { display: inline-block; margin: 0 6px 10px 0; padding: 0 6px; background: #6aa36a; color: white;
+          font-size: 12px; line-height: 20px }
+  .chips { min-height: 30px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.10.2 Close watcher infrastructure</div>
+  <h1>Groups of close watchers</h1>
+  <p class=pr-lede><q>The grouping of close watchers is designed so that if multiple close watchers are created without
+  history-action activation, they are grouped together, so that a user-triggered close request will close all of the
+  close watchers in a group.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-watcher-infrastructure">HTML §6.10.2</a></span></p>
+</header>
+<section>
+  <h2>One group per activation</h2>
+  <p>A new watcher starts a group <q>If manager's groups's size is less than manager's allowed number of groups</q>;
+  otherwise it is appended to the last group. Each user activation, after a watcher is created, allows one more group.
+  A close request will process the last group: <q>For each closeWatcher of group, in reverse order</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-watcher-infrastructure">§6.10.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=two>create B and C in one click</button>
+        <div class=chips id=chips></div>
+      </div>
+      <ol class=pr-log id=log data-lines=3></ol>
+    </div>
+    <figcaption>The page created watcher A as it loaded, without activation: chip A. Click the button: chips B and C,
+    in a new group, since the click allowed one, C joining B's. Press Esc: close C, close B, both chips go. Press Esc
+    again: close A.</figcaption>
+  </figure>
+</section>
+<script>
+  // Creates watcher A at load, and B and C in one click; each is a chip until its close.
+  const chips = document.getElementById("chips"), log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 3);
+  function create(name) {
+      const watcher = new CloseWatcher();
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = name;
+      chips.append(chip);
+      watcher.addEventListener("close", () => {
+          const item = document.createElement("li");
+          item.textContent = "close " + name;
+          log.append(item);
+          while (log.children.length > 3)
+              log.firstElementChild.remove();
+          chip.remove();
+      });
+  }
+  create("A");
+  document.getElementById("two").addEventListener("click", () => {
+      create("B");
+      create("C");
+  });
+</script>
+</body>
+</html>

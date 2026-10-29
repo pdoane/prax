@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>isolation: isolate</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .lime { position: absolute; left: 10px; top: 10px; width: 140px; height: 40px; background: #00ff00; }
+  .group { position: absolute; left: 20px; top: 0; width: 40px; height: 40px; }
+  .el { width: 40px; height: 40px; background: #ff0000; mix-blend-mode: multiply; }
+  .lime img { position: absolute; left: 100px; top: 0; width: 40px; height: 40px; }
+  .back { position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: #0000ff; z-index: -1; }
+  .plain { position: absolute; left: 20px; top: 0; width: 40px; height: 40px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.2 The isolation property</div>
+  <h1>isolation: isolate</h1>
+  <p class=pr-lede><q>For CSS, setting isolation to isolate will turn the element into a stacking context.</q> <q>By
+  default, elements use the auto keyword which implies that they are not isolated.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#isolation">Compositing and Blending 2 §3.4.2</a></span>
+  Each stage has a lime band 140 by 40; the first two hold a red square with
+  <code>mix-blend-mode: multiply</code> in a <code>div</code>: red times lime is black.</p>
+</header>
+
+<section>
+  <h2>An isolated group, a stacking context</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group><div class=el></div></div></div></div>
+    <figcaption><code>isolation: auto</code> on the <code>div</code>: black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group style="isolation: isolate"><div class=el></div></div></div></div>
+    <figcaption><code>isolation: isolate</code>: the red blends with the group's transparent start, and stays red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=plain style="isolation: isolate"><div class=back></div></div></div></div>
+    <figcaption>An orange square, <code>isolate</code>, holding a blue one with <code>z-index: -1</code>: the blue
+    paints over the orange, in its stacking context.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Images are isolated groups</h2>
+  <p><q>In CSS, a background image or the content of an img must always be rendered into an isolated group.</q> The
+  SVG image holds a red square with <code>mix-blend-mode: multiply</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><img src="support/isolation-multiply.svg" alt="" style="left: 80px"><div style="position: absolute; left: 20px; width: 40px; height: 40px; background: url(support/isolation-multiply.svg)"></div></div></div>
+    <figcaption>As a background at x 30 and in an <code>img</code> at x 90: red both times, not blended with the
+    lime. <span class=pr-flag>Safari</span> Black both times.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

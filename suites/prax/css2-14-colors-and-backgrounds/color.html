@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Foreground color: the color property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.1 Foreground color: the 'color' property</div>
+  <h1>Foreground color: the color property</h1>
+  <p class=pr-lede><code>color</code> takes <code>&lt;color&gt; | inherit</code>. The initial value depends on the user
+  agent; it applies to all elements and is inherited.</p>
+</header>
+
+<section>
+  <h2>The color of text</h2>
+  <p><q>This property describes the foreground color of an element's text content. There are different ways to specify
+  red</q>: <code>em { color: red }</code> and <code>em { color: rgb(255,0,0) }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#colors">CSS 2
+  §14.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample">Text <em style="color: red">red</em></div>
+    <figcaption><code>em { color: red }</code>, a predefined color name: the word "red" is red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample">Text <em style="color: rgb(255,0,0)">red</em></div>
+    <figcaption><code>rgb(255,0,0)</code>, the 0 to 255 range: the same red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample">Text <em style="color: #f00">red</em> <em style="color: #ff0000">red</em></div>
+    <figcaption><code>#f00</code> and <code>#ff0000</code>: the same red twice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited, on all elements</h2>
+  <p>Inherited: yes. Applies to: all elements. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#colors">CSS 2 §14.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="color: #2c8a3c">Green <b>bold</b> <i>italic</i></div>
+    <figcaption><code>color: #2c8a3c</code> on the stage: its <code>b</code> and <code>i</code> are green too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="color: #2c8a3c"><span style="color: #2c5a8f">Blue <b style="color: inherit">inherit</b></span></div>
+    <figcaption>A blue span in a green stage; its <code>b</code> with <code>color: inherit</code> is blue, its
+    parent's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background image: one intrinsic dimension</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { width: 160px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .w-ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' viewBox='0 0 2 1'><rect width='2' height='1' fill='%234f81bd'/></svg>"); }
+  .w-only { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .h-only { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='20'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .h-ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='40' viewBox='0 0 1 2'><rect width='1' height='2' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background image: one intrinsic dimension</h1>
+  <p class=pr-lede>How big an image is drawn when it does not say both its width and height. Each dashed box is a padding
+  box 160 by 60, the rectangle <code>background-position</code> works in, with a blue SVG image drawn once at its top
+  left.</p>
+</header>
+
+<section>
+  <h2>With a ratio</h2>
+  <p><q>If the image has one of either an intrinsic width or an intrinsic height and an intrinsic aspect ratio, then the
+  missing dimension is calculated from the given dimension and the ratio.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost w-ratio"></div></div>
+    <figcaption><code>width='40'</code> and a 2:1 <code>viewBox</code>: 40 wide and 20 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost h-ratio"></div></div>
+    <figcaption><code>height='40'</code> and a 1:2 <code>viewBox</code>: 40 tall and 20 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Without a ratio</h2>
+  <p><q>If the image has one of either an intrinsic width or an intrinsic height and no intrinsic aspect ratio, then the
+  missing dimension is assumed to be the size of the rectangle that establishes the coordinate system for the
+  'background-position' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost w-only"></div></div>
+    <figcaption><code>width='40'</code> and no ratio: 40 wide and as tall as the box, 60.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost h-only"></div></div>
+    <figcaption><code>height='20'</code> and no ratio: 20 tall and as wide as the box, 160.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

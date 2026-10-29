@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>details and summary: disclosure markers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .custom summary { list-style-type: "+ "; }
+  .custom details[open] > summary { list-style-type: "− "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 10 Sample style sheet for HTML</div>
+  <h1>details and summary: disclosure markers</h1>
+  <p class=pr-lede><q>This section is informative, not normative. HTML itself defines the styles that apply to its
+  elements, and in some cases defers to the user agent's discretion.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#ua-stylesheet">CSS Counter Styles 3 §10</a></span></p>
+  <pre class=pr-source>details > summary {
+  display: list-item;
+  list-style: disclosure-closed inside;
+}
+details[open] > summary {
+  list-style: disclosure-open inside;
+}</pre>
+</header>
+
+<section>
+  <h2>The summary is a list item</h2>
+  <figure>
+    <div class="pr-stage pr-text"><details><summary>Closed</summary>body</details><details open><summary>Open</summary>body</details></div>
+    <figcaption>A marker pointing right before "Closed", one pointing down before "Open", with its "body" below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text custom"><details><summary>Closed</summary>body</details><details open><summary>Open</summary>body</details></div>
+    <figcaption>As a list item, its marker follows <code>list-style-type</code>: "+ Closed", "− Open".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

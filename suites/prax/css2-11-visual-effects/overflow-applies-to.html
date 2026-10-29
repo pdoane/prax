@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: which boxes clip</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .tbl { width: 120px; height: 40px; margin: 10px 20px; border-spacing: 0; }
+  .cell { display: table-cell; }
+  .moved { position: relative; left: 70px; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: which boxes clip</h1>
+  <p class=pr-lede><code>overflow</code> applies to <q>block containers and boxes that establish a formatting context</q>.
+  Inline boxes and the boxes of tables do not take all its values.</p>
+</header>
+
+<section>
+  <h2>Inline boxes</h2>
+  <p>An inline box is not a block container, and <code>overflow</code> does not apply to it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2
+  §11.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px; padding-top: 10px; box-sizing: border-box"><span class=pr-frame style="overflow: hidden">Before <span class=pr-a style="position: relative; top: 20px">moved</span> after</span></div>
+    <figcaption>A dashed span with <code>overflow: hidden</code> holds a span moved 20px down: nothing is
+    clipped.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 60px; padding-top: 10px; box-sizing: border-box"><span class=pr-frame style="display: inline-block; overflow: hidden">Before <span class=pr-a style="position: relative; top: 20px">moved</span> after</span></div>
+    <figcaption>An <code>inline-block</code> is a block container: the moved span is cut at its bottom edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tables</h2>
+  <p><q>On a table element ('display: table'), 'overflow' applies to the table box (i.e., not the table wrapper box)
+  and all values other than 'hidden' are treated as 'visible'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table tbl pr-frame" style="overflow: hidden"><div class=cell><div class="pr-a pr-fit moved">moved</div></div></div></div>
+    <figcaption>A 120px table, dashed, with <code>overflow: hidden</code>, holds a box moved 70px right: it is cut at the
+    table's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table tbl pr-frame" style="overflow: scroll"><div class=cell><div class="pr-a pr-fit moved">moved</div></div></div></div>
+    <figcaption><code>overflow: scroll</code> is treated as <code>visible</code>: the box runs 30px past the right edge,
+    whole, and nothing scrolls.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+/* The forms gallery's chrome: a page's header, its sections, the grid of states against appearances, and the panels
+   that show the controls in other contexts. Colors are system colors, so that the gallery follows the user's scheme. */
+
+:root { color-scheme: light dark; }
+body { margin: 0; padding: 12px 16px; background: Canvas; color: CanvasText; font: 13px/1.4 system-ui, sans-serif; }
+
+header h1 { margin: 0; font-size: 16px; }
+header p { margin: 2px 0 10px; font-size: 12px; color: GrayText; }
+
+section { margin-bottom: 14px; }
+h2 { margin: 0 0 6px; padding-bottom: 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+     color: GrayText; border-bottom: 1px solid color-mix(in srgb, CanvasText 15%, Canvas); }
+.note { margin: -2px 0 6px; font-size: 12px; color: GrayText; }
+
+/* The grid: a row for each state, a column for each appearance. A column's class sets the appearance of the controls
+   in its cells. */
+.grid { border-collapse: collapse; }
+.grid th { padding: 0 12px 4px 0; font-size: 11px; font-weight: 600; color: GrayText; text-align: start; }
+.grid th[scope=row] { padding: 4px 12px 4px 0; font-weight: 400; white-space: nowrap; }
+.grid td { padding: 4px 12px 4px 0; vertical-align: middle; }
+.none :is(input, button, progress, meter, select, textarea) { appearance: none; }
+.base :is(input, button, progress, meter, select, textarea) { appearance: base; }
+
+/* The author-styled column: rules that a site writes, which devolve a devolvable control. */
+.styled :is(button, input[type=button], input[type=submit], input[type=reset], input[type=color]) {
+  border: 2px solid #c0477a; border-radius: 8px; background: #fbe4ee; color: #6b1d3d; padding: 2px 8px; }
+.styled :is(input[type=checkbox], input[type=radio]) { accent-color: #c0477a; width: 18px; height: 18px; }
+.styled :is(progress, meter) { height: 10px; }
+
+/* A strip of controls, and the panels that set the contexts they are shown in. */
+.strip { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.panels { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel { padding: 6px 8px; border: 1px solid color-mix(in srgb, CanvasText 15%, Canvas); border-radius: 6px;
+         background: Canvas; color: CanvasText; }
+.light { color-scheme: light; }
+.dark { color-scheme: dark; }
+.accent { accent-color: #2e9e6a; }
+.large { font-size: 24px; }
+.vertical { writing-mode: vertical-lr; }
+.cap { display: block; margin-bottom: 4px; font-size: 11px; color: GrayText; }
+label.inline { display: inline-flex; align-items: center; gap: 4px; }
+.log { font: 12px ui-monospace, monospace; color: GrayText; white-space: pre-wrap; }

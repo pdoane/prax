@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters in inline boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .anc { border: 2px solid #d68a3c; background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.8.3 Ancestor Inlines</div>
+  <h1>Initial letters in inline boxes</h1>
+  <p class=pr-lede><q>If the initial letter box is contained by inline box ancestors, the boundaries of those inline
+  boxes are drawn to exclude the initial letter box, as if it were outside their startmost margin edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-ancestors">CSS Inline Layout 3 §7.8.3</a></span>
+  Each paragraph is 13px PR Literata on 20px lines; its first letter, blue, has <code>initial-letter: 3</code>. <span
+  class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code> and <span
+  class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>The ancestor's border starts after the letter</h2>
+  <p><q>This is a purely geometric operation: it does not affect e.g. property inheritance</q>. The orange span holds
+  the first words, the letter among them, and is <code>font-style: italic</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p><span class=anc style="font-style: italic">Inside a span, the letter</span> stays outside its border, but italic like it.</p></div>
+    <figcaption>The span's left border is after the I, not around it, and the I is italic too. <span class=pr-flag>Chrome</span> The border starts at the block's edge, across the top of the I.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

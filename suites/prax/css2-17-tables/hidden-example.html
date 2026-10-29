@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: hidden borders</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex table { color-scheme: light; color: var(--pr-ink); background: white; font-size: 13px; line-height: 20px; }
+  .ex td { padding: 2px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: hidden borders</h1>
+  <p class=pr-lede><q>Here is an example of hidden collapsing borders</q>: <q>Table with two omitted internal
+  borders.</q></p>
+</header>
+
+<section>
+  <h2>Two omitted internal borders</h2>
+  <p>The specification's HTML source. The borders are <code>solid</code> with no width or color, so
+  <code>medium</code> and the text color. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <pre class=pr-source>&lt;TABLE style="border-collapse: collapse; border: solid;">
+&lt;TR>&lt;TD style="border-right: hidden; border-bottom: hidden">foo&lt;/TD>
+    &lt;TD style="border: solid">bar&lt;/TD>&lt;/TR>
+&lt;TR>&lt;TD style="border: none">foo&lt;/TD>
+    &lt;TD style="border: solid">bar&lt;/TD>&lt;/TR>
+&lt;/TABLE></pre>
+  <figure class=ex>
+    <div class=pr-stage style="padding: 10px; width: 180px"><TABLE style="border-collapse: collapse; border: solid;">
+<TR><TD style="border-right: hidden; border-bottom: hidden">foo</TD>
+    <TD style="border: solid">bar</TD></TR>
+<TR><TD style="border: none">foo</TD>
+    <TD style="border: solid">bar</TD></TR>
+</TABLE></div>
+    <figcaption>The top left "foo" has no border on its right, though "bar" sets a solid left one, and none below,
+    where the other "foo" sets none. All the other edges have the solid border, the second "foo"'s too: its
+    <code>none</code> loses to the table's and to "bar"'s.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

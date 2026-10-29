@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feComponentTransfer: a function per channel</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40, and it computes in sRGB. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="red" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncR type="linear" slope="0" intercept="1"/></feComponentTransfer>
+  </filter>
+  <filter id="none" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feComponentTransfer/>
+  </filter>
+  <filter id="twice" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feComponentTransfer>
+      <feFuncR type="linear" slope="0" intercept="1"/>
+      <feFuncR type="linear" slope="0" intercept="0"/>
+    </feComponentTransfer>
+  </filter>
+  <filter id="alpha" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncA type="linear" slope="2"/></feComponentTransfer>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.7 Filter primitive feComponentTransfer</div>
+  <h1>feComponentTransfer: a function per channel</h1>
+  <p class=pr-lede><q>This filter primitive performs component-wise remapping of data</q>: <q>R' = feFuncR( R ), G' =
+  feFuncG( G ), B' = feFuncB( B ), A' = feFuncA( A )</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feComponentTransferElement">Filter Effects 1 §9.7</a></span>
+  Each canvas, 160 by 40, is an orange rectangle, <code>#d68a3c</code>, filtered in sRGB; the bar below it is the
+  color the functions give.</p>
+</header>
+
+<section>
+  <h2>Each channel its own function</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#red)"/><rect y="45" width="160" height="10" fill="#ff8a3c"/></svg></div>
+    <figcaption>Only an <code>feFuncR</code>, its result 1: <code>#ff8a3c</code>, green and blue as they
+    were.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#none)"/><rect y="45" width="160" height="10" fill="#d68a3c"/></svg></div>
+    <figcaption>No functions: <q>processed as if those transfer function elements were specified with their type
+    attributes set to identity</q>, the orange as it was.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#twice)"/><rect y="45" width="160" height="10" fill="#008a3c"/></svg></div>
+    <figcaption>Two <code>feFuncR</code>s, red 1 and then red 0: <q>the last occurrence is to be used</q>,
+    <code>#008a3c</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unpremultiplied</h2>
+  <p><q>The calculations are performed on non-premultiplied color values.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" fill-opacity="0.5" filter="url(#alpha)"/><rect y="45" width="160" height="10" fill="#d68a3c"/></svg></div>
+    <figcaption>Half-opaque orange, alpha doubled: opaque <code>#d68a3c</code>, the color as it was, not
+    darkened.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

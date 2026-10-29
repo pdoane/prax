@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing in cursive scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ar { padding: 0 8px; font: 28px/48px "PR Noto Sans Arabic"; }
+  .mn { padding: 6px 0; font: 24px/40px "PR Noto Sans Mongolian"; writing-mode: vertical-lr; height: 170px; width: auto; }
+  .dv { padding: 0 8px; font: 26px/48px "PR Noto Sans Devanagari"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.2.1 Cursive Scripts</div>
+  <h1>letter-spacing in cursive scripts</h1>
+  <p class=pr-lede><q>if the UA cannot expand text from a cursive script without breaking its cursive connections, it
+  must not apply spacing between any pair of that script’s typographic letter units at all (effectively treating each
+  word as a single typographic letter unit for the purpose of letter-spacing).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#cursive-tracking">CSS Text 4 §8.2.1</a></span>
+  Each stage has <code>letter-spacing: 10px</code>; the words are highlighted.</p>
+</header>
+
+<section>
+  <h2>Arabic and Mongolian</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar" dir=rtl><span class=t>مرحبا</span> <span class=t>بكم</span></div>
+    <div class="pr-stage ar" dir=rtl style="letter-spacing: 10px"><span class=t>مرحبا</span> <span class=t>بكم</span></div>
+    <figcaption>Above with none, below with 10px: the letters still joined, each word as wide as above, or elongated,
+    the spacing applied around the space. <span class=pr-flag>Safari</span> spaces the letters apart, their
+    joins broken.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mn" style="letter-spacing: 10px"><span class=t>ᠮᠣᠩᠭᠣᠯ</span></div>
+    <figcaption>Mongolian, vertical: the word joined, its stem unbroken. <span class=pr-flag>Safari</span> breaks it
+    into letters.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Devanagari, not cursive</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage dv"><span class=t>नमस्ते</span></div>
+    <div class="pr-stage dv" style="letter-spacing: 10px"><span class=t>नमस्ते</span></div>
+    <figcaption>Below, 10px between its units, न, म and the conjunct स्ते, one extended grapheme cluster, kept whole.
+    <span class=pr-flag>Chrome</span> spaces स् from ते inside it; <span class=pr-flag>Safari</span> also its vowel
+    sign.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

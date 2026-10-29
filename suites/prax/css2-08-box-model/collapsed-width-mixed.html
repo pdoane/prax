@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The width of a collapsed margin: positive and negative</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>The width of a collapsed margin: positive and negative</h1>
+  <p class=pr-lede><q>When two or more margins collapse, the resulting margin width is the maximum of the collapsing margins' widths.</q> Negative margins: the largest of them is deducted from the largest positive one, or from zero. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Positive and negative: the largest of each, added</h2>
+  <p>B is drawn in from the left, so that it shows where it overlaps A.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><div class=pr-b style="margin: -10px 0 0 20px">B: mt −10</div></div>
+    <figcaption>40 − 10 = 30</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: -10px">A: mb −10</div><div class=pr-b style="margin: 40px 0 0 20px">B: mt 40</div></div>
+    <figcaption>−10 and 40, either way round: 30</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div class=pr-b style="margin: -30px 0 0 70px; opacity: 0.85">B: mt −30</div></div>
+    <figcaption>10 − 30 = −20: B overlaps all of A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class=pr-parent style="margin: -5px 0 0 20px"><div class=pr-parent style="margin-top: 10px"><div class=pr-b style="margin-top: -25px">B: mt −25</div></div></div></div>
+    <figcaption>30, −5, 10 and −25: the largest positive, 30, less the largest negative, 25: 5px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

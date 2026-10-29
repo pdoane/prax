@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Missing weights</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ladder { padding: 0 6px; font-size: 16px; line-height: 22px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.2.2 Missing weights</div>
+  <h1>Missing weights</h1>
+  <p class=pr-lede><q>When a weight is specified for which no face exists, a face with a nearby weight is used. In
+  general, bold weights map to faces with heavier weights and light weights map to faces with lighter weights.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#missing-weights">CSS Fonts 4 §2.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Two faces: 400 and 700</h2>
+  <p>PR Tinos has a regular face and a bold one. A weight up to 500 takes the regular face, and one above it the
+  bold face. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">§5.2</a></span></p>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: 'PR Tinos'">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 300">300 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>100 to 500 regular; 600 to 900 bold. Only two looks.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: 'PR Arimo'">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 300">300 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>PR Arimo varies from 400 to 700: 100 to 400 alike at 400, 500 and 600 between, 700 and 900 alike at
+    700.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One face: bold is synthesized</h2>
+  <p>PR Cousine has only a regular face. A bold weight is drawn by emboldening it, as 'font-synthesis-weight'
+  allows.</p>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: 'PR Cousine'">
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+    </div>
+    <figcaption>700: the regular face with thickened strokes, and the same advances.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

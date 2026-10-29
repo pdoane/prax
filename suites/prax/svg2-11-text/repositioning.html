@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute, then relative</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.6.2 Repositioning Glyphs</div>
+  <h1>Absolute, then relative</h1>
+  <p class=pr-lede><q>Absolute repositioning (including any adjustment due to the text-anchor property) is done before relative
+  repositioning and rotation.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPreAdjustments">SVG 2 §11.6.2</a></span>
+  Each stage is an SVG 160 by 60, the anchor point solid red and the baseline dashed.</p>
+</header>
+
+<section>
+  <h2>Anchored, then moved and turned</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M120 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="120" y="35" dx="20" text-anchor="end">abcd</text></svg></div>
+    <figcaption>"abcd", 10 a letter, <code>text-anchor="end"</code> at 120 and <code>dx="20"</code>: ending at 120,
+    then 20 on, from 100 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 40H160" class=pr-baseline /><text class=big x="80" y="40" rotate="90" text-anchor="middle">LLL</text></svg></div>
+    <figcaption>"LLL" in 30px PR Noto Sans Mono, 18 a letter, <code>text-anchor="middle"</code> at 80 and
+    <code>rotate="90"</code>: centered first, from 53 to 107, then each L turned about its start, 53, 71 and
+    89.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A shift inside the chunk</h2>
+  <p>The algorithm applies <code>dx</code> first, as <q>The ‘dx’ and ‘dy’ adjustments are applied before
+  adjustments due to the ‘textLength’ attribute while the ‘x’, ‘y’ and ‘rotate’ adjustments are applied after</q>,
+  and then measures each chunk for anchoring from the shifted glyphs. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutAlgorithm">§11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide"><svg width="300" height="60" fill="#2c5a8f"><path d="M140 0V60" stroke="#c0392b" /><path d="M0 35H300" class=pr-baseline /><text class=pr-measure x="140" y="35" text-anchor="end">ab<tspan dx="20">cd</tspan></text></svg></div>
+    <figcaption><code>text-anchor="end"</code> at 140, a <code>tspan</code> of "cd" with <code>dx="20"</code>. By the
+    algorithm, "cd" ends at 140 and "ab" runs from 80 to 100. Anchored before the shift, as <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPreAdjustments">§11.6.2</a></span> orders it, "ab"
+    runs from 100 to 120 and "cd" from 140 to 160. Chrome, Safari and Firefox draw the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

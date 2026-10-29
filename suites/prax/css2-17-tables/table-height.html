@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table height algorithms</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; outline: 1px dashed #6b7381; }
+  td { width: 50px; padding: 0; box-sizing: border-box; border: 1px solid #2c5a8f; vertical-align: top; }
+  .blk { height: 18px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.3 Table height algorithms</div>
+  <h1>Table height algorithms</h1>
+  <p class=pr-lede>Cells have a 1px border and hold an 18px block, so rows are 20px. Tables are outlined.</p>
+</header>
+
+<section>
+  <h2>The table's height</h2>
+  <p><q>The height of a table is given by the 'height' property for the 'table' or 'inline-table' element. A value of
+  'auto' means that the height is the sum of the row heights plus any cell spacing or borders. Any other value is
+  treated as a minimum height. CSS 2.2 does not define how extra space is distributed when the 'height' property
+  causes the table to be taller than it otherwise would be.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 0 10px"><tr><td><div class=blk></div><tr><td><div class=blk></div></table></div>
+    <figcaption><code>height: auto</code>, <code>border-spacing: 0 10px</code>: two 20px rows and three 10px spaces,
+    70px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="height: 80px"><tr><td><div class=blk></div><tr><td><div class=blk></div></table></div>
+    <figcaption><code>height: 80px</code>: the table is 80px; how the rows share the extra 40px is not defined.
+    <span class="pr-flag pr-since">Since CSS 2</span> CSS Tables 3 gives each 20px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#height-distribution-algorithm">CSS Table 3 §3.10.5</a></div>
+  <h2>The extra height goes to the auto rows</h2>
+  <p>Tables 3 shares it out: <q>if the table owns any “auto-height” row (a row
+  whose size is only determined by its content size and none of the specified heights), each non-auto-height row
+  receives its reference height and auto-height rows receive their reference size plus some increment which is equal
+  to the height missing to amount to the specified table height divided by the amount of such rows.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#height-distribution-algorithm">CSS Table 3 §3.10.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="height: 80px"><tr><td><div class=blk></div><tr><td><div class=blk></div></table></div>
+    <figcaption><code>height: 80px</code>, two auto rows: each gets half the extra 40px, and both are 40px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="height: 80px"><tr style="height: 30px"><td><div class=blk></div><tr><td><div class=blk></div></table></div>
+    <figcaption>The first row has <code>height: 30px</code> and keeps it; the auto second row takes the rest, and is
+    50px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

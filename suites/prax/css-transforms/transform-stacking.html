@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A transform makes a stacking context, at level 0</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .x { width: 80px; height: 40px; margin: 10px 0 0 10px; }
+  .y { width: 80px; height: 40px; margin: -20px 0 0 50px; }
+  .k { position: relative; z-index: -1; width: 40px; height: 40px; margin: 10px 0 0 40px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>A transform makes a stacking context, at level 0</h1>
+  <p class=pr-lede><q>any value other than none for the transform property results in the creation of a stacking
+  context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  Each stage is a stacking context. Blue A, 80 by 40, comes first; orange B, a later block, overlaps its right half.</p>
+</header>
+
+<section>
+  <h2>Painted as if positioned, with z-index: 0</h2>
+  <p><q>Implementations must paint the layer it creates, within its parent stacking context, at the same stacking order
+  that would be used if it were a positioned element with z-index: 0.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x">A</div><div class="pr-b pr-fit y">B</div></div>
+    <figcaption>Neither transformed: B, later in the flow, covers A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="transform: translate(0)">A</div><div class="pr-b pr-fit y">B</div></div>
+    <figcaption>A with <code>translate(0)</code>, which moves nothing: A, at level 0, covers B, a block in
+    flow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="transform: translate(0)">A</div><div class="pr-b pr-fit y" style="position: relative">B</div></div>
+    <figcaption>B <code>relative</code> too: both at level 0, in tree order, so B covers A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>z-index: auto is treated as 0</h2>
+  <p><q>If an element with a transform is positioned, the z-index property applies as described in [CSS2], except that
+  auto is treated as 0 since a new stacking context is always created.</q> A is <code>relative</code> and holds a
+  purple child with <code>z-index: -1</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="position: relative; height: 60px"><div class=k></div></div></div>
+    <figcaption>No transform: A is no stacking context, and the child goes behind A's background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="position: relative; height: 60px; transform: translate(0)"><div class=k></div></div></div>
+    <figcaption>With <code>translate(0)</code>: A is one, and the child is over A's
+    background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="position: relative; z-index: -1; transform: translate(0)">A</div><div class="pr-b pr-fit y">B</div></div>
+    <figcaption>A with <code>z-index: -1</code> and the transform: B, a block in flow, covers it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

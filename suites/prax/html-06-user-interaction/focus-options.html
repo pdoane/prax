@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>focus() and focusVisible</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.6 Focus management APIs</div>
+  <h1>focus() and focusVisible</h1>
+  <p class=pr-lede><q>By default, user agents use implementation-defined heuristics to determine whether to indicate focus via a
+  focus ring.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">HTML §6.6.6</a></span></p>
+</header>
+<section>
+  <h2>focusVisible</h2>
+  <p><q>Providing the focusVisible option and setting it to true will ensure the focus ring is always visible.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">§6.6.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=plain>focus() the target</button>
+        <button class=pr-target id=visible>focus({focusVisible: true})</button>
+        <div class=pr-target id=target tabindex=-1>the target</div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>focus({focusVisible: true})</code>: the target takes the focus and its ring, a 3px blue
+    outline. Click <code>focus() the target</code>: it takes the focus, and whether it shows the ring is the user
+    agent's choice.</figcaption>
+  </figure>
+</section>
+<script>
+  // Focuses the target in each of the two ways.
+  const target = document.getElementById("target");
+  document.getElementById("plain").addEventListener("click", () => target.focus());
+  document.getElementById("visible").addEventListener("click", () => target.focus({focusVisible: true}));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

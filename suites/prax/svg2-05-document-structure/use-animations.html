@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>use: animations in the shadow tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  /* To and fro between x 0 and 80 over 4 seconds; a still shows it a quarter of the way, at 20. */
+  #slider { animation: slide 4s linear -1s infinite alternate both; }
+  @keyframes slide { from { transform: translate(0, 0); } to { transform: translate(80px, 0); } }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <rect id="slider" width="20" height="20" fill="#4f81bd" />
+  <rect id="smil" width="20" height="20" fill="#d68a3c"><animate attributeName="x" from="0" to="80" dur="4s" begin="-1s" repeatCount="indefinite" /></rect>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5.4 Animations in use-element shadow trees</div>
+  <h1>use: animations in the shadow tree</h1>
+  <p class=pr-lede><q>User agents that implement those features must ensure that all animations that apply to an element
+  in a referenced document subtree also apply to instances of that element in a use-element shadow tree</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseAnimations">SVG 2 §5.5.4</a></span>
+  Each stage is an SVG 160 by 60 with two <code>use</code> of one square, at 20, 10 and 20, 30. A still holds the
+  CSS animation; it cannot hold an animation element.</p>
+</header>
+
+<section>
+  <h2>CSS and animation elements</h2>
+  <p><q>Animation effects applied using CSS will be duplicated along with other stylesheet rules</q>. <q>For each
+  animation element that targets an element in the referenced document subtree, the user agent must ensure that an
+  equivalent animation element is in effect in the use-element shadow tree.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><use href="#slider" x="20" y="10" /><use href="#slider" x="20" y="30" /></svg></div>
+    <figcaption>A CSS animation moving the square 80 right over 4 seconds: a quarter of the way, both at x 40. They
+    slide to and fro together.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#smil" x="20" y="10" /><use href="#smil" x="20" y="30" /></svg></div>
+    <figcaption>An <code>animate</code> of its <code>x</code> from 0 to 80: both squares level at every moment,
+    sliding right from x 20 to 100 and starting over; a still catches them wherever they are.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

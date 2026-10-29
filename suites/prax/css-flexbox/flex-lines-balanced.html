@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Balanced flex containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 6 Flex Lines</div>
+  <h1>Balanced flex containers</h1>
+  <p class=pr-lede><q>a multi-line flexbox can be a balanced flex container, meaning it carefully chooses its
+  linebreaks to make the line lengths as similar as possible. (Otherwise, it simply fills the first line, then the
+  second, etc.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-lines">CSS Flexible Box Layout 2 §6</a></span>
+  Each stage holds A, B, C and D, each 60px wide, 240px in all.</p>
+</header>
+
+<section>
+  <h2>Two and two, rather than three and one</h2>
+  <p><q>flex-wrap: balance will instead put two items on the first line, then two on the second line</q>.</p>
+  <figure style="margin-right: 60px">
+    <div class=pr-stage style="flex-wrap: wrap"><div class="pr-a pr-fit" style="flex: none">A</div><div class="pr-b pr-fit" style="flex: none">B</div><div class="pr-c pr-fit" style="flex: none">C</div><div class="pr-d pr-fit" style="flex: none">D</div></div>
+    <figcaption><code>wrap</code>: A, B and C on the first line, D alone on the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance"><div class="pr-a pr-fit" style="flex: none">A</div><div class="pr-b pr-fit" style="flex: none">B</div><div class="pr-c pr-fit" style="flex: none">C</div><div class="pr-d pr-fit" style="flex: none">D</div></div>
+    <figcaption><code>balance</code>: A and B on the first line, C and D on the second. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flexing balanced lines</h2>
+  <p><q>This can have more dramatic effects when flexing items to fill the line, as the items are more likely to flex
+  similar amounts, rather than the final line's items flexing a lot more</q>. Here every item is <code>flex:
+  auto</code>.</p>
+  <figure style="margin-right: 60px">
+    <div class=pr-stage style="flex-wrap: wrap"><div class="pr-a pr-fit" style="flex: auto">A</div><div class="pr-b pr-fit" style="flex: auto">B</div><div class="pr-c pr-fit" style="flex: auto">C</div><div class="pr-d pr-fit" style="flex: auto">D</div></div>
+    <figcaption><code>wrap</code>: A, B and C grow to 66.7px each; D alone grows to 200px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="flex-wrap: balance"><div class="pr-a pr-fit" style="flex: auto">A</div><div class="pr-b pr-fit" style="flex: auto">B</div><div class="pr-c pr-fit" style="flex: auto">C</div><div class="pr-d pr-fit" style="flex: auto">D</div></div>
+    <figcaption><code>balance</code>: two lines of two, every item grown to 100px. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> one line, each shrunk to 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Radio buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div, .pad > form { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad input { margin: 0 4px 0 0; vertical-align: -2px; }
+  .pad label + label { margin-left: 8px; }
+  .pad code { display: inline-block; width: 50px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.16 Radio Button state (type=radio)</div>
+  <h1>Radio buttons</h1>
+  <p class=pr-lede><q>The input element represents a control that, when used in conjunction with other input elements,
+  forms a radio button group in which only one control can have its checkedness state set to true.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#radio-button-state-(type=radio)">HTML §4.10.5.1.16</a></span></p>
+</header>
+
+<section>
+  <h2>Who is in a group</h2>
+  <p>Two radio buttons share a group when they have the same form owner, or none, are in the same tree, and have the
+  same non-empty <code>name</code>; checking one sets <q>the checkedness state of all the other elements in the same radio
+  button group</q> to false.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#radio-button-state-(type=radio)">§4.10.5.1.16</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><code>a</code><label><input type=radio name=a id=a1>one</label><label><input type=radio name=a id=a2>two</label><label><input type=radio name=a id=a3>three</label></div>
+        <form><code>a, form</code><label><input type=radio name=a id=f1>one</label><label><input type=radio name=a id=f2>two</label></form>
+        <div><code>no name</code><label><input type=radio id=n1>one</label><label><input type=radio id=n2>two</label></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click each in the first row: one at a time is checked. The second row, all named <code>a</code> too but
+    in a form, is a group of its own: checking it leaves the first row alone. Without names, each is its own group:
+    both can be checked, and neither unchecked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Checked as they are inserted, and required</h2>
+  <p>Becoming connected is one of those phenomena. <q>If an element in the radio button group is required, and all of
+  the input elements in the radio button group have a checkedness that is false, then the element is suffering from
+  being missing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#radio-button-state-(type=radio)">§4.10.5.1.16</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><label><input type=radio name=b checked>one</label><label><input type=radio name=b checked>two</label></div>
+      </div>
+    </div>
+    <figcaption>Both have <code>checked</code>: "two", inserted last, is checked, and "one" is not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad valid pr-validity">
+        <div><label><input type=radio name=c>one</label><label><input type=radio name=c required>two</label></div>
+      </div>
+    </div>
+    <figcaption>Only "two" is required, and both are red. Check "one": both green.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

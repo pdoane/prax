@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>saturate() as feColorMatrix</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="saturate-equivalent-0" color-interpolation-filters="sRGB">
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <filter id="saturate-equivalent-1" color-interpolation-filters="sRGB">
+    <feColorMatrix type="saturate" values="0.5"/>
+  </filter>
+  <filter id="saturate-equivalent-2" color-interpolation-filters="sRGB">
+    <feColorMatrix type="saturate" values="2"/>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.3 saturate</div>
+  <h1>saturate() as feColorMatrix</h1>
+  <p class=pr-lede>The function is <code>&lt;feColorMatrix type="saturate" values="[amount]"/&gt;</code>, whose matrix feColorMatrix defines. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#saturateEquivalent">Filter Effects 1 §13.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Under, and over, 1</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function; beside it the same box with <code>filter: url()</code> to the equivalent, which sets <code>color-interpolation-filters: sRGB</code>, as <q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: saturate(0)"></div><div class=src style="filter: url(#saturate-equivalent-0)"></div><div class=sw style="background: #959595"></div></div></div>
+    <figcaption><code>saturate(0)</code> and its equivalent alike; orange becomes <code>#959595</code>, the swatch at the
+    right. Grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: saturate(50%)"></div><div class=src style="filter: url(#saturate-equivalent-1)"></div><div class=sw style="background: #b58f68"></div></div></div>
+    <figcaption><code>saturate(50%)</code> and its equivalent alike; orange becomes <code>#b58f68</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: saturate(2)"></div><div class=src style="filter: url(#saturate-equivalent-2)"></div><div class=sw style="background: #ff7f00"></div></div></div>
+    <figcaption><code>saturate(2)</code> and its equivalent alike; orange becomes <code>#ff7f00</code>, the swatch at the
+    right. Over 1 is allowed, and oversaturates; channels clamp at 0 and 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

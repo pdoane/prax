@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Language-specific display</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 32px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.2 Language-specific display</div>
+  <h1>Language-specific display</h1>
+  <p class=pr-lede><q>If the content language of the element is known according to the rules of the document language,
+  user agents are required to infer the OpenType language system from the content language and use that when
+  selecting and positioning glyphs using an OpenType font.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#language-specific-support">CSS Fonts 4 §6.2</a></span></p>
+</header>
+
+<section>
+  <h2>Turkish fi</h2>
+  <p><q>in languages such as Turkish which uses both a dotted-i and a dotless-i, it's important to not use this
+  ligature</q>. PR Literata has a Turkish language system.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=en style="font-family: 'PR Literata'">fil fırın</div>
+    <figcaption><code>lang=en</code>: "fi" joined, its dot gone.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=tr style="font-family: 'PR Literata'">fil fırın</div>
+    <figcaption><code>lang=tr</code>: f and i apart, the dot kept, so "fil" and "fırın" stay distinct.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Serbian Cyrillic</h2>
+  <p><q>certain Cyrillic letters have different shapes in Russian text than in Bulgarian.</q> PR Noto Sans has a
+  Serbian language system, whose italic б, г, д, п and т take Serbian forms.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ru style="font-family: 'PR Noto Sans'; font-style: italic">бгдпт</div>
+    <figcaption><code>lang=ru</code>: Russian italic forms.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=sr style="font-family: 'PR Noto Sans'; font-style: italic">бгдпт</div>
+    <figcaption><code>lang=sr</code>: the Serbian italic forms of the same letters, each shaped differently from
+    the Russian.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

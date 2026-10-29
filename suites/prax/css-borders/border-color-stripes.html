@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-color: stripes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.1 Line Colors: the border-color properties</div>
+  <h1>border-color: stripes</h1>
+  <p class=pr-lede><q>The stripes defined by &lt;image-1D&gt; follow the shape of the border on the side to which they apply, and are drawn in bands starting from the padding edge and progressing outwards. The border width at each point defines the total width of the stripes at that point.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-color">CSS Borders and Box Decorations 4 §2.1</a></span> Each box has a 20px border.</p>
+</header>
+
+<section>
+  <h2>Bands from the padding edge outward</h2>
+  <p><code>stripes()</code> is CSS Images 4's one-dimensional image.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border: 20px solid; border-color: stripes(#d68a3c, #4f81bd)"></div></div>
+    <figcaption><code>stripes(#d68a3c, #4f81bd)</code>: an orange band 10px wide next to the padding edge, blue outside it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A border in the text color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border: 20px solid; border-color: stripes(#d68a3c 5px, #4f81bd) #6aa36a"></div></div>
+    <figcaption>Top and bottom: orange 5px inside, blue 15px outside; sides plain green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A border in the text color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border: 20px dotted; border-radius: 20px; border-color: stripes(#d68a3c, #4f81bd)"></div></div>
+    <figcaption><code>dotted</code> with a radius: the dots striped, the stripes following the curves. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Dots in the text color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

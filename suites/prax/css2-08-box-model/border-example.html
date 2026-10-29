@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border shorthands: the specification's example</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.4 Border shorthand properties</div>
+  <h1>Border shorthands: the specification's example</h1>
+  <p class=pr-lede><code>border-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>border</code> take a width, a style and a color, each at most once, in any order.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>Since, to some extent, the properties have overlapping functionality, the order in which the rules are
+  specified is important.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-shorthand-properties">CSS 2 §8.5.4</a></span></p>
+<pre class=pr-source>BLOCKQUOTE {
+  border: solid red;
+  border-left: double;
+  color: black;
+}</pre>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: solid red; border-left: double; color: black"></div></div>
+    <figcaption><q>In the above example, the color of the left border is black, while the other borders are red. This
+    is due to 'border-left' setting the width, style, and color. Since the color value is not given by the
+    'border-left' property, it will be taken from the 'color' property. The fact that the 'color' property is set after
+    the 'border-left' property is not relevant.</q> Every border is medium.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-left: double; border: solid red; color: black"></div></div>
+    <figcaption>With <code>border-left</code> before <code>border</code>, all four are red and solid.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

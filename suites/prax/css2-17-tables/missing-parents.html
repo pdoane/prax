@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous table objects: missing parents</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .cap { color: #9c5f22; font-weight: 600; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .orange { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2.1 Anonymous table objects</div>
+  <h1>Anonymous table objects: missing parents</h1>
+  <p class=pr-lede>The third stage: <q>Generate missing parents</q>. Each stage has <code>border-spacing: 10px</code>,
+  which anonymous tables inherit; blue and orange boxes are cells.</p>
+</header>
+
+<section>
+  <h2>Rows around cells</h2>
+  <p><q>For each 'table-cell' box C in a sequence of consecutive internal table and 'table-caption' siblings, if C's
+  parent is not a 'table-row' then generate an anonymous 'table-row' box around C and all consecutive siblings of C
+  that are 'table-cell' boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class="pr-table-cell blue">1</div><div class="pr-table-cell blue">2</div><div class=pr-table-row><div class="pr-table-cell blue orange">3</div><div class="pr-table-cell blue orange">4</div></div></div></div>
+    <figcaption>Cells 1 and 2 directly in the dashed table are in one anonymous row, above the orange row of 3 and
+    4.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table-cell blue">1</div><div class="pr-table-cell blue">2</div>text<div class="pr-table-cell blue orange">3</div></div>
+    <figcaption>Text interrupts the sequence: 1 and 2 are one anonymous table, "text" a line, and 3 another
+    table below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tables around misparented boxes</h2>
+  <p><q>For each proper table child C in a sequence of consecutive proper table children, if C is misparented then
+  generate an anonymous 'table' or 'inline-table' box T around C and all consecutive siblings of C that are proper
+  table children. (If C's parent is an 'inline' box, then T must be an 'inline-table' box; otherwise it must be a
+  'table' box.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage spaced">before<div class="pr-table-caption cap">caption</div><div class=pr-table-row><div class="pr-table-cell blue">row</div></div>after</div>
+    <figcaption>A caption and a row in a block: one anonymous <code>table</code> between the lines "before" and
+    "after".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced">before <span><span class=pr-table-row><span class="pr-table-cell blue">a</span><span class="pr-table-cell blue">b</span></span></span> after</div>
+    <figcaption>A row in a <code>span</code>: an anonymous <code>inline-table</code>, on the line between "before" and
+    "after".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

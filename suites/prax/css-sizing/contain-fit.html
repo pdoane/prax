@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Contain-fit sizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 90px; overflow: hidden; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 6.1 Contain-fit Sizing</div>
+  <h1>Contain-fit sizing</h1>
+  <p class=pr-lede><q>Contain-fit sizing essentially applies stretch-fit sizing, but reduces the size of the box in one
+  axis to maintain the box’s preferred aspect ratio</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#contain-fit-sizing">CSS Box Sizing 4 §6.1</a></span>
+  The contain keyword <q>If the box has a preferred aspect ratio, applies contain-fit sizing</q>; <q>If the box has no
+  preferred aspect ratio, applies stretch-fit sizing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#sizing-values">§3.2</a></span>
+  Each stage is 150 by 90 and clips what overflows it, and each blue box is <code>width: contain; height: contain</code>.</p>
+</header>
+
+<section>
+  <h2>The containing block, reduced to the ratio</h2>
+  <p><q>The initial target rectangle is the size of the box’s containing block</q>; <q>Last, the target rectangle is
+  reduced in one dimension by the minimum necessary for it to match the box's preferred aspect ratio.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="aspect-ratio: 1; width: contain; height: contain">1:1</div></div>
+    <figcaption><code>aspect-ratio: 1</code>: the 150 by 90 rectangle narrowed to 90 by 90. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150 by 150.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="aspect-ratio: 1 / 2; width: contain; height: contain">1:2</div></div>
+    <figcaption><code>aspect-ratio: 1 / 2</code>: narrowed to 45 by 90. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150 by 300.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: contain; height: contain">none</div></div>
+    <figcaption>No ratio: stretch-fit, 150 by 90. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clamped by a maximum first</h2>
+  <p>The target rectangle <q>is clamped in the affected dimension to less than or equal to the “maximum size” of
+  the box’s margin box</q>.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="aspect-ratio: 1; width: contain; height: contain; max-height: 40px">max</div></div>
+    <figcaption><code>aspect-ratio: 1; max-height: 40px</code>: the rectangle 150 by 40, then 40 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

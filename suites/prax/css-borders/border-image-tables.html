@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border images on tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  table { margin: 10px; border: 10px solid #2c5a8f; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>") 10; }
+  td { width: 40px; height: 20px; padding: 0; border: 2px solid #8e44ad; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.8 Effect on Tables</div>
+  <h1>Border images on tables</h1>
+  <p class=pr-lede><q>The 'border-image' properties apply to the border of tables and inline tables that have
+  'border-collapse' set to collapse. However, this specification does not define how such an image border is
+  rendered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-tables">CSS Borders and Box Decorations 4 §4.8</a></span>
+  Each table has a 10px blue border and the image of orange corners and blue dots; its cells have 2px purple
+  borders.</p>
+</header>
+
+<section>
+  <h2>Separated, or collapsed</h2>
+  <p><q>It is recommended that UAs do not apply border images to tables with collapsed borders until then.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><table style="border-collapse: separate"><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>separate</code>: the image round the table.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><table style="border-collapse: collapse"><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>collapse</code>: not defined; it is recommended that the image not be drawn, leaving the
+    blue border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

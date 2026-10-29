@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline, first baseline, last baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; height: 80px; }
+  .g > div { background: #f9cc9d; line-height: 1; padding: 0 3px; }
+  .s { font-size: 13px; }
+  .m { font-size: 22px; }
+  .l { font-size: 36px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.2 Baseline Alignment</div>
+  <h1>baseline, first baseline, last baseline</h1>
+  <p class=pr-lede><q>Baseline alignment is a form of positional alignment that aligns multiple alignment subjects
+  within a shared alignment context (such as cells within a row) by matching up their alignment baselines.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-values">CSS Box Alignment 3 §4.2</a></span>
+  Each stage is a grid row 80px tall of three items, highlighted, in PR Arimo at 13, 22 and 36px.</p>
+</header>
+
+<section>
+  <h2>baseline is first baseline</h2>
+  <p><q>baseline</q> <q>Computes to first baseline</q>: the two align alike.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=s style="align-self: baseline">Ag</div><div class=m style="align-self: baseline">Ag</div><div class=l style="align-self: baseline">Ag</div></div></div>
+    <figcaption><code>baseline</code>: the three on one baseline, the largest at the top of the row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=s style="align-self: first baseline">Ag</div><div class=m style="align-self: first baseline">Ag</div><div class=l style="align-self: first baseline">Ag</div></div></div>
+    <figcaption><code>first baseline</code>: the same, the three on one baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>last baseline</h2>
+  <p><q>aligns the alignment baseline of the box's last baseline set with the corresponding baseline of its
+  baseline-sharing group.</q> Its fallback, <q>safe self-end</q>, places the group in the row. Here the first item
+  has two lines.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=s style="align-self: first baseline">Ag<br>Bh</div><div class=m style="align-self: first baseline">Ag</div><div class=l style="align-self: first baseline">Ag</div></div></div>
+    <figcaption><code>first baseline</code>: "Ag" of each on one baseline, "Bh" below; all at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=s style="align-self: last baseline">Ag<br>Bh</div><div class=m style="align-self: last baseline">Ag</div><div class=l style="align-self: last baseline">Ag</div></div></div>
+    <figcaption><code>last baseline</code>: "Bh" on the others' baseline, and the group at the bottom of the row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

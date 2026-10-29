@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flood-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+  #styled feFlood { flood-color: #8e44ad; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=initial><feFlood/></filter>
+  <filter id=attribute><feFlood flood-color="#d68a3c"/></filter>
+  <filter id=styled><feFlood flood-color="#d68a3c"/></filter>
+  <filter id=current style="color: #6aa36a"><feFlood flood-color="currentColor"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.13.1 The flood-color property</div>
+  <h1>flood-color</h1>
+  <p class=pr-lede><q>The flood-color property indicates what color to used to flood the current filter primitive
+  subregion.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FloodColorProperty">Filter Effects 1 §9.13.1</a></span>
+  Each stage is an SVG 160 by 80 with a rectangle 100 by 40 at (30, 20); its filter is one feFlood, which fills the
+  rectangle and 10% around it, from x 20 to 140 and y 16 to 64.</p>
+</header>
+
+<section>
+  <h2>The color of the flood</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=30 y=20 width=100 height=40 fill="#4f81bd" filter="url(#initial)"/></svg></div>
+    <figcaption>None given: the initial value, <code>black</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=30 y=20 width=100 height=40 fill="#4f81bd" filter="url(#attribute)"/></svg></div>
+    <figcaption><code>flood-color="#d68a3c"</code> on the feFlood: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=30 y=20 width=100 height=40 fill="#4f81bd" filter="url(#current)"/></svg></div>
+    <figcaption><code>currentColor</code>, with <code>color: #6aa36a</code> on the filter: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A property, as well as an attribute</h2>
+  <p><q>The flood-color property is a presentation attribute for SVG elements.</q> A presentation attribute is an
+  author declaration that any rule of a style sheet overrides.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=30 y=20 width=100 height=40 fill="#4f81bd" filter="url(#styled)"/></svg></div>
+    <figcaption>The attribute says orange; a rule <code>#styled feFlood { flood-color: #8e44ad }</code> wins:
+    purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column measures in fixed mode, and percentages inside cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .fixed { table-layout: fixed; width: 200px; }
+  .inner { background: rgba(214, 138, 60, 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.3 Computing Column Measures, fixed mode and percentages</div>
+  <h1>Column measures in fixed mode, and percentages inside cells</h1>
+  <p class=pr-lede><q>For the purpose of measuring a column when laid out in fixed mode</q>, <q>the min-content and
+  max-content width of cells is considered zero unless they are directly specified as a length-percentage, in which
+  case they are resolved based on the table width (if it is definite, otherwise use 0).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a></span>
+  Text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Fixed mode: percentages of the table's width</h2>
+  <p>Each table is <code>table-layout: fixed; width: 200px</code>, two cells in one row.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table class=fixed><tr><td style="width: 25%">aaaaaaaa</td><td>b</td></tr></table></div>
+    <figcaption>Blue <code>width: 25%</code>: 50px, its text overflowing into orange, which has the other
+    150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table class=fixed><tr><td style="width: calc(20% + 20px)">a</td><td>b</td></tr></table></div>
+    <figcaption>Blue <code>calc(20% + 20px)</code>: math <q>mixing both percentages and non-zero lengths for widths</q>
+    on table cells <q>MUST be treated as if auto had been specified</q> (<a href="https://drafts.csswg.org/css-values-4/#calc-computed-value">CSS Values and Units 4 §10.11</a>),
+    so the two columns share the 200px, 100px each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages inside a cell</h2>
+  <p><q>For the purpose of calculating the outer min-content width of cells, descendants of table cells whose width
+  depends on percentages of their parent cell's width are considered to have an auto width.</q> Each table is
+  <code>width: 10px</code>, so its columns take their min-content widths.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 10px"><tr><td><div class=inner style="width: 300%">aa</div></td><td>bb</td></tr></table></div>
+    <figcaption>A block of <code>width: 300%</code> holding "aa": auto while measuring, so the blue column is 20px;
+    then the block is 300% of it, 60px, over the orange cell.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 10px"><tr><td><div class=inner style="width: 50%">aaaa</div></td><td>bb</td></tr></table></div>
+    <figcaption><code>width: 50%</code> holding "aaaa": the column is 40px; the block 20px, and "aaaa" overflows
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

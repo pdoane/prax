@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: on a line break</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .l { float: left; width: 60px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: on a line break</h1>
+  <p class=pr-lede><code>clear</code> applies to block-level elements, but HTML maps <code>&lt;br clear&gt;</code> to
+  it on the line break. Each stage's text is 13px on 20px lines, and starts with a blue left float 60px tall.</p>
+</header>
+
+<section>
+  <h2>Clearing an inline</h2>
+  <p><q>If an implementation does support clear on inline elements, rather than setting a clearance as explained
+  above, the implementation should force a break and effectively insert one or more empty line boxes (or shifting the
+  new line box downward as described in section 9.5) to move the top of the cleared inline's line box to below the
+  respective floating box(es).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2 §9.5.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit l"></div>one<br><span class=pr-b>two</span></div>
+    <figcaption>A plain <code>&lt;br&gt;</code>: "two" is on the next line, beside the float.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit l"></div>one<br style="clear: left"><span class=pr-b>two</span></div>
+    <figcaption><code>&lt;br style="clear: left"&gt;</code>: the line after it starts below the float, at
+    60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 80px"><div class=pr-frame><div class="pr-a pr-fit l"></div>one<br style="clear: left"></div></div>
+    <figcaption>The cleared break ends the dashed block's content: the block, which does not otherwise hold its float,
+    grows to the float's bottom, 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 80px"><div class=pr-frame><div class="pr-a pr-fit l"></div>one<br></div></div>
+    <figcaption>The same with a plain <code>&lt;br&gt;</code>: the dashed block is one line tall, and the float hangs
+    out of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

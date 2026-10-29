@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track sizes: fit-content()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; }
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, fit-content()</div>
+  <h1>Track sizes: fit-content()</h1>
+  <p class=pr-lede><code>fit-content(&lt;length-percentage&gt;)</code> <q>Represents the formula max(minimum,
+  min(limit, max-content)), where minimum represents an auto minimum (which is often, but not always, equal to a
+  min-content minimum), and limit is the track sizing function passed as an argument to fit-content().</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>max-content, up to the limit</h2>
+  <p>The second column of each grid is <code>1fr</code> and holds "x".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(100px) 1fr"><div class=t1>abc def</div><div class=t2>x</div></div></div>
+    <figcaption><code>fit-content(100px)</code>, "abc def": its max-content, 70px, is under the limit; "x" from
+    70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(50px) 1fr"><div class=t1>abc def ghi</div><div class=t2>x</div></div></div>
+    <figcaption><code>fit-content(50px)</code>, "abc def ghi", 110px: held to 50px, the text on three lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(25%) 1fr"><div class=t1>abc def ghi</div><div class=t2>x</div></div></div>
+    <figcaption><code>fit-content(25%)</code>: a limit of 50px, the same three lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Never under the minimum</h2>
+  <p>The minimum wins over the limit.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(20px) 1fr"><div class=t1>abcdef</div><div class=t2>x</div></div></div>
+    <figcaption><code>fit-content(20px)</code>, "abcdef": its min-content, 60px, is the column; "x" from 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(20px) 1fr"><div class=t1 style="min-width: 40px">ab cd</div><div class=t2>x</div></div></div>
+    <figcaption><code>min-width: 40px</code> on "ab cd": 40px, the text on two lines; "x" from 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

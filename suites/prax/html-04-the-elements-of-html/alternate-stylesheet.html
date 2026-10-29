@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alternative style sheets</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  label { display: block; padding: 0 10px 10px; font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.6.8.1 Link type "alternate"</div>
+  <h1>Alternative style sheets</h1>
+  <p class=pr-lede><q>The alternate keyword modifies the meaning of the stylesheet keyword in the way described for
+  that keyword.</q> <q>If the alternate keyword is also specified on the link element, then the link is an alternative
+  style sheet</q>, whose CSS style sheet has its alternate flag <q>Set if the link is an alternative style sheet and
+  el's explicitly enabled is false; unset otherwise.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#rel-alternate">HTML §4.6.8.1</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#link-type-stylesheet">§4.6.8.23</a></span></p>
+</header>
+<section>
+  <h2>Not applied until chosen</h2>
+  <p>A sheet whose alternate flag is set is not applied unless the reader, or the document, chooses its set. Each
+  frame's document links <code>green.css</code>, which turns its box green, with
+  <code>rel="alternate stylesheet" title=Green</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel='alternate stylesheet' title=Green href=support/green.css><div class=styled>alternate</div>"></iframe></div>
+    <figcaption>Plain: no set is chosen, and the alternative sheet waits.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Explicitly enabled</h2>
+  <p><q>Whenever the disabled attribute is removed, set the link element's explicitly enabled attribute to true.</q>
+  This frame's link also has <code>disabled</code>, which the checkbox removes. The sheet is then fetched again,
+  <q>When the disabled attribute of the link element of an external resource link that is already browsing-context
+  connected is set, changed, or removed.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view id=enable-frame srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel='alternate stylesheet' title=Green href=support/green.css disabled id=sheet><div class=styled>alternate, disabled</div>"></iframe>
+      <label><input type=checkbox checked id=enable> disabled</label></div>
+    <figcaption>Plain. Uncheck the box: green, an alternative sheet no longer, its set the preferred one.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("enable").addEventListener("change", event => {
+    document.getElementById("enable-frame").contentDocument.getElementById("sheet").toggleAttribute("disabled", event.target.checked);
+  });
+</script>
+</body>
+</html>

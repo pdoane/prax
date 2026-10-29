@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The last resorts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+  .cb { border: 0 solid #2c5a8f; box-decoration-break: clone; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.4 Unforced Breaks</div>
+  <h1>The last resorts</h1>
+  <p class=pr-lede><q>If even that does not lead to sufficient break points, cloned margins/border/padding at on the
+  block-end side are truncated; and if more room is still needed, cloned margins/border/padding are truncated at the
+  block-start side as well.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#unforced-breaks">CSS Fragmentation 4 §4.4</a></span>
+  Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Cloned borders give way</h2>
+  <p>The tinted box holds three lines and has <code>box-decoration-break: clone</code>, so each fragment has its top
+  and bottom borders.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=cb style="border-width: 25px 0">one two six</div></div>
+    <figcaption>Borders of 25px and a 20px line need 70px. Cloned borders give way, block-end ones first: the bottom borders of the first two fragments, and the top border of the last, are cut to 15px. One line in each column. <span class=pr-flag>Chrome</span> Keeps the borders whole, 70px: each fragment overflows its column. <span class=pr-flag>Safari</span> Slices: the borders only at the start and end. <span class=pr-flag>Firefox</span> Keeps the borders whole and draws the bottom ones over the lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

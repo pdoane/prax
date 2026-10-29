@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The quotes property: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .qt::before { content: open-quote; }
+  .qt::after { content: close-quote; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.3.1 Specifying quotes with the 'quotes' property</div>
+  <h1>The quotes property: auto</h1>
+  <p class=pr-lede>CSS 2 leaves the initial value of <code>quotes</code> to the user agent. A later specification names
+  it. Every span has <code>:before { content: open-quote }</code> and <code>:after { content: close-quote }</code>, and
+  no figure sets <code>quotes</code>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-content-3/#quotes-property">CSS Generated Content 3 §2.4.1</a></div>
+  <h2>auto: the marks of the parent's language</h2>
+  <p><code>quotes</code> now takes <code>auto | none | match-parent | [&lt;string&gt; &lt;string&gt;]+</code>, with
+  the initial value <code>auto</code>: <q>A typographically appropriate quotation mark system is automatically chosen
+  by the UA based on the content language of the parent (or, if there is no parent, of the element itself).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#quotes-property">CSS Generated Content 3 §2.4.1</a></span> What CSS 2 left to the user agent is now chosen by language,
+  and by the language of the text around a quotation, not of the quotation itself.</p>
+  <figure>
+    <div class="pr-stage pr-text" lang=en><span class=qt>one <span class=qt>two</span> one</span></div>
+    <figcaption><code>lang=en</code>: “one ‘two’ one”, curly double marks outside, single inside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" lang=de><span class=qt>eins <span class=qt>zwei</span> eins</span></div>
+    <figcaption><code>lang=de</code>: German marks, „eins ‚zwei‘ eins“, opening low and closing high.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" lang=en><span class=qt lang=fr>oui</span></div>
+    <figcaption>A French span in an English stage takes its parent's marks: “oui”. <span class=pr-flag>Chrome</span>
+    uses the span's own language: «oui».</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

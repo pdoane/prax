@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-align: start and end</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .t { font: 13px/20px 'PR Arimo'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 2.3 Flow-Relative Values for the text-align Property</div>
+  <h1>text-align: start and end</h1>
+  <p class=pr-lede><code>text-align</code> takes the new values <code>start | end</code>. They are defined in CSS Text: <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#text-align">CSS Logical Properties and Values 1 §2.3</a></span> <code>start</code>: <q>Inline-level content is aligned to the start edge of the line box.</q> <code>end</code>: <q>Inline-level content is aligned to the end edge of the line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>start, then end</h2>
+  <p>Each stage's first line has <code>text-align: start</code>, its second <code>text-align: end</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=t style="text-align: start">start</div><div class=t style="text-align: end">end</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: the first at the left, the second at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=t style="text-align: start">start</div><div class=t style="text-align: end">end</div></div>
+    <figcaption><code>rtl</code>: the first at the right, the second at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=t style="text-align: start">start</div><div class=t style="text-align: end">end</div></div>
+    <figcaption><code>vertical-rl</code>: the first at the top, the second at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In vertical-rl with rtl</h2>
+  <p>The same in <code>vertical-rl</code> <code>rtl</code>, beside <code>left</code> and <code>right</code>, which are line-relative.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; direction: rtl"><div class=t style="text-align: start">start</div><div class=t style="text-align: end">end</div></div>
+    <figcaption><code>start</code> at the bottom, <code>end</code> at the top.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; direction: rtl"><div class=t style="text-align: left">left</div><div class=t style="text-align: right">right</div></div>
+    <figcaption><code>left</code> at the top, <code>right</code> at the bottom, whatever the direction.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scroll origin: block-start, inline-start</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .h { width: 300px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); }
+  .v { width: 20px; height: 300px; background: linear-gradient(to bottom, #4f81bd, #d68a3c); }
+  .end { display: flex; justify-content: space-between; color: white; font-size: 12px; font-weight: 600; line-height: 20px; padding: 0 4px; direction: ltr; writing-mode: horizontal-tb; }
+  .stage { height: 60px; }
+  .n { width: 60px; height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2.3 Scrolling Overflow</div>
+  <h1>The scroll origin: block-start, inline-start</h1>
+  <p class=pr-lede><q>The scroll origin is the anchor coordinate of the scrollable overflow rectangle, from which the
+  scrollable overflow rectangle expands. Unless otherwise specified, it is the block-start inline-start corner of the
+  scrollable overflow rectangle.</q> The <q>initial scroll position</q> <q>unless otherwise specified, coincides with
+  its scroll origin position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A row 300px wide, from either side</h2>
+  <p>Each dashed box is 120 by 40, <code>overflow: auto</code>, and holds a bar 300px wide, blue at its left end and
+  orange at its right. Unscrolled, the box shows the end its origin is at; the second row is scrolled by script as
+  far as it goes the other way.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame sc"><div class=h><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <div class="pr-stage stage" style="margin-top: 6px"><div class="pr-frame sc far"><div class=h><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <figcaption><code>ltr</code>: origin top left, the left end shown; scrolled to the far side, the right
+    end.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame sc" style="direction: rtl"><div class=h><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <div class="pr-stage stage" style="margin-top: 6px"><div class="pr-frame sc far" style="direction: rtl"><div class=h><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <figcaption><code>rtl</code>: origin top right, the right end shown; scrolled to the far side, the left
+    end.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical writing modes</h2>
+  <p>Boxes 60 by 40. In the first two, a horizontal bar 300px wide stands across the block flow; in the last two, a bar
+  300px tall runs along the inline axis, blue at its top.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame sc n" style="writing-mode: vertical-rl"><div class=h style="writing-mode: horizontal-tb"><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <figcaption><code>vertical-rl</code>: block-start is the right, so the right end shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame sc n" style="writing-mode: vertical-lr"><div class=h style="writing-mode: horizontal-tb"><div class=end><span>left</span><span>right</span></div></div></div></div>
+    <figcaption><code>vertical-lr</code>: block-start is the left, so the left end shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame sc n" style="writing-mode: vertical-rl"><div class=v></div></div></div>
+    <figcaption><code>vertical-rl</code>: inline-start is the top, so blue shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame sc n" style="writing-mode: vertical-rl; direction: rtl"><div class=v></div></div></div>
+    <figcaption><code>vertical-rl</code> <code>rtl</code>: inline-start is the bottom, so orange shows.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const e of document.querySelectorAll(".far")) e.scrollLeft = getComputedStyle(e).direction === "rtl" ? -10000 : 10000;
+</script>
+</body>
+</html>

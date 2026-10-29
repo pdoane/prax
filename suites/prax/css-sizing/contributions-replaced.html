@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Contributions of images without a natural size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 110px; height: 60px; overflow: hidden; }
+  figure.f { margin-right: 10px; }
+  figure.f figcaption { max-width: 112px; }
+  img { vertical-align: top; }
+  .bar { display: inline-block; width: 20px; height: 20px; background: #d68a3c; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2 Intrinsic Contributions, replaced elements</div>
+  <h1>Contributions of images without a natural size</h1>
+  <p class=pr-lede><q>A box’s min-content contribution/max-content contribution in each axis is the size of the
+  content box of a hypothetical auto-sized float that contains only that box, if that hypothetical float's containing
+  block is zero-sized/infinitely-sized.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-contribution">CSS Box Sizing 3 §5.2</a></span>
+  In an infinite space an image with only a ratio takes its max-content size, which is <q>an inline size matching the
+  corresponding dimension of the initial containing block</q>, 600px here; with no ratio, 300px or a length
+  minimum. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">§5.1</a></span>
+  Each dashed parent sizes itself to the image, and its width reads back below; the stages clip.</p>
+</header>
+
+<section>
+  <h2>Only a ratio, 2:1</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=b1 class=pr-parent style="width: max-content"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a <code>width: max-content</code> parent: 600px, filling the stage. Reads <code class=pr-computed
+    data-of=b1 data-dom=offsetWidth></code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 0: the parent and image have no size.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=b4 class=pr-parent style="float: left"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a float: 600px held to the 110px available, so 110 by 55. Reads <code class=pr-computed data-of=b4
+    data-dom=offsetWidth></code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 0.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=b2 class=pr-parent style="width: max-content"><img alt="" style="min-width: 50px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>With <code>min-width: 50px</code>: 50 by 25. Reads <code class=pr-computed data-of=b2 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=b3 class=pr-parent style="width: min-content"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"><span class=bar></span></div></div>
+    <figcaption>Beside a 20px orange box in a <code>width: min-content</code> parent: the image's min-content is 0, so
+    20px. Reads <code class=pr-computed data-of=b3 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No ratio and no size</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=c1 class=pr-parent style="width: max-content"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a <code>width: max-content</code> parent: 300px. Reads <code class=pr-computed data-of=c1
+    data-dom=offsetWidth></code>. <span class=pr-flag>Firefox</span> 0, the image 300px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=c2 class=pr-parent style="width: max-content"><img alt="" style="min-width: 50px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>With <code>min-width: 50px</code>: 50px. Reads <code class=pr-computed data-of=c2
+    data-dom=offsetWidth></code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 300px. <span
+    class=pr-flag>Firefox</span> 50px, but the image 300px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

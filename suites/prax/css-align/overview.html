@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The six alignment properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 2 Overview of Alignment Properties</div>
+  <h1>The six alignment properties</h1>
+  <p class=pr-lede><q>The box alignment properties in CSS are a set of 6 properties that control alignment of boxes
+  within other boxes.</q> They differ in <q>which dimension they apply to</q>, and <q>whether they control the position
+  of the box within its parent, or the box's content within itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overview">CSS Box Alignment 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Content within the element: justify-content, align-content</h2>
+  <p><q>content within element</q>. Grids 200 by 50: two 50px columns, a 40px row.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template: 40px / 50px 50px; justify-content: center"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>justify-content: center</code>: the columns, as one, from 50px to 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template: 40px / 50px 50px; align-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>align-content: end</code>: the row at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The element within its parent: justify-self, align-self</h2>
+  <p><q>element within parent</q>: one column and one row, filling the grid.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: end">A</div></div></div>
+    <figcaption><code>justify-self: end</code>: A as wide as its text, at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="align-self: center">A</div></div></div>
+    <figcaption><code>align-self: center</code>: A 20px tall, 15px from the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Items inside the box: justify-items, align-items</h2>
+  <p><q>The '*-items' properties don't affect the element itself.</q> They say what <code>*-self: auto</code> means in its children.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: 1fr 1fr; justify-items: center"><div class=pr-a>A</div><div class=pr-b style="justify-self: start">B</div></div></div>
+    <figcaption><code>justify-items: center</code>: A, <code>auto</code>, centered; B, <code>start</code>, left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 1fr 1fr; align-items: end"><div class=pr-a>A</div><div class=pr-b style="align-self: start">B</div></div></div>
+    <figcaption><code>align-items: end</code>: A, <code>auto</code>, at the bottom; B, <code>start</code>, top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

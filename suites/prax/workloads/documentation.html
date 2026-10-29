@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- API reference with navigation. Two-column documentation: navigation markers, coloured code spans, a callout and a wrapping parameter table. -->
+<title>Documentation</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.app { display:grid; grid-template-columns:150px 1fr; gap:16px; background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:14px 16px; color:#22282f; font-size:12px; line-height:1.55 }
+.nav { font-size:11px; border-right:1px solid #e6e9ed; padding-right:12px }
+.nav .grp { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#8a93a0; margin:10px 0 3px }
+.nav .grp:first-child { margin-top:0 }
+.nav a { display:block; color:#4a5561; text-decoration:none; padding:2px 0 2px 8px; border-left:2px solid transparent }
+.nav a.on { color:#1c5b96; border-left-color:#3d82c4; font-weight:bold }
+.doc h2 { font-size:17px; margin:0 0 2px; letter-spacing:-.01em }
+.doc .sub { color:#6d7783; font-size:11px; margin-bottom:10px }
+.doc h3 { font-size:13px; margin:14px 0 4px; padding-bottom:2px; border-bottom:1px solid #eceff2 }
+.doc p { margin:6px 0 }
+.sig { font-family:monospace; font-size:11px; background:#f6f8fa; border:1px solid #e2e6eb; border-radius:6px; padding:6px 8px; margin:6px 0; color:#1c3f5e }
+pre { font-family:monospace; font-size:11px; background:#1e2733; color:#dfe6ee; border-radius:6px; padding:8px 10px; margin:6px 0; overflow-x:auto; line-height:1.5 }
+pre .kw { color:#79b8ff } pre .st { color:#9ecbff } pre .cm { color:#8b98a6 } pre .fn { color:#f0c674 }
+.note { border-left:3px solid #e08a2e; background:#fdf5ea; border-radius:0 6px 6px 0; padding:6px 9px; margin:8px 0; font-size:11px; color:#6b4b1c }
+.note b { color:#8a5a12 }
+table { border-collapse:collapse; width:100%; font-size:11px; margin:6px 0 }
+th { text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#8a93a0; border-bottom:1px solid #d3d8de; padding:4px 6px }
+td { padding:5px 6px; border-bottom:1px solid #eef1f4; vertical-align:top }
+td code { color:#1c3f5e }
+.req { font-size:9px; background:#fbe1de; color:#96271c; border-radius:99px; padding:1px 6px }
+.opt { font-size:9px; background:#eef1f4; color:#6d7783; border-radius:99px; padding:1px 6px }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="nav">
+    <div class="grp">Getting started</div>
+    <a href="#">Install</a>
+    <a href="#">Quick start</a>
+    <div class="grp">Reference</div>
+    <a href="#">createClient</a>
+    <a href="#" class="on">watchFolder</a>
+    <a href="#">uploadBatch</a>
+    <a href="#">Errors</a>
+    <div class="grp">Guides</div>
+    <a href="#">Retries</a>
+    <a href="#">Webhooks</a>
+  </div>
+
+  <div class="doc">
+    <h2>watchFolder</h2>
+    <div class="sub">Client method &#183; available since 2.4</div>
+    <p>Calls the handler for newly discovered files. Successful paths are
+    remembered; failures retry on the next poll.</p>
+
+    <div class="sig">watchFolder(path: string, options?: WatchOptions, handler: FileHandler): Watcher</div>
+
+    <h3>Example</h3>
+<pre><span class="cm">// Upload every CSV that lands in the drop folder.</span>
+<span class="kw">const</span> watcher = client.<span class="fn">watchFolder</span>(<span class="st">"./drop"</span>, {
+  match: <span class="st">"*.csv"</span>,
+  interval: <span class="st">2000</span>,
+}, <span class="kw">async</span> (file) =&gt; {
+  <span class="kw">await</span> client.<span class="fn">upload</span>(file.path, { bucket: <span class="st">"reports"</span> });
+});</pre>
+
+    <div class="note"><b>Interval limits.</b> Intervals below 500 ms are raised to 500 ms
+    and emit one <code>warning</code> event.</div>
+
+    <h3>Options</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th></th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>match</code></td><td><code>string</code></td><td><span class="opt">optional</span></td><td>Glob applied to the file name. Files that do not match are ignored.</td></tr>
+        <tr><td><code>interval</code></td><td><code>number</code></td><td><span class="opt">optional</span></td><td>Milliseconds between reads. Defaults to 5000.</td></tr>
+        <tr><td><code>handler</code></td><td><code>function</code></td><td><span class="req">required</span></td><td>Called with a file record. A rejected promise retries the file on the next pass.</td></tr>
+        <tr><td><code>signal</code></td><td><code>AbortSignal</code></td><td><span class="opt">optional</span></td><td>Stops the watcher and rejects any handler still running.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Returns</h3>
+    <p>A <code>Watcher</code> with <code>close()</code>, <code>pause()</code>, and
+    an <code>on()</code> subscriber for the <code>error</code> and
+    <code>warning</code> events.</p>
+  </div>
+</div>
+</body>
+</html>

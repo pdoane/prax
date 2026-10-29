@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Three kinds of text layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .wrap { inline-size: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.3 Text layout – Introduction</div>
+  <h1>Three kinds of text layout</h1>
+  <p class=pr-lede><q>The rules for which transforms are allowed depend on if the content area was explicitly
+  declared or not. If not explicitly declared, the rules define the layout of pre-formatted text. If declared, the
+  rules define the layout of auto-wrapped text.</q> <q>Finally, layout of glyphs for any ‘textPath’ elements is
+  performed, converting pre-formatted text to text-on-a-path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayout">SVG 2 §11.3</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code> on 20px lines, each
+  letter 10 wide.</p>
+</header>
+
+<section>
+  <h2>Pre-formatted, wrapped, and on a path</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="20" y="30">Two lines,<tspan x="20" y="50">set by hand</tspan></text></svg></div>
+    <figcaption>Pre-formatted: "Two lines," and a <code>tspan</code> at <code>x="20" y="50"</code>: two lines from
+    x 20, on y 30 and 50.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M0 50H160 M20 0V80 M120 0V80" class=pr-baseline /><text class="pr-measure wrap" x="20" y="30">Wrapped by the browser</text></svg></div>
+    <figcaption>Auto-wrapped, <code>inline-size: 100px</code>: "Wrapped by" from 20 on y 30, "the browser" on y 50,
+    between the red lines at 20 and 120. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line, running off the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path id="curve" d="M 10 60 C 50 0 110 0 150 60" class=pr-baseline /><text class=pr-measure><textPath href="#curve">Along a curve</textPath></text></svg></div>
+    <figcaption>On a path: "Along a curve" standing on the dashed curve from 10, 60, up and over, each letter turned
+    to follow it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

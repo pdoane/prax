@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>writing-mode: a box of another mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/20px "PR Noto Sans JP"; }
+  .float { float: left; width: 40px; height: 40px; background: #d68a3c; }
+  .v { writing-mode: vertical-lr; height: 60px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2 Block Flow Direction: the writing-mode property, boxes</div>
+  <h1>writing-mode: a box of another mode</h1>
+  <p class=pr-lede><q>If a box has a different writing-mode value than its parent box (i.e. nearest ancestor without
+  display: contents)</q>, it becomes an atomic inline or a formatting context root. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#block-flow">CSS Writing Modes 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>An inline becomes an inline-block</h2>
+  <p><q>If the box would otherwise become an in-flow box with a computed display of inline, its display computes
+  instead to inline-block.</q></p>
+  <figure>
+    <div class=pr-stage>前<span id=span1 class=pr-hl style="writing-mode: vertical-rl">縦書き</span>後</div>
+    <figcaption>The highlighted span is <code>vertical-rl</code>: one upright column of three characters, on the
+    line between 前 and 後, as an inline-block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A block becomes a flow root</h2>
+  <p><q>If the box is a block container, then it establishes an independent block formatting context.</q> Each stage has an
+  orange float, then a blue block 60px tall.</p>
+  <figure>
+    <div class=pr-stage><div class=float></div><div style="height: 60px; background: #b9cde6">横書き</div></div>
+    <figcaption>The block in the stage's own mode: under the float, its text beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=float></div><div id=block1 class=v>縦書き</div></div>
+    <figcaption>The block <code>vertical-lr</code>: a formatting context root, clear of the float, beside it or below
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>PNG and SVG, in every property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pair { display: flex; margin: 10px; }
+  .pair > * { margin-right: 20px; }
+  .bg { width: 60px; height: 40px; background-repeat: no-repeat; }
+  .png.bg { background-image: url(../shared/resources/flag-40x20.png); }
+  .svg.bg { background-image: url(../shared/resources/flag-40x20.svg); }
+  ul.list { margin: 10px 0; padding-left: 60px; line-height: 20px; }
+  .png.list { list-style-image: url(../shared/resources/flag-40x20.png); }
+  .svg.list { list-style-image: url(../shared/resources/flag-40x20.svg); }
+  .border { width: 40px; height: 20px; border: 10px solid; }
+  .png.border { border-image: url(../shared/resources/flag-40x20.png) 10; }
+  .svg.border { border-image: url(../shared/resources/flag-40x20.svg) 10; }
+  .png.content { content: url(../shared/resources/flag-40x20.png); }
+  .svg.content { content: url(../shared/resources/flag-40x20.svg); }
+  .secure { width: 60px; height: 40px; margin: 10px; background: url(../shared/resources/external.svg) no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.1 Image File Formats</div>
+  <h1>PNG and SVG, in every property</h1>
+  <p class=pr-lede><q>At minimum, the UA must support the following image file formats when referenced from an
+  &lt;image&gt; value, for all the properties in which using &lt;image&gt; is valid:</q> <q>PNG</q> and <q>SVG, as
+  specified in [SVG11], using the secure static mode</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#image-file-formats">CSS Images 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The same flag, as PNG and as SVG</h2>
+  <p>PNG at the left, SVG at the right: a flag 40 by 20 in blue, orange, green and purple quarters.</p>
+  <figure>
+    <div class=pr-stage><div class=pair><div class="png bg pr-ghost"></div><div class="svg bg pr-ghost"></div></div></div>
+    <figcaption><code>background-image</code>, <code>no-repeat</code>: each flag at the top left of its dashed 60 by 40
+    box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><ul class="list png"><li>&nbsp;</li></ul><ul class="list svg"><li>&nbsp;</li></ul></div>
+    <figcaption><code>list-style-image</code>: each item's marker the flag, 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><div class="png border"></div><div class="svg border"></div></div></div>
+    <figcaption><code>border-image</code>, sliced 10: the top border blue then orange, the bottom green then purple;
+    the flag's middle row is 0px tall, so no sides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><div class="png content"></div><div class="svg content"></div></div></div>
+    <figcaption><code>content</code> on an element: each replaced by the flag, 40 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Secure static mode</h2>
+  <p>Such an image runs no script and loads no external resource.</p>
+  <figure>
+    <div class=pr-stage><div class="secure pr-ghost"></div></div>
+    <figcaption>A <code>background-image</code> of a green 40 by 20 box, with a script that turns it red and the PNG
+    flag over its right half: all green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

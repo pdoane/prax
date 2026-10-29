@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where text shadows paint</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: bold 30px/50px "PR Arimo"; }
+  .scroller { width: 120px; height: 50px; overflow: auto; border: 1px solid #b5bcc7; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 4 Text Shadows: the text-shadow property, painting</div>
+  <h1>Where text shadows paint</h1>
+  <p class=pr-lede><q>Outer text shadows must be painted at a stack level between the element's border/background (if
+  present) and the elements text and text decoration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-shadow-property">CSS Text Decoration 4 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Over its background, under its text</h2>
+  <figure>
+    <div class="pr-stage t"><span style="background: #b9cde6; text-shadow: 5px 5px #d68a3c">Above</span></div>
+    <figcaption>The orange shadow is on the span's blue background, and under its letters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-shadow: 14px 0 #d68a3c">AA</span><span style="color: #2c5a8f">AA</span></div>
+    <figcaption>The first span's shadow reaches under the second span's blue text. <q>UAs should avoid painting text
+    shadows over text in adjacent elements</q>: blue letters over orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No room in the layout</h2>
+  <p><q>Like 'box-shadow', text shadows do not influence layout, and do not trigger scrolling or increase the size of
+  the scrollable overflow region.</q></p>
+  <figure>
+    <div class="t scroller" style="text-shadow: 60px 30px #d68a3c">Text</div>
+    <figcaption>A scroll container exactly holding "Text"; its shadow, 60px right and 30px down, is clipped and
+    the box has no scrollbars.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="line-height: 40px"><span style="text-shadow: 0 30px 4px #d68a3c">Shadowed</span><br>next</div>
+    <figcaption>Lines 40px apart, as without the shadow; the blurred shadow lies over "next".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

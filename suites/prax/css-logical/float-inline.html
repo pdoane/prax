@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>float: inline-start and inline-end</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .fl { width: 40px; height: 40px; }
+  .pr-text { font-family: 'PR Arimo'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 2.2 Flow-Relative Values for the float and clear Properties, float</div>
+  <h1>float: inline-start and inline-end</h1>
+  <p class=pr-lede><code>float</code> takes the new values <code>inline-start | inline-end</code>. <q>The mapping on these properties uses the writing mode of the element’s containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#float-clear">CSS Logical Properties and Values 1 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>inline-start</h2>
+  <p>Each A has <code>float: inline-start</code> and is 40 by 40px.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit fl" style="float: inline-start">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: at the left, the text at its right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class="pr-a pr-fit fl" style="float: inline-start">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>rtl</code>: at the right, the text at its left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class="pr-a pr-fit fl" style="float: inline-start">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>vertical-rl</code>: at the top right, lines below it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inline-end</h2>
+  <p>Each A has <code>float: inline-end</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit fl" style="float: inline-end">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class="pr-a pr-fit fl" style="float: inline-end">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>rtl</code>: at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class="pr-a pr-fit fl" style="float: inline-end">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption><code>vertical-rl</code>: at the bottom right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The containing block's writing mode, not the float's</h2>
+  <p>The stage is <code>ltr</code> and horizontal; A has <code>float: inline-start</code> and a writing mode of its own.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit fl" style="float: inline-start; direction: rtl">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption>A <code>rtl</code>: at the left, its containing block's line start.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit fl" style="float: inline-start; writing-mode: vertical-rl">A</div><div class=pr-text>Text that wraps beside the float.</div></div>
+    <figcaption>A <code>vertical-rl</code>: at the left.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

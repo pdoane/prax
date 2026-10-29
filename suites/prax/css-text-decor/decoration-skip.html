@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-skip</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 5px 0; }
+  .u { text-decoration: underline #c0392b 3px; }
+  .w { white-space: pre; }
+  .g { padding: 0 6px; font: 30px/50px "PR Arimo"; }
+  ins, del { text-decoration-color: #c0392b; text-decoration-thickness: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10 Text Decoration Line Continuity: the text-decoration-skip shorthand and its sub-properties</div>
+  <h1>text-decoration-skip</h1>
+  <p class=pr-lede><q>The none value sets all sub-properties to none, and the auto value sets all sub-properties to
+  their initial values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-skipping">CSS Text Decoration 4 §2.10</a></span>
+  Each line is red and 3px thick.</p>
+</header>
+
+<section>
+  <h2>none: nothing skipped; auto: the initial skipping</h2>
+  <p>The sub-properties: <code>text-decoration-skip-self</code>, <code>-skip-box</code>, <code>-skip-spaces</code>
+  and <code>-skip-ink</code>. Each stage has two spaces before "gyp" and two after, preserved.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage g w"><span class=u style="text-decoration-skip: none">  gyp  </span></div>
+    <figcaption><code>none</code>: the underline runs under the spaces at both ends, and straight through the
+    descenders of "gyp", as Safari draws it. <span class=pr-flag>Chrome</span> draws it under "gyp" only, broken at the descenders. <span class=pr-flag>Firefox</span>
+    draws it under the spaces, broken at the descenders.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage g w"><span class=u style="text-decoration-skip: auto">  gyp  </span></div>
+    <figcaption><code>auto</code>: under "gyp" only, not the spaces; it may break around the descenders. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> run it under the spaces too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>ins and del</h2>
+  <p><q>The following addition is made to the default UA stylesheet for HTML: <code>ins, del { text-decoration-skip:
+  none; }</code></q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage g w"><ins>  gyp  </ins></div>
+    <figcaption><code>ins</code>: underlined under the spaces at both ends too, straight through the descenders, as
+    in Safari. <span class=pr-flag>Chrome</span> Under "gyp" only, broken. <span class=pr-flag>Firefox</span> Broken at the descenders.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage g w"><del>  gyp  </del></div>
+    <figcaption><code>del</code>: struck through from the first space to the last, as in Safari and Firefox.
+    <span class=pr-flag>Chrome</span> strikes through "gyp" only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

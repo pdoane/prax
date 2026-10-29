@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Minimum and maximum inline and block sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .pr-stage.w { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.1 Logical Height and Logical Width, minimum and maximum</div>
+  <h1>Minimum and maximum inline and block sizes</h1>
+  <p class=pr-lede><q>These properties correspond to the 'min-height' and 'min-width' properties.</q> <q>These properties correspond to the 'max-height' and 'max-width' properties. The mapping depends on the element's 'writing-mode'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#dimension-properties">CSS Logical Properties and Values 1 §4.1</a></span> Each stage is 160 by 100px.</p>
+</header>
+
+<section>
+  <h2>min-inline-size and max-block-size</h2>
+  <p>Each A has <code>inline-size: 20px; min-inline-size: 60px; block-size: 80px; max-block-size: 30px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="inline-size: 20px; min-inline-size: 60px; block-size: 80px; max-block-size: 30px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 60px wide, 30px tall.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="inline-size: 20px; min-inline-size: 60px; block-size: 80px; max-block-size: 30px">A</div></div>
+    <figcaption><code>rtl</code>: the same, at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="inline-size: 20px; min-inline-size: 60px; block-size: 80px; max-block-size: 30px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 60px tall, 30px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>max-inline-size and min-block-size</h2>
+  <p>Each A has <code>max-inline-size: 70px; min-block-size: 50px</code> and no size of its own.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-a style="max-inline-size: 70px; min-block-size: 50px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 70px wide, not the 160px of the stage; 50px tall.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=pr-a style="max-inline-size: 70px; min-block-size: 50px">A</div></div>
+    <figcaption><code>rtl</code>: the same, at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=pr-a style="max-inline-size: 70px; min-block-size: 50px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 70px tall, not the 100px of the stage; 50px wide.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

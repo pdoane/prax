@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lighten: the lighter of the two</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .over > div > div { height: 20px; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  pre.pr-source { margin-right: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.1.6 lighten blend mode</div>
+  <h1>lighten: the lighter of the two</h1>
+  <p class=pr-lede><q>Selects the lighter of the backdrop and source colors.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blendinglighten">Compositing and Blending 2 §10.1.6</a></span></p>
+</header>
+
+<section>
+  <h2><code>B(Cb, Cs) = max(Cb, Cs)</code></h2>
+  <p>Rows, top to bottom: the backdrop, black, white, grey 50%, blue and orange; the source; <code>mix-blend-mode</code>; <code>background-blend-mode</code> over the backdrop as <code>background-color</code>; the formula's color and its hex.</p>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div><div style="background: #8e44ad"></div></div><div class=over><div style="background: #000000"><div style="background: #8e44ad; mix-blend-mode: lighten"></div></div><div style="background: #ffffff"><div style="background: #8e44ad; mix-blend-mode: lighten"></div></div><div style="background: #808080"><div style="background: #8e44ad; mix-blend-mode: lighten"></div></div><div style="background: #4f81bd"><div style="background: #8e44ad; mix-blend-mode: lighten"></div></div><div style="background: #d68a3c"><div style="background: #8e44ad; mix-blend-mode: lighten"></div></div></div><div><div style="background: linear-gradient(#8e44ad, #8e44ad) #000000; background-blend-mode: lighten"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #ffffff; background-blend-mode: lighten"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #808080; background-blend-mode: lighten"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #4f81bd; background-blend-mode: lighten"></div><div style="background: linear-gradient(#8e44ad, #8e44ad) #d68a3c; background-blend-mode: lighten"></div></div><div><div style="background: #8e44ad"></div><div style="background: #ffffff"></div><div style="background: #8e80ad"></div><div style="background: #8e81bd"></div><div style="background: #d68aad"></div></div><div class=hex><div>8e44ad</div><div>ffffff</div><div>8e80ad</div><div>8e81bd</div><div>d68aad</div></div></div>
+    <figcaption>Purple over grey 50%: 142 128 173, <code>#8e80ad</code>; over orange <code>#d68aad</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Channel by channel</h2>
+  <p><q>The backdrop is replaced with the source where the source is lighter; otherwise, it is left unchanged.</q></p>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div><div style="background: #808080"></div></div><div class=over><div style="background: #000000"><div style="background: #808080; mix-blend-mode: lighten"></div></div><div style="background: #ffffff"><div style="background: #808080; mix-blend-mode: lighten"></div></div><div style="background: #808080"><div style="background: #808080; mix-blend-mode: lighten"></div></div><div style="background: #4f81bd"><div style="background: #808080; mix-blend-mode: lighten"></div></div><div style="background: #d68a3c"><div style="background: #808080; mix-blend-mode: lighten"></div></div></div><div><div style="background: linear-gradient(#808080, #808080) #000000; background-blend-mode: lighten"></div><div style="background: linear-gradient(#808080, #808080) #ffffff; background-blend-mode: lighten"></div><div style="background: linear-gradient(#808080, #808080) #808080; background-blend-mode: lighten"></div><div style="background: linear-gradient(#808080, #808080) #4f81bd; background-blend-mode: lighten"></div><div style="background: linear-gradient(#808080, #808080) #d68a3c; background-blend-mode: lighten"></div></div><div><div style="background: #808080"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #8081bd"></div><div style="background: #d68a80"></div></div><div class=hex><div>808080</div><div>ffffff</div><div>808080</div><div>8081bd</div><div>d68a80</div></div></div>
+    <figcaption>Grey 50%: over blue, its red becomes 128 and its green and blue stay, <code>#8081bd</code>; over orange <code>#d68a80</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div><div style="background: #000000"></div></div><div class=over><div style="background: #000000"><div style="background: #000000; mix-blend-mode: lighten"></div></div><div style="background: #ffffff"><div style="background: #000000; mix-blend-mode: lighten"></div></div><div style="background: #808080"><div style="background: #000000; mix-blend-mode: lighten"></div></div><div style="background: #4f81bd"><div style="background: #000000; mix-blend-mode: lighten"></div></div><div style="background: #d68a3c"><div style="background: #000000; mix-blend-mode: lighten"></div></div></div><div><div style="background: linear-gradient(#000000, #000000) #000000; background-blend-mode: lighten"></div><div style="background: linear-gradient(#000000, #000000) #ffffff; background-blend-mode: lighten"></div><div style="background: linear-gradient(#000000, #000000) #808080; background-blend-mode: lighten"></div><div style="background: linear-gradient(#000000, #000000) #4f81bd; background-blend-mode: lighten"></div><div style="background: linear-gradient(#000000, #000000) #d68a3c; background-blend-mode: lighten"></div></div><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div class=hex><div>000000</div><div>ffffff</div><div>808080</div><div>4f81bd</div><div>d68a3c</div></div></div>
+    <figcaption>Black, never lighter: the backdrop, column by column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

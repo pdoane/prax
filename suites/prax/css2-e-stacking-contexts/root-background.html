@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: the root's background</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: the root's background</h1>
+  <p class=pr-lede>Step 1 is for the root stacking context alone. Each figure is a frame whose root element,
+  <code>html</code>, is a 100 by 40 box with a white dashed border, 40px from the frame's left and 30px from its top.
+  </p>
+</header>
+
+<section>
+  <h2>Its color, over the entire canvas</h2>
+  <p><q>If the element is a root element: background color of element over the entire canvas.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 30px 40px; width: 100px; height: 40px; border: 1px dashed white; background: #4f81bd } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>The root's blue fills the whole frame, outside its dashed box as well as inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 30px 40px; width: 100px; height: 40px; border: 1px dashed white; background: #4f81bd } body { margin: 0 } div { position: absolute; z-index: -1; left: 10px; top: 10px; width: 60px; height: 50px; background: #d68a3c }</style><div></div>"></iframe></div>
+    <figcaption>It is the bottom of the root stacking context: an orange box with <code>z-index: -1</code>, 10px from
+    the frame's top left corner, is painted over it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its image, anchored as for the root</h2>
+  <p><q>background image of element, over the entire canvas, anchored at the origin that would be used if it was
+  painted for the root element.</q> The image is a 20px square, orange in its top left quarter. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2
+  §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 30px 40px; width: 100px; height: 40px; border: 1px dashed white; background: #4f81bd url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10' fill='%23d68a3c'/></svg>&quot;) no-repeat } body { margin: 0 }</style>"></iframe></div>
+    <figcaption><code>no-repeat</code>: one orange square at the root's top left padding corner, 41px from the
+    frame's left and 31px from its top, as it would be in the root's own box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 30px 40px; width: 100px; height: 40px; border: 1px dashed white; background: #4f81bd url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='10' height='10' fill='%23d68a3c'/></svg>&quot;) } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>Repeated: the tiles cover the whole frame, outside the root's box too, and one of them starts at that
+    same corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

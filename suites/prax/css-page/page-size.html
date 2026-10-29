@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The size descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 7.1 Page size: the size property</div>
+  <h1>The size descriptor</h1>
+  <p class=pr-lede><q>This property specifies the target size and orientation of the page box's containing block. In the general case, where one page box is rendered onto one page sheet, the 'size' property also indicates the size of the destination page sheet.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-size-prop">CSS Paged Media 3 §7.1</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Lengths</h2>
+  <p><q>If two length values are specified, the first establishes the page box width, and the second the page box height.</q> <q>If only one length value is specified, it sets both the width and height of the page box (i.e., the box is a square).</q> The suite's pages use two lengths in px, as the stills read them.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 200px 120px; margin: 10px } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>size: 200px 120px</code>: a page 200 wide and 120 tall, its page area 180 by 100.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 120px 200px; margin: 10px } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>size: 120px 200px</code>: a portrait page, 120 wide and 200 tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Media names and orientation</h2>
+  <p><q>A page size can be specified using one of the following media names. This is the equivalent of specifying 'size' using length values.</q> <code>A5</code> is <q>148mm wide and 210 mm high</q>, <code>A4</code> <q>210 mm wide and 297 mm high</q>, <code>letter</code> <q>8.5 inches wide and 11 inches high</q>. <q>The &lt;page-size&gt; names can be used in conjunction with 'landscape' or 'portrait' to indicate both size and orientation.</q> <code>size: A4 landscape</code> <q>sets the width of the page box to be 297mm and the height to be 210mm.</q> At such sizes a page would not fit this sheet, so these are not printed here.</p>
+
+</section>
+
+</body>
+</html>

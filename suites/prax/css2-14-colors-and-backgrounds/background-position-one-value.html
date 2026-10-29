@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background position: one value, and keyword order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { height: 100px; background-repeat: no-repeat; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='30'><rect width='50' height='30' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background position: one value, and keyword order</h1>
+  <p class=pr-lede><code>background-position</code> takes <code>[ [ &lt;percentage&gt; | &lt;length&gt; | left | center |
+  right ] [ &lt;percentage&gt; | &lt;length&gt; | top | center | bottom ]? ] | [ [ left | center | right ] || [ top |
+  center | bottom ] ]</code>. The image is a 50 by 30 banner in a box 200 by 100.</p>
+</header>
+
+<section>
+  <h2>One value: the other is center</h2>
+  <p><q>If only one value is specified, the second value is assumed to be 'center'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=v1 class=area style="background-position: left"></div></div>
+    <figcaption><code>left</code>: on the left edge, 35px from the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=v2 class=area style="background-position: 20px"></div></div>
+    <figcaption><code>20px</code> is horizontal: 20px from the left, 35px from the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two keywords, in either order</h2>
+  <p>With keywords alone the grammar is <code>[ left | center | right ] || [ top | center | bottom ]</code>: one of
+  each, in either order. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=v3 class=area style="background-position: bottom right"></div></div>
+    <figcaption><code>bottom right</code>: in the bottom right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=v4 class=area style="background-position: center left"></div></div>
+    <figcaption><code>center left</code>: on the left edge, 35px from the top: <code>center</code> is vertical, as <code>left</code> is horizontal.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

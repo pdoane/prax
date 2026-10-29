@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inert subtrees</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.3 Inert subtrees</div>
+  <h1>Inert subtrees</h1>
+  <p class=pr-lede><q>A node (in particular elements and text nodes) can be inert.</q> The figures make nodes inert with the
+  <code>inert</code> attribute. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees">HTML §6.3</a></span></p>
+</header>
+<section>
+  <h2>Not hit, not focused</h2>
+  <p>When a node is inert, <q>Hit-testing must act as if the 'pointer-events' CSS property were set to 'none'.</q>
+  <q>Inert nodes generally cannot be focused</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees">§6.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div id=stage style="padding: 10px 20px 0">
+        <button class=pr-target id=before>before</button>
+        <div inert style="opacity: 0.5">
+          <button class=pr-target id=inside>inert</button>
+          <div class=pr-target id=box tabindex=0>inert, tabindex=0</div>
+        </div>
+        <button class=pr-target id=after>after</button>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=5></ol>
+    </div>
+    <figcaption>The middle two are in an <code>inert</code> element, drawn faded. Click them: the click goes to the
+    stage under them, logged as <code>target=stage</code>, and nothing is focused. Tab from <code>before</code>: the
+    focus goes straight to <code>after</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

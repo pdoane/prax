@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stroking: where it starts, and paint servers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="across" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="140" y2="0"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <pattern id="stripes" patternUnits="userSpaceOnUse" width="10" height="10"><rect width="5" height="10" fill="#4f81bd" /></pattern>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5 Stroke properties</div>
+  <h1>Stroking: where it starts, and paint servers</h1>
+  <p class=pr-lede><q>all stroking properties which are affected by directionality, such as those having to do with
+  dash patterns, must be rendered such that the stroke operation starts at the same point at which the graphics
+  element starts.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeProperties">SVG 2 §13.5</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Dashes from the start</h2>
+  <p><q>In particular, for ‘path’ elements, the start of the path is the first point of the initial "moveto"
+  command.</q> The strokes are dark blue, 6 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" fill="none" stroke="#2c5a8f" stroke-width="6" stroke-dasharray="30 10" /></svg></div>
+    <figcaption><code>M 20 30 H 140</code>, dashes of 30 with gaps of 10: from x 20 to 50, 60 to 90 and 100 to
+    130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 140 30 H 20" fill="none" stroke="#2c5a8f" stroke-width="6" stroke-dasharray="30 10" /></svg></div>
+    <figcaption><code>M 140 30 H 20</code>, the same line drawn leftwards: from x 140 to 110, 100 to 70 and 60
+    to 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="none" stroke="#2c5a8f" stroke-width="6" stroke-dasharray="31.42 94.25" /></svg></div>
+    <figcaption>A <code>circle</code> of radius 20, one dash a quarter of its length: from 100, 30, where it
+    starts, clockwise to 80, 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A paint server fills the stroke's shape</h2>
+  <p><q>When stroking is performed using a complex paint server, such as a gradient or a pattern, the stroke operation
+  must be identical to the result that would have occurred if the geometric shape defined by the geometry of the
+  current graphics element and its associated stroking properties were converted to an equivalent ‘path’ element and
+  then filled using the given paint server.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 10 L 80 50 L 110 10 L 140 50" fill="none" stroke="url(#across)" stroke-width="10" /></svg></div>
+    <figcaption>A zigzag stroked 10 wide with a gradient in user space from blue at x 20 to orange at 140: its
+    color goes with x alone, the same across the stroke's width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="none" stroke="url(#stripes)" stroke-width="12" /></svg></div>
+    <figcaption>A ring 12 wide stroked with a pattern of upright blue stripes 5 wide every 10 in user space:
+    stripes on the guides, from x 50, 60, 70 and so on.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

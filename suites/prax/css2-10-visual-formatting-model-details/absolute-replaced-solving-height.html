@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: solving for replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { position: absolute; left: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.5 Absolutely positioned, replaced elements</div>
+  <h1>Absolute heights: solving for replaced elements</h1>
+  <p class=pr-lede>Each purple box is an absolutely positioned <code>img</code> of an SVG image 60 by 40, and each stage,
+  200 by 100, is its containing block.</p>
+</header>
+
+<section>
+  <h2>Equal margins, one auto, or none</h2>
+  <p><q>If at this point both 'margin-top' and 'margin-bottom' are still 'auto', solve the equation under the extra
+  constraint that the two margins must get equal values.</q> <q>If at this point there is only one 'auto' left, solve
+  the equation for that value.</q> <q>If at this point the values are over-constrained, ignore the value for 'bottom'
+  and solve for that value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-replaced-height">CSS 2 §10.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><img alt="" style="top: 0; bottom: 0; margin: auto 0" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>top: 0; bottom: 0; margin: auto 0</code>: 30px margins center the image.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><img alt="" style="top: auto; bottom: 10px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>bottom: 10px</code> and <code>top: auto</code>: <code>top</code> is 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><img alt="" style="top: 20px; bottom: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>top: 20px; bottom: 20px</code>: over-constrained, <code>bottom</code> is ignored. The image is 40px tall at 20, not stretched.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

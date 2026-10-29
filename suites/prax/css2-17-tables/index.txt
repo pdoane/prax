@@ -1,0 +1,83 @@
+00-supports-1.html
+CSS2/#tables-intro 17.1 Introduction to tables
+    simple-table.html
+CSS2/#table-display 17.2 The CSS table model
+    display-table.html
+    row-groups.html
+    columns-captions.html
+    replaced-cells.html
+    html-defaults.html
+CSS2/#anonymous-boxes 17.2.1 Anonymous table objects
+    anonymous-objects.html
+    remove-irrelevant.html
+    child-wrappers.html
+    missing-parents.html
+    examples.html
+CSS2/#columns 17.3 Columns
+    column-borders-backgrounds.html
+    column-width-visibility.html
+    column-example.html
+CSS2/#model 17.4 Tables in the visual formatting model
+    wrapper-box.html
+    wrapper-properties.html
+    table-box-properties.html
+    inline-table.html
+CSS2/#caption-position 17.4.1 Caption position and alignment
+    caption-side.html
+CSS2/#table-layout 17.5 Visual layout of table contents
+    grid.html
+    spanning.html
+    overlapping-cells.html
+    grid-edges.html
+    floated-cells.html
+CSS2/#table-layers 17.5.1 Table layers and transparency
+    layers.html
+    layer-areas.html
+    missing-and-empty-cells.html
+    layers-example.html
+CSS2/#width-layout 17.5.2 Table width algorithms: the table-layout property
+    table-layout.html
+CSS2/#fixed-table-layout 17.5.2.1 Fixed table layout
+    fixed-columns.html
+    fixed-table-width.html
+    auto-width.html
+CSS2/#auto-table-layout 17.5.2.2 Automatic table layout
+    auto-columns.html
+    specified-widths.html
+    auto-table-width.html
+    column-groups.html
+    rows-and-columns.html
+CSS2/#height-layout 17.5.3 Table height algorithms
+    table-height.html
+    minimum-heights.html
+    vertical-align.html
+    baselines.html
+    alignment-order.html
+CSS2/#column-alignment 17.5.4 Horizontal alignment in a column
+    text-align.html
+CSS2/#dynamic-effects 17.5.5 Dynamic row and column effects
+    visibility-collapse.html
+CSS2/#borders 17.6 Borders
+    border-collapse.html
+CSS2/#separated-borders 17.6.1 The separated borders model
+    border-spacing.html
+    separated-model.html
+    separated-example.html
+CSS2/#empty-cells 17.6.1.1 Borders and Backgrounds around empty cells: the empty-cells property
+    empty-cells.html
+    hidden-cells.html
+    what-is-empty.html
+CSS2/#collapsing-borders 17.6.2 The collapsing border model
+    collapsing.html
+    table-border-width.html
+    top-and-bottom.html
+CSS2/#border-conflict-resolution 17.6.2.1 Border conflict resolution
+    hidden-none.html
+    width-style.html
+    style-order.html
+    element-precedence.html
+    left-and-top.html
+    example.html
+    hidden-example.html
+CSS2/#table-border-styles 17.6.3 Border styles
+    border-styles.html

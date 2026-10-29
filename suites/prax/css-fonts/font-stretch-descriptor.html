@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font-stretch descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Widths"; src: url(../../../third_party/fonts/Tinos.ttf); font-stretch: condensed; }
+  @font-face { font-family: "Widths"; src: url(../../../third_party/fonts/Cousine.ttf); font-stretch: normal; }
+  @font-face { font-family: "Widths"; src: url(../../../third_party/fonts/AD.woff); font-stretch: expanded; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.4.1 Font width: the @font-face 'font-stretch' legacy name alias</div>
+  <h1>The font-stretch descriptor</h1>
+  <p class=pr-lede><q>For historical reasons, a 'font-stretch' descriptor exists which is a legacy name alias and
+  functions in the identical way to the 'font-width' descriptor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-stretch-desc">CSS Fonts 4 §4.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Faces declared by width</h2>
+  <p>Family "Widths" declares Tinos condensed, Cousine normal and a handwriting face expanded, with 'font-stretch'.
+  'font-width' chooses among them.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: condensed">Handgloves</div>
+    <figcaption><code>condensed</code>: Tinos.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths">Handgloves</div>
+    <figcaption><code>normal</code>: Cousine.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: expanded">Handgloves</div>
+    <figcaption><code>expanded</code>: the handwriting face.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

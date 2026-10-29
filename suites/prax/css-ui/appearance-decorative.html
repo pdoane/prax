@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>appearance: none removes decorations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > * { display: block; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2.2 Effects of appearance on Decorative Aspects of Elements</div>
+  <h1>appearance: none removes decorations</h1>
+  <p class=pr-lede><q>All decorative visual aspects of a widget which are not caused by a CSS style rule must be
+  suppressed when the appearance is changed from native to primitive using appearance, even if the UA's internal
+  representation for this element was composed of multiple elements or pseudo-elements combined together.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-decorative">CSS Basic User Interface 4 §7.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>The select's arrow, and a search field's decorations</h2>
+  <p><q>the HTML select element is often rendered with an arrow on the right side indicating that the list will be
+  expanded if the element is clicked. If the computed value of appearance on a select element is none, this must
+  disappear.</q></p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><select><option>Select</select><input type=search value=Search size=10></div>
+    <figcaption><code>auto</code>: a <code>select</code> with its arrow; a search field, with its platform's
+    decorations.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium"><select style="appearance: none"><option>Select</select><input type=search value=Search size=10 style="appearance: none"></div>
+    <figcaption><code>none</code>: no arrow, just "Select" in a box; the search field a plain box with its
+    text. Safari keeps the search field's clear button, which operates it rather than decorates it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Still recognizable</h2>
+  <p><q>UAs should include in their user agent stylesheet style rules to give widgets a recognizable shape when
+  appearance is none.</q></p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><button style="appearance: none">Button</button><input value=Text size=10 style="appearance: none"></div>
+    <figcaption>A button and a text field with <code>none</code>: each still a bordered box round its
+    text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

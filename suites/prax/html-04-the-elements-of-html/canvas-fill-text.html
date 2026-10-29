@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drawing text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.12 Drawing text to the bitmap</div>
+  <h1>Drawing text</h1>
+  <p class=pr-lede><q>The fillText(text, x, y, maxWidth) and strokeText(text, x, y, maxWidth) methods render the given
+  text at the given (x, y) coordinates ensuring that the text isn't wider than maxWidth if specified, using the current
+  font, textAlign, and textBaseline values.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-text-to-the-bitmap">HTML §4.12.5.1.12</a></span>
+  The font is PR Noto Sans; red lines mark the x and y given.</p>
+</header>
+<section>
+  <h2>Fill, stroke, and a maximum width</h2>
+  <p><q>For strokeText(), the reverse holds</q>. Text wider than maxWidth takes <q>a more condensed font</q> <q>or a
+  smaller font</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=fillstroke></canvas></div>
+    <figcaption>36px: "Fill" filled blue on the line at y 40, "Stroke" outlined in orange on the line at y 85.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=maxwidth></canvas></div>
+    <figcaption>"narrow it" in 24px from x 10: as it is, about 100 wide; with maxWidth 60, narrowed or made smaller to
+    end by x 70.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>White space, and the measured box</h2>
+  <p><q>Replace all ASCII whitespace in text with U+0020 SPACE characters.</q> actualBoundingBoxAscent: <q>The distance
+  from the horizontal line indicated by the textBaseline attribute to the top of the bounding rectangle</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=space></canvas></div>
+    <figcaption>"one⇥two⏎three", with a tab and a line feed: one line, "one two three", the tab and the line feed each
+    a space.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=box></canvas></div>
+    <figcaption>"Hgy" at 48px, and the rectangle its four actual bounding box values give, in blue: tight round the
+    ink.</figcaption>
+  </figure>
+</section>
+<script>
+  function guide(context, x0, y0, x1, y1) {
+    context.save();
+    context.strokeStyle = "#c0392b";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x0, y0);
+    context.lineTo(x1, y1);
+    context.stroke();
+    context.restore();
+  }
+  const draw = {
+    fillstroke(context) {
+      context.font = "36px 'PR Noto Sans'";
+      context.fillStyle = "#4f81bd";
+      context.fillText("Fill", 10, 40);
+      context.strokeStyle = "#d68a3c";
+      context.lineWidth = 1.5;
+      context.strokeText("Stroke", 10, 85);
+      guide(context, 0, 40.5, 200, 40.5);
+      guide(context, 0, 85.5, 200, 85.5);
+    },
+    maxwidth(context) {
+      context.font = "24px 'PR Noto Sans'";
+      context.fillStyle = "#4f81bd";
+      context.fillText("narrow it", 10, 35);
+      context.fillText("narrow it", 10, 80, 60);
+      guide(context, 10.5, 0, 10.5, 100);
+      guide(context, 70.5, 50, 70.5, 100);
+    },
+    space(context) {
+      context.font = "20px 'PR Noto Sans'";
+      context.fillStyle = "#4f81bd";
+      context.fillText("one\ttwo\nthree", 10, 55);
+    },
+    box(context) {
+      context.font = "48px 'PR Noto Sans'";
+      context.fillStyle = "#1f2430";
+      const x = 40, y = 60;
+      context.fillText("Hgy", x, y);
+      const m = context.measureText("Hgy");
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 1;
+      context.strokeRect(x - m.actualBoundingBoxLeft, y - m.actualBoundingBoxAscent,
+                         m.actualBoundingBoxLeft + m.actualBoundingBoxRight,
+                         m.actualBoundingBoxAscent + m.actualBoundingBoxDescent);
+      guide(context, 0, y + 0.5, 200, y + 0.5);
+      guide(context, x + 0.5, 0, x + 0.5, 100);
+    },
+  };
+  document.fonts.load("20px 'PR Noto Sans'").then(() => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

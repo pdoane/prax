@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous block boxes: percentages and offsets</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.1.1 Anonymous block boxes</div>
+  <h1>Anonymous block boxes: percentages and offsets</h1>
+  <p class=pr-lede>Inline content beside a block is wrapped in an anonymous block box, which stands between the content and
+  the element around it.</p>
+</header>
+
+<section>
+  <h2>Percentages skip anonymous boxes</h2>
+  <p><q>Anonymous block boxes are ignored when resolving percentage values that would refer to it: the closest
+  non-anonymous ancestor box is used instead.</q> Each dashed box is 100px tall, and holds a line of text and a block.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame style="height: 100px">text <span class="pr-b pr-fit" style="display: inline-block; height: 50%; vertical-align: top">50%</span><div class=pr-a>a block</div></div></div>
+    <figcaption>The orange inline-block, in the anonymous block of the first line, has <code>height: 50%</code> of the
+    100px dashed box: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame style="height: 100px"><span class=pr-chip style="padding-left: 20px">text<div class="pr-a pr-fit" style="width: 50%; height: 50%">50%</div></span></div></div>
+    <figcaption>A block in a span with 20px of left padding, <code>width: 50%; height: 50%</code>: of the dashed
+    box, its containing block, not the span. It is 99 by 50, at the dashed box's left edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Offsets carry the block</h2>
+  <p><q>When such an inline box is affected by relative positioning, any resulting translation also affects the
+  block-level box contained in the inline box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 100px"><span class=pr-chip>Before. <span class=pr-a style="display: block">a block</span> After.</span></div>
+    <figcaption>An inline that holds a block, in place.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 100px"><span class=pr-chip style="position: relative; top: 20px; left: 20px">Before. <span class=pr-a style="display: block">a block</span> After.</span></div>
+    <figcaption>With <code>position: relative; top: 20px; left: 20px</code>: the text and the block move 20px down
+    and right together.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

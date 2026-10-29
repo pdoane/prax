@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cell offsets, box-sizing and collapsed borders</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0 10px; vertical-align: top; background: #b9cde6; background-clip: content-box; box-shadow: inset 0 0 0 1px #2c5a8f; }
+  td + td { background: #f6d7b4; background-clip: border-box; box-shadow: none; padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.2 Computing Cell Measures, offsets</div>
+  <h1>Cell offsets, box-sizing and collapsed borders</h1>
+  <p class=pr-lede>The <dfn>cell intrinsic offsets</dfn> are the cell's horizontal padding and border: <q>In
+  separated-borders mode: the computed horizontal padding and border of the table-cell</q>; <q>In collapsed-borders
+  mode: the computed horizontal padding of the cell and, for border values, the used border-width values of the cell
+  (half the winning border-width)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></span>
+  Each blue cell has 10px of padding on each side, its content blue and its box outlined; an orange cell "dd"
+  follows.</p>
+</header>
+
+<section>
+  <h2>box-sizing on a cell, not on a column</h2>
+  <p>For cells, the widths are their computed values <q>from which the cell's border-{left|right}-width and/or
+  padding-{left|right} have eventually been deduced, depending on the value of 'box-sizing'</q>; for columns, <q>their
+  computed value, irrespective of the value of 'box-sizing' applied on the element.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 60px">aa</td><td>dd</td></tr></table></div>
+    <figcaption>Blue <code>width: 60px</code>, <code>content-box</code>: 60px of content and 20px of padding, 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 60px; box-sizing: border-box">aa</td><td>dd</td></tr></table></div>
+    <figcaption><code>border-box</code>: the padding comes out of the 60px; 40px of content.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><col style="width: 60px; box-sizing: content-box"><tr><td>aa</td><td>dd</td></tr></table></div>
+    <figcaption>No cell width; a <code>col</code> of <code>width: 60px</code>, <code>content-box</code>: the column is
+    60px, padding included; 40px of content.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Half the winning border</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="border-collapse: collapse; width: 10px"><tr><td style="border: 20px solid #8a93a1; padding: 0; box-shadow: none">aa</td><td style="border: 20px solid #8a93a1">dd</td></tr></table></div>
+    <figcaption>Collapsed, 20px grey borders, no padding: each cell counts half of each border, 10px a side, so the
+    20px between the cells is shared: three 20px borders and two 20px contents, 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

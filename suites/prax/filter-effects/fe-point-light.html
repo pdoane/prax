@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>fePointLight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <filter id="above" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><fePointLight x="40" y="20" z="40"/></feDiffuseLighting></filter>
+  <filter id="high" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><fePointLight x="40" y="20" z="160"/></feDiffuseLighting></filter>
+  <filter id="flat" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><fePointLight x="40" y="20"/></feDiffuseLighting></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 11.3 Light source fePointLight</div>
+  <h1>fePointLight</h1>
+  <p class=pr-lede><q>X location for the light source in the coordinate system established by attribute primitiveUnits
+  on the filter element.</q> Its brightness on a surface follows <q>L<sub>x</sub> = Light<sub>x</sub> - x</q>,
+  <q>L<sub>y</sub> = Light<sub>y</sub> - y</q>, <q>L<sub>z</sub> = Light<sub>z</sub> - Z(x,y)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#fePointLightElement">Filter Effects 1 §11.3</a></span>
+  Each stage is an SVG 200 by 40 filled by one flat, opaque rectangle; its filter is an feDiffuseLighting of a white
+  light, in sRGB, so a point's brightness is L<sub>z</sub> over its distance from the light. Swatches below mark x 40,
+  80 and 120.</p>
+</header>
+
+<section>
+  <h2>Brightest under the light</h2>
+  <figure>
+    <div class=pr-stage><svg width="200" height="60"><rect width="200" height="40" filter="url(#above)"/><rect x="30" y="44" width="20" height="14" fill="#ffffff" stroke="#6b7381"/><rect x="70" y="44" width="20" height="14" fill="#b4b4b4"/><rect x="110" y="44" width="20" height="14" fill="#727272"/></svg></div>
+    <figcaption>At (40, 20), 40 up: white under it; at x 80, 40 away, 40 / √3200, 0.71, <code>#b4b4b4</code>; at x
+    120, 0.45, <code>#727272</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width="200" height="60"><rect width="200" height="40" filter="url(#high)"/><rect x="30" y="44" width="20" height="14" fill="#ffffff" stroke="#6b7381"/><rect x="70" y="44" width="20" height="14" fill="#f7f7f7" stroke="#6b7381"/><rect x="110" y="44" width="20" height="14" fill="#e4e4e4"/></svg></div>
+    <figcaption>160 up: nearly even, 0.97 at x 80, <code>#f7f7f7</code>, and 0.89 at x 120,
+    <code>#e4e4e4</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the plane</h2>
+  <figure>
+    <div class=pr-stage><svg width="200" height="40"><rect width="200" height="40" filter="url(#flat)"/></svg></div>
+    <figcaption>No <code>z</code>: <q>The initial value for z is 0</q>, level with the surface, so L<sub>z</sub> is
+    0 and every point is black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

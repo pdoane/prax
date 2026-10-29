@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-image property: sizing the image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .grad { list-style-image: linear-gradient(#4f81bd, #d68a3c); font-size: 20px; line-height: 30px; }
+  .grad30 { list-style-image: radial-gradient(#d68a3c 60%, #4f81bd 61%); font-size: 30px; line-height: 40px; }
+  .grad30 ol { padding-left: 50px; }
+  .inside li { list-style-position: inside; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.3 Image Markers: the list-style-image property</div>
+  <h1>The list-style-image property: sizing the image</h1>
+  <p class=pr-lede><q>The marker image is sized using the default sizing algorithm [css-images-3] with no specified size
+  and a default object size of 1em square.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#image-markers">CSS Lists and Counters 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Gradients: 1em square</h2>
+  <p>A gradient has no natural size or ratio, so the image is the default object size. Each stage sets the font size.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text grad"><ol><li>one<li>two</ol></div>
+    <figcaption>At 20px: a 20 by 20 gradient square, blue to orange downwards, beside each item. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw about
+    9 by 9, half the font's ascent; <span class=pr-flag>Firefox</span> 8 by 8, 0.4em.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text grad30"><ol><li>one</ol></div>
+    <figcaption>A radial gradient at 30px: a 30 by 30 square, an orange disc on blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw about 15 by 15;
+    <span class=pr-flag>Firefox</span> 12 by 12.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text grad inside"><ol><li>one</ol></div>
+    <figcaption>Inside: the 20 by 20 square on the line, then a space and "one". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw about 9 by 9,
+    <span class=pr-flag>Firefox</span> 8 by 8.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>filter: a group, a stacking context, a containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .holder { position: relative; width: 80px; height: 40px; margin: 0 10px; background: #b9cde6; }
+  .holder > .abs { position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; background: #d68a3c; }
+  .pair { width: 80px; height: 40px; margin: 0 10px; }
+  .pair div { position: absolute; width: 40px; height: 30px; }
+  .pair .one { background: #4f81bd; }
+  .pair .two { background: #d68a3c; margin: 10px 0 0 30px; }
+  .ctx { width: 80px; height: 40px; margin: 0 10px; background: #b9cde6; }
+  .ctx .under { position: relative; z-index: -1; width: 40px; height: 30px; margin: 10px 0 0 20px; background: #4f81bd; }
+  .static { width: 80px; height: 40px; margin: 0 10px; background: #b9cde6; }
+  .static .abs { position: absolute; right: 0; top: 0; width: 20px; height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 5 Graphic filters: the filter property</div>
+  <h1>filter: a group, a stacking context, a containing block</h1>
+  <p class=pr-lede><q>A computed value of other than none results in the creation of a stacking context the same way
+  that CSS opacity does. All the elements descendants are rendered together as a group with the filter effect applied
+  to the group as a whole.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">Filter Effects 1 §5</a></span></p>
+</header>
+
+<section>
+  <h2>A group filtered as a whole, and a stacking context</h2>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=pair style="filter: opacity(0.5)"><div class=one></div><div class=two></div></div></div>
+    <figcaption>Blue, then orange over it, <code>opacity(0.5)</code> on their parent: both pale, and no blue through the orange where they
+    overlap.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=pair><div class=one style="filter: opacity(0.5)"></div><div class=two style="filter: opacity(0.5)"></div></div></div>
+    <figcaption>On each box instead: the blue shows through the orange where they overlap.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=ctx style="filter: grayscale(0)"><div class=under></div></div></div>
+    <figcaption>A child at <code>z-index: -1</code> in a parent with <code>grayscale(0)</code>: the blue child over
+    the parent's light blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=ctx><div class=under></div></div></div>
+    <figcaption>Without the filter: the child behind the parent's background, hidden.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A containing block</h2>
+  <p><q>A value other than none for the filter property results in the creation of a containing block for absolute and
+  fixed positioned descendants</q>.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class=static style="filter: grayscale(0)"><div class=abs style="filter: none"></div></div></div>
+    <figcaption>An orange square, <code>position: absolute; right: 0</code>, in an unpositioned parent with a filter:
+    at the parent's top right, x 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class=static style="filter: grayscale(0)"><div class=abs style="position: fixed"></div></div></div>
+    <figcaption><code>position: fixed</code>: the same, the parent its containing block, not the viewport.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

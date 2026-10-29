@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distance along a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.6 Distance along a path</div>
+  <h1>Distance along a path</h1>
+  <p class=pr-lede><q>Various operations, including text on a path and motion animation and various stroke
+  operations, require that the user agent compute the distance along the geometry of a graphics element, such as a
+  ‘path’.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#DistanceAlongAPath">SVG 2 §9.6</a></span>
+  Each stage is an SVG 160 by 60 with a path stroked dark blue, 6 wide, and dashed; the dashes start again at each
+  subpath <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeShape">§13.5.7</a></span>.</p>
+</header>
+
+<section>
+  <h2>Only drawing commands have length</h2>
+  <p><q>A "moveto" operation within a ‘path’ element is defined to have zero length. Only the various "lineto",
+  "curveto" and "arcto" commands contribute to path length calculations.</q> The total length is what
+  <code>pathLength</code> is set against, so each dash shows it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 H 80 M 80 40 H 140" pathLength="12" stroke-dasharray="3 3" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 20 H 80 M 80 40 H 140</code>, <code>pathLength="12"</code>, dashes of 3: two lines, 120
+    in all, so each dash 30: from 20 to 50 on y 20, and from 80 to 110 on y 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 50 M 110 30 H 140" pathLength="6" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 30 H 50 M 110 30 H 140</code>, <code>pathLength="6"</code>, dashes of 1: 60 in all,
+    each dash 10, two on each line, at 20, 40, 110 and 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 A 40 40 0 0 1 60 10" pathLength="4" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 50 A 40 40 0 0 1 60 10</code>, <code>pathLength="4"</code>, dashes of 1: the quarter
+    circle in four equal arcs, the first and third dashed.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

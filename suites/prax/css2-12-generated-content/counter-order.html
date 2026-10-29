@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters: order of reset, increment and use</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .show::before { content: counter(n) " "; font-weight: 600; color: #2c5a8f; }
+  .show2::before { content: counter(section) "/" counter(imagenum) " "; font-weight: 600; color: #2c5a8f; }
+  .s1 { counter-reset: n 5; }
+  .self { counter-increment: n; }
+  .reset-inc { counter-reset: n 10; counter-increment: n; }
+  .twice-reset { counter-reset: n 2 n; }
+  .twice-inc { counter-reset: n; counter-increment: n n 2; }
+  .start { counter-reset: section 4 imagenum 4; }
+  .casc { counter-reset: section -1; }
+  .casc { counter-reset: imagenum 99; }
+  .together { counter-reset: section -1 imagenum 99; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4 Automatic counters and numbering</div>
+  <h1>Counters: order of reset, increment and use</h1>
+  <p class=pr-lede>Each figure is one element whose <code>:before</code> shows its counters in blue.</p>
+</header>
+
+<section>
+  <h2>Reset, then increment, then use</h2>
+  <p><q>If an element increments/resets a counter and also uses it (in the 'content' property of its :before or :after
+  pseudo-element), the counter is used after being incremented/reset.</q> <q>If an element both resets and increments
+  a counter, the counter is reset first and then incremented.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text s1"><div class="show self">text</div></div>
+    <figcaption>The stage resets <code>n</code> to 5; the element increments it and shows 6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="show reset-inc">text</div></div>
+    <figcaption><code>counter-reset: n 10; counter-increment: n</code> on one element: 11.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A name given twice</h2>
+  <p><q>If the same counter is specified more than once in the value of the 'counter-reset' and 'counter-increment'
+  properties, each reset/increment of the counter is processed in the order specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2
+  §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="show twice-reset">text</div></div>
+    <figcaption><code>counter-reset: section 2 section</code> <q>will reset the 'section' counter to 0</q>: here with
+    <code>n</code>, 0.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="show twice-inc">text</div></div>
+    <figcaption><code>counter-increment: chapter chapter 2</code> <q>will increment the 'chapter' counter by 3</q>:
+    from 0, 3.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cascade</h2>
+  <p><q>The 'counter-reset' property follows the cascading rules.</q> The specification's two rules <q>will only reset
+  'imagenum'. To reset both counters, they have to be specified together</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text start"><div class="show2 casc">text</div></div>
+    <figcaption>Both start at 4 on the stage. <code>section -1</code> then <code>imagenum 99</code> in two rules:
+    "4/99".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text start"><div class="show2 together">text</div></div>
+    <figcaption><code>counter-reset: section -1 imagenum 99</code>: "-1/99".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

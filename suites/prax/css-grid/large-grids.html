@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Limiting large grids</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { display: grid; grid-auto-columns: 0; column-gap: 1px; overflow: hidden; }
+  .s > div { height: 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 5.4 Limiting Large Grids</div>
+  <h1>Limiting large grids</h1>
+  <p class=pr-lede><q>Since memory is limited, UAs may clamp the possible size of the implicit grid to be within a
+  UA-defined limit (which should accommodate lines in the range [-10000, 10000]), dropping all lines outside that
+  limit. If a grid item is placed outside this limit, its grid area must be clamped to within this limited grid.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overlarge-grids">CSS Grid Layout 2 §5.4</a></span></p>
+</header>
+
+<section>
+  <h2>Counting the tracks an item spans</h2>
+  <p>Implicit columns 0px wide with 1px gaps: an item spanning <var>n</var> columns is <var>n</var> − 1 pixels
+  wide, its <code>offsetWidth</code> read back.</p>
+  <figure>
+    <div class="pr-stage s"><div id=a style="grid-column: 1 / 5001"></div></div>
+    <figcaption><code>grid-column: 1 / 5001</code>, within the range: 5000 columns, 4999px; here <code
+    class=pr-computed data-of=a data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div id=b style="grid-column: 1 / 10000"></div></div>
+    <figcaption><code>grid-column: 1 / 10000</code>, the end of the range: 9999 columns, 9998px; here <code
+    class=pr-computed data-of=b data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div id=c style="grid-column: 1 / 5000000"></div></div>
+    <figcaption><code>grid-column: 1 / 5000000</code>: <q>If the grid area would span outside the limited grid, its
+    span is clamped to the last line of the limited grid.</q> At least 9998px, and as many as the UA's limit allows;
+    here <code class=pr-computed data-of=c data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Placed completely outside</h2>
+  <p><q>If the grid area would be placed completely outside the limited grid, its span must be truncated to 1 and the
+  area repositioned into the last grid track on that side of the grid.</q> Here the columns are 1px wide with no gap,
+  so an item's <code>offsetLeft</code> counts the columns before it.</p>
+  <figure>
+    <div class="pr-stage s" style="grid-auto-columns: 1px; column-gap: 0; position: relative"><div id=d style="grid-column: 50000000 / span 5"></div></div>
+    <figcaption><code>grid-column: 50000000 / span 5</code>: in the last column, 1px wide, here <code
+    class=pr-computed data-of=d data-dom=offsetWidth></code>px, its left edge past every column before the last, here
+    <code class=pr-computed data-of=d data-dom=offsetLeft></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

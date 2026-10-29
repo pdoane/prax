@@ -1,0 +1,141 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-values-4/#intro 1 Introduction: no page; it introduces the module
+# css-values-4/#placement 1.1 Module Interactions: no page; it says what the module replaces and extends
+# css-values-4/#value-defs 2 Value Definition Syntax: no page; parsing, not layout or paint
+# css-values-4/#component-types 2.1 Component Value Types: no page; parsing, not layout or paint
+# css-values-4/#component-combinators 2.2 Component Value Combinators: no page; parsing, not layout or paint
+# css-values-4/#component-multipliers 2.3 Component Value Multipliers: no page; parsing, not layout or paint
+# css-values-4/#combinator-multiplier-patterns 2.4 Combinator and Multiplier Patterns: no page; parsing, not layout or paint
+# css-values-4/#component-whitespace 2.5 Component Values and White Space: no page; parsing, not layout or paint
+# css-values-4/#component-functions 2.6 Functional Notation Definitions: no page; parsing, not layout or paint
+# css-values-4/#value-examples 2.7 Property Value Examples: no page; parsing, not layout or paint
+# css-values-4/#production-blocks 2.8 Non-Terminal Definitions and Grammar Production Blocks: no page; parsing, not layout or paint
+css-values-4/#combining-values 3 Combining Values: Interpolation, Addition, and Accumulation
+    interpolation.html
+css-values-4/#combining-range 3.1 Range Checking
+    interpolation-range.html
+# css-values-4/#textual-values 4 Textual Data Types: no page; parsing, not layout or paint
+# css-values-4/#keywords 4.1 Pre-defined Keywords: no page; parsing, not layout or paint
+# css-values-4/#common-keywords 4.1.1 CSS-wide keywords: initial, inherit and unset: no page; parsing, not layout or paint (css-cascade defines what they do)
+# css-values-4/#custom-idents 4.2 Unprefixed Author-defined Identifiers: the <custom-ident> type: no page; parsing, not layout or paint
+# css-values-4/#dashed-idents 4.3 Prefixed Author-defined Identifiers: the <dashed-ident> type: no page; parsing, not layout or paint
+# css-values-4/#strings 4.4 Quoted Strings: the <string> type: no page; parsing, not layout or paint
+# css-values-4/#urls 4.5 Resource Locators: the <url> type: no page; parsing, not layout or paint; 4.5.1 and 4.5.1.1 show what a URL loads
+css-values-4/#relative-urls 4.5.1 Relative URLs
+    relative-urls.html
+css-values-4/#local-urls 4.5.1.1 Fragment URLs
+    fragment-urls.html
+# css-values-4/#url-empty 4.5.2 Empty URLs: no page; an empty URL loads nothing, and draws as any URL that fails to load does
+# css-values-4/#url-modifiers 4.5.3 URL Modifiers: no page; it defines none
+# css-values-4/#url-processing 4.5.4 URL Processing Model: no page; it fetches, and 4.5.1 shows what the fetch resolves against
+css-values-4/#numeric-types 5 Numeric Data Types
+    numeric-range.html
+# css-values-4/#numeric-ranges 5.1 Range Restrictions and Range Definition Notation: no page; it says which values parse, and 9.1 shows a function's value out of range, drawn
+css-values-4/#integers 5.2 Integers: the <integer> type
+    integers.html
+css-values-4/#combine-integers 5.2.1 Computation and Combination of <integer>
+    integer-interpolation.html
+# css-values-4/#numbers 5.3 Real Numbers: the <number> type: no page; parsing, not layout or paint
+# css-values-4/#combine-numbers 5.3.1 Computation and Combination of <number>: no page; 3 shows a number interpolated and added
+# css-values-4/#dimensions 5.4 Numbers with Units: dimension values: no page; parsing, not layout or paint
+# css-values-4/#compat 5.4.1 Compatible Units: no page; serialization, not layout or paint
+# css-values-4/#combine-dimensions 5.4.2 Combination of Dimensions: no page; 3 shows lengths interpolated and added
+css-values-4/#percentages 5.5 Percentages: the <percentage> type
+    percentages.html
+css-values-4/#combine-percentages 5.5.1 Computation and Combination of <percentage>
+    percentage-inheritance.html
+css-values-4/#mixed-percentages 5.6 Mixing Percentages and Dimensions
+    length-percentage.html
+# css-values-4/#combine-mixed 5.6.1 Computation and Combination of Percentage and Dimension Mixes: no page; 3 shows a length and a percentage interpolated, and 10.11 a mix inherited
+css-values-4/#ratios 5.7 Ratios: the <ratio> type
+    ratios.html
+css-values-4/#combine-ratio 5.7.1 Combination of <ratio>
+    ratio-interpolation.html
+css-values-4/#lengths 6 Distance Units: the <length> type
+    line-width-snapping.html
+css-values-4/#relative-lengths 6.1 Relative Lengths
+    relative-lengths.html
+css-values-4/#font-relative-lengths 6.1.1 Font-relative Lengths: the em, rem, ex, rex, cap, rcap, ch, rch, ic, ric, lh, rlh units
+    em.html
+    ex-cap.html
+    ch-ic.html
+    lh.html
+    root-font-units.html
+    font-affecting.html
+css-values-4/#viewport-relative-lengths 6.1.2 Viewport-percentage Lengths: the *vw, *vh, *vi, *vb, *vmin, *vmax units
+    viewport-units.html
+css-values-4/#viewport-variants 6.1.2.1 The Large, Small, and Dynamic Viewport Sizes
+    viewport-sizes.html
+css-values-4/#viewport-relative-units 6.1.2.2 The Various Viewport-relative Units
+    viewport-axes.html
+css-values-4/#absolute-lengths 6.2 Absolute Lengths: the cm, mm, Q, in, pt, pc, px units
+    absolute-units.html
+# css-values-4/#other-units 7 Other Quantities: no page; it introduces the subsections
+css-values-4/#angles 7.1 Angle Units: the <angle> type and deg, grad, rad, turn units
+    angles.html
+# css-values-4/#time 7.2 Duration Units: the <time> type and s, ms units: no page; a duration is seen over time, not in a still
+# css-values-4/#frequency 7.3 Frequency Units: the <frequency> type and Hz, kHz units: no page; no property that draws reads one
+# css-values-4/#resolution 7.4 Resolution Units: the <resolution> type and dpi, dpcm, dppx units: no page; an image's resolution is css-images' (image-set(), image-resolution)
+# css-values-4/#defined-elsewhere 8 Data Types Defined Elsewhere: no page; it introduces the subsections
+# css-values-4/#colors 8.1 Colors: the <color> type: no page; css-color defines it
+css-values-4/#combine-colors 8.1.1 Combination of <color>
+    color-interpolation.html
+# css-values-4/#images 8.2 Images: the <image> type: no page; css-images defines it
+# css-values-4/#combine-images 8.2.1 Combination of <image>: no page; css-images defines it
+css-values-4/#position 8.3 2D Positioning: the <position> type
+    position.html
+# css-values-4/#position-parsing 8.3.1 Parsing <position>: no page; parsing, not layout or paint
+# css-values-4/#position-serialization 8.3.2 Serializing <position>: no page; serialization, not layout or paint
+css-values-4/#combine-positions 8.3.3 Combination of <position>
+    position-interpolation.html
+# css-values-4/#functional-notations 9 Functional Notations: no page; parsing, not layout or paint
+css-values-4/#functional-numeric 9.1 Numeric Functions
+    numeric-functions.html
+# css-values-4/#functional-serialization 9.2 Serialization of Functional Notations: no page; serialization, not layout or paint
+# css-values-4/#math 10 Mathematical Expressions: no page; it lists the types a math function can be, which the subsections show
+css-values-4/#calc-func 10.1 Basic Arithmetic: calc()
+    calc.html
+css-values-4/#comp-func 10.2 Comparison Functions: min(), max(), and clamp()
+    min-max-clamp.html
+css-values-4/#round-func 10.3 Stepped Value Functions: round(), mod(), and rem()
+    round-mod-rem.html
+css-values-4/#round-infinities 10.3.1 Argument Ranges
+    round-ranges.html
+css-values-4/#trig-funcs 10.4 Trigonometric Functions: sin(), cos(), tan(), asin(), acos(), atan(), and atan2()
+    trig.html
+css-values-4/#trig-infinities 10.4.1 Argument Ranges
+    trig-ranges.html
+css-values-4/#exponent-funcs 10.5 Exponential Functions: pow(), sqrt(), hypot(), log(), exp()
+    exponential.html
+css-values-4/#exponent-infinities 10.5.1 Argument Ranges
+    exponential-ranges.html
+css-values-4/#sign-funcs 10.6 Sign-Related Functions: abs(), sign()
+    abs-sign.html
+# css-values-4/#calc-keywords 10.7 Numeric Keywords: no page; it introduces the subsections
+css-values-4/#calc-constants 10.7.1 Numeric Constants: e, pi
+    e-pi.html
+css-values-4/#calc-error-constants 10.7.2 Degenerate Numeric Constants: infinity, -infinity, NaN
+    infinity-nan.html
+# css-values-4/#calc-variables 10.7.3 Numeric Variables: no page; other specifications define them, as css-color-5 does a relative color's channels
+# css-values-4/#calc-syntax 10.8 Syntax: no page; parsing, not layout or paint
+css-values-4/#calc-type-checking 10.9 Type Checking
+    unit-algebra.html
+css-values-4/#calc-context 10.9.1 Calculation Contexts
+    calculation-contexts.html
+css-values-4/#calc-ieee 10.9.2 Infinities, NaN, and Signed Zero
+    signed-zero.html
+# css-values-4/#calc-internal 10.10 Internal Representation: no page; it says how a function is held, which only serialization shows
+# css-values-4/#calc-simplification 10.10.1 Simplification: no page; it says how a function is held, which only serialization shows
+css-values-4/#calc-computed-value 10.11 Computed Value
+    calc-computed.html
+css-values-4/#calc-range 10.12 Range Checking
+    calc-range.html
+# css-values-4/#calc-serialize 10.13 Serialization: no page; serialization, not layout or paint
+# css-values-4/#combine-math 10.14 Combination of Math Functions: no page; 3 shows a calc() interpolated
+css-values-4/#linked-properties A Coordinating List-Valued Properties
+    coordinated-lists.html
+# css-values-4/#iana B IANA Considerations: no page; a registration
+# css-values-4/#about-invalid B.1 Registration for the about:invalid URL scheme: no page; a registration
+# css-values-4/#deprecated-quirky-length C Quirky Lengths: no page; it says which values parse in quirks mode

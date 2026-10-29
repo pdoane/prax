@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-justify: ruby</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; text-align-last: justify; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5 Justification Method: the text-justify property</div>
+  <h1>text-justify: ruby</h1>
+  <p class=pr-lede><code>ruby</code>: <q>Justification adjusts spacing as for 'auto' except: Justification
+  opportunities are disabled at word separators. Justification opportunities are disabled between Bopomofo
+  characters</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-justify-property">CSS Text 4 §7.5</a></span>
+  No browser has the value. Each stage is justified, its last line too.</p>
+</header>
+
+<section>
+  <h2>ruby</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j" style="text-justify: ruby"><span class=t>one two six</span></div>
+    <figcaption>Latin with spaces: no opportunity at the spaces, which stay 10px wide; the line is spread between letters, or, with nothing to stretch, centered. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Stretch the spaces.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja j" lang=zh-Hant style="text-justify: ruby"><span class=t>ㄓㄨㄥ</span></div>
+    <figcaption>Bopomofo, ㄓㄨㄥ: no opportunities between them, so not stretched, and centered. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Spread across the
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja j" lang=ja style="text-justify: ruby"><span class=t>漢字かな</span></div>
+    <figcaption>Han and kana: as <code>auto</code>, spread across the line.</figcaption>
+  </figure>
+</section>
+
+<p class=pr-note><code>no-compress</code>: <q>Justification must not compress spacing controlled by
+'text-spacing-trim' or 'text-autospace'.</q> Compressing is something a UA may do, never must, so a page cannot show
+the difference.</p>
+
+</body>
+</html>

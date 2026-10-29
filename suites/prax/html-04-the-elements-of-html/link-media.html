@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The link element's media</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  #narrowing.narrow { width: 100px; }
+  .act { padding: 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.4.1 Processing the media attribute</div>
+  <h1>The link element's media</h1>
+  <p class=pr-lede><q>if the link is an external resource link, then the media attribute is prescriptive. The user
+  agent must apply the external resource when the media attribute's value matches the environment and the other
+  relevant conditions apply, and must not apply it otherwise.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#processing-the-media-attribute">HTML §4.2.4.1</a></span></p>
+</header>
+<section>
+  <h2>The environment is the document's</h2>
+  <p>Each frame's document links a style sheet that turns its box green. The frame is its viewport, 200px wide, though
+  this page's is wider. <q>The default, if the media attribute is omitted, is "all"</q>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css media='(max-width: 300px)'><div class=styled>(max-width: 300px)</div>"></iframe></div>
+    <figcaption>Matches the 200px viewport: green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css media='(min-width: 300px)'><div class=styled>(min-width: 300px)</div>"></iframe></div>
+    <figcaption>Does not match: plain.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css media=print><div class=styled>print</div>"></iframe></div>
+    <figcaption><code>print</code>, on a screen: plain.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css><div class=styled>no media</div>"></iframe></div>
+    <figcaption>No media attribute: all media, green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>When the environment changes</h2>
+  <p>The sheet has <code>media="(min-width: 150px)"</code>, and the button narrows the frame to 100px, or widens it
+  back.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view id=narrowing srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css media='(min-width: 150px)'><div class=styled>min 150px</div>"></iframe>
+      <div class=act><button id=narrow>Narrow the frame</button></div></div>
+    <figcaption>Green at 200px. Press the button: the frame is 100px wide and its box plain; press again: green.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("narrow").addEventListener("click", () => {
+    document.getElementById("narrowing").classList.toggle("narrow");
+  });
+</script>
+</body>
+</html>

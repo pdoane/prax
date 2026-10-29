@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>writing-mode: the block flow direction</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .sq { width: 80px; height: 80px; }
+  .pr-a, .pr-b, .pr-c { font-family: "PR Arimo"; }
+  .para { font: 13px/20px "PR Arimo"; }
+  .sq + figcaption { max-width: 86px; }
+  figure { margin-right: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2 Block Flow Direction: the writing-mode property</div>
+  <h1>writing-mode: the block flow direction</h1>
+  <p class=pr-lede><q>This property specifies whether lines of text are laid out horizontally or vertically and the
+  direction in which blocks progress.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#block-flow">CSS Writing Modes 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Blocks stack in the block flow direction</h2>
+  <p>Each stage is 80px square and holds blocks A, B and C, in that order. <q>horizontal-tb: Top-to-bottom block
+  flow direction.</q> <q>vertical-rl: Right-to-left block flow direction.</q> <q>vertical-lr: Left-to-right block
+  flow direction.</q></p>
+  <figure>
+    <div class="pr-stage sq"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption><code>horizontal-tb</code>: A at the top, C below B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq" style="writing-mode: vertical-rl"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption><code>vertical-rl</code>: A at the right, C left of B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq" style="writing-mode: vertical-lr"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption><code>vertical-lr</code>: A at the left, C right of B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq" style="writing-mode: sideways-rl"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption><code>sideways-rl</code>: as <code>vertical-rl</code>, A at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq" style="writing-mode: sideways-lr"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption><code>sideways-lr</code>: as <code>vertical-lr</code>, A at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lines stack the same way</h2>
+  <p>The property also gives <q>the ordering direction of line boxes in a block container that contains inlines</q>,
+  and with it <q>whether the line boxes' orientation (and thus the writing mode) is horizontal or vertical.</q></p>
+  <figure>
+    <div class="pr-stage sq para">one two three four five six</div>
+    <figcaption><code>horizontal-tb</code>: horizontal lines, the first at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq para" style="writing-mode: vertical-rl">one two three four five six</div>
+    <figcaption><code>vertical-rl</code>: vertical lines read downward, the first at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sq para" style="writing-mode: vertical-lr">one two three four five six</div>
+    <figcaption><code>vertical-lr</code>: vertical lines, the first at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

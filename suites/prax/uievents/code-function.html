@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The function row</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.5 Function Section</div>
+  <h1>The function row</h1>
+  <p class=pr-lede><q>The function section runs along the top of the keyboard (above the alphanumeric section) and contains the function keys and a few additional special keys (for example, Esc and Print Screen).</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-function-section">UI Events KeyboardEvent code Values §3.5</a></span></p>
+</header>
+<section>
+  <h2>F1 to F12, whatever else they do</h2>
+  <p><q>On some keyboards (especially those found on laptops or other portable computers), the function keys (F1 ... F12) are defined to have other primary functions (like controlling display brightness or audio volume) and require that a separate Fn key be pressed to make them act as function keys.</q> <q>Because of this, the code is always set to the function key name.</q> The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-function-section">§3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="function" data-unit=28></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=3></ol>
+    </div>
+    <figcaption>Click the keys and press Escape, then F2, F3 and F4 (with Fn on a laptop whose top row controls media): each lights at its place, with <code>code="F2"</code> and the like. On a PC keyboard, Scroll Lock and Pause light the last keys.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

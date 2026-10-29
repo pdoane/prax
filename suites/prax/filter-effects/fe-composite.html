@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feComposite: Porter-Duff and arithmetic</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 30, and it computes in sRGB. in is an orange flood from x 0 to 100,
+     in2 a blue flood from x 60 to 160. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="over" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="over"/>
+  </filter>
+  <filter id="in" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="in"/>
+  </filter>
+  <filter id="out" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="out"/>
+  </filter>
+  <filter id="atop" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="atop"/>
+  </filter>
+  <filter id="xor" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="xor"/>
+  </filter>
+  <filter id="lighter" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="lighter"/>
+  </filter>
+  <filter id="average" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="arithmetic" k2="0.5" k3="0.5"/>
+  </filter>
+  <filter id="clamp" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="30" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#d68a3c" x="0" width="100" result="a"/><feFlood flood-color="#4f81bd" x="60" width="100" result="b"/>
+    <feComposite in="a" in2="b" operator="arithmetic" k2="1" k4="1"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.8 Filter primitive feComposite</div>
+  <h1>feComposite: Porter-Duff and arithmetic</h1>
+  <p class=pr-lede><q>All of the operator types except arithmetic match the corresponding operation as described in
+  [COMPOSITING-1] with in representing the source and in2 representing the destination.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feCompositeElement">Filter Effects 1 §9.8</a></span>
+  In each canvas, 160 by 30, <code>in</code> is an orange flood from x 0 to 100 and <code>in2</code> a blue one from x
+  60 to 160, in sRGB.</p>
+</header>
+
+<section>
+  <h2>The Porter-Duff operators</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#over)"/></svg></div>
+    <figcaption><code>over</code>, the initial value: orange to x 100, then blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#in)"/></svg></div>
+    <figcaption><code>in</code>: orange only where blue is, x 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#out)"/></svg></div>
+    <figcaption><code>out</code>: orange only where blue is not, x 0 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#atop)"/></svg></div>
+    <figcaption><code>atop</code>: blue from x 60, orange over it to x 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#xor)"/></svg></div>
+    <figcaption><code>xor</code>: orange to x 60, nothing to 100, blue after.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="45"><rect width="160" height="30" fill="none" filter="url(#lighter)"/><rect x="60" y="35" width="40" height="10" fill="#fffff9"/></svg></div>
+    <figcaption><code>lighter</code>: the sum, from x 60 to 100 <code>#fffff9</code>, as the bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>arithmetic</h2>
+  <p><q>result = k1*i1*i2 + k2*i1 + k3*i2 + k4</q>, for each channel of the premultiplied pixels, <q>with the result
+  clamped between [0..1]</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="45"><rect width="160" height="30" fill="none" filter="url(#average)"/><rect x="60" y="35" width="40" height="10" fill="#92857d"/></svg></div>
+    <figcaption><code>k2</code> and <code>k3</code> 0.5: half-opaque orange to x 60, <code>#92857d</code> to 100,
+    half-opaque blue after.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="30"><rect width="160" height="30" fill="none" filter="url(#clamp)"/></svg></div>
+    <figcaption><code>k2</code> and <code>k4</code> 1: every channel, alpha too, at least 1, so white across the
+    canvas.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>White space processing: line starts and tabs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .mono { font: 13px/20px ui-monospace, Menlo, monospace; white-space: pre; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.1 The 'white-space' processing model</div>
+  <h1>White space processing: line starts and tabs</h1>
+  <p class=pr-lede><q>Then, the block container's inlines are laid out.</q> <q>As each line is laid out,</q> four more
+  steps apply. Orange spans show the white space they hold. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Steps 1 and 2: the start of a line, and tabs</h2>
+  <p>1. <q>If a space (U+0020) at the beginning of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line',
+  it is removed.</q> 2. <q>All tabs (U+0009) are rendered as a horizontal shift that lines up the start edge of the
+  next glyph with the next tab stop. Tab stops occur at points that are multiples of 8 times the width of a space
+  (U+0020) rendered in the block's font from the block's starting content edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2
+  §16.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl>one<br>&#32;two</span><br><span class=pr-hl style="white-space: pre-wrap">one<br>&#32;two</span></div>
+    <figcaption>"one", a break, a space, "two", twice. <code>normal</code> above: "two" starts at the left edge.
+    <code>pre-wrap</code> below: one space before it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage mono">12345678|<br>a&#9;|<br>abcd&#9;|<br>abcdefghi&#9;|</div>
+    <figcaption>Monospace <code>pre</code>: the first three bars line up in column 9, tab stop 8; after nine
+    letters, the next stop, column 17. <span class="pr-flag pr-since">Since CSS 2</span> stops come from
+    <code>tab-size</code>.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#white-space-phase-2">CSS Text 3 §4.1.2</a>, <a href="https://drafts.csswg.org/css-text-3/#tab-size-property">§4.2</a></div>
+  <h2>Tab stops: half a ch at least, and the spacing counts</h2>
+  <p><q>If this distance is less than 0.5ch, then the subsequent tab stop is used instead.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#white-space-phase-2">CSS Text 3 §4.1.2</a></span> The tab size, 8 by default, is in spaces <q>including its associated
+  letter-spacing and word-spacing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#tab-size-property">CSS Text 3 §4.2</a></span></p>
+  <figure>
+    <div class="pr-stage mono">1234567890123456|<br><span class=pr-hl style="display: inline-block; width: 7.8ch">&#8203;</span>&#9;|</div>
+    <figcaption>A 7.8-column orange box, then a tab: the next stop is 0.2ch away, under 0.5ch, so the bar
+    is at the stop after, column 17.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage mono">12345678|<div style="word-spacing: 4px">&#9;|</div></div>
+    <figcaption>A tab in a block with <code>word-spacing: 4px</code>: 8 spaces each 4px wider, so the bar is
+    32px right of column 9.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

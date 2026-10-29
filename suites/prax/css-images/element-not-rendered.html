@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>element(): when it is an invalid image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .src { width: fit-content; margin: 10px; isolation: isolate; }
+  .dst { width: 100px; height: 30px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.7 Using Elements as Images: the element() notation</div>
+  <h1>element(): when it is an invalid image</h1>
+  <p class=pr-lede>The image is the element's only when it is <q>an element that is rendered, is not a descendant of a
+  replaced element, and generates a stacking context</q>, or else one that provides a paint source. For <q>anything
+  else</q>, <q>The function represents an invalid image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#element-notation">CSS Images 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>A transparent layer over the color</h2>
+  <p>Each dashed box, 100 by 30, has <code>background: element(#…), #6aa36a</code>. An invalid image draws nothing,
+  so the green shows. <q>An element is not rendered if it does not have an associated box.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=hidden style="display: none">A</div><div class="dst pr-ghost" style="background: element(#hidden), #6aa36a"></div></div>
+    <figcaption>A is <code>display: none</code>: green. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="dst pr-ghost" style="background: element(#nothing), #6aa36a"></div></div>
+    <figcaption>No element has the ID: green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><object data=../shared/resources/flag-40x20.png type=image/png style="display: block; margin: 10px"><div class="src pr-a" id=fallback>A</div></object><div class="dst pr-ghost" style="background: element(#fallback), #6aa36a"></div></div>
+    <figcaption>A is the fallback inside an object, a replaced element showing the flag: green. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not a stacking context</h2>
+  <p>An issue in the text asks: <q>Do we need a full stacking context, or just a pseudo-stacking context?</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=flat style="isolation: auto">A</div><div class="dst pr-ghost" style="background: element(#flat), #6aa36a"></div></div>
+    <figcaption>A is rendered but is no stacking context: green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw
+    nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

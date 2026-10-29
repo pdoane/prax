@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page progression</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 3.3 Page Progression</div>
+  <h1>Page progression</h1>
+  <p class=pr-lede><q>In documents with a left-to-right page progression the first page of the document is a right page, and vice versa.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#progression">CSS Paged Media 3 §3.3</a></span> In each figure, a left page has a 60px left margin and a right page a 60px right margin, the binding edges. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>From the principal writing mode</h2>
+  <p><q>If text is laid out in horizontal lines, the page progression is the same as the inline base direction.</q> <q>If text is laid out in vertical lines, the page progression is the same as the block flow direction.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } @page :right { margin-right: 60px } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div><div>line 3</div></div><div class=pg><div>line 4</div><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption>Left to right: page 1 is a right page, its page area 10px from the left and 60px from the right; page 2 is a left page. <span class=pr-flag>Safari</span> Every page has page 1's margins. <span class=pr-flag>Firefox</span> Margins of 10px: no left or right pages.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } @page :right { margin-right: 60px } html { background: #8cb6c0 } html { direction: rtl }</style><div><div>line 1</div><div>line 2</div><div>line 3</div></div><div class=pg><div>line 4</div><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption><code>direction: rtl</code> on the root: page 1 is a left page, 60px from the left; page 2 a right page. <span class=pr-flag>Safari</span> Every page has page 1's margins. <span class=pr-flag>Firefox</span> No left or right pages.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } @page :right { margin-right: 60px } html { background: #8cb6c0 } html { writing-mode: vertical-rl }</style><div><div>line 1</div><div>line 2</div><div>line 3</div></div><div class=pg><div>line 4</div><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption><code>writing-mode: vertical-rl</code>: blocks flow right to left, so page 1 is a left page, 60px from the left. <span class=pr-flag>Chrome</span> Page 1 is a right page. <span class=pr-flag>Safari</span> Prints no pages. <span class=pr-flag>Firefox</span> No left or right pages, and the pages' content is scaled down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

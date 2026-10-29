@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sys { height: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; }
+  .sys:nth-child(odd) { background: #f4f5f7; }
+  .sys { white-space: nowrap; }
+  .name { display: inline-block; width: 96px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.2 System Colors</div>
+  <h1>System colors</h1>
+  <p class=pr-lede><q>Note. The System Colors are deprecated in the CSS3 Color Module.</q> Each name is a color the user
+  agent takes from the operating system, so what these swatches show depends on the platform.</p>
+</header>
+
+<section>
+  <h2>Colors of the user's graphic environment</h2>
+  <p><q>Any color property (e.g., 'color' or 'background-color') can take one of the following names.</q> They let
+  authors <q>specify colors in a manner that integrates them into the operating system's graphic environment.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#system-colors">CSS 2 §18.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=sys><span class=pr-swatch style="background-color: Window"></span><span class=name>Window</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: WindowText"></span><span class=name>WindowText</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ButtonFace"></span><span class=name>ButtonFace</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ButtonText"></span><span class=name>ButtonText</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: Highlight"></span><span class=name>Highlight</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: GrayText"></span><span class=name>GrayText</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: InfoBackground"></span><span class=name>InfoBackground</span></div>
+      <div class=sys><span class=pr-swatch style="background-color: ThreeDShadow"></span><span class=name>ThreeDShadow</span></div>
+    </div>
+    <figcaption>Eight of the 28 names as <code>background-color</code>, each swatch some color of the user agent's
+    choice. <span class="pr-flag pr-since">Since CSS 2</span> four of them are
+    deprecated.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>For example, to set the foreground and background colors of a paragraph to the same foreground and background
+  colors of the user's window, write the following:</q> <code>p { color: WindowText; background-color: Window }</code>.
+  The names are case-insensitive. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#system-colors">CSS 2 §18.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><p class=pr-text style="margin: 0; padding: 0 6px; color: WindowText; background-color: Window">A paragraph in the colors of the user's window.</p></div>
+    <figcaption><code>color: WindowText; background-color: Window</code>. <span class="pr-flag pr-since">Since CSS
+    2</span> deprecated.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><p class=pr-text style="margin: 0; padding: 0 6px; color: windowtext; background-color: WINDOW">A paragraph in the colors of the user's window.</p></div>
+    <figcaption><code>color: windowtext; background-color: WINDOW</code>: the same as the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

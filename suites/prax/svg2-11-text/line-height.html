@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-height in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lines { white-space: pre-line; }
+  .loose { line-height: 30px; }
+  .rl { writing-mode: vertical-rl; }
+  .huge { line-height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.2 The ‘line-height’ property</div>
+  <h1>line-height in SVG text</h1>
+  <p class=pr-lede><q>SVG uses the line-height property to determine the amount of leading space which is added
+  between lines in multi-line text (both for horizontal and vertical text). It is not applicable to text on a
+  path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#LineHeightProperty">SVG 2 §11.10.2.2</a></span>
+  Each stage is an SVG 160 by 90 holding "one", a line feed and "two" in PR Noto Sans Mono at
+  <code>calc(50px / 3)</code>, 10 a letter, with <code>white-space: pre-line</code>; the expected lines are dashed in
+  red.</p>
+</header>
+
+<section>
+  <h2>Horizontal and vertical</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path d="M0 30H160 M0 60H160" class=pr-baseline /><text class="pr-measure lines loose" x="20" y="30">one
+two</text></svg></div>
+    <figcaption><code>line-height: 30px</code>: "two" 30 below "one", on y 60. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path d="M100 0V90 M70 0V90" class=pr-baseline /><text class="pr-measure lines loose rl" x="100" y="10">one
+two</text></svg></div>
+    <figcaption><code>vertical-rl</code>, <code>line-height: 30px</code>, at x 100: "two" 30 to the left, down x
+    70. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not on a path</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path id="track" d="M20 60H140" class=pr-baseline /><text class=pr-measure><textPath class=huge href="#track">on a path</textPath></text></svg></div>
+    <figcaption><code>line-height: 60px</code> on a <code>textPath</code> along y 60: no effect, "on a path"
+    standing on it from 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

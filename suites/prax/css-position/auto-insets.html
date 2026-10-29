@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving auto insets</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .chip { position: absolute; background: #f9cc9d; outline: 1px solid #d68a3c; outline-offset: -1px; }
+  .lead { height: 40px; background: #b9cde6; }
+  .ab { position: absolute; width: 40px; height: 20px; background: #d68a3c; }
+  .pr-stage.pr-narrow { height: 80px; }
+  .pr-stage.pr-cb { height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.5.1 Resolving auto Insets</div>
+  <h1>Resolving auto insets</h1>
+  <p class=pr-lede>How an <code>auto</code> inset is resolved, before the box is sized into the inset-modified containing
+  block. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#resolving-inset-auto">CSS Positioned Layout 3 §3.5.1</a></span>
+  Each stage is relative, and the containing block.</p>
+</header>
+
+<section>
+  <h2>One auto inset: zero</h2>
+  <p><q>If only one inset property in a given axis is auto, it is set to zero.</q> The tinted box's width and
+  <code>right</code> are <code>auto</code>: it fits its 10px letters into the room from its <code>left</code> to the
+  stage's right edge.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=chip style="top: 10px; left: 20px">fits in the room to the right</div></div>
+    <figcaption><code>left: 20px</code>: 180px of room; the box 180px wide, its text on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=chip style="top: 10px; left: 110px">fits in the room to the right</div></div>
+    <figcaption><code>left: 110px</code>: 90px of room; the box 90px wide, its text on four lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Both auto: the static position, by alignment</h2>
+  <p><q>for self-end alignment or its equivalent</q>, <q>Set its end-edge inset property to the static position, and
+  its start-edge inset property to zero.</q> Start is the reverse; <code>center</code> centers the room on the static
+  position. <q>treat normal as start and any baseline or stretch alignment value as its fallback alignment.</q> In each
+  stage, a blue block 40px tall comes before an orange box 20px tall whose <code>top</code> and <code>bottom</code> are
+  <code>auto</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="position: relative"><div class=lead></div><div class=ab></div></div>
+    <figcaption><code>normal</code>, as <code>start</code>: its top at the static position, 40.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="position: relative"><div class=lead></div><div class=ab style="align-self: end"></div></div>
+    <figcaption><code>end</code>: its bottom at 40, from 20. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> At 40, as <code>start</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="position: relative"><div class=lead></div><div class=ab style="align-self: center"></div></div>
+    <figcaption><code>center</code>: centered on 40, from 30 to 50. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> At 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="position: relative"><div class=lead></div><div class=ab style="align-self: stretch"></div></div>
+    <figcaption><code>stretch</code>, whose fallback is <code>start</code>: at 40, not stretched.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

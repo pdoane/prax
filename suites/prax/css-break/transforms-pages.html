@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transforms across pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.5 Transforms, Positioning, and Pagination</div>
+  <h1>Transforms across pages</h1>
+  <p class=pr-lede><q>However, in order to reduce dataloss when printing, the separation and transfer of page boxes should occur last; thus a transformed fragment that spans pages should be sliced at the page breaks and print in its entirety rather than being clipped by its originating page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#transforms">CSS Fragmentation 4 §5.5</a></span></p>
+</header>
+
+<section>
+  <h2>Printed in full, and per fragment</h2>
+  <p>B, 40px tall, is laid out 80px down the first page’s area, under four lines, and drawn 30px lower by <code>translateY(30px)</code>: from 110px to 150px, across the foot of the 140px area.</p>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<div class=pr-b style='height: 40px; transform: translateY(30px)'>B</div>"></iframe>
+    <figcaption>B in its entirety, sliced at the break: its upper 30px at the foot of the first page’s area, its last 10px atop the second page. Safari, printing larger, puts more on the second.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .t { border: 2px solid #2c5a8f; background: #b9cde6; transform: rotate(4deg); margin: 0 20px }</style><body class=pr-measure><div class=t>one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight<br>nine</div>"></iframe>
+    <figcaption>A box of nine lines turned by <code>rotate(4deg)</code>: each page’s fragment turned about its own center.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

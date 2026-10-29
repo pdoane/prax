@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:hover</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex { padding: 10px; }
+  .ex p { margin: 0; padding: 8px; background: var(--pr-plain); border: 3px solid #d5d9e0; }
+  .ex label, .ex span { display: inline-block; padding: 6px; border: 3px solid #d5d9e0; font-size: 11px; }
+  .ex input { width: 70px; border: 3px solid #d5d9e0; }
+  .ex p:hover, .ex label:hover, .ex span:hover, .ex input:hover { border-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:hover</h1>
+  <p class=pr-lede>The <code>:hover</code> pseudo-class matches an element <q>while the user designates an element
+  with a pointing device</q>: <q>an element that the user indicates using a pointing device</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Ancestors, and a label's control</h2>
+  <p><q>Additionally, any element that is the labeled control of a label element that is currently matching :hover,
+  also matches :hover. (But, it does not count as being designated.)</q> The fragment is the specification's:
+  <code>&lt;p> &lt;label for=c> &lt;input id=a> &lt;/label> &lt;span id=b> &lt;input id=c> &lt;/span> &lt;/p></code>.
+  Each element's border turns green while it matches <code>:hover</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=ex>
+        <p> <label for=c>label <input id=a value=a></label> <span id=b>b <input id=c value=c></span> </p>
+      </div>
+    </div>
+    <figcaption>Move the pointer over field <code>a</code>: <code>a</code>, the label, the <code>p</code> and field
+    <code>c</code> turn green; <code>b</code>, around <code>c</code>, stays grey. Over <code>c</code> instead:
+    <code>c</code>, <code>b</code> and the <code>p</code>, and not the label.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

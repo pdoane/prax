@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Word and phrase detection</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 120px; font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · H Word and Phrase Detection</div>
+  <h1>Word and phrase detection</h1>
+  <p class=pr-lede><q>By themselves, word and phrase boundaries are not observable, but properties like
+  'word-space-transform' or 'word-break' can cause visible effects at those positions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-phrase-detection">CSS Text 4 §H</a></span>
+  The appendix is normative. Each stage is <code>lang=ja</code>, <code>word-break: auto-phrase</code>, 120px wide,
+  six characters to a line, and holds 窓ぎわのトットちゃん, phrases 窓ぎわの and トットちゃん, in a UA that detects
+  Japanese phrases, as Chrome does; Safari and Firefox do not, and break as <code>normal</code>.</p>
+</header>
+
+<section>
+  <h2>No boundary at a joiner</h2>
+  <p><q>The user agent must not place a word or phrase boundary adjacent to any characters with the line breaking class
+  GL, WJ, or ZWJ; when two would-be words or phrases are separated by such characters, they must be treated as a
+  single one.</q></p>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわのトットちゃん</span></div>
+    <figcaption>The two phrases: "窓ぎわの", then "トットちゃん".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわの&#x2060;トットちゃん</span></div>
+    <figcaption>U+2060 WORD JOINER between them: one phrase, too long for a line, so it breaks as
+    <code>normal</code>: "窓ぎわのトッ", "トちゃん".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Boundaries ignore inline boxes</h2>
+  <p><q>Inline box boundaries and out-of-flow elements must be ignored when determining word or phrase
+  boundaries.</q></p>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="word-break: auto-phrase"><span class=t>窓ぎわ</span><span class=u>のトット</span><span class=t>ちゃん</span></div>
+    <figcaption>The text split by spans across the phrases: the same phrases, "窓ぎわの", then
+    "トットちゃん".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

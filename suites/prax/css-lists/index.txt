@@ -1,0 +1,44 @@
+00-supports-1.html
+# css-lists-3/#intro 1 Introduction: no page; it names what the module defines, which the later sections show
+# css-lists-3/#values 1.1 Value Definitions: no page; it defines terms
+css-lists-3/#declaring-a-list-item 2 Declaring a List Item
+    list-item.html
+# css-lists-3/#markers 3 Markers: no page; it defines the marker box, which 3.1 to 3.7 show
+css-lists-3/#marker-pseudo 3.1 The ::marker Pseudo-Element
+    marker-pseudo.html
+css-lists-3/#marker-properties 3.1.1 Properties Applying to ::marker
+    marker-properties.html
+    marker-ua-styles.html
+css-lists-3/#content-property 3.2 Generating Marker Contents
+    marker-contents.html
+css-lists-3/#image-markers 3.3 Image Markers: the list-style-image property
+    list-style-image.html
+css-lists-3/#text-markers 3.4 Text-based Markers: the list-style-type property
+    list-style-type.html
+css-lists-3/#list-style-position-property 3.5 Positioning Markers: The list-style-position property
+    marker-position.html
+css-lists-3/#list-style-property 3.6 Styling Markers: the list-style shorthand property
+    list-style-shorthand.html
+css-lists-3/#marker-side 3.7 The marker-side property
+    marker-side.html
+css-lists-3/#auto-numbering 4 Automatic Numbering With Counters
+    counter-limits.html
+css-lists-3/#counter-reset 4.1 Creating Counters: the counter-reset property
+    counter-reset.html
+css-lists-3/#increment-set 4.2 Manipulating Counter Values: the counter-increment and counter-set properties
+    counter-set.html
+css-lists-3/#nested-counters 4.3 Nested Counters and Scope
+    nested-counters.html
+# css-lists-3/#creating-counters 4.4 Creating and Inheriting Counters: no page; it defines the CSS counters set, which 4.4.1 and 4.4.2 show
+css-lists-3/#inheriting-counters 4.4.1 Inheriting Counters
+    counter-inheritance.html
+css-lists-3/#instantiating-counters 4.4.2 Instantiating Counters
+    reversed-counters.html
+css-lists-3/#counters-without-boxes 4.5 Counters in elements that do not generate boxes
+    counters-without-boxes.html
+css-lists-3/#list-item-counter 4.6 The Implicit list-item Counter
+    list-item-counter.html
+css-lists-3/#counter-functions 4.7 Outputting Counters: the counter() and counters() functions
+    counter-functions.html
+css-lists-3/#ua-stylesheet A Sample Style Sheet For HTML
+    html-lists.html

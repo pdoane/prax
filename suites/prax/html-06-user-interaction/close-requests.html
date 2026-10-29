@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Close requests</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0; border: 2px solid #2c5a8f; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.10.1 Close requests</div>
+  <h1>Close requests</h1>
+  <p class=pr-lede><q>In an implementation-defined (and likely device-specific) manner, a user can send a close request to the user
+  agent. This indicates that the user wishes to close something that is currently being shown on the screen, such as a
+  popover, menu, dialog, picker, or display mode.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-requests">HTML §6.10.1</a></span></p>
+</header>
+<section>
+  <h2>Esc, as the key goes down</h2>
+  <p><q>On platforms where pressing the Esc key is interpreted as a close request, the user agent must interpret the
+  key being pressed down as the close request, instead of the key being released.</q> The popover closes as the
+  watcher it established is processed. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-requests">§6.10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target popovertarget=pop>show the popover</button>
+      </div>
+      <ol class=pr-log data-log="keydown keyup toggle" data-fields="key newState" data-lines=4 data-on=document></ol>
+    </div>
+    <figcaption>Click the button, then press Esc and hold it: keydown, then the popover goes away, logged as a toggle
+    to <code>closed</code>, before the keyup when Esc is released.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A canceled keydown closes nothing</h2>
+  <p><q>If event is not null, and its canceled flag is set, then return.</q> The button shows the same popover, and
+  the page's script cancels each keydown of Esc until it closes. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#close-requests">§6.10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=canceling>show the popover, Esc canceled</button>
+      </div>
+    </div>
+    <figcaption>Click the button and press Esc: the popover stays. Click outside it to close it, by light
+    dismiss.</figcaption>
+  </figure>
+</section>
+<div popover id=pop>a popover</div>
+<script>
+  // The second button shows the popover and cancels each keydown of Esc until it closes.
+  const pop = document.getElementById("pop");
+  let canceling = false;
+  document.getElementById("canceling").addEventListener("click", () => {
+      canceling = true;
+      pop.showPopover();
+  });
+  pop.addEventListener("toggle", event => {
+      if (event.newState === "closed")
+          canceling = false;
+  });
+  document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && canceling)
+          event.preventDefault();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

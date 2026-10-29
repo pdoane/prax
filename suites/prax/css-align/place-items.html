@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>place-items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 7.3 Default Alignment Shorthand: the place-items property</div>
+  <h1>place-items</h1>
+  <p class=pr-lede><q>The first value is assigned to 'align-items'. The second value is assigned to 'justify-items';
+  if omitted, it is copied from the first value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#place-items-property">CSS Box Alignment 3 §7.3</a></span>
+  Each stage is a grid 200 by 60 of one cell, holding A, <code>auto</code> in both axes.</p>
+</header>
+
+<section>
+  <h2>One value and two</h2>
+  <figure>
+    <div class=pr-stage><div class=g style="place-items: end start"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-items: end start</code>: A at the bottom left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="place-items: center"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-items: center</code>: A in the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="place-items: stretch legacy right"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-items: stretch legacy right</code>: A 60px tall at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="place-items: end legacy"><div class=pr-a>A</div></div></div>
+    <figcaption><code>place-items: end legacy</code>: A at the bottom, stretched across, <code>legacy</code> with nothing
+    to inherit being <code>normal</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

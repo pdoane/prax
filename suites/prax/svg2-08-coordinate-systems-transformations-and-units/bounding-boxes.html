@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Bounding boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 40px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <!-- A filter whose region is the object bounding box, flooded: a tint of exactly the box. -->
+  <filter id="bbox" x="0" y="0" width="1" height="1"><feFlood flood-color="#d68a3c" flood-opacity="0.5" /></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.10 Bounding boxes</div>
+  <h1>Bounding boxes</h1>
+  <p class=pr-lede><q>The bounding box (or "bbox") of an element is the tightest fitting rectangle aligned with the
+  axes of that element's user coordinate system that entirely encloses it and its descendants.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#BoundingBoxes">SVG 2 §8.10</a></span>
+  Each stage is an SVG 160 by 60. Under each shape, a copy with a filter whose region is its object bounding box,
+  <code>x="0" y="0" width="1" height="1"</code>, floods that box with orange at half opacity.</p>
+</header>
+
+<section>
+  <h2>The geometry, without control points or stroke</h2>
+  <p><q>control points for a curve which are not defined as lying along the line of the resulting curve […] must not
+  contribute to the dimensions of the bounding box</q>. <q>The object bounding box is the bounding box that contains
+  only an element's geometric shape.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 Q 80 -30 140 50" filter="url(#bbox)" /><path d="M 20 50 Q 80 -30 140 50" fill="#4f81bd" /></svg></div>
+    <figcaption>A curve from 20, 50 to 140, 50 whose control point is at 80, −30: it peaks at y 10, and the box
+    is 120 by 40 from 20, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="20" width="80" height="20" stroke="#2c5a8f" stroke-width="20" filter="url(#bbox)" /><rect x="40" y="20" width="80" height="20" fill="none" stroke="#2c5a8f" stroke-width="20" stroke-opacity="0.5" /></svg></div>
+    <figcaption>A rect 80 by 20 at 40, 20 stroked 20 wide, at half opacity: the box only the rect's, 80 by 20
+    inside the stroke's middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="40" filter="url(#bbox)">Box</text><text x="20" y="40" fill="#2c5a8f">Box</text></svg></div>
+    <figcaption>Text: <q>all glyphs occupy the full glyph cell</q>, its advance by the font's ascent and descent,
+    from above the B to below the baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A group: the union of what it renders</h2>
+  <p><q>an element that is not in the rendering tree does not contribute to the bounding box of any ancestor
+  element.</q> Each group holds a blue square 20 by 20 at 20, 10 and a green one at 120, 30.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g filter="url(#bbox)"><rect x="20" y="10" width="20" height="20" /><rect x="120" y="30" width="20" height="20" /></g><rect x="20" y="10" width="20" height="20" fill="#4f81bd" /><rect x="120" y="30" width="20" height="20" fill="#6aa36a" /></svg></div>
+    <figcaption>Both: the box from 20, 10 to 140, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g filter="url(#bbox)"><rect x="20" y="10" width="20" height="20" /><rect x="120" y="30" width="20" height="20" display="none" /></g><rect x="20" y="10" width="20" height="20" fill="#4f81bd" /><rect class=pr-ghost x="120" y="30" width="20" height="20" /></svg></div>
+    <figcaption>The green one <code>display="none"</code>, outlined: the box only the blue square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

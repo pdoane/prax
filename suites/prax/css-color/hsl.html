@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hsl() and hsla()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 7 HSL Colors: hsl() and hsla() functions</div>
+  <h1>hsl() and hsla()</h1>
+  <p class=pr-lede><q>HSL colors are specified as a triplet of hue, saturation, and lightness.</q> <q>HSL colors
+  resolve to sRGB.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#the-hsl-notation">CSS Color 4
+  §7</a></span> Each pair here is the HSL color, then the <code>rgb()</code> it converts to.</p>
+</header>
+
+<section>
+  <h2>Hue, saturation and lightness</h2>
+  <p><q>For saturation, 100% or 100 is a fully-saturated, bright color, and 0% or 0 is a fully-unsaturated gray. For
+  lightness, 50% or 50 represents the "normal" color, while 100% or 100 is white and 0% or 0 is black.</q> <q>For historical reasons, hsl() and hsla() also support a legacy color
+  syntax.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(0deg 100% 50%)"></div><div class=sw style="background: rgb(255 0 0)"></div><div class=sw style="background: hsl(120 100% 25%)"></div><div class=sw style="background: rgb(0% 50% 0%)"></div></div>
+    <figcaption><code>hsl(0deg 100% 50%)</code> and <code>rgb(255 0 0)</code>: red. <code>hsl(120 100% 25%)</code>
+    and <code>rgb(0% 50% 0%)</code>: dark green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(120 100% 75%)"></div><div class=sw style="background: rgb(50% 100% 50%)"></div><div class=sw style="background: hsl(120 75 85)"></div><div class=sw style="background: rgb(73.75% 96.25% 73.75%)"></div></div>
+    <figcaption><code>hsl(120 100% 75%)</code>: light green, as <code>rgb(50% 100% 50%)</code>. <code>hsl(120 75
+    85)</code>, numbers: pastel green, as <code>rgb(73.75% 96.25% 73.75%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(200 0% 40%)"></div><div class=sw style="background: rgb(40% 40% 40%)"></div><div class=sw style="background: hsl(200 80% 0%)"></div><div class=sw style="background: hsl(200 80% 100%)"></div></div>
+    <figcaption>Saturation 0%: gray, as <code>rgb(40% 40% 40%)</code>. Lightness 0% and 100%: black and white,
+    whatever the hue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: hsl(30 65% 54% / 0.5)"></div><div class=sw style="background: hsla(30, 65%, 54%, 0.5)"></div><div class=sw style="background: hsl(30, 65%, 54%, 50%)"></div></div>
+    <figcaption><code>hsl(30 65% 54% / 0.5)</code>, <code>hsla(30, 65%, 54%, 0.5)</code> and <code>hsl(30, 65%,
+    54%, 50%)</code>: one half-transparent orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

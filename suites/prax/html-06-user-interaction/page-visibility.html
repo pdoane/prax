@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page visibility</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.2 Page visibility</div>
+  <h1>Page visibility</h1>
+  <p class=pr-lede><q>A traversable navigable's system visibility state, including its initial value upon creation, is determined by
+  the user agent. It represents, for example, whether the browser window is minimized, a browser tab is currently in
+  the background, or a system element such as a task switcher obscures the page.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#page-visibility">HTML §6.2</a></span></p>
+</header>
+<section>
+  <h2>visibilitychange as the user hides the page</h2>
+  <p>When the state changes, the user agent will <q>update the visibility state</q> of each document in the tab and
+  <q>Fire an event named visibilitychange at document, with its bubbles attribute initialized to true.</q> The
+  page's script adds the document's new state to each line. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#page-visibility">§6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <iframe id=frame style="display: block; width: 100%; height: 20px; margin: 0 0 10px; border: 0"
+                srcdoc="<body style='margin: 0; font: 12px/20px sans-serif; background: #b9cde6'>a frame in the tab</body>"></iframe>
+      </div>
+      <ol class=pr-log id=log data-lines=4></ol>
+    </div>
+    <figcaption>Switch to another tab, or minimize the window, and come back: <code>visibilitychange hidden</code>
+    then <code>visibilitychange visible</code>, each at the page's document and at the frame's, since the frame's
+    document is in the same tab.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs each visibilitychange of the page's document and of the frame's, with the state it changed to. Waits for the
+  // frame's document to load.
+  const log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 4);
+  function watch(doc, name) {
+      doc.addEventListener("visibilitychange", () => {
+          const item = document.createElement("li");
+          item.textContent = "visibilitychange " + doc.visibilityState + " at " + name;
+          log.append(item);
+          while (log.children.length > 4)
+              log.firstElementChild.remove();
+      });
+  }
+  watch(document, "the page");
+  const frame = document.getElementById("frame");
+  if (frame.contentDocument && frame.contentDocument.URL === "about:srcdoc")
+      watch(frame.contentDocument, "the frame");
+  else
+      frame.addEventListener("load", () => watch(frame.contentDocument, "the frame"));
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex: initial, auto, none and a number</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { padding: 0; border: 0; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.1.1 Basic Values of flex</div>
+  <h1>flex: initial, auto, none and a number</h1>
+  <p class=pr-lede><q>The list below summarizes the effects of the four flex values that represent most
+  commonly-desired effects</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-common">CSS Flexible Box Layout 2 §7.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The four values</h2>
+  <p>Each stage is 200px wide; the first figure's items are 40px wide and the second's 150px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: auto; width: 40px">A</div><div class="pr-b pr-fit" style="flex: initial; width: 40px">B</div><div class="pr-c pr-fit" style="flex: auto; width: 40px">C</div></div>
+    <figcaption>A and C <code>flex: auto</code>, B <code>flex: initial</code>: <q>any positive free space after the
+    items have been sized will be distributed evenly to the items with flex: auto</q>: A and C 80px, B 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: initial; width: 150px">A</div><div class="pr-b pr-fit" style="flex: none; width: 150px">B</div></div>
+    <figcaption>A <code>flex: initial</code> may shrink, B <code>flex: none</code> may not: B keeps 150px, A shrinks
+    to 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1; width: 120px">A</div><div class="pr-b pr-fit" style="flex: 2">B</div><div class="pr-c pr-fit" style="flex: 1">C</div></div>
+    <figcaption><code>flex: 1</code>, <code>2</code>, <code>1</code>: <q>their sizes will be proportional to the
+    specified flex factor</q>: 50px, 100px, 50px. A's <code>width: 120px</code> is not used.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not below the minimum content size</h2>
+  <p><q>By default, flex items won't shrink below their minimum content size (the length of the longest word or
+  fixed-size element). To change this, set the min-width or min-height property.</q> Blue holds a word 140px
+  long; both items are 150px wide, <code>flex: initial</code>, 100px over the stage.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="w" style="background: #4f81bd; width: 150px">abcdefghijklmn</div><div class="pr-b pr-fit" style="width: 150px">B</div></div>
+    <figcaption>Blue stops at its word, 140px, and B takes the 60px left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="w" style="background: #4f81bd; width: 150px; min-width: 0">abcdefghijklmn</div><div class="pr-b pr-fit" style="width: 150px">B</div></div>
+    <figcaption>With <code>min-width: 0</code>, both lose 50px: 100px each, and B covers the end of the word.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

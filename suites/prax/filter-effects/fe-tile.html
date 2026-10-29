@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feTile</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=tiled filterUnits="userSpaceOnUse" x=0 y=0 width=200 height=80 primitiveUnits="userSpaceOnUse">
+    <feFlood x=10 y=10 width=20 height=20 flood-color="#d68a3c" result=orange />
+    <feFlood x=10 y=10 width=10 height=10 flood-color="#4f81bd" result=blue />
+    <feMerge x=10 y=10 width=20 height=20 result=tile><feMergeNode in=orange /><feMergeNode in=blue /></feMerge>
+    <feTile in=tile />
+  </filter>
+  <filter id=target filterUnits="userSpaceOnUse" x=0 y=0 width=200 height=80 primitiveUnits="userSpaceOnUse">
+    <feFlood x=10 y=10 width=20 height=20 flood-color="#d68a3c" result=orange />
+    <feFlood x=10 y=10 width=10 height=10 flood-color="#4f81bd" result=blue />
+    <feMerge x=10 y=10 width=20 height=20 result=tile><feMergeNode in=orange /><feMergeNode in=blue /></feMerge>
+    <feTile in=tile x=60 y=0 width=80 height=80 />
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.20 Filter primitive feTile</div>
+  <h1>feTile</h1>
+  <p class=pr-lede><q>This filter primitive fills a target rectangle with a repeated, tiled pattern of an input image.
+  The target rectangle is as large as the filter primitive subregion established by the feTile element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feTileElement">Filter Effects 1 §9.20</a></span>
+  Each stage is an SVG 200 by 80 whose filter region is the whole stage. The tile is a merge with the subregion 20 by
+  20 at (10, 10): orange, with a blue square 10 by 10 at its top left.</p>
+</header>
+
+<section>
+  <h2>Tiles from the input's subregion</h2>
+  <p><q>The top/left corner of each given tile is at location (x + i*width, y + j*height), where (x,y) represents the
+  top/left of the input image's filter primitive subregion, width and height represent the width and height of the
+  input image's filter primitive subregion, and i and j can be any integer value.</q></p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect width=200 height=80 fill=none filter="url(#tiled)"/></svg></div>
+    <figcaption>Tiles at x 10, 30, 50 … and y 10, 30, 50, and at −10 for i and j of −1: blue squares at x 10, 30
+    … and y 10, 30 …; orange in the rest, from the edges in.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect width=200 height=80 fill=none filter="url(#target)"/></svg></div>
+    <figcaption>The feTile's own subregion, 80 by 80 at x 60: the same tiles, from x 60 to 140 only; blue squares at
+    x 70, 90, 110 and 130.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Items that span rows</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+  .sb { border: 4px solid #2c5a8f; background: #b9cde6; }
+  .sb .pr-a { break-inside: avoid; }
+  .g { display: grid; grid-template-columns: 30px 30px; grid-template-rows: 20px 20px; row-gap: 20px; }
+  .x { grid-row: span 2; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.3 Splitting Boxes</div>
+  <h1>Items that span rows</h1>
+  <p class=pr-lede><q>When a box breaks, its content box extends to fill any remaining fragmentainer extent</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#box-splitting">CSS Fragmentation 4 §5.3</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Items that span rows</h2>
+  <p><q>However, if the fragmented box is a grid item or table cell that spans multiple rows, and the fragmentation
+  break splits its container between two of those rows, then the box should not extend into (or beyond) the gap
+  between those rows.</q> Under B, a grid of two rows 20px tall with a 20px gap; X spans both rows, Y is in the
+  first and Z in the second.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=g><div class=x>X</div><div>Y</div><div>Z</div></div></div>
+    <figcaption>The break falls in the gap: Y and the first fragment of X under B, which ends with the first row,
+    20px above the break; Z and the rest of X atop the second column. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The first fragment of X extends into the gap, to the foot of the column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

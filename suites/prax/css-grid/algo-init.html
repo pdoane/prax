@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initializing track sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+  .c { background: #cfe6c4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.4 Initialize Track Sizes</div>
+  <h1>Initializing track sizes</h1>
+  <p class=pr-lede><q>Each track has a base size, a &lt;length&gt; which grows throughout the algorithm and which will
+  eventually be the track's final size, and a growth limit, a &lt;length&gt; which provides a desired maximum size for
+  the base size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-track-sizing">CSS Grid Layout 2 §12.3</a></span>
+  Each grid below has its columns at its start (<code>justify-content: start</code>), and the text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Base size from the minimum, growth limit from the maximum</h2>
+  <p>A <q>fixed sizing function</q> as minimum: <q>Resolve to an absolute length and use that size as the track’s
+  initial base size.</q> An intrinsic one: <q>Use an initial base size of zero.</q> As maximum, a fixed function is the
+  initial growth limit, and an intrinsic or flexible one <q>infinity</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-init">CSS Grid Layout 2 §12.4</a></span>
+  A grid sized under a <code>min-content</code> constraint keeps its base sizes; under <code>max-content</code> its
+  tracks grow to their growth limits <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grow-tracks">§12.6</a></span>.
+  Blue is in <code>minmax(30px, 80px)</code>, orange in <code>40px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(30px, 80px) 40px; width: min-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: min-content</code>: blue is its base size, 30px, and orange from 30 to 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(30px, 80px) 40px; width: max-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>width: max-content</code>: blue is its growth limit, 80px, and orange from 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(0, 80px) 40px; width: min-content"><div class=a></div><div class=b>b</div></div></div>
+    <figcaption><code>minmax(0, 80px)</code>, empty, under <code>min-content</code>: 0, and orange from 0 to
+    40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A growth limit below the base size is raised to it</h2>
+  <p><q>In all cases, if the growth limit is less than the base size, increase the growth limit to match the base
+  size.</q> <q>Note: Gutters are treated as empty fixed-size tracks for the purpose of the track sizing
+  algorithm.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(60px, 20px) 40px; width: max-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>minmax(60px, 20px)</code> under <code>max-content</code>: its growth limit is raised to 60px, and
+    blue is 60px, orange from 60 to 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(30px, 80px) 40px; column-gap: 20px; width: min-content"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption>With <code>column-gap: 20px</code>, under <code>min-content</code>: blue 30px, a 20px gutter,
+    orange from 50 to 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(auto, 80px) 40px; width: min-content"><div class=a>ab</div><div class=b></div></div></div>
+    <figcaption><code>minmax(auto, 80px)</code> holding "ab": its base size starts at 0 and grows to its item's
+    20px; orange from 20 to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

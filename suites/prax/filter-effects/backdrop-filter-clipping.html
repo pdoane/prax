@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>backdrop-filter: clipped to the border box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { padding: 10px; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #f9cc9d 10px 20px); }
+  .plain { padding: 10px; background: #d68a3c; }
+  .glass { width: 100px; height: 40px; margin: 0 40px; }
+  .child { width: 40px; height: 30px; margin: 20px 0 0 80px; background: rgb(142 68 173 / 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 2 · 2.1 Filtering and Clipping</div>
+  <h1>backdrop-filter: clipped to the border box</h1>
+  <p class=pr-lede><q>Apply a clip to the contents of T’, using the border box of element B, including border-radius if
+  specified. Note that the children of B are not considered for the sizing or location of this clip.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-2/#backdrop-filter-operation">Filter Effects 2 §2.1</a></span>
+  The box, 100 by 40, has no background, and <code>backdrop-filter: grayscale(1)</code> unless the caption gives
+  another.
+  Safari's and Firefox's stills show no backdrop filter, as <a href="backdrop-filter.html">backdrop-filter.html</a>
+  says.</p>
+</header>
+
+<section>
+  <h2>The border box, its corners, not its children</h2>
+  <figure>
+    <div class="pr-stage back"><div class=glass style="border-radius: 20px; backdrop-filter: grayscale(1)"></div></div>
+    <figcaption><code>border-radius: 20px</code>: gray stripes in a box with round ends; colored at the
+    corners.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back" style="padding-bottom: 30px"><div class="glass pr-ghost" style="backdrop-filter: grayscale(1)"><div class=child></div></div></div>
+    <figcaption>A pale purple child overflowing the box 10px right and 10px down: gray only inside the dashed box, the
+    overflow's stripes colored.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The blur's edges, and B's own effects</h2>
+  <p><q>If the filter functions list includes a blur() filter, the filter will be applied with edgeMode="mirror", with
+  the edge defined by the clipped, transformed border box of the element.</q> <q>If element B has any transforms, effects, or clips,
+  apply those to T’.</q></p>
+  <figure>
+    <div class="pr-stage plain"><div class="glass pr-ghost" style="backdrop-filter: blur(10px)"></div></div>
+    <figcaption><code>blur(10px)</code> over solid orange: the same orange to the box's edges, no lighter or darker
+    rim.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class="glass pr-ghost" style="opacity: 0.5; backdrop-filter: grayscale(1)"></div></div>
+    <figcaption><code>opacity: 0.5</code>: the gray stripes half over the colored ones, pale and dull.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

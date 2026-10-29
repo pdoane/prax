@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-color: the border's foreground</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 20px; margin: 10px; padding: 10px; background: #f9cc9d; }
+  ruby { font: 16px/1 sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.1 Line Colors: the border-color properties</div>
+  <h1>border-color: the border's foreground</h1>
+  <p class=pr-lede><q>These properties set the foreground color of the border specified by the 'border-style'
+  properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-color">CSS Borders and Box Decorations 4 §2.1</a></span>
+  Each box has an orange background, which reaches under its border.</p>
+</header>
+
+<section>
+  <h2>The foreground, over the background</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border: 10px dotted #2c5a8f"></div></div>
+    <figcaption><code>dotted</code>: blue dots, the orange between them. <span class=pr-flag>Safari</span> Square dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border: 10px solid rgba(44, 90, 143, 0.4)"></div></div>
+    <figcaption>A translucent blue: the orange shows through it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border: 10px double; color: #8e44ad"></div></div>
+    <figcaption>No color given: <code>currentColor</code>, purple, the box's <code>color</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not on ruby containers</h2>
+  <p>The properties apply to <q>all elements except ruby base containers and ruby annotation containers</q>. The
+  annotation is in an <code>rtc</code> element, a ruby annotation container, with <code>border: 2px solid</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium" style="padding: 10px 0 0 10px; box-sizing: border-box; height: 60px"><ruby><rb>base</rb><rtc style="border: 2px solid #c0392b"><rt>text</rt></rtc></ruby></div>
+    <figcaption>"text" over "base", with no red border. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Draw the red border, round "text" set beside "base".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

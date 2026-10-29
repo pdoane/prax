@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Start and end page values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 8.1 Using named pages: page</div>
+  <h1>Start and end page values</h1>
+  <p class=pr-lede><q>a start 'page' value and end 'page' value is determined for each box as the value (if any) propagated from its first or last child box (respectively), else the used value on the box itself. A child propagates its own start or end page value if and only if the 'page' property applies to it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#using-named-pages">CSS Paged Media 3 §8.1</a></span> Pages of type <code>wide</code> have 40px margins; others 10px. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>From the first and last children</h2>
+  <p><q>Essentially, the two 'page' values compared are those from the deepest boxes meeting at the class A break point</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page wide { margin: 40px } html { background: #8cb6c0 } .w { page: wide }</style><div>line 1</div><div><div>line 2</div><div class=w><div>line 3</div></div></div><div>line 4</div>"></iframe>
+    <figcaption>Line 3, wide, is the last child of a box of type auto: that box's end value is wide, so the break falls between lines 2 and 3, and again before line 4. Pages: line 1 and 2; 3, wide; 4. <span class=pr-flag>Safari</span> One page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page wide { margin: 40px } html { background: #8cb6c0 } .w { page: wide; position: absolute; right: 0; bottom: 0 }</style><div>line 1</div><div>line 2</div><div class=w>abs</div>"></iframe>
+    <figcaption>'page' applies only to boxes in the normal flow between which a page may break: the absolutely positioned box of type wide forces no break, and the one page has 10px margins. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> A second page, empty.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

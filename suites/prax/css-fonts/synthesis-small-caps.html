@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-synthesis-small-caps</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8.3 Controlling synthesized small caps: the 'font-synthesis-small-caps' property</div>
+  <h1>font-synthesis-small-caps</h1>
+  <p class=pr-lede><q>This property controls whether user agents are allowed to synthesize small caps font faces when
+  a font family lacks small caps faces.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis-small-caps">CSS Fonts 4 §2.8.3</a></span></p>
+</header>
+
+<section>
+  <h2>A font without small capitals</h2>
+  <p>Each stage is <code>font-variant-caps: small-caps</code> in PR Tinos, which has no <code>smcp</code> feature.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-variant-caps: small-caps; font-synthesis-small-caps: auto">Handgloves</div>
+    <figcaption><code>auto</code>: "andgloves" as capitals reduced to about the x-height.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-variant-caps: small-caps; font-synthesis-small-caps: none">Handgloves</div>
+    <figcaption><code>none</code>: lowercase, as if 'font-variant-caps' were normal.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A font with small capitals</h2>
+  <p>PR Literata has <code>smcp</code>, so its own small capitals draw either way.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-variant-caps: small-caps; font-synthesis-small-caps: none">Handgloves</div>
+    <figcaption><code>none</code>: Literata's small capitals, drawn for their size, with strokes as heavy as the
+    capital H.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines: where they are painted</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .o { outline: 6px solid #c0392b; }
+  .stage { padding: 20px 20px 10px; }
+  .over { position: relative; z-index: 1; margin: -10px 0 0 30px; }
+  .later { margin: -10px 0 0 30px; }
+  .turned { width: 80px; margin: 30px 0 30px 40px; transform: rotate(20deg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3 Outline properties</div>
+  <h1>Outlines: where they are painted</h1>
+  <p class=pr-lede><q>Outlines differ from borders in the following ways: Outlines do not take up space. Outlines
+  contribute to the ink overflow area of an element. Outlines may be non-rectangular.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-props">CSS Basic User Interface 4 §3</a></span>
+  That they take no space and add no scrollable overflow is shown on CSS 2's <a href="../css2-18-user-interface/outline-no-room.html">outline pages</a>.</p>
+</header>
+
+<section>
+  <h2>The stacking is left to the browser</h2>
+  <p><q>The stacking of the rendering of these outlines is explicitly left up to implementations to provide a better
+  user experience per platform. This supersedes the stacking of outlines as defined in Appendix E of CSS 2.1</q>.
+  A has a 6px red outline; B overlaps its lower edge.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-a o">A</div><div class="pr-b later">B, in flow, after A</div></div>
+    <figcaption>B is an ordinary block after A. Any order is allowed: Chrome, Safari and Firefox all draw A's outline
+    over B's background and text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-a o">A</div><div class="pr-b over">B, z-index: 1</div></div>
+    <figcaption>B is positioned with <code>z-index: 1</code>. Any order is allowed: Chrome, Safari and Firefox all
+    draw B over A's outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Transforms are undefined</h2>
+  <p><q>The rendering of applying transforms to outlines is left explicitly undefined.</q></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a o turned">A</div></div>
+    <figcaption>A turned 20 degrees with <code>transform: rotate(20deg)</code>: any rendering is allowed. Chrome,
+    Safari and Firefox all turn the outline with the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Fuzzy ranges that override a reftest's own, as a browser's metadata overrides them for its runs. An entry is a line
+# of the test and a fuzzy meta's content, which may key one of its references, for each test it covers, then the
+# indented reason: why the engine's render differs from the reference by more than the test allows, and why that is not
+# an error. An override holds for every backend and pixel ratio.
+
+css/css-images/gradient/gradient-longer-hue-lch-001.html maxDifference=0-1;totalPixels=0-80
+css/css-images/gradient/gradient-longer-hue-lch-002.html maxDifference=0-1;totalPixels=0-80
+css/css-images/gradient/gradient-longer-hue-lch-006.html maxDifference=0-1;totalPixels=0-80
+    The reference names the midpoint of the test's gradient as a stop, color-mix(in lch longer hue, red, blue), which
+    is far outside sRGB. lib/draw holds a stop's color in half floats, as it holds colors throughout, so the stop's
+    lightness and chroma move by a fraction of a level on their way back to LCH, and up to two one-level columns of 40
+    pixels differ from the test, which names no midpoint. A stop held in floats agrees with the test in every column.

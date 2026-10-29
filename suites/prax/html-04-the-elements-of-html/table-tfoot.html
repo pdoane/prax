@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The tfoot element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); border-collapse: collapse; }
+  .t td { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; }
+  .t tfoot td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.7 The tfoot element</div>
+  <h1>The tfoot element</h1>
+  <p class=pr-lede><q>The tfoot element represents the block of rows that consist of the column summaries (footers) for
+  the parent table element, if the tfoot element has a parent and it is a table.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-tfoot-element">HTML §4.9.7</a></span>
+  The footer cells are orange.</p>
+</header>
+<section>
+  <h2>The footer's rows come last</h2>
+  <p><q>If the current element is a tfoot, then add that element to the list of pending tfoot elements</q>, then at the
+  end: <q>For each tfoot element in the list of pending tfoot elements, in tree order, run the algorithm for processing
+  row groups.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#forming-a-table">§4.9.12.1</a></span>
+  <code>tfoot { display: table-footer-group }</code> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tbody><tr><td>3<td>4<tr><td>5<td>6</tbody><tfoot><tr><td>8<td>10</tfoot></table>
+    </div>
+    <figcaption>A <code>tfoot</code> after the <code>tbody</code>: the orange totals, 8 and 10, below 3, 4, 5 and
+    6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tfoot><tr><td>8<td>10</tfoot><tbody><tr><td>3<td>4<tr><td>5<td>6</tbody></table>
+    </div>
+    <figcaption>The <code>tfoot</code> written before the <code>tbody</code>: the same table, the orange row still at
+    the bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

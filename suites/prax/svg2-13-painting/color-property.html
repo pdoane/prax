@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The color property and currentColor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 36px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="from-color" color="#4f81bd"><stop offset="0" stop-color="currentColor" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <filter id="flood" x="0" y="0" width="1" height="1" color="#d68a3c"><feFlood flood-color="currentColor" /></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.3 The effect of the ‘color’ property</div>
+  <h1>The color property and currentColor</h1>
+  <p class=pr-lede><q>The color property is used to provide a potential indirect value, currentColor, for the 'fill',
+  'stroke', stop-color, flood-color and lighting-color properties. The property has no other effect on SVG
+  elements.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#ColorProperty">SVG 2 §13.3</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>currentColor</h2>
+  <figure>
+    <div class="pr-stage pr-medium" style="color: #6aa36a"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="currentColor" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>The stage's <code>color</code> is green, inherited into the <code>svg</code>; a rectangle with
+    <code>fill="currentColor"</code>: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#from-color)" /></svg></div>
+    <figcaption>A gradient whose <code>color</code> is blue and whose first stop has
+    <code>stop-color="currentColor"</code>: blue at x 20 to orange at 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" filter="url(#flood)" /></svg></div>
+    <figcaption>A filter whose <code>color</code> is orange, of one <code>feFlood</code> with
+    <code>flood-color="currentColor"</code>, over the rectangle's area: orange, 120 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No other effect</h2>
+  <p>The initial value of <code>fill</code> is black <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingFillPaint">§13.4.1</a></span>, and
+  <code>color</code> does not change it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" color="#d68a3c" /></svg></div>
+    <figcaption>A rectangle with <code>color="#d68a3c"</code> and no <code>fill</code>: black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium" style="color: #d68a3c"><svg width="160" height="60"><text x="20" y="44">Paint</text></svg></div>
+    <figcaption>Text in a stage whose <code>color</code> is orange: black, unlike the HTML around it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

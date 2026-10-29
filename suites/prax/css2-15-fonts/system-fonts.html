@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font shorthand: system fonts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lines { padding: 0 6px; white-space: nowrap; }
+  figcaption .pr-computed { white-space: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.8 Shorthand font property: the 'font' property</div>
+  <h1>The font shorthand: system fonts</h1>
+  <p class=pr-lede><code>caption</code>, <code>icon</code>, <code>menu</code>, <code>message-box</code>,
+  <code>small-caption</code> and <code>status-bar</code> <q>refer to system fonts</q>. Each stage is drawn in the font the user agent picks for it, its platform's or a default of its own; the caption gives its size. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/system-font-names.html">System font names</a>, <a href="../css-fonts/system-font.html">The system font</a>.</p>
+</header>
+
+<section>
+  <h2>Set as a whole</h2>
+  <p><q>System fonts may only be set as a whole; that is, the font family, size, weight, style, etc. are all set at the
+  same time.</q> <q>If no font with the indicated characteristics exists on a given platform, the user agent should
+  either intelligently substitute ... or substitute a user agent default font.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2
+  §15.8</a></span></p>
+  <figure>
+    <div id=s1 class="pr-stage lines" style="font: caption">caption</div>
+    <figcaption><q>The font used for captioned controls</q>: <code class=pr-computed data-of=s1 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div id=s2 class="pr-stage lines" style="font: icon">icon</div>
+    <figcaption><q>The font used to label icons</q>: <code class=pr-computed data-of=s2 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div id=s3 class="pr-stage lines" style="font: menu">menu</div>
+    <figcaption><q>The font used in menus</q>: <code class=pr-computed data-of=s3 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div id=s4 class="pr-stage lines" style="font: message-box">message-box</div>
+    <figcaption><q>The font used in dialog boxes</q>: <code class=pr-computed data-of=s4 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div id=s5 class="pr-stage lines" style="font: small-caption">small-caption</div>
+    <figcaption><q>The font used for labeling small controls</q>: <code class=pr-computed data-of=s5
+    data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div id=s6 class="pr-stage lines" style="font: status-bar">status-bar</div>
+    <figcaption><q>The font used in window status bars</q>: <code class=pr-computed data-of=s6
+    data-property=font-size></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then altered individually</h2>
+  <p><q>These values may then be altered individually if desired.</q> The specification's <code>button p { font: menu }
+  button p em { font-weight: bolder }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide lines" style="font: menu">menu text <em id=s7 style="font-weight: bolder">and bolder emphasis</em></div>
+    <figcaption>The <code>em</code> keeps the menu font's family and size, italic, and one step bolder, bold.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:active</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px; font-size: 12px; }
+  .act .pr-target { margin: 0 0 8px; }
+  .act .plain { margin: 0 0 8px; padding: 0 6px; line-height: 20px; background: var(--pr-plain); border: 1px dashed var(--pr-line); }
+  .act :active { background: #8fd18f; }
+  .act label { display: block; padding: 0 6px; line-height: 24px; background: var(--pr-plain); }
+  .act input { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:active</h1>
+  <p class=pr-lede>The <code>:active</code> pseudo-class matches an element <q>while an element is being activated by
+  the user</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Being activated</h2>
+  <p>A button, a link or a focusable element is being activated while it is <q>in a formal activation state</q>, by the
+  pointer or a key. Anything else is while <q>being actively pointed at</q>: <q>between the time the mouse button is
+  pressed and the time it is released</q>. Green is <code>:active</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=button>a button</button>
+        <div class=pr-target tabindex=0>focusable, tabindex=0</div>
+        <div class=plain>not focusable</div>
+      </div>
+    </div>
+    <figcaption>Hold the mouse button down on each: it is green until released. Tab to the button and hold Space:
+    green from the key's press to its release.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A label's control</h2>
+  <p><q>Additionally, any element that is the labeled control of a label element that is currently matching :active,
+  also matches :active.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <label for=labeled>hold down on this label</label>
+        <p style="margin: 8px 0 0">its control: <input id=labeled></p>
+      </div>
+    </div>
+    <figcaption>Hold the mouse button down on the label: the label and the field below it are green; the line that
+    holds the field is not.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

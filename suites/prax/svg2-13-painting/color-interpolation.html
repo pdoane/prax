@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-interpolation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="srgb"><stop offset="0" stop-color="black" /><stop offset="1" stop-color="white" /></linearGradient>
+  <linearGradient id="linear" color-interpolation="linearRGB"><stop offset="0" stop-color="black" /><stop offset="1" stop-color="white" /></linearGradient>
+  <linearGradient id="referring" href="#srgb" color-interpolation="linearRGB" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.9 Color space for interpolation: the ‘color-interpolation’ property</div>
+  <h1>color-interpolation</h1>
+  <p class=pr-lede><q>The 'color-interpolation' property chooses between color operations occurring in the sRGB color
+  space or in a (light energy linear) linearized RGB color space.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#ColorInterpolation">SVG 2 §13.9</a></span>
+  Each stage is an SVG 160 by 60. Halfway from black to white is <code>#808080</code> in sRGB, and in linearized RGB
+  0.5, which is <code>#bcbcbc</code> in sRGB.</p>
+</header>
+
+<section>
+  <h2>Between gradient stops</h2>
+  <p>It controls <q>interpolating between gradient stops</q>. <q>For gradients which make use of the ‘href’ attribute
+  to reference another gradient, the gradient uses the 'color-interpolation' property value from the gradient element
+  which is directly referenced by the 'fill' or 'stroke' property.</q> The gradients run from black at x 20 to white
+  at 140.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#srgb)" /></svg></div>
+    <figcaption><code>sRGB</code>, the initial value: <code>#808080</code> at x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#linear)" /></svg></div>
+    <figcaption><code>linearRGB</code>: lighter, <code>#bcbcbc</code> at x 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#referring)" /></svg></div>
+    <figcaption>A <code>linearRGB</code> gradient with no stops of its own, whose <code>href</code> takes the
+    first one's: <code>#bcbcbc</code> at x 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Compositing</h2>
+  <p>It controls <q>compositing and blending of graphics elements into the current background.</q> <q>When a child
+  element is blended into a background, the value of the 'color-interpolation' property on the child determines the
+  type of blending</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="black" /><rect x="20" y="10" width="120" height="40" fill="white" fill-opacity="0.5" /></svg></div>
+    <figcaption>White at half opacity over black, <code>sRGB</code>: <code>#808080</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="black" /><rect x="20" y="10" width="120" height="40" fill="white" fill-opacity="0.5" color-interpolation="linearRGB" /></svg></div>
+    <figcaption>The white with <code>linearRGB</code>: <code>#bcbcbc</code>. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>#808080</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

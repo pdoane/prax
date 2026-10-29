@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating lists of rule values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; gap: 36px; height: 40px; column-rule-style: solid; column-rule-color: #c0392b; }
+  .f > div { width: 10px; padding: 0; box-sizing: border-box; }
+  .half { animation-duration: 4s; animation-timing-function: linear; animation-delay: -2s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  .quarter { animation-duration: 4s; animation-timing-function: linear; animation-delay: -1s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes expand { from { column-rule-width: 10px; } to { column-rule-width: 20px, 40px; } }
+  @keyframes repeaters { from { column-rule-width: repeat(2, 4px, 10px); } to { column-rule-width: repeat(2, 16px, 30px); } }
+  @keyframes autos { from { column-rule-width: 4px, repeat(auto, 10px), 30px; } to { column-rule-width: 12px, repeat(auto, 30px), 10px; } }
+  @keyframes mismatch { from { column-rule-width: 4px, repeat(auto, 10px); } to { column-rule-width: 20px, 30px, repeat(auto, 40px, 36px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.7 Interpolation of list values</div>
+  <h1>Interpolating lists of rule values</h1>
+  <p class=pr-lede><q>When interpolating 'repeat()' values, or lists of values for 'rule-color' or 'rule-width', the
+  interpolation proceeds in two steps</q>: <q>Expand any integer repeater into its equivalent list of values</q>, then
+  <q>Apply the repeatable list interpolation algorithm to the expanded lists</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#interpolation-behavior">CSS Gaps 1 §4.7</a></span></p>
+</header>
+
+<section>
+  <h2>Lists of different lengths</h2>
+  <p>Each flexbox has five 10px items, 36px apart, with red column rules, and an animation, to and fro (a still shows the frame the caption gives), of
+  <code>column-rule-width</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class="f half" style="animation-name: expand"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption>From <code>10px</code> to <code>20px, 40px</code>, at 50%: <code>15px, 25px</code>, so the rules
+    are 15, 25, 15 and 25px wide. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class="f half" style="animation-name: repeaters"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption>From <code>repeat(2, 4px, 10px)</code> to <code>repeat(2, 16px, 30px)</code>, at 50%: 10, 20, 10 and
+    20px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto repeaters</h2>
+  <p><q>When both from and to contain auto-repeaters, and the length of their segments match</q>, each part
+  interpolates with its counterpart; <q>If the length of leading values in from and leading values in to don't
+  match, we fall back to discrete interpolation.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class="f half" style="animation-name: autos"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>4px, repeat(auto, 10px), 30px</code> to <code>12px, repeat(auto, 30px), 10px</code>, at 50%:
+    8px, then 20px twice, then 20px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-motion"><div class="f quarter" style="animation-name: mismatch"><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>4px, repeat(auto, 10px)</code> to <code>20px, 30px, repeat(auto, 40px, 36px)</code>: one
+    leading value against two, so discrete; at 25% still the first: 4px, then 10px. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lengthAdjust</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.1 Attributes</div>
+  <h1>lengthAdjust</h1>
+  <p class=pr-lede><q>spacingAndGlyphs: Indicates that the advance values are adjusted and the glyphs themselves
+  stretched or compressed in one axis (i.e., a direction parallel to the inline-base direction).</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanAttributes">SVG 2 §11.2.1</a></span>
+  Each stage is an SVG 160 by 60. The text is "abcd" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 40 long, at
+  <code>x="20"</code>, and the length it is to fill is marked by red ticks.</p>
+</header>
+
+<section>
+  <h2>Stretching the glyphs</h2>
+  <p><q>The user agent is required to achieve correct start and end positions for the text strings, but the locations
+  of intermediate glyphs are not predictable</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 20V45 M100 20V45" class=pr-baseline /><text class=pr-measure x="20" y="35" textLength="80" lengthAdjust="spacing">abcd</text></svg></div>
+    <figcaption><code>textLength="80" lengthAdjust="spacing"</code>: the letters as drawn, spread from 20 to
+    100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 20V45 M100 20V45" class=pr-baseline /><text class=pr-measure x="20" y="35" textLength="80" lengthAdjust="spacingAndGlyphs">abcd</text></svg></div>
+    <figcaption><code>spacingAndGlyphs</code>: each letter twice as wide, no taller, filling 20 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 20V45 M40 20V45" class=pr-baseline /><text class=pr-measure x="20" y="35" textLength="20" lengthAdjust="spacingAndGlyphs">abcd</text></svg></div>
+    <figcaption><code>textLength="20"</code>, <code>spacingAndGlyphs</code>: each letter half as wide,
+    filling 20 to 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In vertical text</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100 M70 10H90 M70 90H90" class=pr-baseline /><text class=pr-measure x="80" y="10" textLength="80" lengthAdjust="spacingAndGlyphs" style="writing-mode: vertical-rl">abcd</text></svg></div>
+    <figcaption><code>vertical-rl</code> at x 80 from y 10: the letters, turned sideways, stretched down to fill
+    10 to 90, no wider. <span class=pr-flag>Safari</span> Fills 10 to about 70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

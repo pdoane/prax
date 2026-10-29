@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lab() and lch()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 9.3 Specifying Lab and LCH: the lab() and lch() functional notations</div>
+  <h1>lab() and lch()</h1>
+  <p class=pr-lede><q>CSS allows colors to be directly expressed in Lab and LCH.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#specifying-lab-lch">CSS Color 4 §9.3</a></span> Each pair is the
+  specification's example, then the <code>rgb()</code> it converts to.</p>
+</header>
+
+<section>
+  <h2>lab() and lch()</h2>
+  <p><q>the first argument specifies the CIE Lightness, L.</q> <q>The second and third arguments are the distances
+  along the "a" and "b" axes</q>. In lch(), <q>The second argument is the chroma C</q>, <q>The third argument is the
+  hue angle H.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lab(29.2345% 39.3825 20.0664)"></div><div class=sw style="background: rgb(49.06% 13.87% 15.9%)"></div><div class=sw style="background: lab(52.2345 40.1645 59.9971)"></div><div class=sw style="background: rgb(77.61% 36.34% 2.45%)"></div></div>
+    <figcaption><code>lab(29.2345% 39.3825 20.0664)</code>: dark red, as <code>rgb(49.06% 13.87% 15.9%)</code>.
+    <code>lab(52.2345 40.1645 59.9971)</code>: orange, as <code>rgb(77.61% 36.34% 2.45%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(29.2345% 44.2 27)"></div><div class=sw style="background: rgb(49.06% 13.87% 15.9%)"></div><div class=sw style="background: lch(67.5345% 42.5 258.2)"></div><div class=sw style="background: rgb(38.29% 67.27% 93.85%)"></div></div>
+    <figcaption><code>lch(29.2345% 44.2 27)</code>: the same dark red. <code>lch(67.5345% 42.5
+    258.2)</code>: the same sky blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lightness 0% and 100%</h2>
+  <p><q>If the lightness of a Lab color (after clamping) is 0%, or 100% the color will be displayed as black, or white,
+  respectively due to gamut mapping to the display.</q> <q>values greater than 100% or 100 are clamped to 100% at
+  parsed-value time.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: lab(100% 40 0)"></div><div class=sw style="background: lch(150% 60 30)"></div><div class=sw style="background: white; outline: 1px solid #b5bcc7"></div></div>
+    <figcaption><code>lab(100% 40 0)</code> and <code>lch(150% 60 30)</code>: white, as the outlined white box.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips
+    the components: a pale pink and a peach.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: lab(0% 40 0)"></div><div class=sw style="background: black"></div></div>
+    <figcaption><code>lab(0% 40 0)</code>: black, beside <code>black</code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to a dark red,
+    <code>rgb(19% 0% 1%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

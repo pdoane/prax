@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Named pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 8.1 Using named pages: page</div>
+  <h1>Named pages</h1>
+  <p class=pr-lede><q>The 'page' property is used to specify a particular type of page (called a named page) on which an element must be displayed. If necessary, a forced page break is introduced and a new page generated of the specified type.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#using-named-pages">CSS Paged Media 3 §8.1</a></span> Pages of type <code>wide</code> have 40px margins; others 10px. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>A break where the type changes</h2>
+  <p><q>If for any two boxes meeting at a class A break point, the end page value of the box preceding the break and start page value of the box succeeding the break do not match, then a page break is forced between the two boxes</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page wide { margin: 40px } html { background: #8cb6c0 } .w { page: wide }</style><div>line 1</div><div class=w><div>line 2</div><div>line 3</div></div><div class=w><div>line 4</div></div><div>line 5</div>"></iframe>
+    <figcaption>Page 1: line 1. Page 2, wide: lines 2 to 4, from two boxes of the same type, which share the page. Page 3: line 5. <span class=pr-flag>Safari</span> One page: no named pages.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page wide { margin: 40px } html { background: #8cb6c0 } .w { page: wide }</style><div class=w><div>line 1</div><div>line 2</div></div><div>line 3</div>"></iframe>
+    <figcaption><q>The first printed page's type is the start page value of the root.</q> The first box is wide, so is page 1, with no page before it. Page 2: line 3. <span class=pr-flag>Safari</span> One page.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>the two tables are rendered on landscape pages (indeed, on the same page, if they fit). The page type "narrow" is used for the &lt;p&gt; after the second table</q>. Here <code>rotated</code> pages have 40px margins and <code>narrow</code> ones a 60px left margin.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page narrow { margin-left: 60px } @page rotated { margin: 40px } html { background: #8cb6c0 } div { page: narrow } .t { page: rotated }</style><div><div class=t>table 1</div><div class=t>table 2</div><p>narrow text</p></div>"></iframe>
+    <figcaption>Page 1, rotated: both tables. Page 2, narrow: the paragraph, 60px from the left. <span class=pr-flag>Safari</span> One page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

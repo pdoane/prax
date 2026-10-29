@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alignment after flexing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 40px; flex-shrink: 0; }
+  .o { margin-left: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8 Alignment</div>
+  <h1>Alignment after flexing</h1>
+  <p class=pr-lede><q>After a flex container's contents have finished their flexing and the dimensions of all flex
+  items are finalized, they can then be aligned within the flex container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#alignment">CSS Flexible Box Layout 2 §8</a></span></p>
+</header>
+
+<section>
+  <h2>Flexing first, then alignment</h2>
+  <p>Each stage has <code>justify-content: center</code> and two items 40px wide.</p>
+  <figure>
+    <div class=pr-stage style="justify-content: center"><div class="pr-a pr-fit" style="flex-grow: 1">A</div><div class="pr-b pr-fit" style="flex-grow: 1">B</div></div>
+    <figcaption>Both <code>flex-grow: 1</code>: flexing gives each 60px of the free space, so A is 0 to 100px and B
+    100 to 200px, and nothing is left to center.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption>Neither grows: the 120px left over is split either side, so A is 60 to 100px and B 100 to
+    140px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Box Alignment's values apply to flex layout</h2>
+  <p><q>any new values defined in the Box Alignment module will apply to Flexible Box Layout; in other words, the Box
+  Alignment module, once completed, will supersede the definitions here.</q> Three items 40px wide.</p>
+  <figure>
+    <div class=pr-stage style="justify-content: space-evenly"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>space-evenly</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-values">CSS Box Alignment 3 §4.3</a></span>:
+    the 80px left over in four equal spaces of 20px, before, between and after: A at 20px, B at 80px, C at
+    140px.</figcaption>
+  </figure>
+  <figure class=o>
+    <div class="pr-stage pr-narrow" style="justify-content: safe center"><div class="pr-a pr-fit" style="width: 140px">A</div></div>
+    <figcaption>A 100px stage and A 140px wide. <code>safe center</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overflow-values">CSS Box Alignment 3 §4.4</a></span>:
+    A overflows, so it is aligned as <code>flex-start</code>: 0 to 140px, past the right edge only.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap-reverse; height: 40px; align-items: flex-start"><div class="pr-a pr-fit">A</div></div>
+    <figcaption><code>flex-wrap: wrap-reverse</code>, 40px tall: cross-start is the bottom, so <code>align-items:
+    flex-start</code> puts A at 20 to 40px…</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-wrap: wrap-reverse; height: 40px; align-items: start"><div class="pr-a pr-fit">A</div></div>
+    <figcaption>…and <code>start</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#positional-values">CSS Box Alignment 3 §4.1</a></span>,
+    the start of the writing mode's block axis, at 0 to 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rule-overlap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 6px solid #c0392b; row-rule: 6px solid #1f2430; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .f { display: flex; flex-wrap: wrap; gap: 10px; }
+  .f > div { padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.5 Gap decoration overlap</div>
+  <h1>rule-overlap</h1>
+  <p class=pr-lede><q>This property sets the paint order for overlapping gap decorations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#overlap">CSS Gaps 1 §3.5</a></span></p>
+</header>
+
+<section>
+  <h2>Which is on top where they cross</h2>
+  <p>Column rules are red, row rules black, each 6px wide.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>row-over-column</code>, the initial value: <q>Row-direction decorations are painted above
+    column-direction decorations.</q> The black rule crosses over the red ones. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-overlap: column-over-row"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-over-row</code>: <q>Column-direction decorations are painted above row-direction
+    decorations.</q> The red rules cross over the black one. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a flex container</h2>
+  <p>A flex line's column rules meet the row rule where they end; with <code>column-rule-inset: -8px</code> they run
+  on across it.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f rules" style="column-rule-inset: -8px"><div class=pr-a style="width: 60px">A</div><div class=pr-b style="width: 80px">B</div><div class=pr-c style="width: 30px">C</div><div class=pr-d style="width: 90px">D</div><div class=pr-a style="width: 50px">E</div></div></div>
+    <figcaption><code>row-over-column</code>: the black rule over the ends of the red rules. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="f rules" style="column-rule-inset: -8px; rule-overlap: column-over-row"><div class=pr-a style="width: 60px">A</div><div class=pr-b style="width: 80px">B</div><div class=pr-c style="width: 30px">C</div><div class=pr-d style="width: 90px">D</div><div class=pr-a style="width: 50px">E</div></div></div>
+    <figcaption><code>column-over-row</code>: the red rules over the black one. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

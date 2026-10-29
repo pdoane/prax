@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The regions of a gauge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 0; font-size: 16px; line-height: 20px; }
+  .pad meter { margin: 0 0 0 10px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.14 The meter element</div>
+  <h1>The regions of a gauge</h1>
+  <p class=pr-lede><q>The other three attributes can be used to segment the gauge's range into "low", "medium", and
+  "high" parts, and to indicate which part of the gauge is the "optimum" part.</q> <q>the UA should indicate</q> <q>the
+  relationship between the actual value and the three regions of the gauge.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element">HTML §4.10.14</a></span></p>
+</header>
+
+<section>
+  <h2>The optimum in the middle</h2>
+  <p><q>If the optimum point is equal to the low boundary or the high boundary, or anywhere in between them, then the
+  region between the low and high boundaries of the gauge must be treated as the optimum region, and the low and high
+  parts, if any, must be treated as suboptimal.</q> Each gauge has <code>low=0.25 high=0.75 optimum=0.5</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element">§4.10.14</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0.5 value=0.5></meter></div>
+    <figcaption><code>value=0.5</code>: optimum, drawn as such, often green.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0.5 value=0.1></meter></div>
+    <figcaption><code>value=0.1</code>, low: suboptimal, often yellow.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0.5 value=0.9></meter></div>
+    <figcaption><code>value=0.9</code>, high: suboptimal too, drawn like 0.1.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The optimum at one end</h2>
+  <p><q>Otherwise, if the optimum point is less than the low boundary, then the region between the minimum value and the
+  low boundary must be treated as the optimum region, the region from the low boundary up to the high boundary must be
+  treated as a suboptimal region, and the remaining region must be treated as an even less good region.</q> Each has
+  <code>low=0.25 high=0.75</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element">§4.10.14</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0 value=0.1></meter></div>
+    <figcaption><code>optimum=0</code>, <code>value=0.1</code>: optimum.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0 value=0.5></meter></div>
+    <figcaption><code>value=0.5</code>: suboptimal.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=0 value=0.9></meter></div>
+    <figcaption><code>value=0.9</code>: even less good, drawn unlike the other two, often red.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter low=0.25 high=0.75 optimum=1 value=0.1></meter></div>
+    <figcaption><code>optimum=1</code>, reversed: 0.1 is even less good.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

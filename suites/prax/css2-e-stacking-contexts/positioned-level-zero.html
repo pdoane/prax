@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: positioned boxes at level 0</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; box-sizing: border-box; width: 100px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: positioned boxes at level 0</h1>
+  <p class=pr-lede>Step 8. Each stage forms the stacking context, and its absolutely positioned boxes are in the source in
+  the order A, B, C.</p>
+</header>
+
+<section>
+  <h2>auto and 0 together, in tree order</h2>
+  <p><q>All positioned descendants with 'z-index: auto' or 'z-index: 0', in tree order.</q> They come after the
+  in-flow content and floats of steps 4 to 7. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class="pr-a p" style="z-index: 0; left: 20px; top: 10px">A: 0</div><div class="pr-b p" style="left: 55px; top: 30px">B: auto</div><div class="pr-c p" style="z-index: 0; left: 90px; top: 50px">C: 0</div></div>
+    <figcaption>0, auto, 0: neither value goes first; B covers A, and C covers B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking pr-text" style="padding: 0 10px"><div class="pr-a p" style="left: 20px; top: 20px">A: auto</div>text in a line after A, text in a line after A, text after A</div>
+    <figcaption>A comes before the stage's text in the tree, and covers it: lines are painted in step 7.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto: as if a context; 0: a context, whole</h2>
+  <p><q>For those with 'z-index: auto', treat the element as if it created a new stacking context, but any positioned
+  descendants and descendants which actually create a new stacking context should be considered part of the parent
+  stacking context, not this new one. For those with 'z-index: 0', treat the stacking context generated
+  atomically.</q> In each figure, A holds a purple child with <code>z-index: 1</code>, and B overlaps it. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class="pr-a p" style="left: 20px; top: 10px; width: 110px; height: 60px">A: auto<div class="pr-d p" style="z-index: 1; left: 30px; top: 25px; width: 80px; height: 30px">child: 1</div></div><div class="pr-b p" style="left: 90px; top: 50px; text-align: right">B: auto</div></div>
+    <figcaption>A is <code>auto</code>: its child is in the stage's context at level 1, painted in step 9, over
+    B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking"><div class="pr-a p" style="z-index: 0; left: 20px; top: 10px; width: 110px; height: 60px">A: 0<div class="pr-d p" style="z-index: 1; left: 30px; top: 25px; width: 80px; height: 30px">child: 1</div></div><div class="pr-b p" style="left: 90px; top: 50px; text-align: right">B: auto</div></div>
+    <figcaption>A is <code>0</code>: its child is inside A's context, painted with A, and B covers both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

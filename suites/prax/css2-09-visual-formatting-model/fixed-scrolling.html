@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed positioning: scrolling</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.6.1 Fixed positioning</div>
+  <h1>Fixed positioning: scrolling</h1>
+  <p class=pr-lede><q>Fixed positioning is a subcategory of absolute positioning. The only difference is that for a fixed
+  positioned box, the containing block is established by the viewport. For continuous media, fixed boxes do not move
+  when the document is scrolled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-positioning">CSS 2 §9.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Scrolling</h2>
+  <p>Each frame is a document 300px tall, scrolled down 60px; the guides are 10px apart. A box at <code>top:
+  10px</code> in each.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: absolute; top: 10px; left: 10px; width: 120px; height: 20px; background: #4f81bd }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>absolute</code>: scrolled out of view.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: fixed; top: 10px; left: 10px; width: 120px; height: 20px; background: #d68a3c }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>fixed</code>: still 10px from the frame's top.</figcaption>
+  </figure>
+</section>
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></div>
+  <h2>Nothing to scroll to</h2>
+  <p><q>As a result, parts of fixed-positioned boxes that extend outside the layout viewport/page area cannot be
+  scrolled to and will not print.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span> Each frame's document
+  has a dashed line at its top and a fixed box at <code>top: 60px</code>, 80px tall, past the frame's bottom; each is
+  scrolled as far down as it goes.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 100px; border-top: 2px dashed #6b7381; box-sizing: border-box } div { position: fixed; top: 60px; left: 10px; width: 120px; height: 80px; background: #d68a3c }</style><div></div><script>scrollTo(0, 1000)</script>"></iframe></div>
+    <figcaption>The document is as tall as the frame: the fixed box adds nothing to scroll, the dashed top stays,
+    and the box's lower half is cut off.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 140px; border-top: 2px dashed #6b7381; box-sizing: border-box } div { position: fixed; top: 60px; left: 10px; width: 120px; height: 80px; background: #d68a3c }</style><div></div><script>scrollTo(0, 1000)</script>"></iframe></div>
+    <figcaption>The document is 40px taller than the frame, and scrolls 40px, the dashed top gone: the box does not
+    move, and its lower half is still cut off.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

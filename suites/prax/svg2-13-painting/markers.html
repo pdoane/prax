@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Markers: start, middle and end</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .turn { animation: turn 4s linear -1s infinite; }
+  @keyframes turn { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="start" viewBox="0 0 20 20" refX="10" refY="10" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect x="1" y="1" width="18" height="18" fill="#6aa36a" stroke="#3f7a3f" stroke-width="2" /></marker>
+  <marker id="mid" viewBox="0 0 20 20" refX="10" refY="10" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect x="1" y="1" width="18" height="18" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></marker>
+  <marker id="end" viewBox="0 0 20 20" refX="10" refY="10" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect x="1" y="1" width="18" height="18" fill="#d68a3c" stroke="#9c5f22" stroke-width="2" /></marker>
+  <marker id="turning" viewBox="-10 -10 20 20" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect class=turn x="-6" y="-6" width="12" height="12" fill="#d68a3c" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7 Markers</div>
+  <h1>Markers: start, middle and end</h1>
+  <p class=pr-lede><q>A marker is a graphical object that is painted at particular positions along any shape
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#Markers">SVG 2 §13.7</a></span>
+  Each stage is an SVG 160 by 60. The markers are squares 20 across: green for <code>marker-start</code>, blue for
+  <code>marker-mid</code>, orange for <code>marker-end</code>.</p>
+</header>
+
+<section>
+  <h2>Vertex markers, painted from start to end</h2>
+  <p><q>The 'marker-start' and 'marker-end' properties can be used to place markers at the first and last vertex of a
+  shape, and the 'marker-mid' property can be used to place markers at all other vertices (aside from the first and
+  last).</q> <q>Markers on a given element are painted in the following order, from bottom to top: any marker
+  specified by 'marker-start'; the 'marker-mid' markers, in order of their position along the path; any marker
+  specified by 'marker-end'</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 45 L 60 15 L 100 45 L 140 15" fill="none" stroke="#1f2430" stroke-width="2" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>A zigzag: green at 20, 45; blue at 60, 15 and 100, 45; orange at 140, 15.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 62 30 H 74 H 86 H 98" fill="none" stroke="#1f2430" stroke-width="2" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>Vertices 12 apart, drawn rightwards: each square over the one to its left, green under two blue
+    under orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 98 30 H 86 H 74 H 62" fill="none" stroke="#1f2430" stroke-width="2" marker-start="url(#start)" marker-mid="url(#mid)" marker-end="url(#end)" /></svg></div>
+    <figcaption>Drawn leftwards: each over the one to its right, green on the right at the bottom, orange on the
+    left on top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Animated markers</h2>
+  <p><q>Markers can be animated, and as with ‘use’ elements, the animated effects will show on all current uses of the
+  markers within the document.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" fill="none" stroke="#1f2430" stroke-width="2" marker-start="url(#turning)" marker-mid="url(#turning)" marker-end="url(#turning)" /></svg></div>
+    <figcaption>One marker at three vertices, an orange square turning a quarter turn in 4 seconds: at a
+    quarter, all three at 22.5°. <span class=pr-flag>Safari</span> They do not turn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

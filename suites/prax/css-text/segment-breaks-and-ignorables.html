@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Segment breaks and ignorable characters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4 White Space Processing &amp; Control Characters</div>
+  <h1>Segment breaks and ignorable characters</h1>
+  <p class=pr-lede><q>For CSS processing, each document language–defined “segment break” or “newline sequence”—or
+  if none are defined, each line feed (U+000A)—in the text is treated as a segment break, which is then
+  interpreted for rendering as specified by the 'white-space' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-processing">CSS Text 4 §4</a></span>
+  CSS 2's page shows <a href="../css2-16-text/control-characters.html">control characters</a>.</p>
+</header>
+
+<section>
+  <h2>Line feeds, not carriage returns, in the DOM</h2>
+  <p><q>Unlike HTML, the DOM does not give any particular meaning to carriage returns (U+000D), so they are not
+  treated as segment breaks.</q> <q>Carriage returns (U+000D) are treated identically to spaces (U+0020) in all
+  respects.</q> Each stage is <code>pre-line</code>, of 10px letters, and its text is set by script.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="white-space: pre-line" id=lf></div>
+    <figcaption>"one", U+000A, "two": two lines.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="white-space: pre-line" id=crlf></div>
+    <figcaption>"one", U+000D U+000A, "two": two lines, the carriage return a space removed beside the
+    break.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-measure" style="white-space: pre-line" id=cr></div>
+    <figcaption>"one", U+000D, "two": one line, "one two", the carriage return a space. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "onetwo": no space.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Default-ignorable characters</h2>
+  <p><q>As required by Unicode, unsupported Default_ignorable characters must be ignored for text rendering.</q>
+  Each stage is "a", the character, "b", of 10px letters.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure">a&#x2065;b</div>
+    <figcaption>U+2065, unassigned and default-ignorable: "ab", 20px, nothing between.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure">a&#xE0080;b</div>
+    <figcaption>U+E0080, in the tags block: "ab", 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure">a&#x1D173;b</div>
+    <figcaption>U+1D173 MUSICAL SYMBOL BEGIN BEAM, a format character: "ab", 20px.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("lf").textContent = "one\ntwo";
+  document.getElementById("crlf").textContent = "one\r\ntwo";
+  document.getElementById("cr").textContent = "one\rtwo";
+</script>
+</body>
+</html>

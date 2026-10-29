@@ -1,0 +1,75 @@
+# Cases in which the engine is right and the corpus is wrong, as decided by docs/behavior.md from the drafts, the
+# browsers and the issues. They count as passing. An entry lists the cases it covers, one per line, followed by the
+# indented reason: what the sources say and why the corpus loses. A case that the engine has yet to build is a failure,
+# not an erratum. A case that starts agreeing is reported so its entry can be removed.
+
+filters/enable-background/accumulate.svg
+filters/enable-background/new-with-invalid-region-1.svg
+filters/enable-background/new-with-invalid-region-2.svg
+filters/enable-background/new-with-invalid-region-3.svg
+filters/enable-background/new-with-region.svg
+filters/enable-background/stop-on-the-first-new-1.svg
+filters/enable-background/stop-on-the-first-new-2.svg
+filters/enable-background/with-filter.svg
+filters/enable-background/with-opacity-3.svg
+filters/enable-background/with-opacity-4.svg
+filters/enable-background/with-transform.svg
+    filter-effects-1 drops SVG 1.1's enable-background (filter-effects-1/#AccessBackgroundImage) and defines
+    BackgroundImage as the backdrop of the current isolation group, which the outermost svg element and a group with
+    opacity are (SVG2/render.html#ParentCompositing, compositing-1/#csscompositingrules_SVG). The references treat the
+    backdrop as empty unless enable-background is new, as SVG 1.1 did. Chrome and Safari read BackgroundImage as
+    SourceGraphic, and Firefox ignores the filter, so no browser draws the references either.
+
+filters/feConvolveMatrix/divisor=0.svg
+    "If the specified divisor is 0 then the default value will be used instead", the kernel's sum
+    (filter-effects-1/#feConvolveMatrixElement). The reference treats it as an error and draws nothing, as SVG 1.1 did.
+
+filters/feGaussianBlur/huge-stdDeviation.svg
+    A deviation of 1000 spreads the rectangle so thin that it nearly vanishes, and Chrome, Safari and Firefox draw at
+    most a faint tint. The reference limits the deviation.
+
+filters/filter/invalid-FuncIRI.svg
+filters/filter-functions/one-invalid-url-in-list.svg
+    A URL that names no filter element ignores the whole filter list, and no filter applies
+    (filter-effects-1/#FilterProperty). Chrome, Safari and Firefox draw the element unfiltered for a lone URL, and
+    Safari and Firefox ignore the list that holds one too. The references draw nothing for the first, and apply the
+    rest of the list for the second, as Chrome does.
+
+paint-servers/radialGradient/fr=0.7.svg
+    A start circle that fully overlaps the end circle draws no gradient, and the area stays untouched
+    (SVG2/pservers.html#RadialGradientNotes), as Chrome draws it. The reference paints the cone of Canvas's
+    gradient, as Safari and Firefox do.
+
+shapes/rect/ic-values.svg
+shapes/rect/lh-values.svg
+shapes/rect/rlh-values.svg
+shapes/rect/vi-and-vb-values.svg
+    SVG 2 parses a presentation attribute as a value of its property, a CSS length with any of CSS's units
+    (svg2-draft/types.html#presentation-attribute-css-value), and Safari 27, Firefox 160 and Chrome 158 agree on em,
+    ex, ch, rem, lh, vw and the rest in attributes (w3c/svgwg#1216, resolved October 2026). The references draw nothing,
+    as if the units were invalid, which is resvg's own limit.
+
+structure/style-attribute/non-presentational-attribute.svg
+structure/style/non-presentational-attribute.svg
+    SVG 2 makes a rect's x, y, width and height geometry properties (svg2-draft/geometry.html), which a style rule or a
+    style attribute sets, and Chrome draws a rect whose height a style rule gives. The references follow SVG 1.1, where
+    the rect has no height and draws nothing.
+
+structure/svg/negative-size.svg
+    A negative width or height attribute is invalid as a value of the property, so it declares nothing and the root's
+    width and height are auto, 100% of the viewport (svg2-draft/geometry.html, w3c/svgwg#1202, resolved October 2026).
+    The browsers draw the content. The reference draws nothing, as SVG 1.1's error processing does.
+
+text/letter-spacing/5percent.svg
+text/word-spacing/5percent.svg
+    A percentage of letter-spacing or word-spacing is of the font size (css-text-4/#letter-spacing-property), and
+    Chrome, Safari and Firefox all space 40px text by 4px a letter at 10%. The references take it as a percentage of the
+    viewport's width.
+
+text/tspan/mixed-xml-space-1.svg
+text/tspan/mixed-xml-space-2.svg
+text/tspan/mixed-xml-space-3.svg
+    SVG 2 processes white space by CSS's rules (svg2-draft/text.html#TextWhiteSpace), with xml:space="preserve" as
+    white-space-collapse: preserve-spaces. A collapsible space is removed only after another collapsible space or at the
+    start or end of a line (css-text-4/#white-space-phase-1), so the first of a run of collapsible spaces next to
+    preserved ones stays, and Chrome keeps it. The references strip it, as SVG 1.1's xml:space="default" did.

@@ -1,0 +1,38 @@
+/* The keyboard that keyboard.js draws: a key is a light box with its US legend, the keys outside the figure's subject
+   are blank and grey, the key held down is filled with the accent, and a key once pressed keeps a tint. */
+.kb-map {
+    position: relative;
+    margin: 10px;
+    outline-offset: 4px;
+}
+
+.kb-map:focus-visible {
+    outline: 3px solid #2c5a8f;
+}
+
+.kb-key {
+    position: absolute;
+    box-sizing: border-box;
+    background: white;
+    border: 1px solid #6b7381;
+    border-radius: 3px;
+    color: #1f2430;
+    font: 11px ui-monospace, Menlo, monospace;
+    text-align: center;
+    overflow: hidden;
+}
+
+.kb-key.kb-other {
+    background: #dfe2e7;
+    border-color: #b5bcc7;
+}
+
+.kb-key.kb-seen {
+    background: #b9cde6;
+}
+
+.kb-key.kb-down {
+    background: #4f81bd;
+    border-color: #2c5a8f;
+    color: white;
+}

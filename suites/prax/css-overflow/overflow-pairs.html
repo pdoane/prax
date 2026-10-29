@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow: the pair of values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 70px; height: 40px; margin: 10px 20px 20px; }
+  .pr-stage.pr-narrow { width: 116px; }
+  figure.pr-narrow { margin-right: 6px; }
+  figure.pr-narrow figcaption { max-width: 118px; }
+  .w { width: 100px; text-align: right; }
+  .h { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, the pair of values</div>
+  <h1>overflow: the pair of values</h1>
+  <p class=pr-lede><q>The visible and clip values are known as the non-scrollable values. However, if the other axis
+  specifies a scrollable value, a specified value of visible computes to overflow/auto, enabling scrolling in its
+  axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>visible beside a scrollable value</h2>
+  <p>Each dashed box is 70 by 40 and holds A and B, 40px wide, then C, 100px wide and labelled "end" at its right end. A script sets <code>scrollLeft</code> and
+  <code>scrollTop</code> to 30; each box scrolls only in an axis it may, at most 30 across and 20 down.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow-x: hidden"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>hidden visible</code>: y is <code>auto</code>: cut below too; scrolled both ways, "end" shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow-y: scroll"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>visible scroll</code>: x is <code>auto</code>: cut at the right too; scrolled both ways.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow: clip visible"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>clip visible</code>: unchanged: nothing scrolls; C is cut at the right and hangs out below.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow: overlay"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>overlay</code>, <q>a legacy value alias of overflow/auto</q>: scrolled both ways.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clip beside a scrollable value</h2>
+  <p><q>If only one axis computes to a scrollable value (i.e. the other axis is overflow/clip), the box is a
+  single-axis scroll container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span> <code>clip</code> keeps its
+  value and forbids scrolling in its axis.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow: clip auto"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>clip auto</code>: scrolled down only: B and C show, C cut before "end". <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> scroll across too.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow: hidden clip"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>hidden clip</code>: scrolled across only: A and B, 10px of each, C cut off below. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> scroll down too.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc s" style="overflow: hidden"><div class="pr-a pr-fit h">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit w">end</div></div></div>
+    <figcaption><code>hidden</code>, a dual-axis scroll container, for comparison: scrolled both ways.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const e of document.querySelectorAll(".s")) {
+    e.scrollLeft = 30;
+    e.scrollTop = 30;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: the table's border</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; border: 0 none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.7.1.1 Conflict Resolution Algorithm for Collapsed Borders, the table's border</div>
+  <h1>Collapsed borders: the table's border</h1>
+  <p class=pr-lede>After the cells, <q>for that table-root</q>, its own borders are harmonized with the cells on its edges. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-conflict-resolution-algorithm">CSS Table 3 §3.7.1.1</a></span> Cells are grey, 40 by 20 inside their borders.</p>
+</header>
+
+<section>
+  <h2>The table's border</h2>
+  <p><q>Harmonize the table-root border-{top,bottom,left,right} with the corresponding border of all cells forming the
+  border of the table (independently)</q>. <q>If the table and the cell border styles have the same specificity, keep
+  the cell border style.</q> <q>Once this is done, set the table-root border-{…}-width to half the maximum width found
+  during the harmonization processes for that border</q>.</p>
+  <figure>
+    <div class=pr-stage><table style="border: 6px solid #4f81bd"><tr><td style="border: 6px solid #d68a3c"></td></tr></table></div>
+    <figcaption>A blue 6px table border and an orange 6px cell border tie: the cell's is kept, and all four sides
+    are orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td style="border-left: 2px solid #4f81bd"></td></tr><tr><td style="border-left: 10px solid #d68a3c"></td></tr></table></div>
+    <figcaption>Left borders of 2px and 10px: the table's left border is half of 10px, so the grid starts 5px in,
+    and each border is centred on that line: orange from 0 to 10px, blue from 4px to 6px. <span class=pr-flag>Safari</span> keeps CSS 2's
+    rule, half the first row's border, 1px: blue from 0 to 2px, and orange cut to 6px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

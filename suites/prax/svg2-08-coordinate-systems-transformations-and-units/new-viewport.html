@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Establishing a new SVG viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <symbol id="half"><rect width="50%" height="50%" fill="#4f81bd" /></symbol>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.8 Establishing a new SVG viewport</div>
+  <h1>Establishing a new SVG viewport</h1>
+  <p class=pr-lede><q>The bounds of the new SVG viewport are defined by the ‘x’, ‘y’, ‘width’ and ‘height’ attributes
+  on the element establishing the new SVG viewport</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#EstablishingANewSVGViewport">SVG 2 §8.8</a></span>
+  Each stage is an SVG 160 by 60; a dashed outline marks each new viewport.</p>
+</header>
+
+<section>
+  <h2>svg, and a symbol instanced by use</h2>
+  <p><q>The following elements establish new SVG viewports: The ‘svg’ element; A ‘symbol’ element that is instanced by
+  a ‘use’ element.</q> Each new viewport holds a blue rect 50% by 50%.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><svg x="20" y="10" width="120" height="40"><rect width="50%" height="50%" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>An <code>svg</code> 120 by 40 at 20, 10: the rect 60 by 20 at its top left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><use href="#half" x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>symbol</code>, by a <code>use</code> 120 by 40 at 20, 10: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clipped by overflow, and not a pattern</h2>
+  <p><q>Whether a new SVG viewport also establishes a new additional clipping path is determined by the value of the
+  overflow property on the element that establishes the new SVG viewport.</q> <q>For historical reasons, the ‘pattern’
+  and ‘marker’ elements do not create a new viewport</q>; <q>Percentage lengths within the content of these elements
+  are not proportional to the dimensions of the graphical effect region.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="40" y="10" width="80" height="40" /><svg x="40" y="10" width="80" height="40"><circle cx="40" cy="20" r="30" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>A circle of radius 30 in a viewport 80 by 40, hidden by the user agent style sheet: cut at y 10 and
+    50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="40" y="10" width="80" height="40" /><svg x="40" y="10" width="80" height="40" overflow="visible"><circle cx="40" cy="20" r="30" fill="#4f81bd" /></svg></svg></div>
+    <figcaption><code>overflow="visible"</code>: the whole circle, from y 0 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><pattern id="tile" width="40" height="20" patternUnits="userSpaceOnUse"><rect width="50%" height="10" fill="#d68a3c" /></pattern><rect width="160" height="60" fill="url(#tile)" /></svg></div>
+    <figcaption>Tiles 40 by 20 holding a rect <code>width="50%"</code>: 50% of the stage, 80, not of the tile; the
+    tile clips it to 40, so the tiles are all orange above y 10, 30 and 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

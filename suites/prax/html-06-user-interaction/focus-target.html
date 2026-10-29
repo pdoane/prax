@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The focusable area for an element</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.4 Processing model</div>
+  <h1>The focusable area for an element</h1>
+  <p class=pr-lede>The focusing steps first <q>set new focus target to the result of getting the focusable area for new focus
+  target</q> when it is not a focusable area itself. The buttons do not take the focus when pressed. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">HTML §6.6.4</a></span></p>
+</header>
+<section>
+  <h2>A scroll container and a frame</h2>
+  <p><q>If focus target is an element with one or more scrollable regions that are focusable areas</q>: <q>Return the
+  element's first scrollable region</q>. <q>If focus target is a navigable container with a non-null content
+  navigable</q>: <q>Return the navigable container's content navigable's active document.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=call-scroller>scroller.focus()</button>
+        <div id=scroller style="height: 30px; margin: 0 0 10px; overflow: scroll; background: var(--pr-plain); font-size: 12px; line-height: 20px; padding: 0 6px">
+          one<br>two<br>three<br>four<br>five<br>six
+        </div>
+        <button class=pr-target id=call-frame>frame.focus()</button>
+        <iframe id=frame style="display: block; width: 100%; height: 30px; margin: 0 0 10px; border: 0"
+                srcdoc="<body style='margin: 0; height: 200px; font: 12px/20px sans-serif; background: linear-gradient(#b9cde6, #f6d7b4)'>the frame's document, taller than the frame</body>"></iframe>
+      </div>
+    </div>
+    <figcaption>Click <code>scroller.focus()</code>, then press the down arrow: the box above scrolls. Click
+    <code>frame.focus()</code> and press the down arrow: the frame's document scrolls, from blue toward
+    orange.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The document element</h2>
+  <p><q>If focus target is the document element of its Document</q>: <q>Return the Document's viewport.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=pr-target id=field value="a field">
+        <button class=pr-target id=call-root>document.documentElement.focus()</button>
+      </div>
+      <ol class=pr-log data-log="blur" data-fields="target" data-lines=1 data-on=document></ol>
+    </div>
+    <figcaption>Click the field, then the button: blur at the field, whose caret goes away, and nothing on the page is
+    focused.</figcaption>
+  </figure>
+</section>
+<script>
+  // Each button focuses its element without taking the focus itself.
+  for (const [button, target] of [["call-scroller", () => document.getElementById("scroller")],
+                                  ["call-frame", () => document.getElementById("frame")],
+                                  ["call-root", () => document.documentElement]]) {
+      const element = document.getElementById(button);
+      element.addEventListener("mousedown", event => event.preventDefault());
+      element.addEventListener("click", () => target().focus());
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

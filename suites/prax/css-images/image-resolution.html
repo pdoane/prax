@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-resolution</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; margin: 10px; }
+  .box { width: 80px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 6.1 Overriding Image Resolutions: the image-resolution property</div>
+  <h1>image-resolution</h1>
+  <p class=pr-lede><q>By default, CSS assumes a resolution of one image pixel per CSS px unit; however, the
+  image-resolution property allows using some other resolution.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#the-image-resolution">CSS Images 4 §6.1</a></span>
+  Each image is an <code>img</code> of <code>auto</code> size. Both PNGs are 80 by 40 image pixels; one records
+  192dpi, 2dppx, in the file, the other no resolution.</p>
+</header>
+
+<section>
+  <h2>A resolution given, or taken from the image</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-2x.png alt=""></div>
+    <figcaption>The 192dpi PNG, initial <code>1dppx</code>: the file's resolution unused, 80 by 40.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-1x.png style="image-resolution: 2dppx" alt=""></div>
+    <figcaption>The plain PNG, <code>2dppx</code>: 40 by 20. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80 by 40.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-2x.png style="image-resolution: from-image" alt=""></div>
+    <figcaption>The 192dpi PNG, <code>from-image</code>: 40 by 20. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80 by 40.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-1x.png style="image-resolution: from-image 2dppx" alt=""></div>
+    <figcaption>The plain PNG, <code>from-image 2dppx</code>: with none in the file, the 2dppx given, 40 by
+    20. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Decorative images too, vector images not</h2>
+  <p><q>It affects both content images (e.g. replaced elements and generated content) and decorative images (such as
+  background-image).</q> <q>this property has no effect on vector images.</q> Each dashed box is 80 by 40, a
+  background drawn once.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: url(../shared/resources/flag-1x.png); image-resolution: 2dppx"></div></div>
+    <figcaption>The plain PNG, <code>2dppx</code>: 40 by 20 at the top left. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.svg style="image-resolution: 2dppx" alt=""></div>
+    <figcaption>An SVG 40 by 20, <code>2dppx</code>: still 40 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

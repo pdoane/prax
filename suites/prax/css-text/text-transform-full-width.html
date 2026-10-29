@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-transform: full-width and full-size-kana</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  .big { font: 30px/48px "PR Noto Sans JP"; padding: 0 4px; }
+  rt { font-size: 12px; }
+  .m .pr-stage { width: 150px; }
+  .m figcaption { max-width: 155px; }
+  .m { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 2.1 Case Transforms: the text-transform property</div>
+  <h1>text-transform: full-width and full-size-kana</h1>
+  <p class=pr-lede><q>This property transforms text for styling purposes. It has no effect on the underlying
+  content</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-property">CSS Text 4 §2.1</a></span>
+  CSS 2's values are on <a href="../css2-16-text/text-transform.html">its own page</a>. Text is 20px PR Noto Sans JP,
+  whose ideographs are 20px wide.</p>
+</header>
+
+<section>
+  <h2>full-width</h2>
+  <p><q>Puts all typographic character units in full-width form. If a character does not have a corresponding
+  full-width form, it is left as is.</q></p>
+  <figure class="m pr-erratum">
+    <div class="pr-stage ja" style="text-transform: full-width">ABC123</div>
+    <figcaption>"ＡＢＣ１２３": six full-width forms, each 20px, ending at 120px. <span class=pr-flag>Chrome</span>
+    leaves them narrow.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage ja" style="text-transform: full-width">ｶﾀｶﾅ漢字</div>
+    <figcaption>Half-width katakana "ｶﾀｶﾅ" become "カタカナ", 20px each; the ideographs, already wide, are as they
+    were: 120px in all. <span class=pr-flag>Chrome</span> leaves the katakana half-width.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage ja" style="text-transform: full-width">A&#xE9;B</div>
+    <figcaption>"AéB": "é" has no full-width form, and stays narrow between "Ａ" and "Ｂ". <span
+    class=pr-flag>Chrome</span> leaves all three narrow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>full-size-kana</h2>
+  <p><q>Converts all small Kana characters to the equivalent full-size Kana.</q> The mapping is <a
+  href="small-kana-mapping.html">Appendix G's</a>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage big"><span>ぁゃっァヵㇰ</span></div>
+    <div class="pr-stage big" style="text-transform: full-size-kana">ぁゃっァヵㇰ</div>
+    <figcaption>Small hiragana and katakana, above as they are, and below with <code>full-size-kana</code>:
+    "あやつアカク", each as large as its neighbors. <span class=pr-flag>Chrome</span> leaves them small.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage big"><ruby>十<rt style="text-transform: full-size-kana">じゅう</rt></ruby>
+    <ruby>十<rt>じゅう</rt></ruby></div>
+    <figcaption>The specification's example, ruby of "じゅう" over 十: with <code>full-size-kana</code>, at the left,
+    "じゆう", its small ゅ drawn large; without, at the right, "じゅう". <span class=pr-flag>Chrome</span> draws "じゅう" in both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

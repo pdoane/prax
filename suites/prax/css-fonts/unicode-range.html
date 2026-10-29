@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>unicode-range</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Digits"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+30-39; }
+  @font-face { font-family: "Wild"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+4?; }
+  @font-face { font-family: "Broad"; src: url(../../../third_party/fonts/AD.woff); unicode-range: U+0-3FF; }
+  .pr-sample { font-size: 22px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.5 Character range: the 'unicode-range' descriptor</div>
+  <h1>unicode-range</h1>
+  <p class=pr-lede><q>The union of these ranges defines the set of codepoints for which the corresponding font may be
+  used. User agents must not download or use the font for codepoints outside this set.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#unicode-range-desc">CSS Fonts 4 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>Single code points, intervals and wildcards</h2>
+  <p>Each family is Cousine, a monospace, for its range; each stage names it, then <code>serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Digits, serif">Room 101</div>
+    <figcaption><code>U+30-39</code>: "101" monospace, "Room" serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Wild, serif">ABCDEFGHIJ</div>
+    <figcaption><code>U+4?</code>, U+40 to U+4F: A to J and the rest of that row monospace.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The effective character map</h2>
+  <p><q>When the font is used, the effective character map is the intersection of the codepoints defined by
+  'unicode-range' with the font's character map.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Broad, serif">Hand αβγ</div>
+    <figcaption><code>U+0-3FF</code> covers Greek, but the handwriting face has none: "αβγ" in serif.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

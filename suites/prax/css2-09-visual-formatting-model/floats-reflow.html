@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats: content before the float</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5 Floats</div>
+  <h1>Floats: content before the float</h1>
+  <p class=pr-lede><q>Any content in the current line before a floated box is reflowed in the same line on the other side
+  of the float.</q> Each float is 60 by 40.</p>
+</header>
+
+<section>
+  <h2>Reflowed on the other side</h2>
+  <p>The specification's example: <q>&lt;P&gt;a&lt;SPAN style="float: right"&gt;b&lt;/SPAN&gt;&lt;/P&gt; ... If the P
+  element's width is enough, the a and the b will be side by side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-position">CSS 2 §9.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a<span class="pr-b pr-fit f" style="float: right">b</span></div>
+    <figcaption>"a" at the left, and the float "b" at the right, on the same line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Before the text or within it</h2>
+  <p><q>Formatting would have been exactly the same if the document had been</q> written with the float after some of
+  the line's text, <q>because the content to the left of the float is displaced by the float and reflowed down its
+  right side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2 §9.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class="pr-a pr-fit f" style="float: left">float</span>Some sample text that has no other purpose.</div>
+    <figcaption>The float before "Some sample text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">Some sample text <span class="pr-a pr-fit f" style="float: left">float</span>that has no other purpose.</div>
+    <figcaption>The float after "Some sample text": the same rendering.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

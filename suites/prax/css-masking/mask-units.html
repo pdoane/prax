@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The mask element's units and region</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <mask id="user"><rect width="50" height="60" fill="white" /></mask>
+  <mask id="bbox" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="white" /></mask>
+  <mask id="all"><rect x="-1000" y="-1000" width="2000" height="2000" fill="white" /></mask>
+  <mask id="narrow" width="50%"><rect x="-1000" y="-1000" width="2000" height="2000" fill="white" /></mask>
+  <mask id="zero" width="0"><rect x="-1000" y="-1000" width="2000" height="2000" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 9.1 The mask element</div>
+  <h1>The mask element's units and region</h1>
+  <p class=pr-lede><q>If at least one of the attributes x, y, width or height are specified, the given object and the
+  rectangle defined by x, y, width and height establish a current clipping path. The rendered content of the mask must
+  be clipped by this current clipping path.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#MaskElement">CSS Masking 1 §9.1</a></span>
+  Each box is 140 by 60 and blue; each mask holds one white rectangle.</p>
+</header>
+
+<section>
+  <h2>maskContentUnits</h2>
+  <p><q>If attribute maskContentUnits is not specified, then the effect is as if a value of userSpaceOnUse were
+  specified.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#user)"></div></div>
+    <figcaption>A rectangle 50 wide in user space: the blue from x 10 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#bbox)"></div></div>
+    <figcaption><code>objectBoundingBox</code>, width 0.5: half the box, to x 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The region: x, y, width, height</h2>
+  <p>A rectangle much larger than the box, and maskUnits <code>objectBoundingBox</code>, the default. <q>If the
+  attribute is not specified but at least one of the attributes y, width or height are specified, the effect is as if a
+  value of -10% were specified.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#all)"></div></div>
+    <figcaption>No x, y, width or height: no region, the whole box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#narrow)"></div></div>
+    <figcaption><code>width="50%"</code> only: x is -10%, so the region runs to 40% of 140, x 66.
+    <span class=pr-flag>Safari</span> The whole box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#zero)"></div></div>
+    <figcaption><code>width="0"</code>: <q>A negative value or a value of zero disables rendering of the element.</q>
+    Nothing drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

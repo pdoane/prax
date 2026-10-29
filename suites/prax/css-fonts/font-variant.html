@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font-variant shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.11 Overall shorthand for font rendering: the 'font-variant' property</div>
+  <h1>The font-variant shorthand</h1>
+  <p class=pr-lede>'font-variant' sets 'font-variant-ligatures', 'font-variant-caps', 'font-variant-alternates',
+  'font-variant-numeric', 'font-variant-east-asian', 'font-variant-position' and 'font-variant-emoji'. <code>normal</code>
+  resets them all; <code>none</code> sets 'font-variant-ligatures' to <code>none</code> and the rest to their
+  initial values. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-prop">CSS Fonts 4 §6.11</a></span></p>
+</header>
+
+<section>
+  <h2>Several longhands at once</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant: small-caps oldstyle-nums">Paris 1983</div>
+    <figcaption><code>small-caps oldstyle-nums</code>: small capitals and old-style figures.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant: none">The fist</div>
+    <figcaption><code>none</code>: no ligatures; Th and fi apart.</figcaption>
+  </figure>
+  <figure>
+    <div style="font-variant: small-caps oldstyle-nums"><div class="pr-stage pr-sample" style="font-variant: normal">Paris 1983</div></div>
+    <figcaption><code>normal</code> inside the first: every longhand reset; lowercase and lining figures.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

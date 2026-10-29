@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous inline boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.2.1 Anonymous inline boxes</div>
+  <h1>Anonymous inline boxes</h1>
+  <p class=pr-lede><q>Any text that is directly contained inside a block container element (not inside an inline element)
+  must be treated as an anonymous inline element.</q></p>
+</header>
+
+<section>
+  <h2>Text in a block</h2>
+  <p>In <code>&lt;p&gt;Some &lt;em&gt;emphasized&lt;/em&gt; text&lt;/p&gt;</code>, "Some" and "text" are anonymous
+  inline boxes. <q>Such anonymous inline boxes inherit inheritable properties from their block parent box.
+  Non-inherited properties have their initial value. In the example, the color of the anonymous inline boxes is
+  inherited from the P, but the background is transparent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous①">CSS 2 §9.2.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px"><p style="margin: 0; color: #2c5a8f; border-bottom: 3px solid #2c5a8f">Some <em class=pr-hl>emphasized</em> text</p></div>
+    <figcaption>All three words are blue, the P's color. Only the EM has the orange background, and the P's bottom
+    border runs under its block alone. <span class="pr-flag pr-since">Since CSS 2</span> one root inline box
+    holds it all.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · CSS Display 3 Appendix A</div>
+  <h2>One root inline box</h2>
+  <p><q>The element then also generates a root inline box which wraps all of its inline content. Note, this root inline
+  box concept effectively replaces the "anonymous inline element" concept introduced in CSS2§9.2.2.1.</q> <span
+  class=pr-cite>CSS Display 3 Appendix A</span> One box now holds all of the P's content, the EM inside it; what is
+  drawn is the same.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px"><p style="margin: 0; color: #2c5a8f; border-bottom: 3px solid #2c5a8f">Some <em class=pr-hl>emphasized</em> text</p></div>
+    <figcaption>The same paragraph: the root inline box takes the P's blue, and no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

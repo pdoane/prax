@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feColorMatrix: a matrix on every pixel</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40, and it computes in sRGB. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="swap" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0 0 1 0 0  0 1 0 0 0  1 0 0 0 0  0 0 0 1 0"/>
+  </filter>
+  <filter id="saturate" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <filter id="hue" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="hueRotate" values="180"/>
+  </filter>
+  <filter id="luminance" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="luminanceToAlpha"/>
+  </filter>
+  <filter id="short" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0 0 1 0 0"/>
+  </filter>
+  <filter id="red" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.6 Filter primitive feColorMatrix</div>
+  <h1>feColorMatrix: a matrix on every pixel</h1>
+  <p class=pr-lede><q>This filter applies a matrix transformation</q> <q>on the RGBA color and alpha values of every
+  pixel on the input graphics to produce a result with a new set of RGBA color and alpha values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feColorMatrixElement">Filter Effects 1 §9.6</a></span>
+  Each canvas, 160 by 40, is an orange rectangle, <code>#d68a3c</code>, filtered in sRGB. The bar below it is the
+  color the matrix gives.</p>
+</header>
+
+<section>
+  <h2>The four types</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#swap)"/><rect y="45" width="160" height="10" fill="#3c8ad6"/></svg></div>
+    <figcaption><code>matrix</code>, red and blue exchanged: <code>#3c8ad6</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#saturate)"/><rect y="45" width="160" height="10" fill="#959595"/></svg></div>
+    <figcaption><code>saturate</code> <code>0</code>: the grey of the luminance coefficients, <code>#959595</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#hue)"/><rect y="45" width="160" height="10" fill="#539fed"/></svg></div>
+    <figcaption><code>hueRotate</code> <code>180</code>: <code>#539fed</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#luminance)"/><rect y="45" width="160" height="10" fill="black" fill-opacity="0.582"/></svg></div>
+    <figcaption><code>luminanceToAlpha</code>: black, its alpha the luminance, 0.58.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Too few values, and unpremultiplied</h2>
+  <p><q>If the number of entries in the values list does not match the required number of entries by the type, the
+  filter primitive acts as a pass through filter.</q> <q>The calculations are performed on non-premultiplied color
+  values.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" filter="url(#short)"/><rect y="45" width="160" height="10" fill="#d68a3c"/></svg></div>
+    <figcaption><code>matrix</code> with five values, not twenty: the orange as it was. <span
+    class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect width="160" height="40" fill="#d68a3c" fill-opacity="0.5" filter="url(#red)"/><rect y="45" width="160" height="10" fill="#ff8a3c" fill-opacity="0.5"/></svg></div>
+    <figcaption>Half-opaque orange, red set to 1: <code>#ff8a3c</code> at half opacity, the red full though the
+    alpha is half.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Metadata name color-scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  .act { padding: 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.5.1 Standard metadata names</div>
+  <h1>Metadata name color-scheme</h1>
+  <p class=pr-lede><q>To aid user agents in rendering the page background with the desired color scheme immediately
+  (rather than waiting for all CSS in the page to load), a 'color-scheme' value can be provided in a meta element.</q>
+  Its value <q>determines the page's supported color-schemes.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#standard-metadata-names">HTML §4.2.5.1</a></span></p>
+</header>
+<section>
+  <h2>The first one in the document tree</h2>
+  <p>The candidates are the meta elements <q>in tree order</q> where <q>the element is in a document tree</q>, and the
+  first valid value is returned. Each frame's document holds "Text and a link"; its frame has
+  <code>color-scheme: light</code>, which the document takes as its preference. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-page">CSS Color Adjustment 1 §2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<meta name=color-scheme content=dark><meta name=color-scheme content=light><style>body { margin: 10px; font: 13px/20px sans-serif }</style>Text and <a href=#>a link</a>"></iframe></div>
+    <figcaption><code>dark</code>, then <code>light</code>: the first wins, light text on a dark canvas.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif }</style><span><template shadowrootmode=open><meta name=color-scheme content=dark><slot></slot></template>Text and <a href=#>a link</a></span>"></iframe></div>
+    <figcaption><code>dark</code> in a shadow tree, which is no document tree: light, the default, over the
+    stage.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Run again when one is inserted or removed</h2>
+  <p><q>If any meta elements are inserted into the document or removed from the document, or existing meta elements
+  have their name or content attributes changed, user agents must re-run the above algorithm.</q> The button inserts
+  <code>&lt;meta name=color-scheme content=dark&gt;</code> into the frame's head, or removes it.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view id=insert-frame srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif }</style>Text and <a href=#>a link</a>"></iframe>
+      <div class=act><button id=insert>Insert the meta element</button></div></div>
+    <figcaption>Light. Press the button: dark, light text on a dark canvas; press again: light.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("insert").addEventListener("click", () => {
+    const frame = document.getElementById("insert-frame").contentDocument;
+    const meta = frame.querySelector("meta[name=color-scheme]");
+    if (meta) {
+      meta.remove();
+    } else {
+      const inserted = frame.createElement("meta");
+      inserted.name = "color-scheme";
+      inserted.content = "dark";
+      frame.head.append(inserted);
+    }
+  });
+</script>
+</body>
+</html>

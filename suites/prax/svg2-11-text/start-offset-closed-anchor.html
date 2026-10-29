@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anchoring on a closed path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="ring" d="M 110 45 A 30 30 0 0 1 50 45 A 30 30 0 0 1 110 45 Z" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>Anchoring on a closed path</h1>
+  <p class=pr-lede><q>For paths consisting of a single closed subpath (including an equivalent path for a basic
+  shape), typographic characters are rendered along one complete circuit of the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  Each stage is an SVG 160 by 90 holding a closed path, a circle of radius 30 at 80, 45, 188.5 around, dashed in
+  red, that starts at its right and goes clockwise. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>,
+  10 a letter.</p>
+</header>
+
+<section>
+  <h2>Anchored to the offset</h2>
+  <p><q>For the middle, the text is rendered from the middle point in both directions until a point on the path
+  equal distance in both directions from the initial position on the path is reached.</q> Here
+  <code>startOffset="0"</code>, the path's start at the right, marked solid red.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><path d="M100 45H125" stroke="#c0392b" /><text class=pr-measure text-anchor="middle"><textPath href="#ring" startOffset="0">abcdefgh</textPath></text></svg></div>
+    <figcaption><code>text-anchor="middle"</code>, "abcdefgh": centered on the path's start, "abcd" above it,
+    before the start and so round from the path's end, "efgh" below. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "efgh" only.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><path d="M100 45H125" stroke="#c0392b" /><text class=pr-measure text-anchor="end"><textPath href="#ring" startOffset="0">abcdefgh</textPath></text></svg></div>
+    <figcaption><code>text-anchor="end"</code>: h ending at the path's start, the rest back round above it, up
+    over the top. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

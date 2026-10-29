@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The focused element removed</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>The focused element removed</h1>
+  <p class=pr-lede><q>One focusable area in each Document is designated the focused area of the document. Which control is so
+  designated changes over time, based on algorithms in this specification.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>A focused element removed</h2>
+  <p>When the focused element is removed from the document, <q>set document's focused area to document's
+  viewport</q>. <q>This does not perform the unfocusing steps, focusing steps, or focus update steps</q>, so no
+  blur is fired. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/infrastructure.html#dom-trees">§2.1.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0; height: 30px" id=holder>
+        <div class=pr-target id=removed tabindex=0>click me, tabindex=0</div>
+      </div>
+      <ol class=pr-log data-log="focus blur focusout" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box: focus at it. A second later the script removes it: no blur and no focusout, and
+    nothing focused after. Click the stage to put the box back.</figcaption>
+  </figure>
+</section>
+<script>
+  // Removes the box a second after it takes the focus; a click of the stage puts it back.
+  const removed = document.getElementById("removed"), holder = document.getElementById("holder");
+  removed.addEventListener("focus", () => setTimeout(() => removed.remove(), 1000));
+  holder.closest(".pr-stage").addEventListener("click", event => {
+      if (!removed.isConnected)
+          holder.append(removed);
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

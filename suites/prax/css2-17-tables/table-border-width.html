@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The collapsing border model: the table's border</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f2e394; outline: 1px dashed #c0392b; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0; border: 2px solid #2c5a8f; background: #8cb6c0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2 The collapsing border model</div>
+  <h1>The collapsing border model: the table's border</h1>
+  <p class=pr-lede>Tables are outlined in dashed red at their border box; cells have 2px blue borders.</p>
+</header>
+
+<section>
+  <h2>Left and right: the first row</h2>
+  <p><q>The left border width of the table is half of the first cell's collapsed left border, and the right border width
+  of the table is half of the last cell's collapsed right border. If subsequent rows have larger collapsed left and
+  right borders, then any excess spills into the margin area of the table.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-borders">CSS 2 §17.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px 0 10px 30px; width: 270px"><table><tr><td style="border-left-width: 10px"><td><tr><td style="border-left-width: 30px; border-left-color: #d68a3c"><td></table></div>
+    <figcaption>The first row's left border is 10px, so the table's is 5px. The second row's 30px orange border is
+    centered on the same line: its outer 10px spill past the outline, into the margin. <span class="pr-flag
+    pr-since">Since CSS 2</span> Tables 3 makes the table's left border 15px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#border-conflict-resolution-algorithm">CSS Table 3 §3.7.1.1</a></div>
+  <h2>Every side: the widest</h2>
+  <p>The table's border on each side is resolved against all the cells along it: <q>Once this is done, set the
+  table-root border-{…}-width to half the maximum width found during the harmonization processes for that border, then
+  set border-{…}-style to solid, and border-{…}-color to transparent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-conflict-resolution-algorithm">CSS Table 3
+  §3.7.1.1</a></span> Left and right work as top and bottom: nothing spills.</p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px 0 10px 30px; width: 270px"><table><tr><td style="border-left-width: 10px"><td><tr><td style="border-left-width: 20px; border-left-color: #d68a3c"><td></table></div>
+    <figcaption>Left borders of 10px in the first row and 20px, orange, in the second: the table's left border is
+    10px, and the outline runs along the orange border's outer edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

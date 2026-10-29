@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The mask-border shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.7 Mask Border Image Shorthand: the mask-border property</div>
+  <h1>The mask-border shorthand</h1>
+  <p class=pr-lede><q>This is a shorthand property for setting mask-border-source, mask-border-slice,
+  mask-border-width, mask-border-outset, mask-border-repeat and mask-border-mode. Omitted values are set to their
+  initial values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border">CSS Masking 1 §8.7</a></span>
+  Each box is 140 by 60 and blue; the images are the frame of discs, bars and a middle square, opaque on transparency
+  or white on black.</p>
+</header>
+
+<section>
+  <h2>Every part, and the parts left out</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border: url(support/frame-luminance.svg) 10 fill / 20px / 0 stretch luminance"></div></div>
+    <figcaption><code>url(white on black) 10 fill / 20px / 0 stretch luminance</code>: the frame at 20px, discs 20
+    across, where the image is white. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-width: 20px; mask-border: url(support/frame-alpha.svg) 10 fill"></div></div>
+    <figcaption>After <code>mask-border-width: 20px</code>, <code>mask-border: url(…) 10 fill</code> resets the width
+    to <code>auto</code>: discs 10 across. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box
+    unmasked.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border: url(support/frame-alpha.svg) 10 fill; mask: none"></div></div>
+    <figcaption>Then <code>mask: none</code>: <q>The mask shorthand resets the properties mask-border</q> and its
+    longhands, says a Note, so the box unmasked. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,265 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-color-4/#introduction 1 Introduction: no page; it says what the module covers
+# css-color-4/#values 1.1 Value Definitions: no page; it defines terms
+# css-color-4/#terminology 2 Color Terminology: no page; it defines color space, gamut and out of gamut, which 10 and 14.2 show
+# css-color-4/#applying-color 3 Applying Color in CSS: no page; it introduces the subsections
+# css-color-4/#accessibility 3.1 Accessibility and Conveying Information By Color: no page; it is guidance for authors
+css-color-4/#the-color-property 3.2 Foreground Color: the color property
+    color-property.html
+    color-glyphs.html
+css-color-4/#transparency 3.3 Transparency: the opacity property
+    opacity.html
+    opacity-values.html
+    opacity-stacking.html
+css-color-4/#tagged-images 3.4 Color Space of Tagged Images
+    tagged-images.html
+css-color-4/#untagged 3.5 Color Spaces of Untagged Colors
+    untagged-images.html
+# css-color-4/#color-type 4 Representing Colors: the <color> type: no page; it lists the ways to write a color, which 5 to 10 show
+# css-color-4/#color-syntax 4.1 The <color> syntax: no page; it is the grammar of <color>, which is parsing
+# css-color-4/#color-syntax-modern 4.1.1 Modern (Space-separated) Color Function Syntax: no page; it is syntax; 5.1 draws the two syntaxes alike
+# css-color-4/#color-syntax-legacy 4.1.2 Legacy (Comma-separated) Color Function Syntax: no page; it is syntax; 5.1 draws the two syntaxes alike
+css-color-4/#alpha-syntax 4.2 Representing Transparency in Colors: the <alpha-value> syntax
+    alpha.html
+css-color-4/#hue-syntax 4.3 Representing Cylindrical-coordinate Hues: the <hue> syntax
+    hue.html
+css-color-4/#missing 4.4 “Missing” Color Components and the none Keyword
+    missing.html
+css-color-4/#powerless 4.4.1 “Powerless” Color Components
+    powerless.html
+# css-color-4/#parse-color 4.5 Parsing a <color> Value: no page; it parses a color for HTML attributes and canvas, which is parsing
+# css-color-4/#numeric-srgb 5 sRGB Colors: no page; it introduces the subsections
+css-color-4/#rgb-functions 5.1 The RGB functions: rgb() and rgba()
+    rgb.html
+css-color-4/#hex-notation 5.2 The RGB Hexadecimal Notations: #RRGGBB
+    hex.html
+# css-color-4/#color-keywords 6 Color Keywords: no page; it introduces the subsections
+css-color-4/#named-colors 6.1 Named Colors
+    named-colors.html
+    named-colors-a-to-d.html
+    named-colors-d-to-l.html
+    named-colors-l-to-p.html
+    named-colors-p-to-y.html
+css-color-4/#css-system-colors 6.2 System Colors
+    system-colors.html
+    system-colors-controls.html
+    system-colors-scheme.html
+css-color-4/#transparent-color 6.3 The transparent keyword
+    transparent.html
+css-color-4/#currentcolor-color 6.4 The currentcolor keyword
+    currentcolor.html
+css-color-4/#the-hsl-notation 7 HSL Colors: hsl() and hsla() functions
+    hsl.html
+# css-color-4/#hsl-to-rgb 7.1 Converting HSL Colors to sRGB: no page; it is sample code for the conversion, whose results 7 shows
+# css-color-4/#rgb-to-hsl 7.2 Converting sRGB Colors to HSL: no page; it is sample code for the conversion, which interpolating in hsl uses (13.5)
+css-color-4/#hsl-examples 7.3 Examples of HSL Colors
+    hsl-examples.html
+css-color-4/#the-hwb-notation 8 HWB Colors: hwb() function
+    hwb.html
+# css-color-4/#hwb-to-rgb 8.1 Converting HWB Colors to sRGB: no page; it is sample code for the conversion, whose results 8 shows
+# css-color-4/#rgb-to-hwb 8.2 Converting sRGB Colors to HWB: no page; it is sample code for the conversion, which interpolating in hwb uses
+css-color-4/#hwb-examples 8.3 Examples of HWB Colors
+    hwb-examples.html
+# css-color-4/#lab-colors 9 Device-independent Colors: CIE Lab and LCH, Oklab and OkLCh: no page; it introduces the subsections
+css-color-4/#cie-lab 9.1 CIE Lab and LCH
+    cie-lab.html
+css-color-4/#ok-lab 9.2 Oklab and OkLCh
+    ok-lab.html
+css-color-4/#specifying-lab-lch 9.3 Specifying Lab and LCH: the lab() and lch() functional notations
+    lab-lch.html
+css-color-4/#specifying-oklab-oklch 9.4 Specifying Oklab and OkLCh: the oklab() and oklch() functional notations
+    oklab-oklch.html
+# css-color-4/#lab-to-lch 9.5 Converting Lab or Oklab colors to LCH or OkLCh colors: no page; the polar form is what interpolating in lch and oklch uses, which 13.3 and 13.5 show
+css-color-4/#lch-to-lab 9.6 Converting LCH or OkLCh colors to Lab or Oklab colors
+    lch-to-lab.html
+# css-color-4/#predefined 10 Predefined Color Spaces: no page; it introduces the subsections
+css-color-4/#color-function 10.1 Specifying Predefined Colors: the color() function
+    color-function.html
+css-color-4/#predefined-sRGB 10.2 The Predefined sRGB Color Space: the sRGB keyword
+    srgb.html
+css-color-4/#predefined-sRGB-linear 10.3 The Predefined Linear-Light sRGB Color Space: the srgb-linear keyword
+    srgb-linear.html
+css-color-4/#predefined-display-p3 10.4 The Predefined Display P3 Color Space: the display-p3 keyword
+    display-p3.html
+css-color-4/#predefined-display-p3-linear 10.5 The Predefined Linear-Light Display P3 Color Space: the display-p3-linear keyword
+    display-p3-linear.html
+css-color-4/#predefined-a98-rgb 10.6 The Predefined A98 RGB Color Space: the a98-rgb keyword
+    a98-rgb.html
+css-color-4/#predefined-prophoto-rgb 10.7 The Predefined ProPhoto RGB Color Space: the prophoto-rgb keyword
+    prophoto-rgb.html
+css-color-4/#predefined-rec2020 10.8 The Predefined ITU-R BT.2020-2 Color Space: the rec2020 keyword
+    rec2020.html
+css-color-4/#predefined-xyz 10.9 The Predefined CIE XYZ Color Spaces: the xyz-d50, xyz-d65, and xyz keywords
+    xyz.html
+# css-color-4/#predefined-to-lab-oklab 10.10 Converting Predefined Color Spaces to Lab or Oklab: no page; the conversion is how each space of 10.2 to 10.9 draws in sRGB, which their pages show
+# css-color-4/#oklab-lab-to-predefined 10.11 Converting Lab or Oklab to Predefined RGB Color Spaces: no page; the conversion is how lab() and oklab() draw in sRGB, which 9.3 and 9.4 show
+# css-color-4/#predefined-to-predefined 10.12 Converting Between Predefined RGB Color Spaces: no page; the conversion is how each space of 10.2 to 10.9 draws in sRGB, which their pages show
+css-color-4/#alpha 10.13 Simple Alpha Compositing
+    alpha-compositing.html
+# css-color-4/#color-conversion 11 Converting Colors: no page; it introduces the subsections
+css-color-4/#color-convert-intro 11.1 Introduction to Converting Colors
+    converting-colors.html
+# css-color-4/#color-convert-algorithm 11.2 Algorithm for Converting Colors: no page; its steps are shown where they draw: missing components as zero (4.4), gamut mapping for display (14.2)
+# css-color-4/#comparing-color-values 12 Comparing <color> Values: no page; it decides whether a value changed, and equivalent colors draw alike either way
+css-color-4/#interpolation 13 Color Interpolation
+    interpolation.html
+css-color-4/#component-wise-linear-interpolation 13.1 Component-wise Linear Interpolation
+    component-wise.html
+css-color-4/#interpolation-space 13.2 Color Space for Interpolation
+    interpolation-space.html
+    interpolation-legacy.html
+css-color-4/#interpolation-missing 13.3 Interpolating with Missing Components
+    interpolation-missing.html
+css-color-4/#interpolation-alpha 13.4 Interpolating with Alpha
+    premultiplied.html
+# css-color-4/#hue-interpolation 13.5 Hue Interpolation: no page; it introduces the four methods, which 13.5.1 to 13.5.4 show
+css-color-4/#hue-shorter 13.5.1 shorter
+    hue-shorter.html
+css-color-4/#hue-longer 13.5.2 longer
+    hue-longer.html
+css-color-4/#hue-increasing 13.5.3 increasing
+    hue-increasing.html
+css-color-4/#hue-decreasing 13.5.4 decreasing
+    hue-decreasing.html
+# css-color-4/#gamut-mapping 14 Gamut Mapping: no page; it introduces the subsections
+# css-color-4/#gamut-mapping-intro 14.1 An Introduction to Gamut Mapping: no page; it explains, without requirements, the methods 14.2 chooses among
+css-color-4/#GM-clip 14.1.1 Clipping
+    clipping.html
+# css-color-4/#GM-closest 14.1.2 Closest Color (MINDE): no page; it explains a method, without requirements; 14.2 shows what CSS requires
+# css-color-4/#GM-chroma 14.1.3 Chroma Reduction: no page; it explains a method, without requirements; 14.2 shows what CSS requires
+# css-color-4/#GM-excessive-reduction 14.1.4 Excessive Chroma Reduction: no page; it explains a pitfall, without requirements; 14.2 shows what CSS requires
+# css-color-4/#GM-chroma-local-MINDE 14.1.5 Chroma Reduction with Local Clipping: no page; it explains a method, without requirements; 14.2 shows what CSS requires
+# css-color-4/#GM-hue-curvature 14.1.6 Deviations from Perceptual Uniformity: Hue Curvature: no page; it explains why CSS maps in OkLCh, which 14.2 shows
+css-color-4/#css-gamut-mapping 14.2 CSS Gamut Mapping to an RGB Destination
+    gamut-mapping.html
+    gamut-mapping-lightness.html
+# css-color-4/#GMA-Binary-local-MINDE 14.2.1 Binary Search Gamut Mapping with Local MINDE: no page; one of three algorithms a user agent chooses among, all of which hold lightness and hue, as 14.2 shows
+# css-color-4/#pseudo-binsearch 14.2.2 Sample Pseudocode for the Binary Search Gamut Mapping with Local MINDE: no page; it is sample code
+# css-color-4/#GMA-EdgeSeeker 14.2.3 The EdgeSeeker Gamut Mapping: no page; one of three algorithms a user agent chooses among, all of which hold lightness and hue, as 14.2 shows
+# css-color-4/#pseudo-edgeseeker 14.2.4 Sample Pseudocode for the EdgeSeeker Gamut Mapping: no page; it is sample code
+# css-color-4/#GMA-Raytrace 14.2.5 The Ray Trace Gamut Mapping: no page; one of three algorithms a user agent chooses among, all of which hold lightness and hue, as 14.2 shows
+# css-color-4/#pseudo-raytrace 14.2.6 Sample Pseudocode for the Ray Trace Gamut Mapping: no page; it is sample code
+# css-color-4/#raytrace-footnotes 14.2.6.1 Footnotes for Ray Trace algorithm: no page; notes on sample code
+# css-color-4/#resolving-color-values 15 Resolving <color> Values: no page; it introduces the subsections
+# css-color-4/#resolving-sRGB-values 15.1 Resolving sRGB values: no page; it gives declared and computed values, which is serialization; what they draw, 5 to 8 show
+# css-color-4/#resolving-lab-lch-values 15.2 Resolving Lab and LCH values: no page; it gives declared and computed values, which is serialization; what they draw, 9.3 shows
+# css-color-4/#resolving-oklab-oklch-values 15.3 Resolving Oklab and OkLCh values: no page; it gives declared and computed values, which is serialization; what they draw, 9.4 shows
+# css-color-4/#resolving-color-function-values 15.4 Resolving values of the color() function: no page; it gives declared and computed values, which is serialization; what they draw, 10 shows
+css-color-4/#resolving-other-colors 15.5 Resolving other colors
+    currentcolor-inherited.html
+# css-color-4/#serializing-color-values 16 Serializing <color> Values: no page; serialization
+# css-color-4/#serializing-alpha-values 16.1 Serializing alpha values: no page; serialization
+# css-color-4/#serializing-legacy-alpha-values 16.1.1 Serializing legacy alpha values: no page; serialization
+# css-color-4/#serializing-modern-alpha-values 16.1.2 Serializing modern alpha values: no page; serialization
+# css-color-4/#serializing-sRGB-values 16.2 Serializing sRGB values: no page; serialization
+# css-color-4/#HTML-compatible-serialization-of-srgb 16.2.1 HTML-compatible serialization of sRGB values: no page; serialization
+# css-color-4/#css-serialization-of-srgb 16.2.2 CSS serialization of sRGB values: no page; serialization
+# css-color-4/#serializing-lab-lch 16.3 Serializing Lab and LCH values: no page; serialization
+# css-color-4/#serializing-oklab-oklch 16.4 Serializing Oklab and OkLCh values: no page; serialization
+# css-color-4/#serializing-color-function-values 16.5 Serializing values of the color() function: no page; serialization
+# css-color-4/#serializing-other-colors 16.6 Serializing other colors: no page; serialization
+# css-color-4/#serializing-opacity-values 17 Serializing <opacity-value>: no page; serialization
+css-color-4/#sample 18 Default Style Rules
+    default-style.html
+# css-color-4/#color-conversion-code 19 Sample code for Color Conversions: no page; sample code
+# css-color-4/#color-difference-code 20 Color Difference Formulae: no page; it introduces the subsections
+# css-color-4/#color-differences-intro 20.1 Introduction to Color Difference metrics.: no page; the formulae measure differences that gamut mapping (14.2) uses, and draw nothing of their own
+# css-color-4/#color-difference-2000 20.2 ΔE2000: no page; a formula, which draws nothing
+# css-color-4/#color-difference-OK 20.3 ΔEOK: no page; a formula, which gamut mapping (14.2) uses
+# css-color-4/#color-difference-OK2 20.4 ΔEOK2: no page; a formula, which draws nothing
+# css-color-4/#color-difference-OK2r 20.5 ΔEOKr2: no page; a formula, which draws nothing
+css-color-4/#deprecated-system-colors A Deprecated CSS System Colors
+    deprecated-system-colors.html
+# css-color-4/#quirky-color B Deprecated Quirky Hex Colors: no page; it says how hex colors without "#" parse in quirks mode, which is parsing
+# css-color-4/#security 21 Security Considerations: no page; nothing to see
+# css-color-4/#privacy 22 Privacy Considerations: no page; nothing to see
+# css-color-4/#a11y-sec 23 Accessibility Considerations: no page; nothing to see
+# css-color-5/#intro 1 Introduction: no page; it says CSS Color 5 adds to level 4
+# css-color-5/#color-syntax 2 The <color> syntax: no page; it is the grammar of <color> with level 5's functions, which is parsing
+css-color-5/#color-mix 3 Mixing Colors: the color-mix() Function
+    color-mix.html
+css-color-5/#color-mix-space 3.1 Colorspace for mixing
+    color-mix-space.html
+css-color-5/#color-mix-percent-norm 3.2 Percentage Normalization
+    color-mix-percentages.html
+css-color-5/#color-mix-result 3.3 Calculating the Result of color-mix
+    color-mix-result.html
+css-color-5/#color-mix-color-space-effect 3.4 Effect of Mixing Color Space on color-mix
+    color-mix-spaces.html
+css-color-5/#color-mix-with-alpha 3.5 Effect of Non-Unity Alpha on color-mix
+    color-mix-alpha.html
+# css-color-5/#relative-colors 4 Relative Colors: no page; it introduces the subsections
+css-color-5/#rcs-intro 4.1 Processing Model for Relative Colors
+    relative-colors.html
+css-color-5/#relative-syntax 4.2 Relative Color Syntax
+    relative-syntax.html
+css-color-5/#relative-RGB 4.3 Relative sRGB Colors
+    relative-rgb.html
+css-color-5/#relative-HSL 4.4 Relative HSL Colors
+    relative-hsl.html
+css-color-5/#relative-HWB 4.5 Relative HWB Colors
+    relative-hwb.html
+css-color-5/#relative-Lab 4.6 Relative Lab Colors
+    relative-lab.html
+css-color-5/#relative-Oklab 4.7 Relative Oklab Colors
+    relative-oklab.html
+css-color-5/#relative-LCH 4.8 Relative LCH Colors
+    relative-lch.html
+css-color-5/#relative-OkLCh 4.9 Relative OkLCh Colors
+    relative-oklch.html
+css-color-5/#relative-alpha 4.10 Relative Alpha Colors
+    relative-alpha.html
+# css-color-5/#color-function 5 Specifying Predefined and Custom Color Spaces: the color() Function: no page; it adds relative and custom colors to color(), which 5.1 and 5.2 show
+css-color-5/#relative-color-function 5.1 Relative Color-Function Colors
+    relative-color-function.html
+css-color-5/#custom-color 5.2 Custom Color Spaces
+    custom-color.html
+css-color-5/#at-profile 5.3 Specifying a Color Profile: the @color-profile at-rule
+    color-profile.html
+css-color-5/#cal-cmyk 5.4 CSS and Print: Using Calibrated CMYK and Other Printed Color Spaces
+    calibrated-cmyk.html
+# css-color-5/#cmyk-to-lab 5.5 Converting CMYK colors to Lab: no page; the lookup is in the ICC profile, which 5.4 shows
+# css-color-5/#lab-to-cmyk 5.6 Converting Lab colors to CMYK: no page; the lookup is in the ICC profile, for print
+css-color-5/#device-cmyk 6 Uncalibrated CMYK Colors: the device-cmyk() Function
+    device-cmyk.html
+    device-cmyk-profile.html
+css-color-5/#cmyk-rgb 6.1 Naively Converting Between Uncalibrated CMYK and sRGB-Based Color
+    device-cmyk-naive.html
+css-color-5/#light-dark 7 Reacting to the used color-scheme: the light-dark() Function
+    light-dark.html
+css-color-5/#contrast-color 8 Dynamically specifying a text color with adequate contrast: the contrast-color() Function
+    contrast-color.html
+# css-color-5/#interpolation 9 Color Interpolation: no page; it introduces 9.1
+css-color-5/#interpolation-space 9.1 Color Space for Interpolation
+    interpolation-custom.html
+# css-color-5/#resolving-color-values 10 Resolving <color> Values: no page; it introduces the subsections
+css-color-5/#resolving-mix 10.1 Resolving color-mix() Values
+    color-mix-currentcolor.html
+css-color-5/#resolving-rcs 10.2 Resolving Relative Color Syntax Values
+    relative-currentcolor.html
+# css-color-5/#resolving-device-cmyk-values 10.3 Resolving device-cmyk Values: no page; it gives computed values, and what device-cmyk() draws, 6 shows
+# css-color-5/#serial 11 Serialization: no page; serialization
+# css-color-5/#serial-color-mix 11.1 Serializing color-mix(): no page; serialization
+# css-color-5/#serial-origin-color 11.2 Serializing Origin Colors: no page; serialization
+# css-color-5/#serial-relative-color 11.3 Serializing Relative Color Functions: no page; serialization
+# css-color-5/#serial-custom-color 11.4 Serializing Custom Color Spaces: no page; serialization
+# css-color-5/#serializing-device-cmyk-values 11.5 Serializing device-cmyk Values: no page; serialization
+# css-color-5/#apis 12 APIs: no page; object model
+# css-color-5/#the-csscolorprofilerule-interface 12.1 The CSSColorProfileRule interface: no page; object model
+# css-color-5/#sample 13 Default Style Rules: no page; its rules are level 4's (18), and a device-cmyk profile, which 6 shows with the same profile
+# css-color-5/#color-conversion-code 14 Sample code for Color Conversions: no page; sample code
+# css-color-5/#security 15 Security Considerations: no page; nothing to see
+# css-color-5/#privacy 16 Privacy Considerations: no page; nothing to see
+# css-color-5/#a11y-sec 17 Accessibility Considerations: no page; nothing to see
+# css-color-5/#changes 18 Changes: no page; nothing to see
+# css-color-5/#changes-20260113 18.1 Since the Working Draft of 13 January 2026: no page; nothing to see
+# css-color-5/#changes-20250318 18.2 Since the Working Draft of 18 March 2025: no page; nothing to see
+# css-color-5/#changes-20240229 18.3 Since the Working Draft of 29 February 2024: no page; nothing to see
+# css-color-5/#changes-20220628 18.4 Since the Working Draft of 28 June 2022: no page; nothing to see
+# css-color-5/#changes-20220428 18.5 Since the Working Draft of 28 April 2022: no page; nothing to see
+# css-color-5/#changes-20211215 18.6 Since the Working Draft of 15 December 2021: no page; nothing to see
+# css-color-5/#changes-20210601 18.7 Since the Working Draft of 1 June 2021: no page; nothing to see
+# css-color-5/#changes-20200303 18.8 Since the FPWD of 10 June 2020: no page; nothing to see
+# css-color-5/#changes-from-4 18.9 Changes from CSS Color 4: no page; nothing to see

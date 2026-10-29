@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-blend-mode: within the element's background</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .lime { position: absolute; left: 10px; top: 10px; width: 140px; height: 40px; background: #00ff00; }
+  .box { position: absolute; left: 20px; top: 0; width: 80px; height: 40px; background-repeat: no-repeat; }
+  .red { background-image: linear-gradient(#ff0000, #ff0000); background-size: 40px 40px; }
+  .duck { width: 100px; background-size: 100px 40px, 40px 20px; background-position: 0 0, 30px 10px; background-image: linear-gradient(to right, #000000 0%, #ffffff 100%), url(../shared/resources/flag-40x20.png); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.3 The background-blend-mode property</div>
+  <h1>background-blend-mode: within the element's background</h1>
+  <p class=pr-lede><q>Each background layer must blend with the element's background layer that is below it and the
+  element's background color. Background layers must not blend with the content that is behind the element, instead
+  they must act as if they are rendered into an isolated group.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#background-blend-mode">Compositing and Blending 2 §3.4.3</a></span>
+  Each stage has a lime band behind an 80 by 40 box.</p>
+</header>
+
+<section>
+  <h2>The background color, not what is behind</h2>
+  <p>The box's one layer is red, 40 by 40 at its left, with <code>background-blend-mode: multiply</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class="box red" style="background-color: #ffff00; background-blend-mode: multiply"></div></div></div>
+    <figcaption>A yellow <code>background-color</code>: the red multiplies with it, red; the rest of the box yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class="box red" style="background-color: #0000ff; background-blend-mode: multiply"></div></div></div>
+    <figcaption>A blue <code>background-color</code>: red times blue, black, then blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class="box red" style="background-blend-mode: multiply"></div></div></div>
+    <figcaption>No <code>background-color</code>: the red blends with the group's transparent start, not the lime
+    behind, and stays red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The section's example</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-wide"><div class=lime style="width: 280px"><div class="box duck" style="background-blend-mode: difference, normal"></div></div></div>
+    <figcaption>A black-to-white gradient, <code>difference</code>, over the flag 40 by 20 in the box's middle: the
+    flag differenced with the grey from x 60 to 100; around it the gradient <q>retains its original color</q>, not
+    differenced with the lime.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

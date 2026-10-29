@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Selecting ellipsed text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; margin: 10px 50px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #f4f5f7; }
+  .stage { height: 40px; }
+  ::selection { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1.3 user interaction with ellipsis</div>
+  <h1>Selecting ellipsed text</h1>
+  <p class=pr-lede><q>When the user is interacting with content (e.g. editing, selecting, scrolling), the user agent
+  may treat text-overflow: ellipsis as text-overflow: clip.</q> <q>Selecting the ellipsis should select the ellipsed
+  text. If all of the ellipsed text is selected, UAs should show selection of the ellipsis. Behavior of
+  partially-selected ellipsed text is up to the UA.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#ellipsis-interaction">CSS Overflow 3 §6.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>A selection made by script</h2>
+  <p>The box is 100px wide with <code>text-overflow: ellipsis</code> and holds "a sentence too long" in
+  <code>.pr-measure</code> text. A script selects text in it; selected text is highlighted orange.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div id=all class="pr-frame pr-measure t">a sentence too long</div></div>
+    <figcaption>All of it selected, so all of the ellipsed text is: the ellipsis is highlighted with the rest. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> highlight "a sentenc" but not the ellipsis.
+    Safari shows no selection in this still.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t">a sentence too long</div></div>
+    <figcaption>Nothing selected, for comparison: "a sentenc…".</figcaption>
+  </figure>
+</section>
+
+<script>
+  getSelection().selectAllChildren(document.getElementById("all"));
+</script>
+</body>
+</html>

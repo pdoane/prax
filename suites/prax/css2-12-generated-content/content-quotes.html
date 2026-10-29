@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: quote keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .qs { quotes: "<" ">" "(" ")"; }
+  .oq::before { content: open-quote; }
+  .cq::after { content: close-quote; }
+  .noq::before { content: no-open-quote; }
+  .ncq::after { content: no-close-quote; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: quote keywords</h1>
+  <p class=pr-lede>Every figure has <code>quotes: "&lt;" "&gt;" "(" ")"</code>: angle brackets at the outer level,
+  parentheses one level in. <code>open-quote</code> and <code>close-quote</code> are set on <code>:before</code> and
+  <code>:after</code> of spans.</p>
+</header>
+
+<section>
+  <h2>open-quote and close-quote</h2>
+  <p><q>open-quote and close-quote: These values are replaced by the appropriate string from the 'quotes'
+  property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class="oq cq">one</span></div>
+    <figcaption>"&lt;one&gt;": the outer pair.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class="oq cq">one <span class="oq cq">two</span> one</span></div>
+    <figcaption>"&lt;one (two) one&gt;": the nested quotation takes the second pair.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>no-open-quote and no-close-quote</h2>
+  <p><q>no-open-quote and no-close-quote: Introduces no content, but increments (decrements) the level of nesting for
+  quotes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class="noq ncq">one <span class="oq cq">two</span> one</span></div>
+    <figcaption>The outer span has <code>no-open-quote</code> and <code>no-close-quote</code>: it shows no marks, but
+    the inner quotation is one level in: "one (two) one".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class="noq">one</span> <span class="oq cq">two</span><span class="ncq"></span></div>
+    <figcaption>A <code>no-open-quote</code> on "one", which is not around "two", still raises the level for it:
+    "one (two)"; an empty span's <code>no-close-quote</code> then lowers it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

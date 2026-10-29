@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Templates: a shadow tree of the template's children</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="source" color="#4f81bd"><stop stop-color="currentColor" /></linearGradient>
+  <linearGradient id="host" href="#source" color="#d68a3c" />
+  <pattern id="tile" width="40" height="40" patternUnits="userSpaceOnUse" fill="#4f81bd"><rect x="10" y="10" width="20" height="20" /></pattern>
+  <pattern id="tile-host" href="#tile" fill="#d68a3c" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.1.1 Using paint servers as templates</div>
+  <h1>Templates: a shadow tree of the template's children</h1>
+  <p class=pr-lede><q>If the current element has no child elements other than descriptive elements, the user agent
+  must generate a shadow tree for this element, which must behave equivalently to a use-element shadow tree, except
+  that the host is the current paint server element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#PaintServerTemplates">SVG 2 §14.1.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>Clones inherit from the host</h2>
+  <p><q>The use-element shadow tree model for templating allows cloned content to inherit different styles than the
+  original.</q> The template's one stop is <code>currentColor</code>, and its <code>color</code> is blue.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#source)" /></svg></div>
+    <figcaption>The template itself: blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#host)" /></svg></div>
+    <figcaption>A gradient whose <code>color</code> is orange, with only <code>href</code> to it: the cloned stop
+    inherits orange. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Blue, the template's.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A pattern's clones</h2>
+  <p>The template is 40 by 40 tiles of a 20 by 20 square, whose fill it inherits from the <code>pattern</code>,
+  blue.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="0" y="0" width="160" height="60" fill="url(#tile)" /></svg></div>
+    <figcaption>The template: blue squares from 10, 10 every 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="0" y="0" width="160" height="60" fill="url(#tile-host)" /></svg></div>
+    <figcaption>A <code>pattern</code> with <code>fill="#d68a3c"</code> and only <code>href</code>: the same
+    squares, orange. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

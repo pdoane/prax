@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flood-opacity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=half x=0 y=0 width=1 height=1><feFlood flood-color="#4f81bd" flood-opacity="0.5"/></filter>
+  <filter id=percent x=0 y=0 width=1 height=1><feFlood flood-color="#4f81bd" flood-opacity="50%"/></filter>
+  <filter id=times x=0 y=0 width=1 height=1><feFlood flood-color="rgb(79 129 189 / 0.5)" flood-opacity="0.5"/></filter>
+  <filter id=clamped x=0 y=0 width=1 height=1><feFlood flood-color="#4f81bd" flood-opacity="3"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.13.2 The flood-opacity property</div>
+  <h1>flood-opacity</h1>
+  <p class=pr-lede><q>The flood-opacity property defines the opacity value to use across the entire filter primitive
+  subregion. If the flood-color value includes an alpha channel, the alpha channel gets multiplied with the computed
+  value of the flood-opacity property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FloodOpacityProperty">Filter Effects 1 §9.13.2</a></span>
+  Each stage is an SVG 160 by 80, white, with a rectangle 100 by 40 at (30, 10) whose filter floods exactly its own
+  area blue, <code>#4f81bd</code>. Under it, a swatch of the color expected over white.</p>
+</header>
+
+<section>
+  <h2>Opacity across the flood</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect width=160 height=80 fill=white /><rect x=30 y=10 width=100 height=40 fill="#d68a3c" filter="url(#half)"/><rect x=70 y=56 width=20 height=20 fill="#a7c0de"/></svg></div>
+    <figcaption><code>0.5</code>: half blue over white, <code>#a7c0de</code>, as the swatch. No orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect width=160 height=80 fill=white /><rect x=30 y=10 width=100 height=40 fill="#d68a3c" filter="url(#percent)"/><rect x=70 y=56 width=20 height=20 fill="#a7c0de"/></svg></div>
+    <figcaption><code>50%</code>, as <q>converted to a number</q>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect width=160 height=80 fill=white /><rect x=30 y=10 width=100 height=40 fill="#d68a3c" filter="url(#clamped)"/><rect x=70 y=56 width=20 height=20 fill="#4f81bd"/></svg></div>
+    <figcaption><code>3</code>, <q>clamped to the range [0,1]</q>: opaque blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multiplied with the color's alpha</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect width=160 height=80 fill=white /><rect x=30 y=10 width=100 height=40 fill="#d68a3c" filter="url(#times)"/><rect x=70 y=56 width=20 height=20 fill="#d3e0ef"/></svg></div>
+    <figcaption><code>flood-color: rgb(79 129 189 / 0.5)</code> and <code>flood-opacity: 0.5</code>: a quarter
+    blue, <code>#d3e0ef</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

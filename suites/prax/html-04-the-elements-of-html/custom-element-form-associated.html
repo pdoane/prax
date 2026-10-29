@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Form-associated custom elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  .act label { display: block; margin: 0 0 10px; font-size: 13px; line-height: 20px; }
+  .act .row { display: flex; gap: 6px; margin: 0 0 10px; }
+  .act .row button { font-size: 12px; }
+  x-check { display: inline-block; min-width: 40px; padding: 0 6px; border: 2px solid #4f81bd; background: white;
+            font: 12px/16px ui-monospace, Menlo, monospace; text-align: center; }
+  x-check:invalid { border-color: #c0392b; background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.7.3 Form-associated custom elements</div>
+  <h1>Form-associated custom elements</h1>
+  <p class=pr-lede><q>Each form-associated custom element has submission value. It is used to provide one or more entries
+  on form submission.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#form-associated-custom-elements">HTML §4.13.7.3</a></span>
+  The page defines <code>x-check</code>, form-associated: a click toggles it between "[ ]" and "[x]", and it calls
+  <code>setFormValue</code> and, while unchecked, <code>setValidity({valueMissing: true}, "Check this")</code>.
+  <code>:invalid</code> gives it a red border on orange.</p>
+</header>
+<section>
+  <h2>Labels, reset and validity</h2>
+  <p>It is labelable: <q>for user agents where the label element's activation behavior impacts the labeled control, both
+  built-in and custom elements will be impacted.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-label-element">§4.10.4</a></span>
+  <q>The reset algorithm for form-associated custom elements is to enqueue a custom element callback reaction with the
+  element, callback name "formResetCallback"</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-core-concepts">§4.13.3</a></span>,
+  and its callback unchecks it. The page cancels <code>submit</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=act id=form>
+        <label><x-check name=agree id=agree>[ ]</x-check> I read the agreement</label>
+        <div class=row><button id=submit>submit</button><button type=reset id=reset>reset</button></div>
+      </form>
+      <ol class=pr-log data-log="click invalid submit reset" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>At first red on orange. Click "submit": <code>invalid</code> at <code>agree</code>, no
+    <code>submit</code>. Click the label's text: a <code>click</code> at <code>agree</code>, now "[x]" and blue. Submit:
+    <code>submit</code>. Reset: "[ ]" and red again.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Read-only: barred from validation</h2>
+  <p><q>If the readonly attribute is specified on a form-associated custom element, the element is barred from
+  constraint validation.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-core-concepts">§4.13.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act><x-check readonly>[ ]</x-check> <x-check>[ ]</x-check></div>
+    </div>
+    <figcaption>Two unchecked <code>x-check</code>s: the first, <code>readonly</code>, is blue on white, not
+    <code>:invalid</code>; the second red on orange.</figcaption>
+  </figure>
+</section>
+<script>
+  customElements.define("x-check", class extends HTMLElement {
+    static formAssociated = true;
+    constructor() {
+      super();
+      this.internals = this.attachInternals();
+      this.addEventListener("click", () => this.set(!this.checked));
+      this.set(false);
+    }
+    set(checked) {
+      this.checked = checked;
+      this.textContent = checked ? "[x]" : "[ ]";
+      this.internals.setFormValue(checked ? "on" : null);
+      this.internals.setValidity(checked ? {} : {valueMissing: true}, checked ? "" : "Check this");
+    }
+    formResetCallback() { this.set(false); }
+  });
+  document.getElementById("form").addEventListener("submit", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

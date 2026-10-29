@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>visibility: collapse on a track: backgrounds stay</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 30px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.4.2 Rendering a visibility: collapse table-track or table-track-group</div>
+  <h1>visibility: collapse on a track: backgrounds stay</h1>
+  <p class=pr-lede><q>When a table-track or table-track-group has visibility: collapse, all the backgrounds, borders or
+  outlines that are contributed by the cells within the given table-track or table-track-group will continue to be
+  painted on cells that have not been fully collapsed (because they spanned multiple tracks).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#visibility-collapse-track-rendering">CSS Table 3 §5.4.2</a></span>
+  Grey tables, <code>border-spacing: 10px</code>, cells 30 by 20.</p>
+</header>
+
+<section>
+  <h2>A spanning cell keeps the collapsed track's background</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr style="visibility: collapse; background: #d68a3c"><td rowspan=2 style="visibility: visible"></td><td></td></tr><tr style="background: #4f81bd"><td></td></tr></table></div>
+    <figcaption>An orange row collapsed; a cell originating in it and spanning the blue row below, <code>visible</code>:
+    it is the blue row's 20px, and orange, its originating row's background. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> draw nothing of the cell. <span class=pr-flag>Safari</span> does not collapse the
+    row.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><col style="visibility: collapse; background: #d68a3c"><col style="background: #4f81bd"><tr><td colspan=2 style="visibility: visible"></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption>An orange column collapsed, a cell spanning it and the blue column: blue's 30px, orange. <span
+    class=pr-flag>Safari</span> does not collapse the column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

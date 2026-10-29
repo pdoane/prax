@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>auto margins on grid items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+  .g { display: grid; grid-template-columns: 100px 100px; grid-template-rows: 40px; }
+  .w { display: grid; grid-template-columns: 60px 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.2 Aligning with auto margins</div>
+  <h1>auto margins on grid items</h1>
+  <p class=pr-lede><q>Auto margins on grid items have an effect very similar to auto margins in block layout</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-margins">CSS Grid Layout 2 §11.2</a></span></p>
+</header>
+
+<section>
+  <h2>Zero for sizing, then absorbing free space</h2>
+  <p><q>During calculations of grid track sizes, auto margins are treated as 0.</q> Then <q>auto margins in either
+  axis absorb positive free space prior to alignment via the box alignment properties, thereby disabling the effects
+  of any self-alignment properties in that axis.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: auto 1fr"><div class=t style="margin: 0 auto">abcd</div><div class=u>ef</div></div></div>
+    <figcaption>Columns <code>auto 1fr</code>; blue, "abcd", has <code>margin: 0 auto</code>: the first column is
+    40px, as if the margins were 0, and orange fills the rest.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=t style="margin-left: auto; justify-self: start">abcd</div><div class=u style="margin: auto; align-self: start">abcd</div></div></div>
+    <figcaption>Two 100px columns, a 40px row. Blue, <code>margin-left: auto</code>, <code>justify-self:
+    start</code>: at 60px. Orange, <code>margin: auto</code>, <code>align-self: start</code>: centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overflowing items</h2>
+  <p><q>Overflowing grid items resolve their auto margins to zero and overflow as specified by their box alignment
+  properties.</q> Blue is 140px wide in the 100px column at 60px, with <code>margin-left: auto</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=w><div class=u>ab</div><div class=t style="width: 140px; margin-left: auto; justify-self: end">abcd</div></div></div>
+    <figcaption><code>justify-self: end</code>: margin zero, end-aligned, from 20 to 160px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    ignore <code>end</code> and start it at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w><div class=u>ab</div><div class=t style="width: 140px; margin-left: auto; justify-self: start">abcd</div></div></div>
+    <figcaption><code>justify-self: start</code>: from 60 to 200px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

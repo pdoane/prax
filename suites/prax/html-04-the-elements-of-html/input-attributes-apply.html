@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Attributes that do not apply</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 170px; font-size: 11px; }
+  .pad input { font-size: 12px; }
+  .pad input[type=checkbox] { margin: 0; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3 Common input element attributes</div>
+  <h1>Attributes that do not apply</h1>
+  <p class=pr-lede><q>When an attribute doesn't apply to an input element, user agents must ignore the attribute,
+  regardless of the requirements and definitions below.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#common-input-element-attributes">HTML §4.10.5.3</a></span></p>
+</header>
+
+<section>
+  <h2>Ignored, though present</h2>
+  <p>Each state lists the attributes that apply to it. readonly does not apply to a checkbox: <q>Only text controls can
+  be made read-only, since for other controls (such as checkboxes and buttons) there is no useful distinction between
+  being read-only and being disabled</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-readonly-attribute">§4.10.5.3.3</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>checkbox readonly required</code><input type=checkbox readonly required></div>
+        <div><code>number maxlength=2</code><input type=number maxlength=2 value=12345 style="width: 90px"></div>
+        <div><code>number pattern="[0-9]"</code><input type=number pattern="[0-9]" value=42 style="width: 90px"></div>
+        <div><code>range required</code><input type=range required style="width: 90px; vertical-align: middle"></div>
+        <div><code>date placeholder</code><input type=date placeholder="a day"></div>
+      </div>
+    </div>
+    <figcaption>The checkbox is red, required and unchecked, readonly being ignored; click it: it checks, green. The
+    number holds five digits, and more can be typed; it is green, as is "42", though neither matches. The slider is
+    green. The date shows its own empty fields, not "a day". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> the checkbox has no outline, barred from validation as if readonly applied.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

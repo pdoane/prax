@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rule-break: longhands, grid lanes and spanners</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .see > div { opacity: 0.6; }
+  .lanes { display: grid-lanes; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .mc { column-count: 3; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.2 Break behaviors at intersections, more</div>
+  <h1>rule-break: longhands, grid lanes and spanners</h1>
+  <p class=pr-lede><code>column-rule-break</code> and <code>row-rule-break</code> set each axis on its own; <code>rule-break</code>
+  <q>sets 'column-rule-break' and 'row-rule-break' to the same value.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#break">CSS Gaps 1 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Each axis its own</h2>
+  <p>Column rules are red, row rules black; the items are translucent.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules see" style="column-rule-break: intersection; row-rule-break: none"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div><div class=pr-d>H</div></div></div>
+    <figcaption><code>column-rule-break: intersection; row-rule-break: none</code>: the red rules stop at each row
+    gap; the black rules run end to end. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules see" style="column-rule-break: none; row-rule-break: intersection"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div><div class=pr-d>H</div></div></div>
+    <figcaption><code>column-rule-break: none; row-rule-break: intersection</code>: the red rules run end to end,
+    the first behind A; the black rules stop at each junction. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Grid lanes, and a multicol spanner</h2>
+  <p>In grid lanes, <code>normal</code> <q>In the grid axis, behaves as it does for grid containers. In the stacking
+  axis, behaves the same as 'none', staying contained within the gutters.</q> In multicol, <q>column gaps break when
+  they encounter the spanner</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="lanes rules see"><div class=pr-a style="height: 40px">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d style="grid-column: span 2">D</div><div class=pr-a>E</div></div></div>
+    <figcaption>D spans lanes 2 and 3, so the second red rule stops above it; a black rule in each lane.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules;
+    Chrome and Firefox, no grid lanes.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="mc rules" style="column-rule-break: none"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d style="column-span: all">D spans all</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div></div></div>
+    <figcaption><code>column-rule-break: none</code>, and D spans the columns: the red rules stop at D, and start
+    again below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

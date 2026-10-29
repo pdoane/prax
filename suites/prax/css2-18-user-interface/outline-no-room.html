@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines take no room</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 30px; overflow: auto; }
+  .scroller .pr-a { outline: 30px solid #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outlines take no room</h1>
+  <p class=pr-lede><q>Outlines do not take up space.</q> Each pair compares a 10px border with a 10px outline on box
+  A; box B follows A in the flow.</p>
+</header>
+
+<section>
+  <h2>Drawn over, not laid out</h2>
+  <p><q>The outline created with the outline properties is drawn "over" a box, i.e., the outline is always on top, and
+  does not influence the position or size of the box, or of any other boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2
+  §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-a style="border: 10px solid #c0392b">A</div><div class=pr-b>B</div></div>
+    <figcaption>A 10px border: A is 38px tall, and B starts 38px below A's top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-a style="outline: 10px solid #c0392b">A</div><div class=pr-b>B</div></div>
+    <figcaption>A 10px outline: A is 20px tall and B starts right under it, at 20px. A's outline is drawn over B's top
+    10px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Just outside the border edge, and no overflow</h2>
+  <p><q>The outline may be drawn starting just outside the border edge.</q> <q>Therefore, displaying or suppressing
+  outlines does not cause reflow or overflow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-plain style="border: 10px solid #2c5a8f; outline: 10px solid #c0392b"></div></div>
+    <figcaption>A 10px blue border and a 10px red outline: the red begins where the blue ends, 20px from the light
+    content on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage scroller" id=sc style="padding: 10px"><div class=pr-a>A</div></div>
+    <figcaption>A scrolling stage with 10px of padding, whose A has a 30px outline: the outline is clipped at the
+    stage's edges, and the stage has nothing to scroll: scrollHeight <code class=pr-computed data-of=sc
+    data-dom=scrollHeight></code> = clientHeight <code class=pr-computed data-of=sc data-dom=clientHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

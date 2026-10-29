@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>marker: viewBox, refX and refY</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="square" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+  <marker id="wide" viewBox="0 0 20 10" refX="10" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="20" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+  <marker id="stretched" viewBox="0 0 20 10" refX="10" refY="5" preserveAspectRatio="none" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="20" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+  <marker id="origin" viewBox="0 0 10 10" refX="0" refY="0" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+  <marker id="percent" viewBox="0 0 10 10" refX="100%" refY="50%" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+  <marker id="keywords" viewBox="0 0 10 10" refX="right" refY="bottom" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#d68a3c" fill-opacity="0.8" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.1 The ‘marker’ element</div>
+  <h1>marker: viewBox, refX and refY</h1>
+  <p class=pr-lede><q>The ‘markerWidth’ and ‘markerHeight’ attributes represent the size of the SVG viewport into
+  which the marker is to be fitted according to the ‘viewBox’ and ‘preserveAspectRatio’ attributes.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#MarkerElement">SVG 2 §13.7.1</a></span>
+  Each stage is an SVG 160 by 60 with a line from 20, 30 to 140, 30 whose middle vertex, at 80, 30, has a
+  <code>marker-mid</code> 20 by 20 in user units. The marker's content is an orange rectangle the size of its
+  <code>viewBox</code>.</p>
+</header>
+
+<section>
+  <h2>Fitted to the viewport</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#square)" /></svg></div>
+    <figcaption><code>viewBox="0 0 10 10"</code>, <code>refX="5" refY="5"</code>: a square 20 by 20 centered on
+    80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#wide)" /></svg></div>
+    <figcaption><code>viewBox="0 0 20 10"</code>, fitted whole: 20 by 10, from 70, 25 to 90, 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#stretched)" /></svg></div>
+    <figcaption>The same with <code>preserveAspectRatio="none"</code>: stretched to 20 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The reference point</h2>
+  <p><q>The ‘refX’ and ‘refY’ attributes define the reference point of the marker, which is to be placed exactly at
+  the marker's position on the shape.</q> <q>Percentage values must be interpreted as being a percentage of the
+  ‘viewBox’ width for ‘refX’ or a percentage of the ‘viewBox’ height for ‘refY’.</q> The keywords are <q>left 0%</q>,
+  <q>center 50%</q>, <q>right 100%</q>, <q>top 0%</q> and <q>bottom 100%</q>. Each <code>viewBox</code> is 10 by
+  10. The working group resolved on both in <a href="https://github.com/w3c/svgwg/issues/64">svgwg#64</a>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#origin)" /></svg></div>
+    <figcaption><code>refX="0" refY="0"</code>: the square's top left at 80, 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#percent)" /></svg></div>
+    <figcaption><code>refX="100%" refY="50%"</code>, 10 and 5: the middle of its right side at 80, 30, the square
+    from 60, 20 to 80, 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Its top left at
+    80, 30, as for 0. <span class=pr-flag>Firefox</span> No square on the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#keywords)" /></svg></div>
+    <figcaption><code>refX="right" refY="bottom"</code>: its bottom right at 80, 30, the square from 60, 10 to 80,
+    30. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Its top
+    left at 80, 30, as for 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

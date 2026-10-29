@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rect: position and size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .sized { x: 30px; y: 20px; width: 100px; height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.2 The ‘rect’ element</div>
+  <h1>rect: position and size</h1>
+  <p class=pr-lede><q>The ‘rect’ element defines a rectangle which is axis-aligned with the current user coordinate
+  system.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">SVG 2 §10.2</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>x and y, width and height</h2>
+  <p><q>The ‘x’ and ‘y’ coordinates refer to the left and top edges of the rectangle, in the current user coordinate
+  system.</q> <q>The width and height properties define the overall width and height of the rectangle.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="100" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption><code>x="20" y="10" width="100" height="40"</code>: 100 by 40 at 20, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=sized x="0" y="0" width="20" height="20" fill="#4f81bd" /></svg></div>
+    <figcaption>A style sheet's <code>x: 30px; y: 20px; width: 100px; height: 30px</code> over the attributes:
+    100 by 30 at 30, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(20 10) scale(2)"><rect x="10" y="5" width="30" height="15" fill="#4f81bd" /></g></svg></div>
+    <figcaption>In a <code>g</code> that scales by 2 and moves by 20, 10: the 30 by 15 at 10, 5 is 60 by 30 at 40, 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A width or height of zero</h2>
+  <p><q>A computed value of zero for either dimension disables rendering of the element.</q> Stroked orange, 10
+  wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="1" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption><code>width="1"</code>: drawn, a stroke 11 wide and 50 tall from 15, 5.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="0" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption><code>width="0"</code>: nothing, not even the stroke.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" style="height: 0"/></svg></div>
+    <figcaption><code>height: 0</code> from CSS over <code>height="40"</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

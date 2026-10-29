@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>aspect-ratio on boxes that are not replaced</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 90px; }
+  figure.f figcaption { max-width: 152px; }
+  .r { background: #8cb6c0; border: 0 solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.1 Preferred Aspect Ratios: the aspect-ratio property</div>
+  <h1>aspect-ratio on boxes that are not replaced</h1>
+  <p class=pr-lede><q>This property sets a preferred aspect ratio for the box, which will be used in the calculation of
+  auto sizes and some other layout functions.</q> With a &lt;ratio&gt;, <q>The box’s preferred aspect ratio is the
+  specified ratio of width / height. Size calculations involving the aspect ratio work with the dimensions of the box
+  specified by box-sizing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio">CSS Box Sizing 4 §4.1</a></span>
+  Each stage is 150px wide.</p>
+</header>
+
+<section>
+  <h2>The auto height from the ratio</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="aspect-ratio: 2 / 1"></div></div>
+    <figcaption><code>aspect-ratio: 2 / 1</code>: the block fills the stage's width, 150px, and is 75px tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="aspect-ratio: 2 / 1; border-width: 10px"></div></div>
+    <figcaption>With a 10px border, <code>content-box</code>: the 130px content box is 2:1, 65px tall, so the box is
+    150 by 85.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="aspect-ratio: 2 / 1; border-width: 10px; box-sizing: border-box"></div></div>
+    <figcaption>The same, <code>border-box</code>: the border box is 2:1, 150 by 75.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto, and a degenerate ratio</h2>
+  <p>auto: <q>Replaced elements with a natural aspect ratio use that aspect ratio; otherwise the box has no preferred
+  aspect ratio.</q> <q>If the &lt;ratio&gt; is degenerate, the property instead behaves as auto.</q></p>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="aspect-ratio: auto 2 / 1; border-width: 10px"></div></div>
+    <figcaption><code>auto 2 / 1</code> on a box that is not replaced: the ratio, applied to the content box, as the
+    second.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="r pr-text" style="aspect-ratio: 0 / 1">0 / 1</div></div>
+    <figcaption><code>aspect-ratio: 0 / 1</code>: degenerate, as auto, so as tall as its 20px line.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="r pr-text" style="width: 60px; aspect-ratio: 1">1</div></div>
+    <figcaption><code>width: 60px; aspect-ratio: 1</code>: 60 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The use element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="pair"><rect width="40" height="40" fill="#4f81bd" /><circle cx="60" cy="20" r="20" fill="#d68a3c" /></g>
+  <g id="loop"><rect width="40" height="40" fill="#4f81bd" /><use href="#loop" x="50" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5 The ‘use’ element</div>
+  <h1>The use element</h1>
+  <p class=pr-lede><q>The ‘use’ element references another element, a copy of which is rendered in place of the ‘use’
+  in the document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseElement">SVG 2 §5.5</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>A copy of an element, or of a whole document</h2>
+  <p><q>The referenced element may be a container element, in which case a copy of the complete SVG document subtree
+  rooted at that element is used.</q> <q>The ‘use’ element can reference an entire SVG document by specifying an ‘href’
+  value without a fragment.</q> The group is a blue square 40 by 40 and an orange circle beside it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#pair" x="20" y="10" /><use href="#pair" x="100" y="10" /></svg></div>
+    <figcaption>Two <code>use</code> of the group, at 20, 10 and 100, 10: two copies, the second cut by the
+    stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/standalone.svg" /></svg></div>
+    <figcaption><code>href="support/standalone.svg"</code>, no fragment: its root, a blue rect 120 by 40 at 20,
+    10. <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not rendered: unresolved, invalid or circular</h2>
+  <p><q>A ‘use’ that has an unresolved or invalid URL reference is not rendered.</q> <q>If the referenced element is a
+  (shadow-including) ancestor of the ‘use’ element, then this is an invalid circular reference and the ‘use’ element
+  is in error.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#missing" x="20" y="10" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>href="#missing"</code>: nothing in the dashed outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#loop" x="20" y="10" /></svg></div>
+    <figcaption>A group that uses itself, at 20, 10: its square, and the inner <code>use</code>, the circular one,
+    nothing; one square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

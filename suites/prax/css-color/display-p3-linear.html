@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(display-p3-linear …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.5 The Predefined Linear-Light Display P3 Color Space: the display-p3-linear keyword</div>
+  <h1>color(display-p3-linear …)</h1>
+  <p class=pr-lede><q>The display-p3-linear predefined color space is the same as display-p3 <em>except</em> that the transfer
+  function is linear-light (there is no gamma-encoding).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-display-p3-linear">CSS Color 4
+  §10.5</a></span></p>
+</header>
+
+<section>
+  <h2>Linear light</h2>
+  <p><q>these are the same color</q>: <code>color(display-p3 0.591 0.123 0.264)</code> and
+  <code>color(display-p3-linear 0.3081 0.014 0.0567)</code>, which is <code>rgb(64.55% 2.065% 26.03%)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(display-p3-linear 0.3081 0.014 0.0567)"></div><div class=sw style="background: color(display-p3 0.591 0.123 0.264)"></div><div class=sw style="background: rgb(64.55% 2.065% 26.03%)"></div></div>
+    <figcaption>The three: one crimson.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(display-p3-linear 0.5 0.5 0.5)"></div><div class=sw style="background: rgb(73.5% 73.5% 73.5%)"></div></div>
+    <figcaption><code>color(display-p3-linear 0.5 0.5 0.5)</code> beside <code>rgb(73.5% 73.5% 73.5%)</code>: one light gray.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

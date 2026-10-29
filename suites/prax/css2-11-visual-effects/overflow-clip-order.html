@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: clipping out of order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .clip { width: 40px; height: 40px; overflow: hidden; margin: 10px 20px; }
+  .neg { position: absolute; z-index: -1; top: 0; left: 0; width: 120px; height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: clipping out of order</h1>
+  <p class=pr-lede>Each stage is <code>position: relative; z-index: 0</code>, a stacking context. Each dashed box is
+  40 by 40 with <code>overflow: hidden</code>, and holds a blue box with <code>z-index: -1</code>, 120px wide at
+  <code>top: 0; left: 0</code>.</p>
+</header>
+
+<section>
+  <h2>Painted out of order, clipped in order</h2>
+  <p>A box at <code>z-index: -1</code> is painted before the content around it, and yet clipped as its place in the
+  tree says: the overflow clips its descendants, <q>except any descendant elements ... whose containing block is the
+  viewport or an ancestor of the element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 60px"><div class="clip pr-frame" style="position: relative"><i class="pr-a neg"></i></div></div>
+    <figcaption>The 40px clip is relative and holds the blue box at −1: the box is cut to the clip.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 60px"><div class="clip pr-frame"><i class="pr-a neg"></i></div></div>
+    <figcaption>The clip is static; the stage holds the box, which is whole, 120px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>margin-break: keep and discard</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.2 Adjoining Margins at Breaks: the margin-break property</div>
+  <h1>margin-break: keep and discard</h1>
+  <p class=pr-lede><q>Controls whether the box’s block-axis margins are discarded or kept at a fragmentation break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span> Three columns 60px tall; B has a 20px top margin.</p>
+</header>
+
+<section>
+  <h2>keep and discard</h2>
+  <p><code>keep</code>: <q>Margins adjoining a fragmentation break are not truncated.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b style="margin-top: 20px; margin-break: keep">B</div></div>
+    <figcaption>After an unforced break: the margin is kept, B 20px down the second column. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Truncated: B at the top. Safari keeps it, as it does with <code>auto</code>.</figcaption>
+  </figure>
+  <p><code>discard</code>: <q>Margins adjoining a fragmentation break are always truncated, including at the start and end of a fragmentation context.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="margin-top: 20px; margin-break: discard; break-before: column">B</div></div>
+    <figcaption>After a forced break: truncated, B at the very top of the second column. <span class=pr-flag>Chrome</span> Kept: B 20px down. <span class=pr-flag>Firefox</span> No break: B 20px under A. Safari truncates it, as it does with <code>auto</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b style="margin-top: 20px; margin-break: discard">B</div></div>
+    <figcaption>At the start of the multi-column container: truncated, B at the very top of the first column. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Kept: B 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b style="margin-top: 20px">B</div></div>
+    <figcaption>For comparison, <code>auto</code> at the start: kept, B 20px down the first column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

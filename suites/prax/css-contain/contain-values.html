@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The values of contain</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.s { height: 70px; counter-reset: n; }
+  .k { float: left; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .t { position: relative; left: 30px; counter-increment: n; }
+  .abs { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background: #d68a3c; }
+  .w { display: flow-root; height: 30px; }
+  .n { padding: 0 0 0 4px; }
+  .n::before { content: "n=" counter(n); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 2 Strong Containment: the contain property</div>
+  <h1>The values of contain</h1>
+  <p class=pr-lede><q>The 'contain' property allows an author to indicate that an element and its contents are, as
+  much as possible, <em>independent</em> of the rest of the document tree.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#contain-property">CSS Containment 2 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Each value, on the same box</h2>
+  <p>Each stage is the containing block of its orange square, unless the blue float takes its place. The float holds
+  "text", shifted 30px right, which increments the counter <code>n</code>; the line below the float reads it.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: none"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>none</code>: the float is 40 by 20, the text spills out of it, the square is at the stage's
+    corner, and n=1.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: size"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>size</code>: sized as if empty, 0 by 0; the text is still drawn.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: inline-size"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>inline-size</code>: 0 wide, but 20 tall from its line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: layout"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>layout</code>: 40 by 20, and the square is at the float's corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: style"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>style</code>: as <code>none</code>, but the increment stays inside: n=0.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: paint"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>paint</code>: the text is cut at the float's edge, "t" left; the square at its corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: strict"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>strict</code>, <q>size layout paint style</q>: 0 by 0, all of it cut away, and n=0.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb s pr-measure"><div class=w><div class=k style="contain: content"><span class=t>text</span><i class=abs></i></div></div><div class=n></div></div>
+    <figcaption><code>content</code>, <q>layout paint style</q>: as <code>paint</code>, and n=0.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

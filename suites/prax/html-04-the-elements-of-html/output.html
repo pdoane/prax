@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The output element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0 0 10px; font-size: 13px; }
+  .pad input { width: 50px; }
+  output { display: inline-block; min-width: 30px; padding: 0 4px; background: #f9cc9d; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.12 The output element</div>
+  <h1>The output element</h1>
+  <p class=pr-lede><q>The output element represents the result of a calculation performed by the application, or the
+  result of a user action.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-output-element">HTML §4.10.12</a></span></p>
+</header>
+
+<section>
+  <h2>A result as the user types</h2>
+  <p>The form's <code>oninput</code> sets the output's <code>value</code> to the sum of the fields. <q>The output
+  element is associated with a form so that it can be easily referenced from the event handlers of form controls; the
+  element's value itself is not submitted when the form is submitted.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-output-element">§4.10.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad id=calc action=support/form-echo.html target=sum-result oninput="sum.value = a.valueAsNumber + b.valueAsNumber">
+        <input type=number id=a name=a value=2> + <input type=number id=b name=b value=3> =
+        <output id=sum name=sum for="a b">5</output><br>
+        <button>Submit</button> <button type=reset>Reset</button>
+      </form>
+      <iframe class=pr-result name=sum-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>"2 + 3 = 5". Change 3 to 10: "12" in orange. Click Submit: the frame shows <code>a=2</code> and
+    <code>b=10</code>, and no <code>sum</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Reset to its default value</h2>
+  <p><q>The reset algorithm for output elements is to run these steps: String replace all with this element's default
+  value within this element. Set this element's default value override to null.</q> Setting <code>value</code> first
+  sets the default value override to the element's text. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-output-element">§4.10.12</a></span></p>
+  <figure>
+    <form class="pr-stage pr-wide pad">
+      <output id=answer>5</output>
+      <button type=button onclick="answer.value = 42">value = 42</button>
+      <button type=button onclick="answer.defaultValue = 7">defaultValue = 7</button>
+      <button type=reset>Reset</button>
+    </form>
+    <figcaption>Click "value = 42": "42". Click Reset: "5" again. Click "value = 42", then "defaultValue = 7": still
+    "42"; Reset: "7".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

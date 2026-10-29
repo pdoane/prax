@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows: sizing and positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; width: 150px; height: 60px; }
+  .v { writing-mode: vertical-rl; background: #b9cde6; }
+  .h { writing-mode: horizontal-tb; background: #b9cde6; }
+  .pre { height: 10px; background: #d68a3c; }
+  figcaption { max-width: 150px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3 Orthogonal Flows</div>
+  <h1>Orthogonal flows: sizing and positioning</h1>
+  <p class=pr-lede><q>When a box has a writing mode that is perpendicular to its containing block it is said to be in,
+  or establish, an orthogonal flow.</q> <q>CSS layout calculations are divided into two phases: sizing a box, and
+  positioning the box within its flow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#orthogonal-flows">CSS Writing Modes 4 §7.3</a></span></p>
+</header>
+
+<section>
+  <h2>Sized in its own writing mode</h2>
+  <p><q>if a vertical block is placed inside a horizontal block, then when calculating the physical height (which is
+  the inline size) of the child block the physical height of the parent block is used as the child's containing block
+  inline size</q>. Each stage is 150px wide and 60px tall; the blue block holds "aaa bbb ccc ddd".</p>
+  <figure>
+    <div class=pr-stage><div class=v>aaa bbb ccc ddd</div></div>
+    <figcaption>A <code>vertical-rl</code> block in a horizontal stage: 60px tall, the stage's height; two lines,
+    and only as wide as they are.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=v style="height: 40px">aaa bbb ccc ddd</div></div>
+    <figcaption>With <code>height: 40px</code>: lines of 40px, so four of them, and a wider block.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl"><div class=h>aaa bbb ccc ddd</div></div>
+    <figcaption>A horizontal block in a <code>vertical-rl</code> stage: 150px wide, the stage's width, at its
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positioned in its containing block's</h2>
+  <p><q>the vertical margins on the child participate in margin-collapsing, even though they are in the inline-axis of
+  the child, and horizontal auto margins will expand to fill the containing block, even though they are in the
+  block-axis of the child.</q></p>
+  <figure>
+    <div class=pr-stage><div class=pre style="margin-bottom: 30px"></div><div class=v style="height: 20px; margin-top: 20px">ab</div></div>
+    <figcaption>An orange block with a 30px bottom margin, then the blue block with a 20px top margin: a 30px gap,
+    collapsed.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=v style="height: 40px; width: 40px; margin: 0 auto">ab</div></div>
+    <figcaption>The blue block 40px wide with <code>margin: 0 auto</code>: centered, 55px from each
+    side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

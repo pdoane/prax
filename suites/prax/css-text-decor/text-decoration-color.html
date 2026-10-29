@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/36px "PR Arimo"; }
+  .t span { text-decoration-thickness: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.3 Text Decoration Color: the text-decoration-color property</div>
+  <h1>text-decoration-color</h1>
+  <p class=pr-lede>It <q>sets the color of underlines, overlines, and line-throughs specified on the element with
+  'text-decoration-line', and affects all decorations originating from this element even if descendant boxes specify
+  a different color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-color-property">CSS Text Decoration 4 §2.3</a></span>
+  Its initial value is <code>currentcolor</code>. Each line is 3px thick.</p>
+</header>
+
+<section>
+  <h2>A color of its own, or the text's</h2>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: underline; text-decoration-color: #c0392b">red line</span><br><span style="text-decoration-line: underline overline; text-decoration-color: rgb(44 90 143 / 0.4)">pale blue</span></div>
+    <figcaption>Black text with a red underline; then a translucent blue under and over line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: line-through; color: #3f7a3f">green text</span></div>
+    <figcaption><code>currentcolor</code>: the line through the green text is green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A descendant's color does not change it</h2>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: underline; color: #c0392b">red <b style="color: #2c5a8f">blue</b> red</span></div>
+    <figcaption>The underline takes the outer span's red; under the blue word it is still red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: underline; text-decoration-color: #c0392b">red <b style="text-decoration-color: #3f7a3f">still</b> red</span></div>
+    <figcaption>The child sets a green <code>text-decoration-color</code> and no line: the underline is red under
+    all three words.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

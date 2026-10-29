@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The properties of a typographic character unit</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .s { padding: 0 6px; font: 20px/32px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · E Characters and Properties</div>
+  <h1>The properties of a typographic character unit</h1>
+  <p class=pr-lede><q>For the purposes of CSS Text, the properties of a typographic character unit are given by the
+  base character of its first grapheme cluster—except in two cases</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#character-properties">CSS Text 4 §E</a></span>
+  The appendix is normative.</p>
+</header>
+
+<section>
+  <h2>A space with a mark is a symbol</h2>
+  <p><q>Grapheme clusters formed with a Space Separator (Zs) as the base are considered to be Modifier Symbols
+  (Sk).</q> So a space carrying a combining mark is not a word separator. Each stage has <code>word-spacing:
+  20px</code>; the words are highlighted.</p>
+  <figure>
+    <div class="pr-stage s" style="word-spacing: 20px"><span class=t>ab</span> <span class=t>cd</span></div>
+    <figcaption>A plain space: 20px more.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage s" style="word-spacing: 20px"><span class=t>ab</span> &#x301;<span class=t>cd</span></div>
+    <figcaption>A space and U+0301 COMBINING ACUTE, one unit, a symbol: nothing added, the accent over the gap. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 20px added.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

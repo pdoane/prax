@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>visibility: collapse on flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ifx { display: inline-flex; vertical-align: top; }
+  .box { width: 40px; }
+  .tall { height: 60px; }
+  .cnt::after { content: counter(n); }
+  figure.n figcaption { max-width: 116px; }
+  figure.n .pr-stage { width: 120px; height: 60px; }
+  section + section figure.n .pr-stage { width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.4 Collapsed Items</div>
+  <h1>visibility: collapse on flex items</h1>
+  <p class=pr-lede><q>the collapsed flex item is removed from rendering entirely, but leaves behind a "strut" that keeps
+  the flex line's cross-size stable. Thus, if a flex container has only one flex line, dynamically collapsing or
+  uncollapsing items may change the flex container's main size, but is guaranteed to have no effect on its cross
+  size</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#visibility-collapse">CSS Flexible Box Layout 2 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>A strut keeps the cross size</h2>
+  <p>Each dashed <code>inline-flex</code> container holds A, 40px wide, B, 40 by 60, and C, 40px wide; A and C
+  have no height of their own, so they stretch to the line.</p>
+  <figure class=n>
+    <div class=pr-stage><div class="ifx pr-frame"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box tall">B</div><div class="pr-c pr-fit box">C</div></div></div>
+    <figcaption>As is: 120 by 60.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class=pr-stage><div class="ifx pr-frame"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box tall" style="visibility: collapse">B</div><div class="pr-c pr-fit box">C</div></div></div>
+    <figcaption>B <code>collapse</code>: 80 by 60, A and C still 60px tall. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> As <code>hidden</code>: 120 wide, a gap.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class=pr-stage><div class="ifx pr-frame"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box tall" style="display: none">B</div><div class="pr-c pr-fit box">C</div></div></div>
+    <figcaption>B <code>display: none</code>: no strut; 80 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a column, and still in the formatting structure</h2>
+  <p>A column: the strut keeps the line's width, B's 60px; A, B and C are 20px tall. And <q>effects that depend on a
+  box appearing in the formatting structure (like incrementing counters or running animations and transitions) still
+  operate on collapsed items.</q></p>
+  <figure class=n>
+    <div class=pr-stage><div class="ifx pr-frame" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="width: 60px">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>As is: 60 by 60.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class=pr-stage><div class="ifx pr-frame" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="width: 60px; visibility: collapse">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>B <code>collapse</code>: 60 by 40, C under A, both 60px wide. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> 60 by 60, a gap. <span class=pr-flag>Firefox</span> No strut: as narrow as the letters.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class=pr-stage><div class="ifx pr-frame" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="width: 60px; display: none">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>B <code>display: none</code>: A and C as narrow as their letters; 40px tall.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class=pr-stage style="display: flex; width: 100px; height: 20px; counter-reset: n"><div class="pr-a pr-fit" style="width: 20px; counter-increment: n">A</div><div class="pr-b pr-fit" style="width: 20px; counter-increment: n; visibility: collapse">B</div><div class="pr-c pr-fit" style="width: 40px; counter-increment: n">C<span class=cnt></span></div></div>
+    <figcaption>A, B collapsed and C each count: C reads "C3".</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: visible and hidden</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; height: 40px; margin: 10px 40px; }
+  .wide-child { width: 150px; }
+  .half { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: visible and hidden</h1>
+  <p class=pr-lede><code>overflow</code> takes <code>visible | hidden | scroll | auto</code>. Initial <code>visible</code>,
+  not inherited, and it applies to block containers and boxes that establish a formatting context. Each dashed box is
+  120 by 40 and holds a 150px wide A and two 60px wide boxes, 60px of content.</p>
+</header>
+
+<section>
+  <h2>visible and hidden</h2>
+  <p><code>visible</code>: <q>content is not clipped, i.e., it may be rendered outside the block box.</q>
+  <code>hidden</code>: <q>the content is clipped and that no scrolling user interface should be provided to view the
+  content outside the clipping region.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: visible"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption><code>visible</code>: A runs 30px past the right edge and C lies below the bottom edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: hidden"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption><code>hidden</code>: A is cut at the right edge, C is not seen, and nothing scrolls. <span
+    class="pr-flag pr-since">Since CSS 2</span> A script can now scroll it, below.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></div>
+  <h2>hidden still scrolls by script</h2>
+  <p><code>hidden</code> keeps the user from scrolling, <q>However, the content must still be scrollable
+  programmatically, for example using the mechanisms defined in [CSSOM-VIEW].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3
+  §3.1</a></span> CSS 2 asked only that no scrolling interface be shown; a <code>hidden</code> box is now a scroll
+  container, and the boxes below are the ones above, scrolled by script.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div id=across class="pr-frame box1" style="overflow: hidden"><div class="pr-a pr-fit wide-child">A, to its end</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption><code>scrollLeft = 30</code>: A's last 120px are seen, and B is cut to its right 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div id=down class="pr-frame box1" style="overflow: hidden"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption><code>scrollTop = 20</code>: A is scrolled out of view, and B and C fill the box.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("across").scrollLeft = 30;
+  document.getElementById("down").scrollTop = 20;
+</script>
+</body>
+</html>

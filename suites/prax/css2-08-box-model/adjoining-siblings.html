@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adjoining margins: siblings</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>Adjoining margins: siblings</h1>
+  <p class=pr-lede><q>In CSS, the adjoining margins of two or more boxes (which might or might not be siblings) can
+  combine to form a single margin.</q> <q>Adjoining vertical margins collapse</q>; this page shows which margins
+  adjoin. Every box is 20px tall and the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>A box and its next sibling</h2>
+  <p>The <q>bottom margin of box and top margin of its next in-flow following sibling</q> adjoin.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 20px">A: mb 20</div><div class=pr-b style="margin-top: 40px">B: mt 40</div></div>
+    <figcaption>One 40px gap, not 60.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 40px">A: mb 40</div><div class=pr-b style="margin-top: 20px">B: mt 20</div></div>
+    <figcaption>The same 40px gap with the margins the other way round.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class=pr-b style="margin-top: 30px">B: mt 30</div></div>
+    <figcaption>Equal margins: one 30px gap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Horizontal margins</h2>
+  <p><q>Horizontal margins never collapse.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=pr-a style="display: inline-block; margin-right: 20px">A: mr 20</div><div class=pr-b style="display: inline-block; margin-left: 20px">B: ml 20</div></div>
+    <figcaption>Side by side, 20 and 20 make a 40px gap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested ::first-line pseudo-elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 0; }
+  .outer::first-line { color: #d68a3c; background: #f6d7b4; }
+  .inner::first-line { color: #4f81bd; }
+  .big::first-line { font-size: 200%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1.1 Finding the First Formatted Line</div>
+  <h1>Nested ::first-line pseudo-elements</h1>
+  <p class=pr-lede><q>When a first formatted line is represented by multiple ::first-line pseudo-elements, they are
+  nested in the same order as their originating elements. The inline-level contents of this line—including its root
+  inline box fragment—are nested within the innermost ::first-line pseudo-element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-text-line">CSS Pseudo-Elements 4 §2.1.1</a></span>
+  The text is 10px a character on 20px lines.</p>
+</header>
+
+<section>
+  <h2>The div's outside, the p's inside</h2>
+  <p>The section's example: <code>&lt;div&gt;&lt;p&gt;First paragraph&lt;/p&gt;&lt;p&gt;Second paragraph&lt;/p&gt;&lt;/div&gt;</code>
+  as <code>&lt;P&gt;&lt;DIV::first-line&gt;&lt;P::first-line&gt;First paragraph&lt;/P::first-line&gt;&lt;/DIV::first-line&gt;&lt;/P&gt;</code>.
+  The <code>div</code>'s <code>::first-line</code> is orange on light orange; each <code>p</code>'s is blue.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=outer><p class=inner>First paragraph</p><p class=inner>Second paragraph</p></div></div>
+    <figcaption>The first line: blue, the inner color, on the outer light orange, 150px. The second <code>p</code>'s
+    first line, which is not the <code>div</code>'s: blue on no background. <span class=pr-flag>Firefox</span> No light orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=outer><p>First paragraph</p><p class=inner>Second paragraph</p></div></div>
+    <figcaption>Only the <code>div</code>'s on the first <code>p</code>: orange on light orange; the second line
+    blue. <span class=pr-flag>Firefox</span> The first line black, on no background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The inner one inherits from the outer one</h2>
+  <p>Nested inside the <code>div</code>'s <code>::first-line</code>, the <code>p</code>'s inherits from it what it
+  does not set itself, and the line's contents, its root inline box fragment among them, inherit from the
+  <code>p</code>'s.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=big><p class=inner>First line here</p></div></div>
+    <figcaption><code>div::first-line { font-size: 200% }</code>: the <code>p::first-line</code> inherits it, so
+    <q>First line</q> is blue at 20px a character, the 200px of the line, and <q>here</q> wraps to the
+    next line at 10px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All at 10px: the <code>p::first-line</code> inherits from the <code>p</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

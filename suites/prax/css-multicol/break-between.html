@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>break-before and break-after in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .h60 { height: 60px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 5.1 Controlling Fragmentation: break-before and break-after</div>
+  <h1>break-before and break-after in columns</h1>
+  <p class=pr-lede><q>break-before, break-after, and break-inside are defined in [CSS3-BREAK].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#break-before-break-after-break-inside">CSS Multi-column Layout 1 §5.1</a></span>
+  <code>column</code>: <q>Always force a column break before/after the principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#column-break-values">CSS Fragmentation 4 §3.1.3</a></span>
+  Each stage has three columns of 60px.</p>
+</header>
+
+<section>
+  <h2>Forced breaks</h2>
+  <p>Three blocks, A, B and C, in columns 60px tall (<code>column-fill: auto</code>), which would all fit in the first.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h60"><div class=pr-a>A</div><div class=pr-b style="break-before: column">B</div><div class=pr-c>C</div></div>
+    <figcaption>B, <code>break-before: column</code>: A in the first column, B and C in the second. <span class=pr-flag>Firefox</span> All three in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h60"><div class=pr-a style="break-after: column">A</div><div class=pr-b style="break-after: column">B</div><div class=pr-c>C</div></div>
+    <figcaption>A and B, <code>break-after: column</code>: A, B and C each in a column of its own. <span class=pr-flag>Firefox</span> All three in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h60"><div class=pr-a>A</div><div class=pr-b style="break-before: always">B</div><div class=pr-c>C</div></div>
+    <figcaption>B, <code>break-before: always</code>: <q>in a multi-column container forces a column break</q>, as
+    <code>column</code> does. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#generic-break-values">§3.1.1</a></span> <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No break: all three in the first column.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

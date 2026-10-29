@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lazy loading an iframe</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; overflow: auto; font-size: 12px; line-height: 20px; }
+  .scroller p { margin: 0; padding: 0 6px; }
+  .far { height: 6000px; }
+  .scroller iframe { display: block; width: 120px; height: 40px; margin: 0 10px 10px; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.5 The iframe element</div>
+  <h1>Lazy loading an iframe</h1>
+  <p class=pr-lede><q>The loading attribute is a lazy loading attribute. Its purpose is to indicate the policy for
+  loading iframe elements that are outside the viewport.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-iframe-element">HTML §4.8.5</a></span>
+  It is navigated once it comes within the implementation-defined <q>lazy load scroll margin</q> of the viewport.
+  Each iframe is 6000px down a scroller, and the page's script gives it a green <code>srcdoc</code>; the log lists
+  its <code>load</code>.</p>
+</header>
+
+<section>
+  <h2>Navigated when scrolled to, or when made eager</h2>
+  <p><q>When the loading attribute's state is changed to the Eager state, the user agent must run these steps</q>,
+  which invoke the iframe's <q>lazy load resumption steps</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Scroll to the end.</p><div class=far></div><iframe id=lazy loading=lazy></iframe></div>
+      <ol class=pr-log data-on="#lazy" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption><code>loading=lazy</code>: the log is empty until you scroll near the end, then <code>load</code>,
+    and the frame is green. Chrome navigates it at once, as a scroll margin of 6000px or more would.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Scroll to the end.</p><div class=far></div><iframe id=eager></iframe></div>
+      <ol class=pr-log data-on="#eager" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption>No <code>loading</code>, so Eager: <code>load</code> as the page loads, before any scrolling.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Out of view, 6000px down.</p><div class=far></div><iframe id=resume loading=lazy></iframe></div>
+      <div class=act><button class=pr-target id=make-eager>Set loading to eager</button></div>
+      <ol class=pr-log data-on="#resume" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption>Press the button without scrolling: <code>load</code>, though the iframe is still out of view. Chrome
+    has navigated it already.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+<script>
+  for (const frame of document.querySelectorAll(".scroller iframe"))
+      frame.srcdoc = "<body style='margin: 0; background: #dcefd6; font: 12px/20px sans-serif; padding: 0 6px'>" + frame.id;
+  document.getElementById("make-eager").addEventListener("click", () => {
+      document.getElementById("resume").loading = "eager";
+  });
+</script>
+</body>
+</html>

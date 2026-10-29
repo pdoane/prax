@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The figure element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.12 The figure element</div>
+  <h1>The figure element</h1>
+  <p class=pr-lede><q>The figure element represents some flow content, optionally with a caption, that is self-contained (like a complete sentence) and is typically referenced as a single unit from the main flow of the document.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-figure-element">HTML §4.4.12</a></span></p>
+</header>
+<section>
+  <h2>A block set in by 40px, its caption a block</h2>
+  <p><q>blockquote, figure, listing, p, plaintext, pre, xmp { margin-block: 1em; }</q> <q>blockquote, figure {
+  margin-inline: 40px; }</q> figcaption is a block. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span> <q>The first figcaption element child of the element, if any,
+  represents the caption of the figure element's contents.</q> The frame's text is 10px on 20px lines; the figure is
+  tinted blue and its caption orange.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 0 10px; font: 10px/20px &quot;PR Noto Sans&quot; } body { margin: 0 } figure { background: rgba(79, 129, 189, 0.16) } figcaption { background: rgba(214, 138, 60, 0.2) }</style><p style='margin: 0'>Before</p><figure><img src=../shared/resources/flag-40x20.png alt='' style='display: block'><figcaption>The flag</figcaption></figure><p style='margin: 0'>After</p>"></iframe></div>
+    <figcaption>"Before"; 10px below, the figure, 40px in from each side: the flag, 40 by 20, then its caption on a
+    line of its own; 10px below, "After".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

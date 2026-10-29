@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Style containment: what stays inside</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.m { width: 150px; }
+  figure.m figcaption { max-width: 152px; }
+  .ex { counter-reset: foo; height: auto; }
+  .ex div { counter-increment: foo; margin: 2px; padding: 0 4px; background: rgba(31, 36, 48, 0.08); }
+  .ex div::before { content: counters(foo, "."); }
+  .k { contain: style; }
+  .c { counter-reset: n; height: auto; padding: 2px 4px; }
+  .c .inc { counter-increment: n; }
+  .c .set { counter-set: n 5; }
+  .c .show::before { content: "n=" counter(n); }
+  .c .k { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.4 Style Containment, the scope</div>
+  <h1>Style containment: what stays inside</h1>
+  <p class=pr-lede><q>If scoped to a sub-tree, it's the same, except the scoping element itself is counted as "outside"
+  the tree, like the rest of the document, and the effects of the property on that element are unaffected by
+  scoping.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-style">CSS Containment 2 §3.4</a></span>
+  Text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Increments and sets stay inside; reading does not</h2>
+  <p>Each stage resets <code>n</code>. The blue box has <code>contain: style</code>. <q>the counter() and counters()
+  value of the 'content' property is not itself scoped, and can refer to counters established outside of the
+  subtree.</q></p>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure c m"><div class=inc></div><div class=inc></div><div class=k><span class=show></span> <span class="inc show"></span></div><div class=show></div></div>
+    <figcaption>Two increments outside, then in the box a reading, n=2, and an increment, which makes a fresh counter,
+    n=1; after the box, n=2 again. <span class=pr-flag>Safari</span> reads n=0 in the box.</figcaption>
+  </figure>
+  <figure class=m>
+    <div class="pr-stage pr-measure c m"><div class=k><span class="set show"></span></div><div class=show></div></div>
+    <figcaption><code>counter-set: n 5</code> in the box: n=5 there, and n=0 after it.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure c m"><div class="k inc"><span class=show></span></div><div class=show></div></div>
+    <figcaption>An increment on the box itself is outside the scope: n=1 in it and after it. <span class=pr-flag>Safari</span> reads n=0 in it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

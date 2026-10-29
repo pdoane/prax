@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which characters are white space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3 The White Space Processing Rules</div>
+  <h1>Which characters are white space</h1>
+  <p class=pr-lede><q>Except where specified otherwise, white space processing in CSS affects only the document white
+  space characters: spaces (U+0020), tabs (U+0009), and segment breaks.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-rules">CSS Text 4 §4.3</a></span>
+  <q>all characters in the Unicode general category Zs except space (U+0020) and no-break space (U+00A0) are
+  collectively referred to as other space separators.</q> Each stage is <code>white-space: normal</code>, letters
+  10px wide, highlighted to show the spaces.</p>
+</header>
+
+<section>
+  <h2>Only these collapse</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>a   	 b</span></div>
+    <figcaption>Spaces and a tab: one space, "a b", 30px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>a&nbsp;&nbsp;&nbsp;b</span></div>
+    <figcaption>Three no-break spaces: all kept, "a   b", 50px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>a&#x2003;&#x2003;&#x2003;b</span></div>
+    <figcaption>Three U+2003 EM SPACE, other space separators: all kept, three wide spaces.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja"><span class=t>あ&#x3000;&#x3000;い</span></div>
+    <figcaption>Two U+3000 IDEOGRAPHIC SPACE: both kept, "い" at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other space separators still break lines</h2>
+  <p>Unlike a no-break space, an other space separator is a place the line may wrap. Each stage is 60px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px"><span class=t>aaaa&#x2002;bbbb</span></div>
+    <figcaption>U+2002 EN SPACE between: "aaaa", then "bbbb" on the next line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px"><span class=t>aaaa&nbsp;bbbb</span></div>
+    <figcaption>U+00A0 between: no break, "aaaa bbbb" on one line past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

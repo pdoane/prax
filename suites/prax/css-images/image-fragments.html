@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image(): a part of an image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .sheet { display: block; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 2.1.2 Image Fragments</div>
+  <h1>image(): a part of an image</h1>
+  <p class=pr-lede><q>When a URL specified in image() represents a portion of a resource (e.g. by the use of media
+  fragment identifiers) that portion is clipped out of its context and used as a standalone image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#image-fragments">CSS Images 5 §2.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>xywh= clips out a rectangle</h2>
+  <p><q>implementations that support the image() notation must support the xywh=#,#,#,# form of media fragment
+  identifiers for images specified via image().</q> The sprite sheet: nine 20px cells, the nth n eighths orange.
+  Each dashed box is 100 by 40, its background drawn once at the top left.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><img class=sheet src=support/sprites.svg alt=""></div>
+    <figcaption>The sheet, 180 by 20, clipped at the stage's edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('support/sprites.svg#xywh=40,0,20,20')"></div></div>
+    <figcaption><code>#xywh=40,0,20,20</code>: the third cell alone, 20 by 20, a quarter filled. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('../shared/resources/flag-40x20.png#xywh=20,0,20,10')"></div></div>
+    <figcaption>A flag PNG 40 by 20, <code>#xywh=20,0,20,10</code>: its orange quarter alone, 20 by 10. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A fragment not understood: invalid</h2>
+  <p><q>If a URL uses a fragment identifier syntax that the implementation does not understand, or does not consider
+  valid for that type of image, the URL must be treated as representing an invalid image.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: image('../shared/resources/flag-40x20.png#banana', #6aa36a)"></div></div>
+    <figcaption><code>image("…png#banana", green)</code>: the box filled with green. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: url('support/sprites.svg#xywh=40,0,20,20')"></div></div>
+    <figcaption>In <code>url()</code>, as the example says, a UA may ignore the fragment: Chrome and Safari
+    draw the whole sheet; Firefox only its part from 40px on.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

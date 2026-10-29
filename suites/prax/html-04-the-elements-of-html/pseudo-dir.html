@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:dir()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows > * { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; padding: 0 6px; line-height: 20px; background: var(--pr-plain); font-size: 12px; }
+  .rows span { display: block; margin: 0 0 4px; }
+  .rows :dir(ltr) { outline: 3px solid #3f9a3f; outline-offset: 1px; }
+  .rows :dir(rtl) { outline: 3px solid #d68a3c; outline-offset: 1px; }
+  .rows input { padding: 2px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:dir()</h1>
+  <p class=pr-lede><q>The :dir(ltr) pseudo-class must match all elements whose directionality is 'ltr'.</q> <q>The
+  :dir(rtl) pseudo-class must match all elements whose directionality is 'rtl'.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Directionality, not the direction property</h2>
+  <p>Outlines: green <code>:dir(ltr)</code>, orange <code>:dir(rtl)</code>. Directionality comes from
+  <code>dir</code>, inherited from the parent, or for <code>dir=auto</code> from the text. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <div>no dir</div>
+        <div dir=rtl>dir=rtl<span>a span in it</span></div>
+        <div dir=auto>dir=auto, English first</div>
+        <div dir=auto>שלום, dir=auto, Hebrew first</div>
+        <div style="direction: rtl">direction: rtl, no dir</div>
+        <input dir=auto value="dir=auto">
+      </div>
+    </div>
+    <figcaption>Green; orange, with its span orange; green; orange; green, as the <code>direction</code> property is
+    no part of directionality. The field is green; replace its text with <code>שלום</code>: it turns
+    orange.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

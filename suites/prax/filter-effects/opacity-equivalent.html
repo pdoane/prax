@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>opacity() as feComponentTransfer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="opacity-equivalent-0" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncA type="table" tableValues="0 0.25"/></feComponentTransfer>
+  </filter>
+  <filter id="opacity-equivalent-1" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncA type="table" tableValues="0 0.5"/></feComponentTransfer>
+  </filter>
+  <filter id="opacity-equivalent-2" color-interpolation-filters="sRGB">
+    <feComponentTransfer><feFuncA type="table" tableValues="0 1"/></feComponentTransfer>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.6 opacity</div>
+  <h1>opacity() as feComponentTransfer</h1>
+  <p class=pr-lede>The function is a table from 0 to <code>[amount]</code> on the alpha channel.  <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#opacityEquivalent">Filter Effects 1 §13.1.6</a></span></p>
+</header>
+
+<section>
+  <h2>Three amounts, over the stage</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function; beside it the same box with <code>filter: url()</code> to the equivalent, which sets <code>color-interpolation-filters: sRGB</code>, as <q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: opacity(25%)"></div><div class=src style="filter: url(#opacity-equivalent-0)"></div><div class=sw style="background: rgb(214 138 60 / 0.25)"></div></div></div>
+    <figcaption><code>opacity(25%)</code> and its equivalent alike; orange becomes <code>rgb(214 138 60 / 0.25)</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: opacity(50%)"></div><div class=src style="filter: url(#opacity-equivalent-1)"></div><div class=sw style="background: rgb(214 138 60 / 0.5)"></div></div></div>
+    <figcaption><code>opacity(50%)</code> and its equivalent alike; orange becomes <code>rgb(214 138 60 / 0.5)</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: opacity(150%)"></div><div class=src style="filter: url(#opacity-equivalent-2)"></div><div class=sw style="background: rgb(214 138 60 / 1)"></div></div></div>
+    <figcaption><code>opacity(150%)</code> and its equivalent alike; orange becomes <code>rgb(214 138 60 / 1)</code>, the swatch at the
+    right. Over 100% the amount is clamped to 1: opaque.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

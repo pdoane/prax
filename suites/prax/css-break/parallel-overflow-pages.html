@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow across pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .fixed { height: 20px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.1 Parallel Fragmentation Flows</div>
+  <h1>Overflow across pages</h1>
+  <p class=pr-lede><q>Content overflowing the content edge of a fixed-size box is considered parallel to the content
+  after the fixed-size box and follows the normal fragmentation rules. Although overflowing content doesn’t affect the
+  size of the fragmentation root box, it does increase the length of the fragmented flow, spilling into or generating
+  additional fragmentainers as necessary.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#parallel-flows">CSS Fragmentation 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>On pages</h2>
+  <p>The tinted box is 40px tall and holds ten lines; C follows it, 120px in. The document is 60px tall.</p>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .fixed { height: 40px; background: #b9cde6 }</style><body class=pr-measure><div class=fixed>one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight<br>nine<br>ten</div><div class=pr-c style='margin-left: 120px'>C</div>"></iframe>
+    <figcaption>Printed: two pages, though the document is 60px tall. C beside "three" on the first page, which ends
+    with "seven"; "eight" to "ten" on a second page that the overflow generates. Safari prints larger, six lines to a
+    page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

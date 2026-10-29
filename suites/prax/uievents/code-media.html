@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Media keys</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.6 Media Keys</div>
+  <h1>Media keys</h1>
+  <p class=pr-lede><q>Media keys are extra keys added to a keyboard that provide media related functionality like play, pause or volume control. These keys do not have a standard location on the keyboard</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-media">UI Events KeyboardEvent code Values §3.6</a></span></p>
+</header>
+<section>
+  <h2>Merged with the function keys</h2>
+  <p><q>On laptop keyboards, these keys are often merged with the function keys, with the media key interpretation being the primary function of the key and the function key interpretation requiring the Fn key to be pressed at the same time. In this configuration the code should be set to match the function key ("F1" ... "F12").</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-media">§3.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box. On a keyboard with separate media keys, press play/pause or a volume key: <code>code="MediaPlayPause"</code> or <code>"AudioVolumeUp"</code>, where the system passes the key to the page. On a laptop whose F8 is play/pause, the key's events, where they reach the page, have <code>code="F8"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pattern: patternTransform, and a tile of no size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #styled { transform: rotate(45deg); }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <pattern id="stripes" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="#4f81bd" /></pattern>
+  <pattern id="turned" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="20" fill="#4f81bd" /></pattern>
+  <pattern id="styled" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="scale(2 1)"><rect width="10" height="20" fill="#4f81bd" /></pattern>
+  <pattern id="empty" width="0" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="20" fill="#4f81bd" /></pattern>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.3.1 Attributes</div>
+  <h1>pattern: patternTransform, and a tile of no size</h1>
+  <p class=pr-lede><code>patternTransform</code> <q>Contains the definition of an optional additional transformation
+  from the pattern coordinate system onto the target coordinate system</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#PatternElementAttributes">SVG 2 §14.3.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10. Each tile is 20 by 20 with a blue stripe 10 wide
+  on its left.</p>
+</header>
+
+<section>
+  <h2>patternTransform, and transform</h2>
+  <p><q>‘patternTransform’ gets mapped to the transform CSS property</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#PresentationAttributes">§6.6</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#stripes)" /></svg></div>
+    <figcaption>No transform: upright stripes, blue from x 20 to 30, 40 to 50, and on.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#turned)" /></svg></div>
+    <figcaption><code>patternTransform="rotate(45)"</code>: the stripes lean 45°, falling to the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#styled)" /></svg></div>
+    <figcaption><code>patternTransform="scale(2 1)"</code> and a style sheet's <code>transform:
+    rotate(45deg)</code>: leaning 45°, as the middle figure. <span class=pr-flag>Safari</span> Upright stripes 20
+    wide, the attribute's scale.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A width of zero</h2>
+  <p><q>A value of zero disables rendering of the element (i.e., no paint is applied).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#empty)" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption><code>width="0"</code>: no paint, the dashed outline bare.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

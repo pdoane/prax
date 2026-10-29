@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties on ::marker</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .text li::marker { letter-spacing: 6px; font-family: "PR Literata"; font-weight: 800; color: #c0392b; }
+  .text li { list-style-type: "a b"; list-style-position: inside; }
+  .words li { list-style-type: "a b "; list-style-position: inside; }
+  .words li::marker { word-spacing: 20px; }
+  .box li::marker { padding: 0 20px; margin-right: 30px; width: 80px; }
+  .box ol { list-style-position: inside; }
+  .tcu { writing-mode: vertical-rl; height: 120px; width: auto; font-family: "PR Noto Sans JP"; }
+  .tcu ol { padding: 30px 0 0; }
+  .tcu li::marker { text-combine-upright: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.1.1 Properties Applying to ::marker</div>
+  <h1>Properties on ::marker</h1>
+  <p class=pr-lede><q>All properties can be set on a ::marker pseudo-element and will have a computed value which will
+  then inherit to its text content.</q> <q>However, only the following CSS properties actually apply to a marker
+  box:</q> <q>the 'text-combine-upright', 'unicode-bidi', and 'direction' properties</q>, <q>the 'content'
+  property</q>, <q>all animation and transition properties</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#marker-properties">CSS Lists and Counters 3 §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Inherited by the marker's text</h2>
+  <p><q>Inheritable properties that apply to text can be set on the ::marker pseudo-element: these will inherit to and
+  take effect on its text contents.</q> The items are inside, tinted blue.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text text"><ul><li>item</ul></div>
+    <figcaption><code>letter-spacing: 6px</code>, Literata at 800, red: a widely spaced, heavy serif "a b" in red,
+    then "item" in the item's font. <span class=pr-flag>Firefox</span> No letter spacing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text words"><ul><li>item</ul></div>
+    <figcaption><code>word-spacing: 20px</code> on the marker "a b ": 20px more between "a" and "b", and before
+    "item". <span class=pr-flag>Firefox</span> No extra word spacing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Box properties do not apply; text-combine-upright does</h2>
+  <p><q>Other properties should not have an effect on the marker box when declared directly on ::marker in the author or
+  user origin of the cascade.</q></p>
+  <figure>
+    <div class="pr-stage pr-text box"><ol><li>item</ol></div>
+    <figcaption><code>padding: 0 20px; margin-right: 30px; width: 80px</code>: no effect, "1. item" as if they were
+    not there.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text tcu"><ol start=12><li>縦書き</ol></div>
+    <figcaption>Vertical text, <code>text-combine-upright: all</code>: "12." set across in one upright square above
+    "縦書き"; in Firefox the square overlaps the top of "縦". <span class=pr-flag>Safari</span> Sets "12." sideways, not combined.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

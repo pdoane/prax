@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Axis mappings: vertical</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; align-content: flex-start; }
+  .v { writing-mode: vertical-rl; width: 100px; height: 100px; }
+  .v > div { width: 20px; height: 40px; flex: none; text-orientation: upright; }
+  .v.c > div { width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · A Axis Mappings, vertical-rl</div>
+  <h1>Axis mappings: vertical</h1>
+  <p class=pr-lede>The appendix tabulates where main-start, main-end, cross-start and cross-end fall for each flex-flow. Each stage is <code>vertical-rl</code>, 100px square, with <code>align-content: flex-start</code>, and holds A, B and C, 40px long in the main axis and 20px across: two fit in a line, so C starts the second. The arrows point from start to end. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#axis-mapping">CSS Flexible Box Layout 2 §A</a></span></p>
+</header>
+
+<section>
+  <h2><code>ltr</code> + <code>vertical-rl</code> (e.g. Japanese)</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-flow: row wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row wrap</code>: main &darr;, cross &larr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-flow: row-reverse wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row-reverse wrap</code>: main &uarr;, cross &larr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-flow: row wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row wrap-reverse</code>: main &darr;, cross &rarr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-flow: row-reverse wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row-reverse wrap-reverse</code>: main &uarr;, cross &rarr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v c" style="flex-flow: column wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column wrap</code>: main &larr;, cross &darr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v c" style="flex-flow: column-reverse wrap"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column-reverse wrap</code>: main &rarr;, cross &darr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v c" style="flex-flow: column wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column wrap-reverse</code>: main &larr;, cross &uarr;.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v c" style="flex-flow: column-reverse wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column-reverse wrap-reverse</code>: main &rarr;, cross &uarr;.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

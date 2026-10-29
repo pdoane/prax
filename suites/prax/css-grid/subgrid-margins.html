@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: their margins, borders and padding</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { display: grid; grid-template-columns: auto auto; justify-content: start; }
+  .s { grid-column: span 2; display: grid; grid-template-columns: subgrid; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .tc { background: #6aa36a; color: white; }
+  .td { background: #8e44ad; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, margins, borders and padding</div>
+  <h1>Subgrids: their margins, borders and padding</h1>
+  <p class=pr-lede><q>the sum of the subgrid's margin, padding, scrollbar gutter, and border at each edge are applied
+  as an extra layer of (potentially negative) margin to the items at those edges. This extra layer of “margin”
+  accumulates through multiple levels of subgrids.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span></p>
+</header>
+
+<section>
+  <h2>Columns</h2>
+  <p><code>auto auto</code> columns: the tinted, outlined subgrid holds "abcd" and "ef", 40 and 20px; "x" and "y"
+  mark the columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-parent" style="padding: 0 10px"><div class=ta>abcd</div><div class=tb>ef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption><code>padding: 0 10px</code>: "abcd" counts 10px more at its left, "ef" at its right; columns of
+    50 and 30px, "abcd" from 10px, "ef" and "y" at 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-parent" style="margin-left: 20px; border-left: 10px solid #9c5f22"><div class=ta>abcd</div><div class=tb>ef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption>A 20px left margin and 10px left border: a 70px first column, "abcd" from 30px, "y" at
+    70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class="s pr-parent" style="padding-left: 10px"><div class="s pr-parent" style="padding-left: 10px"><div class=ta>abcd</div><div class=tb>ef</div></div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption>Two subgrids, one in the other, each <code>padding-left: 10px</code>: they add up, "abcd" from 20px,
+    "y" at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows</h2>
+  <p>Two 100px columns, <code>auto</code> rows: a subgrid of both rows holds "aa" and "bb"; B and C stretch to the
+  rows.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class=pr-parent style="grid-row: span 2; display: grid; grid-template-rows: subgrid; padding: 10px 0"><div class=ta>aa</div><div class=tb>bb</div></div><div class=pr-b style="grid-column: 2">B</div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>padding: 10px 0</code>: rows of 30px; "aa" from 10px, "bb" from 30px, B 30px tall, C from
+    30 to 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class=pr-parent style="grid-row: span 2; display: grid; grid-template-rows: subgrid; padding: 10px 0"><div class=ta style="grid-row: 1 / 3">aa</div></div><div class=pr-b style="grid-column: 2">B</div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption>"aa" spans both rows, so both paddings: 10 + 20 + 10 = 40px, which B's and C's rows hold;
+    "aa" from 10 to 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

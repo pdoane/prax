@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The target of a pointer event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .row { margin: 10px 20px; touch-action: none; }
+  .row .pr-target { display: inline-block; width: 120px; margin: 0 16px 0 0; }
+  #outer { height: 60px; margin: 10px 20px; padding: 10px; box-sizing: border-box; touch-action: none;
+           background: rgba(79, 129, 189, 0.16); outline: 1px dashed var(--pr-line); font-size: 12px; }
+  #inner { height: 30px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.3 Firing events using the PointerEvent interface</div>
+  <h1>The target of a pointer event</h1>
+  <p class=pr-lede><q>If the pointer capture target override has been set for the pointer, set the target to pointer
+  capture target override object.</q> <q>Otherwise, set the target to the object returned by hit test.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#firing-events-using-the-pointerevent-interface">Pointer Events §3.1.3</a></span></p>
+</header>
+<section>
+  <h2>Moving into the capturing element</h2>
+  <p><q>Using the pointer capture target override as the target instead of the normal hit-test result may fire some
+  boundary events. This is the same as the pointer leaving its previous target and entering this new capturing
+  target.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#firing-events-using-the-pointerevent-interface">§3.1.3</a></span>
+  A <code>pointerdown</code> listener on A sets capture to B.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>A, press here</div><div class=pr-target id=b>B</div></div>
+      <ol class=pr-log data-log="pointerover pointerout gotpointercapture lostpointercapture" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Press A and move a little: <code>pointerout</code> at A, <code>gotpointercapture</code> and
+    <code>pointerover</code> at B, though the pointer is over A. Release: <code>lostpointercapture</code> and
+    <code>pointerout</code> at B, and <code>pointerover</code> at A again.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A target that is removed</h2>
+  <p><q>If the previousTarget at any point will no longer be connected [DOM], update the previousTarget to the nearest
+  still connected [DOM] parent following the event path corresponding to dispatching events to the previousTarget, and
+  set the needsOverEvent flag to true.</q> <q>If the needsOverEvent flag is set, a pointerover event is needed even if
+  the target element is the same.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#firing-events-using-the-pointerevent-interface">§3.1.3</a></span>
+  A <code>pointerdown</code> listener removes the inner box, and puts it back after two seconds.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div id=outer><div class=pr-target id=inner>inner, press here</div></div>
+      <ol class=pr-log data-log="pointerdown pointerover pointerout" data-fields="target" data-on="#outer" data-lines=3></ol>
+    </div>
+    <figcaption>Press the inner box, which disappears, and move a little: <code>pointerover</code> at
+    <code>outer</code>, though the pointer was already over it, and no <code>pointerout</code> at the box that is
+    gone.</figcaption>
+  </figure>
+</section>
+<script>
+  // A's pointerdown sends the pointer's events to B instead.
+  const b = document.getElementById("b");
+  document.getElementById("a").addEventListener("pointerdown", event => b.setPointerCapture(event.pointerId));
+  // The inner box removes itself when pressed, and comes back later.
+  const outer = document.getElementById("outer"), inner = document.getElementById("inner");
+  inner.addEventListener("pointerdown", () => {
+    inner.remove();
+    setTimeout(() => outer.append(inner), 2000);
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

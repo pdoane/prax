@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blockification</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .sized { width: 60px; height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.7 Automatic Box Type Transformations, blockification</div>
+  <h1>Blockification</h1>
+  <p class=pr-lede><q>Some layout effects require blockification or inlinification of the box type, which sets the
+  box’s computed outer display type to block or inline (respectively).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#transformations">CSS Display 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>What blockifies</h2>
+  <p><q>Absolute positioning or floating an element blockifies the box’s display type.</q> <q>A parent with a grid or
+  flex 'display' value blockifies the box’s display type.</q> Each orange box is a <code>span</code> with <code>width:
+  60px; height: 30px</code>, which apply only because it is now a block.</p>
+  <figure>
+    <div class=pr-stage style="height: 40px">text <span id=b1 class="pr-chip pr-fit sized" style="float: left">span</span> text</div>
+    <figcaption><code>float: left</code>: 60 by 30, at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px">text <span id=b2 class="pr-chip pr-fit sized" style="position: absolute; top: 40px; left: 40px">span</span> text</div>
+    <figcaption><code>position: absolute</code>: 60 by 30, at 40, 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><span id=b3 class="pr-chip pr-fit sized">span</span></div></div>
+    <figcaption>A flex item: 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: grid"><span id=b4 class="pr-chip pr-fit sized">span</span></div></div>
+    <figcaption>A grid item: 60 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Of the computed value, inherited too</h2>
+  <p>Blockification sets the <q>computed</q> outer display type, so it applies to whatever value the element gets,
+  <code>inherit</code> among them. The parent is an inline <code>span</code>.</p>
+  <figure>
+    <div class=pr-stage style="height: 40px"><span>text <span id=b5 class="pr-chip pr-fit sized" style="display: inherit; float: left">span</span> text</span></div>
+    <figcaption>A floated child with <code>display: inherit</code> takes <code>inline</code> and blockifies it:
+    60 by 30 at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 40px">text <span id=b6 class="pr-chip pr-fit sized" style="display: contents; float: left">span</span> text</div>
+    <figcaption><q>This has no effect on display types that generate no box at all</q>: <code>contents</code> with
+    <code>float: left</code>: no box, so no orange chip and no float; only its word "span" is drawn, in
+    the line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

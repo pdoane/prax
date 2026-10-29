@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .cols { column-count: 2; column-gap: 20px; height: 60px; column-fill: auto; }
+  .v { writing-mode: vertical-rl; height: 100px; background: #b9cde6; }
+  .room { margin-bottom: 44px; }
+  .h { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3.4 Fragmenting Orthogonal Flows</div>
+  <h1>Orthogonal flows across columns</h1>
+  <p class=pr-lede><q>With regards to fragmentation, the rules in CSS2.1 still hold in vertical writing modes and
+  orthogonal flows: break opportunities do not occur inside line boxes, only between them.</q> The section is
+  informative. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#orthogonal-pagination">CSS Writing Modes 4 §7.3.4</a></span></p>
+</header>
+
+<section>
+  <h2>Between lines, not across them</h2>
+  <p>Each stage is two columns 60px tall (<a href="https://drafts.csswg.org/css-multicol-1/#cc">CSS Multi-column Layout 1 §3.2</a>),
+  filled in order.</p>
+  <figure>
+    <div class="pr-stage cols"><div class=h>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr</div></div>
+    <figcaption>Horizontal text: broken between lines, three in the first column, the rest in the
+    second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols room"><div class=v>aaa bbb ccc</div></div>
+    <figcaption>A <code>vertical-rl</code> block 100px tall: a break across it would cut through its vertical lines,
+    so it is not broken; it stays whole in the first column and overflows it below. <span
+    class=pr-flag>Safari</span> breaks it, cutting its lines: "ccc" continues at the top of the second
+    column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

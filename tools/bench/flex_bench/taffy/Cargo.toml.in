@@ -1,0 +1,24 @@
+# The flex benchmark's adapter for Taffy: a static library with a C interface (src/lib.rs) that tools/bench/flex_bench links.
+# It builds on the Taffy that the build fetches, with Taffy's default features. The build configures this manifest into
+# its own directory with the paths of the sources and of Taffy.
+[package]
+name = "flex_bench_taffy"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+path = "@FLEX_BENCH_TAFFY@/src/lib.rs"
+
+[dependencies]
+taffy = { path = "@taffy_SOURCE_DIR@" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+panic = "abort"

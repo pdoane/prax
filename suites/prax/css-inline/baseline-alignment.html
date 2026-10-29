@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ex { font: 40px/64px "PR Noto Sans"; white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .inner { font-size: 75%; font-family: "PR Noto Sans Devanagari"; }
+  .diag { font: 72px/80px "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .half { font-size: 36px; }
+  .sq { display: inline-block; width: 20px; height: 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4 Baseline Alignment</div>
+  <h1>Baseline alignment</h1>
+  <p class=pr-lede><q>each glyph or inline-level box is aligned in the block axis by positioning its alignment
+  baseline to match the corresponding baseline of its parent (which is its alignment context), and then is potentially
+  shifted from that position according to its post-alignment shift.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment">CSS Inline Layout 3 §4</a></span></p>
+</header>
+
+<section>
+  <h2>A smaller box on its parent's alphabetic baseline</h2>
+  <p>The spec's example: "Ap" and a Devanagari word in a child with <code>font-size: 75%</code>. <q>The child box is
+  aligned to its parent by matching up their alphabetic baselines.</q> The red line is the parent's alphabetic
+  baseline.</p>
+  <figure>
+    <div class="pr-stage ex"><span class=pr-baseline style="margin-left: -6px"></span>Ap <span class=inner>जी</span></div>
+    <figcaption>The default: A, the bowl of p and the bottom of जी on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ex"><span class=pr-baseline style="margin-left: -6px"></span>Ap <span class=inner style="vertical-align: super">जी</span></div>
+    <figcaption><code>vertical-align: super</code>: aligned the same way, then <q>shifted to the superscript
+    position</q>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Corresponding baselines</h2>
+  <p><q>Baseline alignment always matches corresponding baselines: alphabetic to alphabetic, hanging to hanging,
+  mathematical to mathematical, etc.</q> A box's alignment baseline <q>defaults to matching the parent’s
+  dominant-baseline</q>. Each block is 72px PR Baseline Diagnostic, whose H fills from its hanging baseline to its
+  alphabetic one, with <code>dominant-baseline: hanging</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage diag" style="dominant-baseline: hanging">H<span class=half>H</span></div>
+    <figcaption>A 36px span, hanging to hanging: the tops of the two H level. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Alphabetic to alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage diag" style="dominant-baseline: hanging">H<span class=sq></span></div>
+    <figcaption>An inline-block, its hanging baseline synthesized at its top: level with the H's top. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Its bottom on alphabetic.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

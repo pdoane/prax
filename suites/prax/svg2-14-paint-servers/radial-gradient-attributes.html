@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radialGradient: the end and start circles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <radialGradient id="end" gradientUnits="userSpaceOnUse" cx="60" cy="30" r="20"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="focus" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="25" fx="95" fy="30"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="start" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="25" fr="10"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="reflect" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="10" spreadMethod="reflect"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="repeat" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="10" spreadMethod="repeat"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.3.1 Attributes</div>
+  <h1>radialGradient: the end and start circles</h1>
+  <p class=pr-lede><q>‘cx’, ‘cy’ and ‘r’ define the end circle for the radial gradient. The gradient will be drawn
+  such that the 100% gradient stop is mapped to the perimeter of this end circle.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#RadialGradientAttributes">SVG 2 §14.2.3.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10; each gradient, in user space, runs from blue at
+  0 to orange at 1.</p>
+</header>
+
+<section>
+  <h2>The end circle and the start circle</h2>
+  <p><q>‘fx’, ‘fy’, and ‘fr’ define the start circle for the radial gradient. The gradient will be drawn such that the
+  0% gradient stop is mapped to the perimeter of this start circle.</q> The initial <code>fx</code> and
+  <code>fy</code> are those of the center, and <code>fr</code> is 0. A dashed circle marks each end circle.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#end)" /><circle class=pr-ghost cx="60" cy="30" r="20" /></svg></div>
+    <figcaption><code>cx="60" cy="30" r="20"</code>: blue at 60, 30, orange at the circle and beyond it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#focus)" /><circle class=pr-ghost cx="80" cy="30" r="25" /></svg></div>
+    <figcaption><code>fx="95"</code> in a circle of radius 25 about 80, 30: blue at 95, 30, so orange close by on
+    the right and far off on the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#start)" /><circle class=pr-ghost cx="80" cy="30" r="25" /></svg></div>
+    <figcaption><code>fr="10"</code>: a solid blue disc of radius 10, then blue to orange out to 25.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>spreadMethod</h2>
+  <p>It <q>Has the same values and meanings as the ‘spreadMethod’ attribute on ‘linearGradient’ element.</q> Each end
+  circle has radius 10 about 80, 30.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#reflect)" /></svg></div>
+    <figcaption><code>reflect</code>: orange rings at radius 10, 30 and 50, blue ones at 20, 40 and 60.
+    <span class=pr-flag>Safari</span> Padded: orange from radius 10 on.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#repeat)" /></svg></div>
+    <figcaption><code>repeat</code>: from blue to orange every 10, the edges sharp at 10, 20, 30 and on.
+    <span class=pr-flag>Safari</span> Padded: orange from radius 10 on.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

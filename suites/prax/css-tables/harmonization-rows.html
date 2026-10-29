@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: rows and columns apart</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; border: 2px solid #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.7.1.2 Harmonization Algorithm for Collapsed Borders, rows and columns</div>
+  <h1>Collapsed borders: rows and columns apart</h1>
+  <p class=pr-lede>The harmonization looks at columns only for a border between columns, and at rows only for one between rows. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-style-harmonization-algorithm">CSS Table 3 §3.7.1.2</a></span> Cells are grey with 2px grey borders.</p>
+</header>
+
+<section>
+  <h2>Rows do not take part in borders between columns</h2>
+  <p>Only <q>If the border separates two columns</q> are columns considered, and only <q>If the border separates two
+  rows</q> rows; a row's left and right borders are in neither set, nor in the table's.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr style="border-left: 6px solid #d68a3c"><td><td></table></div>
+    <figcaption>A row with a 6px orange left border: not drawn, the cell's 2px grey is. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw the
+    orange, as CSS 2 has rows take part in conflicts.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

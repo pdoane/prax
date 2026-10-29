@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas fallback content</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5 The canvas element</div>
+  <h1>Canvas fallback content</h1>
+  <p class=pr-lede><q>The contents of the canvas element, if any, are the element's fallback content.</q> <q>In
+  interactive visual media, if scripting is enabled for the canvas element, and if support for canvas elements has been
+  enabled, then the canvas element represents embedded content consisting of a dynamically created image, the element's
+  bitmap.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-element">HTML §4.12.5</a></span></p>
+</header>
+<section>
+  <h2>The bitmap, not the fallback, is drawn</h2>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=bar>This fallback text is not drawn.</canvas></div>
+    <figcaption>A blue bar 180 by 20 at (10, 10), which the page draws on the canvas; none of the canvas's text.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Focus reaches the fallback</h2>
+  <p><q>When a canvas element represents embedded content, the user can still focus descendants of the canvas element
+  (in the fallback content). When an element is focused, it is the target of keyboard interaction events (even though the
+  element itself is not visible).</q> The canvas holds a fallback <code>button</code>, id <code>play</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=before>before the canvas</button>
+        <canvas width=260 height=30 data-draw=play><button id=play>Play</button></canvas>
+      </div>
+      <ol class=pr-log data-log="focus keydown click" data-fields="key target" data-lines=4></ol>
+    </div>
+    <figcaption>Click "before the canvas", then press Tab: <code>focus target=play</code>, though nothing on the stage
+    shows it. Press Space: <code>keydown</code>, then <code>click</code>, at <code>play</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    bar(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(10, 10, 180, 20);
+    },
+    play(context) {
+      context.fillStyle = "#6aa36a";
+      context.fillRect(0, 0, 60, 30);
+      context.fillStyle = "white";
+      context.font = "14px sans-serif";
+      context.fillText("Play", 15, 20);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+00-supports-1.html
+CSS2/#stacking-defs E.1 Definitions
+    tree-order.html
+    tree-order-positioned.html
+    elements.html
+CSS2/#painting-order E.2 Painting order
+    the-stack.html
+    root-background.html
+    context-background.html
+    tables.html
+    negative-levels.html
+    negative-levels-inline.html
+    block-descendants.html
+    floats.html
+    floats-in-inlines.html
+    as-if-stacking-contexts.html
+    as-if-negative-levels.html
+    line-by-line.html
+    inline-stacking-context.html
+    replaced-content.html
+    text-decoration.html
+    outlines.html
+    outlines-since.html
+    positioned-level-zero.html
+    positioned-inline.html
+    level-zero-since.html
+    level-zero-since-contexts.html
+    inline-opacity.html
+    positive-levels.html
+CSS2/#stacking-notes E.3 Notes
+    notes.html

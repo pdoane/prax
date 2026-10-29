@@ -1,0 +1,19 @@
+00-supports-1.html
+SVG2/geometry.html#CX 7.1 Horizontal center coordinate: The ‘cx’ property
+    cx.html
+SVG2/geometry.html#CY 7.2 Vertical center coordinate: The ‘cy’ property
+    cy.html
+SVG2/geometry.html#R 7.3 Radius: The ‘r’ property
+    r.html
+SVG2/geometry.html#RX 7.4 Horizontal radius: The ‘rx’ property
+    rx.html
+SVG2/geometry.html#RY 7.5 Vertical radius: The ‘ry’ property
+    ry.html
+SVG2/geometry.html#X 7.6 Horizontal coordinate: The ‘x’ property
+    x.html
+SVG2/geometry.html#Y 7.7 Vertical coordinate: The ‘y’ property
+    y.html
+SVG2/geometry.html#Sizing 7.8 Sizing properties: the effect of the ‘width’ and ‘height’ properties
+    sizing.html
+    sizing-auto.html
+    sizing-min-max.html

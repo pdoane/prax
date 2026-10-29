@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:autofill</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows label { display: block; margin: 0 0 4px; }
+  .rows input { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; font-size: 12px; outline: 3px solid #b5bcc7; outline-offset: 1px; }
+  .rows input.std:autofill { outline-color: #3f9a3f; }
+  .rows input.webkit:-webkit-autofill { outline-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:autofill</h1>
+  <p class=pr-lede><q>The :autofill and :-webkit-autofill pseudo-classes must match input elements which have been
+  autofilled by user agent. These pseudo-classes must stop matching if the user edits the autofilled field.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Filled by the browser, until edited</h2>
+  <p>The first two fields are outlined green while they match <code>:autofill</code>, the last two while they match
+  <code>:-webkit-autofill</code>. How a browser offers to fill a field is its own. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=rows onsubmit="return false">
+        <label>name, :autofill</label><input class=std name=name autocomplete=name>
+        <label>email, :autofill</label><input class=std name=email type=email autocomplete=email>
+        <label>name, :-webkit-autofill</label><input class=webkit name=name2 autocomplete=name>
+        <label>email, :-webkit-autofill</label><input class=webkit name=email2 type=email autocomplete=email>
+      </form>
+    </div>
+    <figcaption>Click a field and choose one of the browser's suggestions, if it offers any: the fields it fills are
+    outlined green. Type a character into one: its outline turns grey.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

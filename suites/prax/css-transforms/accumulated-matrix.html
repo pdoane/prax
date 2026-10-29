@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The accumulated 3D matrix: offsets, scrolling and perspective</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .sc { overflow: hidden; perspective: 100px; }
+  .tall { height: 300px; }
+  .far { position: absolute; left: 60px; top: 30px; width: 40px; height: 20px; transform: translateZ(-100px); }
+  .near { position: absolute; left: 10px; top: 30px; width: 20px; height: 20px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1.4 Accumulated 3D Transformation Matrix Computation</div>
+  <h1>The accumulated 3D matrix: offsets, scrolling and perspective</h1>
+  <p class=pr-lede><q>Compute a translation matrix which represents the offset (including the scroll offset) of current
+  element from its parent element, and pre-multiply that matrix into the transform.</q> <q>If parent element has a value
+  for perspective which is not none, pre-multiply the parent element's perspective matrix into the transform.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#accumulated-3d-transformation-matrix-computation">CSS Transforms 2 §4.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>The scroll offset: parallax</h2>
+  <p>Each stage scrolls, with <code>perspective: 100px</code> about its center, (80, 40). In it, a blue 40 by 20 box at
+  (60, 30) has <code>translateZ(-100px)</code>; an orange 20px square has none.</p>
+  <figure>
+    <div class="pr-stage pr-medium sc" data-scroll=0><div class="pr-a pr-fit far"></div><div class="pr-b pr-fit near"></div><div class=tall></div></div>
+    <figcaption>Not scrolled: blue half size at the center, 35 to 45 down; orange 30 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium sc" data-scroll=20><div class="pr-a pr-fit far"></div><div class="pr-b pr-fit near"></div><div class=tall></div></div>
+    <figcaption>Scrolled 20px: orange up 20, to 10; blue half as far, up 10, to 25 to 35.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the parent's perspective</h2>
+  <p>The loop takes a parent's perspective, and climbs only within the 3D rendering context. Each stage has
+  <code>perspective: 100px</code>; the blue box <code>translateZ(-100px)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(-100px)"></div></div>
+    <figcaption>The stage's child: half size.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div style="position: absolute; inset: 0"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(-100px)"></div></div></div>
+    <figcaption>In a flat box: its parent has none, so 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb" style="perspective: 100px"><div style="position: absolute; inset: 0; transform-style: preserve-3d"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(-100px)"></div></div></div>
+    <figcaption>In a <code>preserve-3d</code> box: the loop climbs to the stage; half size.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

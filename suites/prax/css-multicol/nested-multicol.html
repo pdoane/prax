@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested multicol containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .outer { column-count: 2; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .inner { column-count: 2; column-gap: 10px; column-rule: 1px solid #c0392b; }
+  .fixed { height: 40px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 2 The Multi-Column Model, nesting</div>
+  <h1>Nested multicol containers</h1>
+  <p class=pr-lede><q>Nested multi-column containers are allowed, but there may be implementation-specific limits.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#the-multi-column-model">CSS Multi-column Layout 1 §2</a></span>
+  The outer container has two columns of 95px and a dashed rule; the tinted inner one, two columns and a red rule,
+  each column (95 + 10) / 2 &minus; 10 = 42.5px wide.</p>
+</header>
+
+<section>
+  <h2>Columns in a column</h2>
+  <p>The inner container is a block in the outer's first column, and lays its own columns out in that column's
+  95px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure outer"><div class="pr-parent inner">one two six ten</div>red blue</div>
+    <figcaption>Two inner columns in the first outer one; "red blue" in the second. <span
+    class=pr-flag>Safari</span> The inner lines run up over "red blue".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The inner container breaks across the outer columns</h2>
+  <p>The outer columns are 40px tall (<code>height: 40px; column-fill: auto</code>), so the inner container is
+  fragmented. Its columns in each outer column are a multicol line of their own; <q>In fragmented contexts, only the last
+  fragment is balanced.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cf">§7.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure outer fixed"><div class="pr-parent inner">one two six ten red blue</div></div>
+    <figcaption>Four lines fill the first outer column; "red" and "blue", balanced, one to each inner column in
+    the second. <span class=pr-flag>Safari</span> "one two" and "ten red" in the first
+    outer column, "six" and "blue" in the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure outer fixed"><div class="pr-parent inner">one two six ten red blue big</div></div>
+    <figcaption>Seven words: four in the first outer column; "red", "blue" and "big" balanced in the second,
+    two and one. <span class=pr-flag>Safari</span> "red" and "blue" in the first outer column, "six", "ten" and
+    "big" in the second, and a third past the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

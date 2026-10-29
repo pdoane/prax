@@ -1,0 +1,151 @@
+// HTML views: a top-level browsing context's document on a host's screen.
+//
+// A view is how a host presents a browsing context. The view owns the steps between the event loop and the screen. It
+// sizes the viewport, which the window's media environment and the document's layout follow. It brings the rendering
+// through the pipeline of the context's agent, and commits each scene that the agent's layout thread records, with the
+// composited animations, to a compositor (pr/layout_compositor.h). It passes the scroll offsets that the compositor
+// applied back to the document. It routes the host's input to the document's elements.
+//
+// A host calls a view on the agent's thread: as each of the host's frames starts, as the event loop's tasks run, and as
+// the agent's layout thread finishes its jobs (prDomAgentSetLayoutDone).
+//
+// A host with a compositor scrolls a user's wheel there at once, on its own thread, unless the compositor says that the
+// wheel waits for the document (prLayoutCompositorWheelBlocks). It passes every wheel to the view, with
+// PrHtmlViewEventFlag_Scrolled if it scrolled the wheel itself.
+
+#pragma once
+
+#include "pr/app.h"
+#include "pr/base.h"
+#include "pr/css_presentation.h"
+#include "pr/dom.h"
+#include "pr/draw.h"
+#include "pr/html_page.h"
+#include "pr/layout_compositor.h"
+#include "pr/layout_tree.h"
+#include "pr/vec.h"
+
+PR_ASSUME_NONNULL_BEGIN
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+// The presentation of a browsing context's document.
+typedef struct PrHtmlView PrHtmlView;
+
+// Parameters for creating a view.
+typedef struct PrHtmlViewDesc {
+    // The browsing context to present, which must outlive the view. Its host gives it a text font and a shaper.
+    PrHtmlPage* page;
+
+    // The compositor that presents the scenes, which must outlive the view. If null, the view commits nothing. This is
+    // for a host that records the document itself (prHtmlViewPaint).
+    PrLayoutCompositor* PR_NULLABLE compositor;
+
+    // The approximate duration of each job of the layout thread, in milliseconds, or 0 for no limit. The presentation
+    // interprets it as prCssPresentationSetJobBudget describes.
+    double jobBudget;
+
+    // True if the host fills what lies beneath each list that prHtmlViewPaint records with the document's canvas color,
+    // as its render pass's clear does, so that the list records no fill for the canvas
+    // (PrLayoutScenePlayOptions::canvasFilled). A host that presents through the compositor says so to the compositor.
+    bool canvasFilled;
+} PrHtmlViewDesc;
+
+// Creates a view of the browsing context's document. The viewport starts at 800 by 600 CSS pixels, and the window's
+// media environment takes that size.
+PrHtmlView* prHtmlViewCreate(const PrHtmlViewDesc* desc);
+
+// Waits for the agent's layout thread, and frees the view.
+void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view);
+
+// Sets the viewport's extent in CSS pixels. The window's media queries see it, and the document is laid out in it.
+void prHtmlViewSetViewport(PrHtmlView* view, PrVec2 extent);
+
+// Sets the display that the view is shown on, and the user's preferences (prHtmlPageSetDisplay,
+// prHtmlPageSetUserPreferences). Scenes are committed and painted at the display's pixel ratio.
+void prHtmlViewSetDisplay(PrHtmlView* view, const PrAppDisplay* display);
+void prHtmlViewSetUserPreferences(PrHtmlView* view, const PrAppUserPreferences* preferences);
+
+// The result of an update.
+typedef struct PrHtmlViewUpdate {
+    bool committed;                 // true if a scene was committed to the compositor
+    bool started;                   // true if a job started on the agent's layout thread
+    PrLayoutTreeStats layout;       // if committed, the statistics of the job that recorded the scene
+    PrCssPresentationStats style;   // if started, the statistics of bringing the job's styles and boxes up to date
+} PrHtmlViewUpdate;
+
+// Advances the view's rendering without waiting. The scroll offsets that the compositor applied are passed to the
+// document immediately. The rest of the update is skipped if the document is render-blocked or the agent's layout
+// thread is running a job. Otherwise, the scene of the view's last job is committed to the compositor with the
+// composited animations. A pointer move that waited for the job hovers the element under the pointer. A new job starts
+// if the document, its scroll offsets or the viewport changed since the last job.
+PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view);
+
+// Waits for the agent's layout thread to finish its jobs.
+void prHtmlViewWait(PrHtmlView* view);
+
+// Records the document into `list` in CSS pixels, as the view's next frame would show it. The call brings the
+// document's styles and layout up to date on the caller's thread, waits for the agent's layout thread, and plays the
+// resulting scene with its composited animations sampled at the document's current time (prLayoutSceneSampleTracks), as
+// a compositor's frame at that time shows them. The layout snaps to the view's pixel ratio, and the caller renders the
+// list at that pixel ratio. Records nothing while the document is render-blocked.
+//
+// Returns the color of the document's canvas (prLayoutSceneCanvasColor), which the list fills unless the host does
+// (PrHtmlViewDesc::canvasFilled), or transparent while the document is render-blocked.
+PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
+
+// What the host did with an event before passing it to the view.
+enum {
+    PrHtmlViewEventFlag_Scrolled = 1u << 0,    // the host scrolled the compositor by this Scroll already
+};
+typedef uint8_t PrHtmlViewEventFlags;
+
+// What the document did with an event.
+enum {
+    PrHtmlViewEventResult_Ignored,      // the document had no use for it
+    PrHtmlViewEventResult_Canceled,     // a listener canceled it, and its default action did not run
+    PrHtmlViewEventResult_Handled,      // the document dispatched it, and its default action ran if it has one
+    PrHtmlViewEventResult_FocusLeft,    // the focus moved out of the document, past its last focusable area
+};
+typedef uint8_t PrHtmlViewEventResult;
+
+// Routes a host's input to the document. A position is in the viewport, in CSS pixels, as the document was last laid
+// out. Text that `event` holds is read during the call only.
+//
+// The pointer and the wheel reach into the document of a frame whose content box is under them, and its events carry
+// positions in that document's viewport. An element that the pointer hovers or activates in a frame's document makes
+// the frame match :hover or :active in the document around it. Keys go to the focused element of the innermost focused
+// frame. What keys and the wheel scroll that a frame's document cannot take passes on to the containers around the
+// frame.
+//
+// The pointer follows pointerevents4/#mouse-event-order. A move hovers the element under the pointer no later than the
+// next update, and an update hovers once for all the moves since the previous one. A scroll by the compositor also
+// hovers the element that comes under a pointer that has not moved. A press makes the element under the pointer active
+// and fires mousedown at it. A release fires mouseup, and then, if the primary button was pressed, fires click at the
+// nearest element that contained both the press and the release.
+//
+// Keys follow uievents/#events-keyboard-event-order, at the focused element, or else the body or the document element.
+// A keydown that no listener cancels runs the key's default action: Enter activates a focused link or button, Space
+// activates a focused button as it is released, and the keys that scroll move the nearest scroll container that can
+// move their way. The text of a key fires a keypress for each character, unless the key's keydown was canceled or the
+// key is held with Control or Meta. An input method's composition fires the composition events
+// (uievents/#events-compositionevents), and the keys it takes report Process.
+//
+// A Scroll fires wheel (pointerevents4/#interface-wheelevent) with its deltas in CSS pixels, and a line of the device's
+// is kPrAppScrollLineHeight pixels. A sequence of wheels (kPrLayoutWheelSequenceGap) is one gesture, which keeps the
+// target of its first wheel while that target keeps its box. The first wheel can be canceled if a listener on its path
+// is not passive, and the rest can be canceled only if a listener canceled the first. A wheel that no listener cancels
+// scrolls from its target's box outward, as a user's scroll does, unless the host scrolled it already
+// (PrHtmlViewEventFlag_Scrolled). Once the first wheel is not canceled, the view releases the rest of the sequence in
+// its compositor (prLayoutCompositorReleaseWheel).
+//
+// The events that the view fires are trusted.
+PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event, PrHtmlViewEventFlags flags);
+
+#if defined(__cplusplus)
+}
+#endif
+
+PR_ASSUME_NONNULL_END

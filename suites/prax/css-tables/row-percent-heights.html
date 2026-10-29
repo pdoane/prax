@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Row layout, second pass: percentage heights</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; height: 100px; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  tr + tr td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.3 Row layout (second pass)</div>
+  <h1>Row layout, second pass: percentage heights</h1>
+  <p class=pr-lede><q>Once the table height has been determined, a second row layout pass will be performed, if
+  necessary, to assign the correct minimum height to table rows, by taking percentages used in rows/cells specified
+  'height' into account.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-relayout">CSS Table 3 §3.10.3</a></span>
+  Each table is <code>height: 100px</code>, outlined: a blue row and an orange one, each a line of
+  <code>.pr-measure</code> text, 20px.</p>
+</header>
+
+<section>
+  <h2>Percentages of the table's height</h2>
+  <p>In the first pass the percentages are 0px; in the second they are of the 100px. The extra height then goes as
+  <a href="https://drafts.csswg.org/css-tables-3/#height-distribution-algorithm">§3.10.5</a> says: the auto row takes
+  what the other leaves.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr style="height: 70%"><td>a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>Blue row <code>height: 70%</code>: 70px; orange the other 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="height: 70%">a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>Blue cell <code>height: 70%</code>: the same, 70px and 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

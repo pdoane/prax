@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CIE Lab and LCH</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 9.1 CIE Lab and LCH</div>
+  <h1>CIE Lab and LCH</h1>
+  <p class=pr-lede>The section is not normative. <q>Lab is a rectangular coordinate system with a central Lightness (L)
+  axis.</q> <q>CIE LCH has the same L axis as Lab, but uses polar coordinates C (chroma) and H (hue)</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#cie-lab">CSS Color 4 §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>Lightness, and the a and b axes</h2>
+  <p><q>equal increments in L are evenly spaced visually</q>; <q>positive values along the a axis are a purplish red
+  while negative values are the complementary color, a green. Similarly, positive values along the b axis are yellow
+  and negative are the complementary blue/violet.</q></p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: lab(0 0 0)"></div><div class=sw style="background: lab(20 0 0)"></div><div class=sw style="background: lab(40 0 0)"></div><div class=sw style="background: lab(60 0 0)"></div><div class=sw style="background: lab(80 0 0)"></div><div class=sw style="background: lab(100 0 0)"></div></div>
+    <figcaption><code>lab(L 0 0)</code> for L of 0 to 100 in steps of 20: black to white in even steps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lab(60 50 0)"></div><div class=sw style="background: lab(60 -50 0)"></div><div class=sw style="background: lab(60 0 50)"></div></div>
+    <figcaption>a 50, a −50, b 50: purplish red, green, yellow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Hue in LCH</h2>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: lch(60 40 0)"></div><div class=sw style="background: lch(60 40 60)"></div><div class=sw style="background: lch(60 40 120)"></div><div class=sw style="background: lch(60 40 180)"></div><div class=sw style="background: lch(60 40 240)"></div><div class=sw style="background: lch(60 40 300)"></div></div>
+    <figcaption><code>lch(60 40 H)</code> for H of 0 to 300 in steps of 60: pink, tan, green, teal, sky blue,
+    violet, all about equally light.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

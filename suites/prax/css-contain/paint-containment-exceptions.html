@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where paint containment has no effect</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 60px; }
+  .k { contain: paint; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .over { position: relative; top: 10px; left: 10px; background: #f6d7b4; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; padding-top: 14px; }
+  rt { font-size: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.5 Paint Containment, where it does not apply</div>
+  <h1>Where paint containment has no effect</h1>
+  <p class=pr-lede><q>However, giving an element paint containment has no effect if any of the following are
+  true</q>: no principal box; <q>an internal table box other than table-cell</q>; <q>an internal ruby box or a
+  non-atomic inline-level box</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-paint">CSS Containment 2 §3.5</a></span>
+  In each figure the blue box has <code>contain: paint</code>, and an orange span in it is shifted 10px down and 10px
+  right, out of it. Where containment applies, the span is cut; where not, it is drawn whole.</p>
+</header>
+
+<section>
+  <h2>Table parts</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class="pr-table-row k"><div class="pr-table-cell b"><span class=over>row</span></div></div></div></div>
+    <figcaption>On a row: no effect; "row" is drawn whole below the cell.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class="pr-table-cell b k"><span class=over>cell</span></div></div></div>
+    <figcaption>On a cell: it applies; "cell" is cut at the cell's padding edge, its top half left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k b" style="width: 60px">x <span class=over>cap</span></div></div>
+    <figcaption>On a block, for comparison: cut the same way.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline boxes and ruby</h2>
+  <figure>
+    <div class="pr-stage pr-measure">an <span class="b k">inline <span class=over>box</span></span></div>
+    <figcaption>On a <code>span</code>: no effect; "box" is drawn whole, below its line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">an <span class="b k" style="display: inline-block">atomic <span class=over>box</span></span></div>
+    <figcaption>On an inline-block: it applies; "box" is cut, its top half left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja"><ruby>漢字<rt class="b k"><span class=over>kanji</span></rt></ruby></div>
+    <figcaption>On a ruby annotation: no effect; "kanji" is drawn whole, down over the base.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

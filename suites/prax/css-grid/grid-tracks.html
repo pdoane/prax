@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid tracks and cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 60px 1fr; grid-template-rows: 20px; }
+  .g > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 3.2 Grid Tracks and Cells</div>
+  <h1>Grid tracks and cells</h1>
+  <p class=pr-lede><q>Grid track is a generic term for a grid column or grid row—in other words, it is the space
+  between two adjacent grid lines. Each grid track is assigned a sizing function, which controls how wide or tall the
+  column or row may grow, and thus how far apart its bounding grid lines are.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-track-concept">CSS Grid Layout 2 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A fixed column and a flexible one</h2>
+  <p>The specification's example, scaled: <q>The first column is fixed at</q> 60px. <q>The second column uses flexible
+  sizing, which is a function of the unassigned space in the grid, and thus will vary as the width of the grid
+  container changes.</q> Each dashed container has columns <code>60px 1fr</code> and holds A and B; B has
+  <code>min-width: 0</code>, as <code>1fr</code> has an automatic minimum that would otherwise keep the column as
+  wide as B's content.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="g pr-frame" style="width: 160px"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>160px wide: the second column is 100px, B from 60 to 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="g pr-frame" style="width: 40px"><div class=pr-a>A</div><div style="min-width: 0; font: 600 12px/20px 'PR Arimo'; color: #9c5f22">B</div></div></div>
+    <figcaption>40px wide, less than the fixed column: <q>the second column is 0px and any content positioned in the
+    column will overflow the grid container.</q> A, 60px, sticks out past the frame, and B, 0px wide, has its
+    letter at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Cells, and tracks packed together</h2>
+  <p><q>A grid cell is the intersection of a grid row and a grid column. It is the smallest unit of the grid that can be
+  referenced when positioning grid items.</q> <q>Adjacent grid tracks can be separated by gutters but are otherwise
+  packed tightly.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=g style="grid-template-columns: 40px 40px 40px; grid-template-rows: 20px 20px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div><div class=pr-b>6</div></div></div>
+    <figcaption>Three 40px columns and two 20px rows: six cells, one item in each, edge to edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=g style="grid-template-columns: 40px 40px 40px; grid-template-rows: 20px 20px; gap: 10px 20px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div><div class=pr-b>6</div></div></div>
+    <figcaption><code>gap: 10px 20px</code>: gutters of 20px between the columns and 10px between the rows; the
+    columns start at 0, 60 and 120px, the second row at 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

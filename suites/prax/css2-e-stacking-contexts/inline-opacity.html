@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: an inline's opacity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .faded { opacity: 0.5; }
+  .f { float: left; width: 60px; height: 40px; box-sizing: border-box; }
+  .blk { width: 140px; height: 30px; margin-top: -10px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: an inline's opacity</h1>
+  <p class=pr-lede>Each stage holds a span with <code>opacity: 0.5</code>, and in it a float; text is on 20px
+  lines.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></div>
+  <h2>One group: every piece of the inline</h2>
+  <p><q>The 'opacity' property applies the specified opacity to the element as a whole, including its contents, rather
+  than applying it to each descendant individually.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span>
+  The span's contents are its boxes on lines, the blocks inside it, and its floats.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="height: 80px; padding: 10px"><span class="pr-hl faded">abcdef<i class="pr-a f" style="margin-right: -40px"></i><div class="pr-c blk"></div>ghi</span></div>
+    <figcaption>The span's orange background, its blue float and the green block inside it overlap: drawn once and
+    faded as one, each overlap shows only the top piece. <span class=pr-flag>Safari</span> It fades each piece
+    apart, so the overlaps mix and darken.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="height: 80px; padding: 10px"><span class=faded>a<span class="pr-b f"></span></span></div>
+    <figcaption>A float alone in the span: it is faded with the span, a pale orange. <span class=pr-flag>Safari</span>
+    It draws the float at full strength.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

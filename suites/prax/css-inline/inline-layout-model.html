@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The inline layout model</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .small { font-size: 10px; line-height: 10px; }
+  .m { margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 2 Inline Layout Model</div>
+  <h1>The inline layout model</h1>
+  <p class=pr-lede><q>Any block container that directly contains inline-level content—such as inline boxes, atomic
+  inlines, and text sequences—establishes an inline formatting context to lay out its contents using inline
+  layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#model">CSS Inline Layout 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>The root inline box</h2>
+  <p><q>The block container also generates a root inline box, which is an anonymous inline box that holds all of its
+  inline-level contents.</q> <q>The root inline box inherits from its parent block container, but is otherwise
+  unstyleable.</q> In each stage, the text is an orange span of 10px text on 10px lines.</p>
+  <figure>
+    <div class=pr-stage style="line-height: 40px"><span class="pr-hl small">one two three four five six seven eight nine ten</span></div>
+    <figcaption>The block's <code>line-height: 40px</code> is its root inline box's: each line is 40px tall, though
+    nothing on it asks for more than 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 30px; line-height: 1"><span class="pr-hl small">one two three four five six seven eight nine ten</span></div>
+    <figcaption>The block's 30px font and <code>line-height: 1</code>: the root inline box makes each line 30px
+    tall, its baseline as low as 30px text needs.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline-axis margins, borders and padding</h2>
+  <p><q>Inline-axis margins, borders, and padding are respected between inline-level boxes (and their margins do not
+  collapse).</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-chip>A</span><span class="pr-chip m">B</span><span class="pr-chip m">C</span></div>
+    <figcaption>B and C each have 10px margins on both sides: 10px between A and B, and 20px between B and C, the two
+    margins added, not collapsed.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-chip style="padding: 0 20px; border-left-width: 10px">A</span><span class=pr-chip>B</span></div>
+    <figcaption>A with 20px padding at each side and a 10px left border: its letter 30px from its start, and B
+    after its right border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

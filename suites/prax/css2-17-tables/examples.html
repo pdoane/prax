@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous table objects: the examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  hbox { display: table-row; }
+  vbox { display: table-cell; padding: 0 6px; background: #4f81bd; color: white; font-weight: 600; }
+  stack { display: inline-table; background: rgba(79, 129, 189, 0.16); outline: 1px dashed #6b7381; }
+  row { display: table-row; }
+  d { display: inline; font-weight: bolder; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2.1 Anonymous table objects</div>
+  <h1>Anonymous table objects: the examples</h1>
+  <p class=pr-lede>The stages have <code>border-spacing: 10px</code>, which the anonymous tables inherit.</p>
+</header>
+
+<section>
+  <h2>A row without a table</h2>
+  <p><q>In this XML example, a 'table' element is assumed to contain the HBOX element</q>, styled <code>HBOX {
+  display: table-row }</code> and <code>VBOX { display: table-cell }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <pre class=pr-source>&lt;HBOX>
+  &lt;VBOX>George&lt;/VBOX>
+  &lt;VBOX>4287&lt;/VBOX>
+  &lt;VBOX>1998&lt;/VBOX>
+&lt;/HBOX></pre>
+  <figure>
+    <div class="pr-stage spaced"><hbox>
+  <vbox>George</vbox>
+  <vbox>4287</vbox>
+  <vbox>1998</vbox>
+</hbox></div>
+    <figcaption>One row of three blue cells, 10px apart, in an anonymous table 10px from the stage's
+    corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows without cells</h2>
+  <p><q>In this example, three 'table-cell' elements are assumed to contain the text in the ROWs. Note that the text is
+  further encapsulated in anonymous inline boxes</q>. The style sheet is <code>STACK { display: inline-table }</code>,
+  <code>ROW { display: table-row }</code>, <code>D { display: inline; font-weight: bolder }</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-boxes">CSS 2 §17.2.1</a></span></p>
+  <pre class=pr-source>&lt;STACK>
+  &lt;ROW>This is the &lt;D>top&lt;/D> row.&lt;/ROW>
+  &lt;ROW>This is the &lt;D>middle&lt;/D> row.&lt;/ROW>
+  &lt;ROW>This is the &lt;D>bottom&lt;/D> row.&lt;/ROW>
+&lt;/STACK></pre>
+  <figure>
+    <div class="pr-stage spaced"><stack>
+  <row>This is the <d>top</d> row.</row>
+  <row>This is the <d>middle</d> row.</row>
+  <row>This is the <d>bottom</d> row.</row>
+</stack></div>
+    <figcaption>The dashed inline table: three rows of one anonymous cell, 10px apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

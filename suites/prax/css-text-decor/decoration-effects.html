@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What moves and hides a decoration</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/30px "PR Arimo"; }
+  .u { text-decoration: underline #c0392b 3px; }
+  .ex { height: 110px; padding: 0 6px; font: 24px/40px "PR Arimo"; text-decoration: underline; text-shadow: #2c5a8f 0 25px 0; }
+  .ex span { font-size: 10px; vertical-align: top; text-shadow: #3f7a3f 0 50px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2 Line Decoration: Underline, Overline, and Strike-Through</div>
+  <h1>What moves and hides a decoration</h1>
+  <p class=pr-lede><q>The 'visibility' property, 'text-shadow', filters, and other graphical transformations likewise
+  also affect all text decorations applied to that box-- including decorations propagated from an ancestor box-- and do
+  not affect the calculation of their initial positions or thicknesses.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#line-decoration">CSS Text Decoration 4 §2</a></span>
+  Each underline is red and 3px thick, set on the outer span; relative positioning is on CSS 2's <a href="../css2-16-text/text-decoration-descendants.html">descendants</a> page.</p>
+</header>
+
+<section>
+  <h2>A descendant's visibility and filter take the ancestor's line with them</h2>
+  <figure>
+    <div class="pr-stage t"><span class=u>one <span style="visibility: hidden">two</span> three</span></div>
+    <figcaption>"two" is <code>visibility: hidden</code>: a gap in the underline under it, as wide as the word.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span class=u>one <span style="filter: opacity(25%)">two</span> three</span></div>
+    <figcaption>"two" has <code>filter: opacity(25%)</code>: the word and the stretch of underline under it are both
+    faint.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The shadow of a decoration is the descendant's shadow</h2>
+  <p><q>Unlike line decorations, however, `text-shadow` is inherited as a property; therefore the green text shadow on
+  the &lt;span&gt; overrides the blue text shadow on the &lt;div&gt;. As a result, when the shadows are painted, the
+  shadow of the &lt;div&gt;’s underline is disjoint across the two elements.</q> The example, halved: the
+  div is 24px, underlined, with a blue shadow 25px down; the span is 10px, <code>vertical-align: top</code>, with a
+  green shadow 50px down.</p>
+  <figure>
+    <div class="pr-stage pr-wide ex">Help, help! <span>I am under a hat!</span></div>
+    <figcaption>One black underline, unbroken, under both. Its blue shadow is 25px below it under "Help, help!"; under
+    the small text its shadow is green and 50px below, the span's own: the shadowed underline is in two
+    pieces.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

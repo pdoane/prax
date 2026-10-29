@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clip property: clipped content and overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { position: absolute; top: 10px; left: 40px; width: 120px; }
+  .scroller { position: relative; overflow: auto; width: 120px; height: 50px; margin: 10px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.2 Clipping: the 'clip' property</div>
+  <h1>The clip property: clipped content and overflow</h1>
+  <p class=pr-lede>Each dashed box is 120px wide with <code>overflow: auto</code>, and holds a 120px wide blue box at 40,
+  10 in it, which ends 40px past its right edge unless it is clipped.</p>
+</header>
+
+<section>
+  <h2>Clipped content does not overflow</h2>
+  <p><q>Content that has been clipped does not cause overflow.</q> Each caption reads the dashed box's
+  <code>scrollWidth</code>, how wide the content it scrolls over is. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=s1 class="pr-frame scroller"><div class="pr-a pr-fit box1">not clipped</div></div></div>
+    <figcaption>Unclipped, the box ends 160px into the dashed box, and the content is <code class=pr-computed data-of=s1
+    data-dom=scrollWidth></code>px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-frame scroller"><div class="pr-a pr-fit box1" style="clip: rect(auto, 60px, auto, auto)">clipped</div></div></div>
+    <figcaption><code>rect(auto, 60px, auto, auto)</code> ends it 100px in, inside the dashed box: the content is to be
+    120px wide, and nothing scrolls. <span class="pr-flag pr-since">Since CSS 2</span> Clipping no longer changes
+    overflow.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></div>
+  <h2>The border box counts, clipped or not</h2>
+  <p>The scrollable overflow area includes <q>The border boxes of all boxes for which it is the containing block</q>.
+  <q>Note: The clip, clip-path, and mask-* properties [CSS-MASKING-1] do not affect the scrollable overflow area. Only
+  effects that clip to the overflow clip edge are taken into account.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3
+  §3.3</a></span> CSS 2's rule is reversed: a clipped box scrolls as if it were whole.</p>
+  <figure>
+    <div class=pr-stage><div id=s2 class="pr-frame scroller"><div class="pr-a pr-fit box1" style="clip: rect(auto, 60px, auto, auto)">clipped</div></div></div>
+    <figcaption>The clipped box of the card above: the content is <code class=pr-computed data-of=s2
+    data-dom=scrollWidth></code>px wide, and the dashed box scrolls 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=s3 class="pr-frame scroller"><div class="pr-a pr-fit box1" style="clip: rect(auto, 60px, auto, auto)">clipped</div></div></div>
+    <figcaption>The same, scrolled 40px by script: the 60px left of the box is seen at 0 to 60 in the dashed
+    box.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("s3").scrollLeft = 40;</script>
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>currentcolor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.pad { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .emph { font: 20px/40px "PR Arimo"; padding: 10px 8px 0; color: black; }
+  .emph em { font-style: normal; text-emphasis: dot; }
+  .emph strong { font-weight: normal; color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.4 The currentcolor keyword</div>
+  <h1>currentcolor</h1>
+  <p class=pr-lede><q>The keyword currentcolor represents value of the 'color' property on the same element. Unlike
+  &lt;named-color&gt;s, it is <em>not</em> restricted to sRGB; the value can be any &lt;color&gt;.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#currentcolor-color">CSS Color 4 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>The element's color</h2>
+  <figure>
+    <div class="pr-stage pr-row pad"><div class=sw style="color: #d68a3c; background: currentcolor"></div><div class=sw style="background: #d68a3c"></div></div>
+    <figcaption><code>color: #d68a3c; background-color: currentcolor</code> beside <code>background-color:
+    #d68a3c</code>: the same orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pad"><div class=sw style="color: oklch(0.55 0.12 250); background: currentcolor"></div><div class=sw style="background: oklch(0.55 0.12 250)"></div></div>
+    <figcaption><code>color: oklch(0.55 0.12 250)</code> and <code>background-color: currentcolor</code>, beside that
+    color: the same blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A property whose initial value is currentcolor</h2>
+  <p><q>the 'text-emphasis-color' property, whose initial value is currentcolor, by default matches the text color
+  even as the 'color' property changes across elements.</q> Black text in <code>em</code> with <code>text-emphasis:
+  dot</code>, and a <code>strong</code> in red.</p>
+  <figure>
+    <div class="pr-stage pr-wide emph"><em>Some <strong>really</strong> fine</em></div>
+    <figcaption>Black dots over "Some" and "fine", red dots over "really".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

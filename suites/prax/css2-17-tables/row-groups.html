@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table model: row groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .full { width: 100%; }
+  .cap { font-size: 12px; line-height: 20px; color: #4a5261; }
+  .full .pr-table-cell { color: white; font-weight: 600; background: #6aa36a; }
+  .full .pr-table-header-group .pr-table-cell { background: #4f81bd; }
+  .full .pr-table-footer-group .pr-table-cell { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2 The CSS table model</div>
+  <h1>The table model: row groups</h1>
+  <p class=pr-lede><code>table-row-group</code> (TBODY) <q>Specifies that an element groups one or more rows.</q> Header
+  groups are blue, footer groups orange, other rows green; each row is 20px tall. All are <code>div</code>s.</p>
+</header>
+
+<section>
+  <h2>Headers first, footers last</h2>
+  <p><code>table-header-group</code>: <q>Like 'table-row-group', but for visual formatting, the row group is always
+  displayed before all other rows and row groups and after any top captions.</q> <code>table-footer-group</code>:
+  <q>the row group is always displayed after all other rows and row groups and before any bottom captions.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table full"><div class=pr-table-footer-group><div class=pr-table-row><div class=pr-table-cell>footer (1st in source)</div></div></div><div class=pr-table-row><div class=pr-table-cell>row (2nd)</div></div><div class=pr-table-header-group><div class=pr-table-row><div class=pr-table-cell>header (3rd)</div></div></div></div></div>
+    <figcaption>In the source the footer comes first and the header last; they show header, row, footer from
+    the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table full"><div class="pr-table-caption cap" style="caption-side: bottom">bottom caption</div><div class=pr-table-footer-group><div class=pr-table-row><div class=pr-table-cell>footer</div></div></div><div class=pr-table-header-group><div class=pr-table-row><div class=pr-table-cell>header</div></div></div><div class="pr-table-caption cap">top caption</div><div class=pr-table-row-group><div class=pr-table-row><div class=pr-table-cell>body</div></div></div></div></div>
+    <figcaption>Top caption, header, body, footer, bottom caption, from the top, whatever the source
+    order.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the first header and footer</h2>
+  <p><q>If a table contains multiple elements with 'display: table-header-group', only the first is rendered as a
+  header; the others are treated as if they had 'display: table-row-group'.</q> The same holds for footer groups.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table full"><div class=pr-table-row><div class=pr-table-cell>row 1</div></div><div class=pr-table-header-group><div class=pr-table-row><div class=pr-table-cell>header A</div></div></div><div class=pr-table-row><div class=pr-table-cell>row 2</div></div><div class=pr-table-header-group><div class=pr-table-row><div class=pr-table-cell>header B</div></div></div></div></div>
+    <figcaption>Header A moves to the top; header B is a row group and stays in source order, after row 2: A, row 1,
+    row 2, B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table full"><div class=pr-table-footer-group><div class=pr-table-row><div class=pr-table-cell>footer A</div></div></div><div class=pr-table-footer-group><div class=pr-table-row><div class=pr-table-cell>footer B</div></div></div><div class=pr-table-row><div class=pr-table-cell>row</div></div></div></div>
+    <figcaption>Footer A moves to the bottom; footer B is a row group in source order: B, row, A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

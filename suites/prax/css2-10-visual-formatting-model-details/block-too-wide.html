@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block widths: wider than the containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.3 Block-level, non-replaced elements in normal flow</div>
+  <h1>Block widths: wider than the containing block</h1>
+  <p class=pr-lede>When a box is too wide for its containing block, auto margins cannot be negative to make room. Each
+  stage is 200px wide; the boxes overflow it.</p>
+</header>
+
+<section>
+  <h2>Auto margins treated as zero</h2>
+  <p><q>If 'width' is not 'auto' and 'border-left-width' + 'padding-left' + 'width' + 'padding-right' +
+  'border-right-width' (plus any of 'margin-left' or 'margin-right' that are not 'auto') is larger than the width of
+  the containing block, then any 'auto' values for 'margin-left' or 'margin-right' are, for the following rules,
+  treated as zero.</q> The equation is then over-constrained. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 250px; margin: 0 auto">250px</div></div>
+    <figcaption><code>width: 250px; margin: 0 auto</code>: both margins are 0, not −25px, and <code>margin-right</code>
+    gives way. The box starts at the stage's left edge and overflows 50px to the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 180px; margin-left: 40px; margin-right: auto">180px</div></div>
+    <figcaption><code>width: 180px; margin-left: 40px; margin-right: auto</code>: 40 + 180 is more than 200, so the
+    right margin is treated as 0 and then gives way. The box is at 40 and overflows by 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl; margin-left: 50px"><div class="pr-a pr-fit" style="width: 250px; margin: 0 auto">250px</div></div>
+    <figcaption>In an <code>rtl</code> containing block, <code>margin-left</code> gives way instead: the 250px box ends
+    at the stage's right edge and overflows 50px to the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

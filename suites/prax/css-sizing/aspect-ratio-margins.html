@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>aspect-ratio and collapsing margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+  .gap { margin: 20px 0; background: #c0392b; outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.2.1 Margin-collapsing</div>
+  <h1>aspect-ratio and collapsing margins</h1>
+  <p class=pr-lede><q>For the purpose of margin collapsing, if the block axis is the ratio-dependent axis, it is not
+  considered to have a computed block-size of auto.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio-margin-collapse">CSS Box Sizing 4 §4.2.1</a></span>
+  A box whose height is auto and is empty collapses its own top and bottom margins together; one whose height comes
+  from its ratio does not, even when that height is zero.</p>
+</header>
+
+<section>
+  <h2>An empty box of zero width between A and B</h2>
+  <p>Between A and B is an empty block of <code>width: 0; margin: 20px 0</code>, outlined red.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit">A</div><div class=gap style="width: 0"></div><div class="pr-b pr-fit">B</div></div>
+    <figcaption>No ratio: its margins collapse through it, and B is 20px below A.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit">A</div><div class=gap style="width: 0; aspect-ratio: 1"></div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>aspect-ratio: 1</code>: 0 tall from the ratio, but not auto, so its margins do not collapse
+    together: B is 40px below A. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> 20px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit">A</div><div class=gap style="width: 0; height: 0"></div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>height: 0</code>, for comparison: a zero height collapses through, B 20px below A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

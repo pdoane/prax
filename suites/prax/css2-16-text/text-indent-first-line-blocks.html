@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: a block inside an inline</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: a block inside an inline</h1>
+  <p class=pr-lede>Every stage here has <code>text-indent: 30px</code>, and holds a span that holds a block, dashed.
+  The span is broken around the block, and the lines on either side go in anonymous blocks. The blue box is the first
+  box on a line that is indented; the orange one is on a line that is not.</p>
+</header>
+
+<section>
+  <h2>Only the first formatted line</h2>
+  <p><q>'Text-indent' only affects a line if it is the first formatted line of an element. For example, the first line
+  of an anonymous block box is only affected if it is the first child of its parent element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span>
+  The block inherits the indent, and indents its own first line.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span><span class=pr-a>one</span> line<div class=pr-frame><span class=pr-a>block</span></div><span class=pr-b>two</span> after</span></div>
+    <figcaption>"one" starts the stage's first line, 30px in. The block's first line is indented too. "two", after
+    the block, is not.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span><div class=pr-frame><span class=pr-a>block</span></div><span class=pr-b>two</span> after</span></div>
+    <figcaption>The block first: it is indented, and "two" after it is not, though it is the first line of
+    text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

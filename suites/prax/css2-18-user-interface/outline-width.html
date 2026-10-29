@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ol { outline: solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline width</h1>
+  <p class=pr-lede><code>outline-width</code> takes <code>&lt;border-width&gt; | inherit</code>: <code>thin | medium |
+  thick | &lt;length&gt;</code>. Initial <code>medium</code>, not inherited. Every figure's outline is solid and blue
+  unless it says otherwise; a caption reads back a width too thin to measure off the guides.</p>
+</header>
+
+<section>
+  <h2>Keywords and lengths</h2>
+  <p><q>The 'outline-width' property accepts the same values as 'border-width'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2
+  §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" id=w1 style="outline-width: thin"></div></div>
+    <figcaption><code>thin</code>: <code class=pr-computed data-of=w1 data-property=outline-width></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" id=w2 style="outline-width: medium"></div></div>
+    <figcaption><code>medium</code>: <code class=pr-computed data-of=w2 data-property=outline-width></code>, no thinner
+    than <code>thin</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" id=w3 style="outline-width: thick"></div></div>
+    <figcaption><code>thick</code>: <code class=pr-computed data-of=w3 data-property=outline-width></code>, no thinner
+    than <code>medium</code>. <span class="pr-flag pr-since">Since CSS 2</span> the three are now 1px, 3px and
+    5px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-width: 1em; font-size: 15px"></div></div>
+    <figcaption><code>1em</code> in a 15px font: 15px out from the box on every side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The initial value</h2>
+  <p>Initial: <code>medium</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div style="outline-style: solid; outline-color: #2c5a8f"></div></div>
+    <figcaption>A style and no width: <code>medium</code>, as wide as the second figure's.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

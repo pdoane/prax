@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definitions: tree order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; box-sizing: border-box; }
+  .r { position: relative; }
+  .rtl { direction: rtl; unicode-bidi: bidi-override; }
+  .pair span { padding: 0 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.1 Definitions</div>
+  <h1>Definitions: tree order</h1>
+  <p class=pr-lede>Where boxes are painted in the same step, tree order decides which comes first, and a later box covers
+  an earlier one. Every box on this page is positioned with <code>z-index: auto</code>, so all of them are painted in
+  one step.</p>
+</header>
+
+<section>
+  <h2>Preorder, depth-first</h2>
+  <p>Tree order is the <q>Preorder depth-first traversal of the rendering tree, in logical (not visual) order for
+  bidirectional content, after taking into account properties that move boxes around.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2
+  §E.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a p" style="left: 20px; top: 10px; width: 100px; height: 60px">A<div class="pr-b p" style="left: 40px; top: 20px; width: 100px; height: 40px">B, in A</div></div><div class="pr-c p" style="left: 100px; top: 50px; width: 80px; height: 40px">C</div></div>
+    <figcaption>A, then its child B, then A's sibling C: B covers A, and C covers B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a r" style="top: 20px; margin: 10px 0 0 20px; width: 120px; height: 30px; box-sizing: border-box">A: top 20</div><div class="pr-b r" style="margin: 0 0 0 60px; width: 120px; height: 30px; box-sizing: border-box">B</div></div>
+    <figcaption>A is moved down 20px by <code>top: 20px</code>, onto B. Moving it does not move it in tree order: B
+    still covers A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Logical, not visual, order</h2>
+  <p>In bidirectional content, tree order follows the source, not the line's left to right. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2
+  §E.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 20px 0; text-align: center"><span class="rtl pair"><span class="pr-a r">A</span><span class="pr-b r" style="margin-right: -20px">B</span></span></div>
+    <figcaption>Right to left, A comes first in the source and is on the right; B is on the left, and a negative margin
+    pulls it 20px over A. B, second in tree order, covers A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 20px 0; text-align: center"><span class=pair><span class="pr-a r">A</span><span class="pr-b r" style="margin-left: -20px">B</span></span></div>
+    <figcaption>Left to right, for comparison: A on the left, B on the right and pulled 20px over A. B covers A again.
+    </figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

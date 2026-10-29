@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative lengths inherit as absolute lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .parent { font: 10px/1 "PR Arimo"; }
+  .bar { height: 20px; background: #4f81bd; }
+  .line { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1 Relative Lengths</div>
+  <h1>Relative lengths inherit as absolute lengths</h1>
+  <p class=pr-lede><q>Relative length units specify a length relative to another length.</q> <q>Child elements do not
+  inherit the relative values as specified for their parent; they inherit the computed values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#relative-lengths">CSS Values and Units 4 §6.1</a></span>
+  In each stage, a parent in 10px text holds a child in 20px text.</p>
+</header>
+
+<section>
+  <h2>An em inherited</h2>
+  <figure>
+    <div class=pr-stage><div class=parent style="width: 10em"><div class=bar style="font-size: 20px; width: inherit"></div></div></div>
+    <figcaption>The parent is <code>width: 10em</code>, 100px; the child's <code>width: inherit</code> is 100px too,
+    not ten of its own 20px ems.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=parent style="line-height: 2em"><div class=line style="font-size: 20px">Two<br>lines</div></div></div>
+    <figcaption>The parent's <code>line-height: 2em</code> is 20px, and the child's lines inherit 20px: its 20px
+    text sits on two 20px lines, not 40px ones.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage of the font size</h2>
+  <figure>
+    <div class=pr-stage><div class=parent style="line-height: 300%"><div class=line style="font-size: 20px">Two<br>lines</div></div></div>
+    <figcaption>The parent's <code>line-height: 300%</code> computes to 30px, which the child inherits: two lines
+    30px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

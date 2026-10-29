@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The legend element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 0; font-size: 13px; line-height: 20px; }
+  .pad fieldset { margin: 0; padding: 0 10px; border: 4px solid #4f81bd; }
+  .pad legend { padding: 0 4px; background: #f9cc9d; line-height: 20px; }
+  .tall { line-height: 40px !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.16 The legend element</div>
+  <h1>The legend element</h1>
+  <p class=pr-lede><q>The legend element represents a caption for the rest of the contents of the legend element's
+  parent fieldset element, if any.</q> Each fieldset here has a 4px blue border and 10px inline padding; each legend an
+  orange background. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-legend-element">HTML §4.10.16</a></span></p>
+</header>
+
+<section>
+  <h2>In the border</h2>
+  <p><q>If the element has a rendered legend, then the border is expected to not be painted behind the rectangle</q> of
+  the legend's margin box. <q>The space allocated for the element's border on the block-start side is expected to be the
+  element's 'border-block-start-width' or the rendered legend's margin box size in the fieldset's block-flow direction,
+  whichever is greater.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-fieldset-and-legend-elements">§15.3.12</a></span></p>
+  <figure>
+    <div class="pr-stage pad"><fieldset><legend>Caption</legend>Content</fieldset></div>
+    <figcaption>"Caption" on orange sits across the top border, 10px in from its left edge, and the border breaks
+    behind it; "Content" is below.</figcaption>
+  </figure><figure>
+    <div class="pr-stage pad"><fieldset><legend class=tall>Caption</legend>Content</fieldset></div>
+    <figcaption>A legend 40px tall: the top border is drawn through its middle, 20px down, and "Content" starts below
+    the legend.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Placed as a block, unless floated</h2>
+  <p><q>If the computed value of 'inline-size' is 'auto', then the used value is the fit-content inline size.</q> It is
+  <q>positioned in the inline direction as is normal for blocks (e.g., taking into account margins and the
+  'justify-self' property)</q>; <code>legend[align=right i] { justify-self: right; }</code>. A rendered legend's <q>used value of 'float' is
+  'none'</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-fieldset-and-legend-elements">§15.3.12</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><fieldset><legend align=right>Right</legend>A</fieldset></div>
+    <figcaption><code>align=right</code>: at the right, 10px in.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><fieldset><legend style="justify-self: center">Mid</legend>A</fieldset></div>
+    <figcaption><code>justify-self: center</code>: centered.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><fieldset><legend style="margin-left: auto">Auto</legend>A</fieldset></div>
+    <figcaption><code>margin-left: auto</code>: at the right.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><fieldset><legend style="float: left">Float</legend>A</fieldset></div>
+    <figcaption>Floated: inside, the border whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex item contributions: flex base size, min and max</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; width: max-content; }
+  .i1 { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.3 Flex Item Intrinsic Size Contributions, clamping</div>
+  <h1>Flex item contributions: flex base size, min and max</h1>
+  <p class=pr-lede><q>For this purpose, each contribution is capped by the item’s flex base size if the item is not
+  growable, floored by the item’s flex base size if the item is not shrinkable, and then further clamped by the
+  item's min/max main size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-item-contributions">CSS Flexible Box Layout 2 §9.10.3</a></span>
+  Each dashed row is <code>width: max-content</code> around one item.</p>
+</header>
+
+<section>
+  <h2>Capped by the flex base size if it cannot grow</h2>
+  <p>The item is "aa bb cc", 80px of text, on a basis of 40px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: 0 1 40px">aa bb cc</div></div></div>
+    <figcaption><code>flex: 0 1 40px</code>: capped at 40px; the item is 40px, a word to a line.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> An 80px container round the 40px
+    item.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: 1 1 40px">aa bb cc</div></div></div>
+    <figcaption><code>flex: 1 1 40px</code>, growable: 80px, and the item grows to it, on one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Floored by the flex base size if it cannot shrink</h2>
+  <p>The item is "aa", 20px of text, on a basis of 90px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: 0 0 90px">aa</div></div></div>
+    <figcaption><code>flex: 0 0 90px</code>: floored at 90px; the item is 90px. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> A 20px container, the item overflowing it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: 0 1 90px">aa</div></div></div>
+    <figcaption><code>flex: 0 1 90px</code>, shrinkable: 20px, and the item shrinks to it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then clamped by min and max</h2>
+  <p>The item is "aaaaa", 50px of text, of <code>flex: auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: auto; max-width: 30px">aaaaa</div></div></div>
+    <figcaption><code>max-width: 30px</code>: 30px; the text overflows the item.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent"><div class=i1 style="flex: auto; min-width: 70px">aaaaa</div></div></div>
+    <figcaption><code>min-width: 70px</code>: 70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

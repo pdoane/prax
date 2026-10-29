@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hanging-punctuation: first and last</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 120px; margin-left: 20px; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  figure { margin-right: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 9.2.1 Hanging Punctuation: the hanging-punctuation property</div>
+  <h1>hanging-punctuation: first and last</h1>
+  <p class=pr-lede><q>This property determines whether a punctuation mark, if one is present, hangs and may be placed
+  outside the line box (or in the indent) at the start or at the end of a line of text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hanging-punctuation-property">CSS Text 4 §9.2.1</a></span>
+  Each stage is 120px wide; the text is highlighted, so a hanging mark shows outside the stage.</p>
+</header>
+
+<section>
+  <h2>first</h2>
+  <p><q>An opening bracket, quote, or ideographic space at the start of the first formatted line of an element hangs.
+  This applies to all characters in the Unicode categories Ps, Pf, Pi plus the ASCII quote marks U+0027 ' APOSTROPHE and
+  U+0022 " QUOTATION MARK and the IDEOGRAPHIC SPACE U+3000.</q> Letters are 10px wide.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="hanging-punctuation: first"><span class=t>"Quoted words"</span></div>
+    <figcaption>The opening " hangs left of the stage, "Quoted" at 0; the second line does not hang. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="hanging-punctuation: first"><span class=t>(paren) a (b)</span></div>
+    <figcaption>"(", Ps, hangs; the "(" starting the second line does not, not being on the first. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="hanging-punctuation: first"><span class=t>　日本語の文章です</span></div>
+    <figcaption>A leading U+3000 hangs: "日" at 0. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>last, and one at each edge</h2>
+  <p><q>A closing bracket or quote at the end of the last formatted line of an element hangs.</q> <q>At most one
+  punctuation character may hang at each edge of the line.</q> Each stage is right-aligned.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="hanging-punctuation: last; text-align: right"><span class=t>a few "words"</span></div>
+    <figcaption>The closing " hangs right of the stage, "words" flush. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="hanging-punctuation: last; text-align: right"><span class=t>"a (b)"</span></div>
+    <figcaption>")" and then '"': only the last, '"', hangs; ")" is flush. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" style="hanging-punctuation: first last; text-align: center"><span class=t>"centered"</span></div>
+    <figcaption><code>first last</code>, centered: both quotes hang, "centered" centered on its own, 10px in. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

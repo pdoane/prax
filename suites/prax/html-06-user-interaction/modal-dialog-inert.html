@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blocked by a modal dialog</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  dialog { width: 220px; padding: 10px 20px 0; border: 2px solid #2c5a8f; font-size: 12px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.3.1 Modal dialogs and inert subtrees</div>
+  <h1>Blocked by a modal dialog</h1>
+  <p class=pr-lede><q>While document is so blocked, every node that is connected to document, with the exception of the subject
+  element and its flat tree descendants, must become inert.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#modal-dialogs-and-inert-subtrees">HTML §6.3.1</a></span></p>
+</header>
+<section>
+  <h2>Everything but the dialog</h2>
+  <p><q>The dialog element's showModal() method causes this mechanism to trigger</q>. The button calls it.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#modal-dialogs-and-inert-subtrees">§6.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=open>showModal()</button>
+        <button class=pr-target id=behind>a button behind the dialog</button>
+        <dialog id=dialog>
+          <button class=pr-target id=inside>a button in the dialog</button>
+          <button class=pr-target id=close>close</button>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>showModal()</code>: the dialog, centered in the window. Click the dialog's buttons: each
+    is logged. Click the button behind it, or press Tab past the dialog's last button: the button behind is never
+    clicked or focused. <code>close</code> ends it.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The dialog escapes its ancestors' inertness</h2>
+  <p><q>subject can additionally become inert via the inert attribute, but only if specified on subject itself (i.e.,
+  subject escapes inertness of ancestors)</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#modal-dialogs-and-inert-subtrees">§6.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=open2>showModal() of a dialog in an inert div</button>
+        <div inert>
+          <dialog id=dialog2>
+            <button class=pr-target id=inside2>a button in the dialog</button>
+            <button class=pr-target id=close2>close</button>
+          </dialog>
+        </div>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>The dialog is in a <code>div</code> with <code>inert</code>. Click the button: the dialog shows, and
+    its buttons take clicks and the focus, as if the <code>div</code> were not inert.</figcaption>
+  </figure>
+</section>
+<script>
+  // Opens and closes the two dialogs.
+  const dialog = document.getElementById("dialog"), dialog2 = document.getElementById("dialog2");
+  document.getElementById("open").addEventListener("click", () => dialog.showModal());
+  document.getElementById("close").addEventListener("click", () => dialog.close());
+  document.getElementById("open2").addEventListener("click", () => dialog2.showModal());
+  document.getElementById("close2").addEventListener("click", () => dialog2.close());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

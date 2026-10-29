@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Selectors and case</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font: 12px/16px ui-monospace, Menlo, monospace; }
+  .rows p { margin: 0 0 2px; padding: 0 6px; background: #d5d9e0; }
+  P.one, [DATA-K], .a[type="CHECKBOX"], .b[data-v="A"], .c[type="CHECKBOX" s] { background: #8fd18f; }
+  .rows p { white-space: nowrap; }
+  svg rect { fill: #d5d9e0; }
+  svg rect.lower, svg RECT.upper { fill: #8fd18f; }
+  svg text { font: 12px ui-monospace, Menlo, monospace; fill: #1f2430; }
+  iframe.rows-frame { display: block; width: 200px; height: 72px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.2 Case-sensitivity of selectors</div>
+  <h1>Selectors and case</h1>
+  <p class=pr-lede><q>When comparing a CSS element type selector to the names of HTML elements in HTML documents, the
+  CSS element type selector must first be converted to ASCII lowercase. The same selector when compared to other
+  elements must be compared according to its original case.</q> Attribute names are compared the same way. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-selectors">HTML §4.16.2</a></span></p>
+</header>
+<section>
+  <h2>Names</h2>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <p class=one>P.one</p>
+        <p data-k>[DATA-K]</p>
+      </div>
+    </div>
+    <figcaption>Each line shows the selector that would tint it green. HTML elements in this HTML document: both
+    green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <iframe class=rows-frame src="support/selector-case.xhtml"></iframe>
+    </div>
+    <figcaption>In an XML document: only <code>p.three</code> is green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <svg width=200 height=56>
+        <rect class=lower x=10 y=10 width=180 height=18 /><text x=16 y=23>svg rect.lower</text>
+        <rect class=upper x=10 y=32 width=180 height=18 /><text x=16 y=45>svg RECT.upper</text>
+      </svg>
+    </div>
+    <figcaption>SVG elements, here in an HTML document: only <code>rect.lower</code> is green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Attribute values</h2>
+  <p>Attribute selectors <q>must treat the values of attributes with the following names as ASCII
+  case-insensitive</q>, among them <code>type</code>; <q>All other attribute values and everything else must be
+  treated as entirely identical to each other for the purposes of selector matching.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-selectors">§4.16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <p class=a type=checkbox>[type="CHECKBOX"] on type=checkbox</p>
+        <p class=b data-v=a>[data-v="A"] on data-v=a</p>
+        <p class=c type=checkbox>[type="CHECKBOX" s] on type=checkbox</p>
+      </div>
+    </div>
+    <figcaption>Only the first line is green, though <code>type</code> means nothing on a <code>p</code>:
+    <code>data-v</code> is not in the list, and <code>s</code> asks for an exact match.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

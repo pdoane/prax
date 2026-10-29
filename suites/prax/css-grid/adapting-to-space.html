@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adapting a layout to the space it has</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .game { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr auto; color: var(--pr-ink); }
+  .game > div { outline: 1px solid rgba(31, 36, 48, 0.4); outline-offset: -1px; }
+  .title { grid-column: 1; grid-row: 1; background: #b9cde6; }
+  .score { grid-column: 1; grid-row: 3; background: #f6d7b4; }
+  .stats { grid-column: 1; grid-row: 2; align-self: start; background: #c8e0c8; }
+  .board { grid-column: 2; grid-row: 1 / span 2; background: #d9c3e3; }
+  .controls { grid-column: 2; grid-row: 3; justify-self: center; background: #f4e3a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 1.1.1 Adapting Layouts to Available Space</div>
+  <h1>Adapting a layout to the space it has</h1>
+  <p class=pr-lede><q>Grid layout can be used to intelligently resize elements within a webpage.</q> The
+  specification's game: <q>the game title, stats area, game board, score area, and control area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#adapting-to-available-space">CSS Grid Layout 2 §1.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The same grid at two sizes</h2>
+  <p>Columns <code>auto 1fr</code>, rows <code>auto 1fr auto</code>; the stats are <code>align-self:
+  start</code>, the controls <code>justify-self: center</code>, and the board spans the first two rows.</p>
+  <figure>
+    <div class="pr-stage pr-measure game" style="height: 100px"><div class=title>Title</div><div class=score>Score</div><div class=stats>Stats</div><div class=board>Board</div><div class=controls>Ctrls</div></div>
+    <figcaption>200 by 100px: the left column is 50px, as "Title", "Stats" and "Score"; the board 150 by 80px,
+    its middle row 60px; the controls centered under it, from 100 to 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure game" style="width: 260px; height: 140px"><div class=title>Title</div><div class=score>Score</div><div class=stats>Stats</div><div class=board>Board</div><div class=controls>Ctrls</div></div>
+    <figcaption style="max-width: 260px">260 by 140px: <q>As more space becomes available in larger screens, the
+    middle row / right column are allowed to expand to fill that space.</q> The left column stays 50px; the board is
+    210 by 120px, the stats 20px tall at the top of their 100px row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At its minimum height</h2>
+  <p><q>The bottom of the game board and bottom of the stats area align when the game has reached its minimum
+  height.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure game" style="height: 60px"><div class=title>Title</div><div class=score>Score</div><div class=stats>Stats</div><div class=board>Board</div><div class=controls>Ctrls</div></div>
+    <figcaption>60px tall: the middle row is the stats' 20px, its minimum, and the board 40px tall, its bottom level
+    with the stats'.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

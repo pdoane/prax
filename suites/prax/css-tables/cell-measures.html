@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A cell's min-content and max-content widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.2 Computing Cell Measures</div>
+  <h1>A cell's min-content and max-content widths</h1>
+  <p class=pr-lede><q>The outer min-content width of a table-cell is max('min-width', min-content width) adjusted by the
+  cell intrinsic offsets.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></span>
+  Blue cells hold "aaa bbb ccc", <code>.pr-measure</code> text 30px at its narrowest and 110px on one line; orange
+  ones "dd". No padding, borders or spacing.</p>
+</header>
+
+<section>
+  <h2>min-width raises the minimum</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 10px"><tr><td style="min-width: 70px">aaa bbb ccc</td><td>dd</td></tr></table></div>
+    <figcaption>A table of <code>width: 10px</code>, blue <code>min-width: 70px</code>: the blue column's minimum is
+    70px; the table 90px, "aaa bbb" on one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The max-content width, in a column with no width and in one with a width</h2>
+  <p>A column is <dfn>constrained</dfn> if its column, group or a cell of it has a <q>computed 'width' that is not
+  "auto", and is not a percentage.</q> <q>The outer max-content width of a table-cell in a non-constrained column is
+  max('min-width', 'width', min-content width, min('max-width', max-content width))</q>; <q>in a constrained column is
+  max('min-width', 'width', min-content width, min('max-width', 'width'))</q>. Each table has room to spare.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="max-width: 70px">aaa bbb ccc</td><td>dd</td></tr></table></div>
+    <figcaption>Blue <code>max-width: 70px</code>, no width: the max-content width is 70px, and the column 70px,
+    "aaa bbb" and "ccc" on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 70px">aaa bbb ccc</td><td>dd</td></tr></table></div>
+    <figcaption>Blue <code>width: 70px</code>: constrained, so its content's 110px no longer counts; the column is
+    70px, on two lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: none and normal</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .gen::before { display: inline-block; width: 30px; height: 18px; margin-right: 6px; vertical-align: top;
+                 background: #d68a3c; border: 1px solid #9c5f22; }
+  .c-none::before { content: none; }
+  .c-normal::before { content: normal; }
+  .c-empty::before { content: ""; }
+  .c-unset::before { }
+  .c-x::before { content: "x"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: none and normal</h1>
+  <p class=pr-lede><code>content</code> takes <code>normal | none | [ &lt;string&gt; | &lt;uri&gt; | &lt;counter&gt; |
+  attr(&lt;identifier&gt;) | open-quote | close-quote | no-open-quote | no-close-quote ]+</code>. Initial
+  <code>normal</code>, not inherited, applies to <code>:before</code> and <code>:after</code>.</p>
+</header>
+
+<section>
+  <h2>A pseudo-element with no content is not generated</h2>
+  <p><q>none: The pseudo-element is not generated.</q> <q>normal: Computes to 'none' for the :before and :after
+  pseudo-elements.</q> In each figure the <code>:before</code> is styled as an orange 30 by 20 inline-block, which
+  shows only if it is generated. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="gen c-none">text</div></div>
+    <figcaption><code>content: none</code>: no orange box, "text" at the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="gen c-normal">text</div></div>
+    <figcaption><code>content: normal</code>: no orange box either.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="gen c-unset">text</div></div>
+    <figcaption>No <code>content</code> at all, so the initial <code>normal</code>: no orange box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="gen c-empty">text</div></div>
+    <figcaption><code>content: ""</code>, an empty string, is content: the orange box is generated, and "text" follows
+    it 6px after.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

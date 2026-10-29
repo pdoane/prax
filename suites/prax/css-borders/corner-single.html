@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-top-left and the like: one corner</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.1 Sizing & shaping a corner</div>
+  <h1>corner-top-left and the like: one corner</h1>
+  <p class=pr-lede><q>The 'corner-*-*' shorthands set the two 'corner-*-*-shape' and 'border-*-*-radius' longhand properties of the related side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#single-corner-shorthands">CSS Borders and Box Decorations 4 §3.9.1</a></span> Each blue box is 120 by 60.</p>
+</header>
+
+<section>
+  <h2>A radius and a shape, in any order</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-top-left: bevel 40px"></div></div>
+    <figcaption><code>corner-top-left: bevel 40px</code>: the top left corner bevelled 40 by 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-bottom-right: 30px 20px scoop"></div></div>
+    <figcaption><code>corner-bottom-right: 30px 20px scoop</code>: a scoop 30 across and 20 up. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; corner-start-start: 40px notch"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>corner-start-start: 40px notch</code>: the top right corner notched. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

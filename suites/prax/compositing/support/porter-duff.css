@@ -1,0 +1,48 @@
+/* The Porter Duff pages' figures: a white canvas 160 by 100 in a stage, the expected colors of its regions as swatches,
+   and a green box masked by two layers in the canvas's rectangles. Each is over white, as the canvas is. */
+.pd-stage canvas, .pd-mask {
+    display: block;
+    width: 160px;
+    height: 100px;
+    margin: 10px;
+}
+
+.pd-stage canvas {
+    background: white;
+}
+
+.pd-stage.pd-white, .pd-swatches {
+    background: white;
+}
+
+/* The box masked as the canvas is drawn: the first layer is the source, the second the destination. */
+.pd-mask {
+    background: #6aa36a;
+    mask-image: linear-gradient(rgb(0 0 0 / 0.6), rgb(0 0 0 / 0.6)), linear-gradient(rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.8));
+    mask-position: 60px 30px, 10px 10px;
+    mask-size: 90px 60px;
+    mask-repeat: no-repeat;
+}
+
+/* The operator's formula, on a row of its own above the figures. */
+pre.pd-formula {
+    display: block;
+    width: max-content;
+    margin: 0 0 12px;
+}
+
+/* Swatches of the expected colors, labeled with their regions. */
+.pd-swatches {
+    height: 120px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.pd-swatch {
+    height: 20px;
+    margin: 0 0 10px;
+    outline: 1px solid #8a93a1;
+    color: #1f2430;
+    font: 600 11px/20px -apple-system, "Helvetica Neue", Arial, sans-serif;
+    text-align: center;
+}

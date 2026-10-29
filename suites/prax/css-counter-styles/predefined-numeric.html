@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Numeric styles: decimal, roman, cjk-decimal</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.1 Numeric, decimal and roman</div>
+  <h1>Numeric styles: decimal, roman, cjk-decimal</h1>
+  <p class=pr-lede><q>The following stylesheet uses the @counter-style rule to redefine all of the counter styles defined in CSS 2 and CSS 2.1. This stylesheet is normative-- UAs must include it in their UA stylesheet</q>. The markers are inside; each item's text is its value in decimal. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-numeric">CSS Counter Styles 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Decimal, padded, and Han</h2>
+  <p><q>cjk-decimal Han decimal numbers (e.g., 一, 二, 三, ..., 九八, 九九, 一〇〇).</q> Its suffix is "、" and its range 0 and up.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: decimal; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=99>99<li>100<li value=-3>-3</ol></div>
+    <figcaption><code>decimal</code>: <bdi dir=ltr>"1."</bdi>, <bdi dir=ltr>"99."</bdi>, <bdi dir=ltr>"100."</bdi>, <bdi dir=ltr>"-3."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: decimal-leading-zero; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li value=99>99<li>100<li value=-3>-3</ol></div>
+    <figcaption><code>decimal-leading-zero</code>: <bdi dir=ltr>"01."</bdi>, <bdi dir=ltr>"99."</bdi>, <bdi dir=ltr>"100."</bdi>, <bdi dir=ltr>"-3."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: cjk-decimal; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li>1<li value=98>98<li value=100>100</ol></div>
+    <figcaption><code>cjk-decimal</code>: <bdi dir=ltr>"〇、"</bdi>, <bdi dir=ltr>"一、"</bdi>, <bdi dir=ltr>"九八、"</bdi>, <bdi dir=ltr>"一〇〇、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Roman</h2>
+  <p><q>range: 1 3999;</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-medium pr-text"><ol style='list-style-type: lower-roman; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=4>4<li value=9>9<li value=3999>3999<li>4000</ol></div>
+    <figcaption><code>lower-roman</code>: <bdi dir=ltr>"iv."</bdi>, <bdi dir=ltr>"ix."</bdi>, <bdi dir=ltr>"mmmcmxcix."</bdi>, <bdi dir=ltr>"4000."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-medium pr-text"><ol style='list-style-type: upper-roman; font-family: "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=0>0<li value=49>49<li value=98>98<li value=3999>3999</ol></div>
+    <figcaption><code>upper-roman</code>: <bdi dir=ltr>"0."</bdi>, <bdi dir=ltr>"XLIX."</bdi>, <bdi dir=ltr>"XCVIII."</bdi>, <bdi dir=ltr>"MMMCMXCIX."</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

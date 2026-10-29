@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks from filters, containment, will-change</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  a[href^="https://drafts.fxtf.org/"] { color: inherit; text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2.1 Containing Blocks of Positioned Boxes</div>
+  <h1>Containing blocks from filters, containment, will-change</h1>
+  <p class=pr-lede><q>Properties that can cause a box to establish a fixed positioning containing block include
+  transform, will-change, contain…</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span>
+  In each frame, a static dashed box with the property named holds an orange <code>fixed</code> box and a blue
+  <code>absolute</code> one, with <code>top: 0; right: 0</code> and <code>bottom: 0; left: 0</code>.</p>
+</header>
+
+<section>
+  <h2>Filters and containment</h2>
+  <p><q>A value other than none for the filter property results in the creation of a containing block for absolute
+  and fixed positioned descendants</q> <span class=pr-cite><a href="https://drafts.fxtf.org/filter-effects-1/#FilterProperty">Filter Effects 1, the filter property</a></span>,
+  as does <code>backdrop-filter</code> <span class=pr-cite><a href="https://drafts.fxtf.org/filter-effects-2/#BackdropFilterProperty">Filter Effects 2, the backdrop-filter property</a></span>.
+  <q>The paint containment box establishes an absolute positioning containing block and a fixed positioning
+  containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-paint">CSS Containment 2 §3.5</a></span></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; filter: blur(0) } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>filter: blur(0)</code>: both in the dashed box's corners.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; backdrop-filter: blur(0) } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>backdrop-filter: blur(0)</code>: the same.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; contain: paint } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>contain: paint</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>will-change</h2>
+  <p>If a property's value would make a containing block, <q>specifying that property in will-change must cause the
+  element to generate a containing block</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-will-change-1/#will-change">CSS Will Change 1 §2</a></span></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; will-change: filter } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>will-change: filter</code>: the same.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; will-change: opacity } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>will-change: opacity</code>: neither; both in the frame's corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

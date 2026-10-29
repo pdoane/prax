@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-size: auto auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .disc { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>"); }
+  .ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%234f81bd'/></svg>"); }
+  .height { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='20'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .bare { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.10 Sizing Images: the background-size property, auto auto</div>
+  <h1>background-size: auto auto</h1>
+  <p class=pr-lede><q>If both values are auto then the natural width and/or height of the image should be used, if any,
+  the missing dimension (if any) behaving as auto as described above. If the image has neither natural size, its size
+  is determined as for contain.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-size">CSS Backgrounds 4 §2.10</a></span>
+  Each dashed box is a positioning area 140 by 60, with one blue image drawn once at its top left.</p>
+</header>
+
+<section>
+  <h2>Both auto</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost ratio"></div></div>
+    <figcaption>A 2:1 ratio and no size: as large as fits, 120 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost height"></div></div>
+    <figcaption>A natural height of 20 and no ratio: 20 tall, and 100% wide, 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost bare"></div></div>
+    <figcaption>No size and no ratio: the whole area, 140 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

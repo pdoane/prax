@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D transforms outside a 3D rendering context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 100px; }
+  .w, .wg { position: absolute; left: 40px; top: 30px; width: 80px; height: 40px; }
+  .a { position: absolute; left: 50px; top: 40px; width: 40px; height: 20px; }
+  .b { position: absolute; left: 80px; top: 20px; width: 40px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.1 3D Transform Rendering</div>
+  <h1>3D transforms outside a 3D rendering context</h1>
+  <p class=pr-lede><q>An element with a three-dimensional transform that is not contained in a 3D rendering context
+  renders with the appropriate transform applied, but does not intersect with any other elements. The three-dimensional
+  transform in this case can be considered just as a painting effect, like two-dimensional transforms.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#3d-transform-rendering">CSS Transforms 2 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Flat on the page</h2>
+  <p>An 80 by 40 box at (40, 30), with no perspective: <q>this makes the blue box appear narrower, but not
+  three-dimensional.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost wg"></div><div class="pr-a pr-fit w" style="transform: rotateY(60deg)">AB</div></div>
+    <figcaption><code>rotateY(60deg)</code>: 40 wide, 60 to 100, and 40 tall at both edges.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost wg"></div><div class="pr-a pr-fit w" style="transform: rotateX(60deg)">AB</div></div>
+    <figcaption><code>rotateX(60deg)</code>: 20 tall, 40 to 60, and 80 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Depth does not change the painting order</h2>
+  <p><q>the transform does not affect painting order. For example, a transform with a positive Z translation may make
+  an element look larger, but does not cause that element to render in front of elements with no translation in
+  Z.</q> Each stage has <code>perspective: 100px</code>, centered; blue A comes first, orange B, 40 by 60 at (80, 20),
+  after it.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-a pr-fit a" style="transform: translateZ(50px)">A</div><div class="pr-b pr-fit b">B</div></div>
+    <figcaption>A, 40 by 20 at (50, 40), <code>translateZ(50px)</code>: twice the size and nearer, but B
+    covers it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-a pr-fit w" style="transform: rotateY(60deg)">A</div><div class="pr-b pr-fit b">B</div></div>
+    <figcaption>A, 80 by 40, <code>rotateY(60deg)</code>, its left half nearer: B covers all of A it overlaps; no
+    intersection.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

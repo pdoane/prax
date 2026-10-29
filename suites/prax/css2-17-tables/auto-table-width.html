@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic table layout: the table's width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; font-size: 0; line-height: 0; vertical-align: top; }
+  caption { font-size: 0; line-height: 0; text-align: left; }
+  .blk { display: inline-block; width: 30px; height: 18px; background: #4f81bd; outline: 1px solid white; outline-offset: -1px; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.2 Automatic table layout</div>
+  <h1>Automatic table layout: the table's width</h1>
+  <p class=pr-lede><q>Column and caption widths influence the final table width as follows</q>. Cells hold 30px blocks,
+  have a 1px border, and no padding; each column's MIN and MAX here is 32px.</p>
+</header>
+
+<section>
+  <h2>A specified width</h2>
+  <p><q>If the 'table' or 'inline-table' element's 'width' property has a computed value (W) other than 'auto', the used
+  width is the greater of W, CAPMIN, and the minimum width required by all the columns plus cell spacing or borders
+  (MIN). If the used width is greater than MIN, the extra width should be distributed over the columns.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2 §17.5.2.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="width: 160px"><tr><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption><code>width: 160px</code>: the table is 160px, and the two columns share the extra, 80px each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 20px"><tr><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption><code>width: 20px</code> is less than MIN: the table is 64px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 20px"><caption><span class="blk o" style="width: 120px"></span></caption><tr><td><span class=blk></span><td><span class=blk></span></table></div>
+    <figcaption>A caption holding a 120px orange block: CAPMIN is 120, so the table is 120px, the columns 60px
+    each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>width: auto, and percentages</h2>
+  <p>With <code>width: auto</code>, <q>if either CAPMIN or the maximum width required by the columns plus cell spacing
+  or borders (MAX) is less than that of the containing block, use max(MAX, CAPMIN).</q> <q>A percentage value for a
+  column width is relative to the table width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2 §17.5.2.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption><code>width: auto</code>: MAX is 64px, less than the stage: the table is 64px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><tr><td style="width: 25%"><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>In a 200px table, the first cell's <code>width: 25%</code> makes its column 50px; the second has the
+    other 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

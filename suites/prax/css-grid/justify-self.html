@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self in grid: baselines and their cycles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; height: 80px; }
+  .g { display: grid; writing-mode: vertical-rl; height: 80px; justify-content: start; justify-items: baseline; }
+  .g > div { writing-mode: horizontal-tb; }
+  .t { padding: 0 4px; background: #b9cde6; font-size: 26px; line-height: 40px; }
+  .u { padding: 0 4px; background: #f6d7b4; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.3 Inline-axis Alignment: the justify-self and justify-items properties</div>
+  <h1>justify-self in grid: baselines and their cycles</h1>
+  <p class=pr-lede><q>Grid items can be aligned in the inline dimension by using the justify-self property on the grid
+  item or justify-items property on the grid container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#row-align">CSS Grid Layout 2 §11.3</a></span>
+  The values: <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-grid">CSS Box Alignment 3 §6.1.5</a></span>.</p>
+</header>
+
+<section>
+  <h2>Baselines in the inline axis</h2>
+  <p>Each grid is <code>vertical-rl</code>, so its inline axis runs down and its rows are side by side, from the right.
+  Its items are <code>horizontal-tb</code> with <code>justify-items: baseline</code>: blue has 26px text, orange 13px,
+  and the red line is blue's baseline.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=u>Ab</div><div class=t><span class=pr-baseline></span>Ab</div></div></div>
+    <figcaption>Both items in one <code>auto</code> column: orange, at the right, sits on the red line, about 29px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: start"><div class=u>Ab</div><div class=t><span class=pr-baseline></span>Ab</div></div></div>
+    <figcaption>The same with <code>justify-items: start</code>, to compare: orange at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A size that depends on the track: fallback</h2>
+  <p><q>If baseline alignment is specified on a grid item whose size in that axis depends on the size of an
+  intrinsically-sized track</q>, <q>that item does not participate in baseline alignment, and instead uses its
+  fallback alignment</q>. Orange has <code>height: 50%</code>, its size in the grid's
+  inline axis.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=u style="height: 50%">Ab</div><div class=t><span class=pr-baseline></span>Ab</div></div></div>
+    <figcaption>An <code>auto</code> column, 40px: orange, 20px tall, falling back to the top. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    put it on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 60px"><div class=u style="height: 50%">Ab</div><div class=t><span class=pr-baseline></span>Ab</div></div></div>
+    <figcaption>A 60px column: orange, 30px tall, joins the baseline, its text on the red line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

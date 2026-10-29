@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The lang and xml:lang attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+  text { font: 700 20px "PR Arimo"; fill: #2c5a8f; }
+  text:lang(fr) { fill: #d68a3c; }
+  text:lang(de) { fill: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.11.3 The ‘lang’ and ‘xml:lang’ attributes</div>
+  <h1>The lang and xml:lang attributes</h1>
+  <p class=pr-lede><q>The ‘lang’ attribute (in no namespace) specifies the primary language for the element's contents
+  and for any of the element's attributes that contain text.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#LangSpaceAttrs">SVG 2 §5.11.3</a></span>
+  Each stage is 160 by 60. A style sheet colors text by <code>:lang()</code>: French orange, German green, other
+  text dark blue.</p>
+</header>
+
+<section>
+  <h2>Set, inherited, and which wins</h2>
+  <p><q>If these attributes are omitted from an element, then the language of this element is the same as the
+  language of its parent element, if any.</q> <q>If both the ‘lang’ attribute in no namespace and the ‘lang’ attribute
+  in the XML namespace are set on an element, user agents must use the ‘lang’ attribute in the XML namespace</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="10" y="35" lang="fr">fr</text><text x="60" y="35" lang="de">de</text><text x="110" y="35">en</text></svg></div>
+    <figcaption><code>lang="fr"</code>, <code>lang="de"</code>, and none, the page's <code>en</code>: orange, green,
+    dark blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g lang="de"><text x="10" y="35">in</text><text x="60" y="35" lang="fr">fr</text></g></svg></div>
+    <figcaption>In a <code>g</code> with <code>lang="de"</code>: the first text inherits it, green; the second has
+    its own, orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/xml-lang.svg"></iframe></div>
+    <figcaption>An SVG document: <code>xml:lang="fr"</code>, orange; <code>lang="de" xml:lang="fr"</code>,
+    orange, the XML namespace's winning.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

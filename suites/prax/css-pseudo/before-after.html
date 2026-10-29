@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::before and ::after: fully styleable</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .box { margin: 10px; height: 60px; background: var(--pr-plain); }
+  .float::before { content: ""; float: left; width: 40px; height: 40px; background: #d68a3c; }
+  .abs { position: relative; }
+  .abs::after { content: ""; position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: #8e44ad; }
+  .block::before { content: "first"; display: block; color: white; background: #4f81bd; }
+  .flex { display: flex; }
+  .flex::before, .flex::after { content: ""; flex: 1; background: #6aa36a; }
+  .flex::after { background: #d68a3c; }
+  img, iframe { display: block; margin: 10px; width: 40px; height: 40px; border: 0; }
+  img::before, img::after, iframe::before, iframe::after { content: "X"; color: #c0392b; font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 4.1 Generated Content Pseudo-elements: ::before and ::after</div>
+  <h1>::before and ::after: fully styleable</h1>
+  <p class=pr-lede><q>Both ::before and ::after are fully styleable pseudo-elements: there is no restriction on what
+  properties apply to them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#generated-content">CSS Pseudo-Elements 4 §4.1</a></span>
+  Each grey box is 180 by 60 unless said; its pseudo-elements have <code>content: ""</code> and the styles
+  given.</p>
+</header>
+
+<section>
+  <h2>Layout properties apply</h2>
+  <figure>
+    <div class="pr-stage pr-text"><div class="box float">text</div></div>
+    <figcaption><code>float: left</code>, 40 by 40 orange: "text" flows to its right, from x 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="box abs">text</div></div>
+    <figcaption><code>position: absolute; top: 0; right: 0</code>: a purple 20px square in the box's top right
+    corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="box block">text</div></div>
+    <figcaption><code>display: block</code>, "first" on blue: a line of its own above "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="box flex">text</div></div>
+    <figcaption>A flex container, <code>flex: 1</code> on both: green and orange items either side of
+    "text".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Suppressed on replaced elements</h2>
+  <p><q>Also as with regular child elements, the ::before and ::after pseudo-elements are suppressed when their
+  parent, the originating element, is replaced.</q> Each element has a red "X" as its <code>::before</code> and
+  <code>::after</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption>An <code>img</code>: a blue 40px square, no "X".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe srcdoc="<body style='margin:0;background:#6aa36a'>"></iframe></div>
+    <figcaption>An <code>iframe</code>: its green document, no "X".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

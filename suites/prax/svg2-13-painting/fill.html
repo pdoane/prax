@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>fill: the interior</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 36px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.4.1 Specifying fill paint: the ‘fill’ property</div>
+  <h1>fill: the interior</h1>
+  <p class=pr-lede><q>The 'fill' property paints the interior of the given graphical element. The area to be painted
+  consists of any areas inside the outline of the shape.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingFillPaint">SVG 2 §13.4.1</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Open subpaths, filled as if closed</h2>
+  <p><q>The fill operation fills open subpaths by performing the fill operation as if an additional "closepath"
+  command were added to the path to connect the last point of the subpath with the first point of the subpath.</q>
+  The shapes are filled blue and stroked dark blue, 2 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 L 140 50</code>: a filled triangle, its base on y 50 not stroked.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 50,10 80,50 110,10 140,50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>A <code>polyline</code> zigzag: closed along y 50, two filled triangles, peaks at 50 and
+    110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 10 L 80 50 M 90 10 L 140 10 L 140 50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption>Two open subpaths, each closed to its own first point: a triangle on 20, 50 to 80, 50, and one
+    with its long side from 140, 50 to 90, 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Shapes and text</h2>
+  <p>The initial value is black, and <code>fill</code> applies to <q>shapes and text content elements</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>rect</code> with no <code>fill</code>: black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="44" fill="#6aa36a">Paint</text></svg></div>
+    <figcaption>Text with <code>fill="#6aa36a"</code>: green glyphs.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="44" fill="none" stroke="#2c5a8f" stroke-width="1">Paint</text></svg></div>
+    <figcaption><code>fill="none"</code>, stroked: hollow glyphs.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

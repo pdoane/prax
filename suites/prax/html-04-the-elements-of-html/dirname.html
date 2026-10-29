@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The dirname attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+  iframe.pr-result { height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.2 Submitting element directionality: the dirname attribute</div>
+  <h1>The dirname attribute</h1>
+  <p class=pr-lede><q>The dirname attribute on a form control element enables the submission of the directionality of
+  the element, and gives the name of the control that contains this value during form submission.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#submitting-element-directionality:-the-dirname-attribute">HTML §4.10.19.2</a></span></p>
+</header>
+
+<section>
+  <h2>The direction of what was typed</h2>
+  <p>In the entry list, <q>Let dir be the string "ltr" if the directionality of the element is 'ltr', and "rtl"
+  otherwise</q>, an entry named by <code>dirname</code>. Each textarea has <code>dir=auto</code>, so its text sets its
+  directionality. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set">§4.10.22.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=dir-result>
+        <textarea name=comment dirname=comment.dir dir=auto cols=10 rows=1>Hello</textarea>
+        <textarea name=reply dirname=reply.dir dir=auto cols=10 rows=1>مرحبا</textarea>
+        <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=dir-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>"مرحبا" aligns to the right of its box. Click Submit: <code>comment.dir=ltr</code> and
+    <code>reply.dir=rtl</code>, each after its text. Swap the two texts and submit: the directions swap.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats in a line-clamp container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 0; background: #f4f5f7; continue: collapse; block-ellipsis: ellipsis; }
+  .stage { height: 110px; }
+  .in { background: #b9cde6; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.3.1 Line-clamp containers, floats</div>
+  <h1>Floats in a line-clamp container</h1>
+  <p class=pr-lede><q>A line-clamp container is an independent block formatting context that additionally follows the
+  rules in this section.</q> A clamp point is its start, a point between two consecutive line boxes, or <q>A point
+  between two in-flow block-level sibling boxes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#line-clamp-containers">CSS Overflow 4 §5.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Floats</h2>
+  <p><q>floats which have not been made into visually suppressed boxes must be visually clipped to the unshaped
+  block-end content edge of the line-clamp container. They do not introduce any clearance that would make the
+  line-clamp container increase its height, and do not contribute to the scrollable overflow area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#line-clamp-containers">CSS Overflow 4 §5.3.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 90px"><div class="pr-frame pr-measure c" style="max-lines: 2; margin: 10px 40px"><div class="pr-b pr-fit" style="float: right; width: 30px; height: 60px"></div>one<br>two<br>three</div></div>
+    <figcaption><code>max-lines: 2</code> beside an orange float 60px tall: "two…" last, the box 40px tall, the float cut at its bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> suppress nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

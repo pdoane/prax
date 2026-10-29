@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The g element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.2.1 Overview</div>
+  <h1>The g element</h1>
+  <p class=pr-lede><q>The ‘g’ element is a container element for grouping together related graphics elements.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#GroupsOverview">SVG 2 §5.2.1</a></span>
+  <q>A ‘g’ element can contain other ‘g’ elements nested within it, to an arbitrary depth.</q> Each stage is an SVG
+  160 by 60.</p>
+</header>
+
+<section>
+  <h2>Grouped, styled and moved together</h2>
+  <p>What is set on the group, its children inherit or share.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g fill="#4f81bd"><rect x="20" y="10" width="40" height="40" /><circle cx="110" cy="30" r="20" /></g></svg></div>
+    <figcaption>A <code>g</code> with <code>fill</code> blue around a square and a circle: both blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(20 10)"><g transform="translate(20 0)"><g transform="translate(20 10)"><rect width="40" height="20" fill="#4f81bd" /></g></g></g></svg></div>
+    <figcaption>Three nested <code>g</code> each moving it: the rect at 60, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g opacity="0.5"><rect x="20" y="10" width="80" height="40" fill="#4f81bd" /><rect x="60" y="10" width="80" height="40" fill="#d68a3c" /></g></svg></div>
+    <figcaption><code>opacity="0.5"</code> on the <code>g</code>: the two rects at half opacity as one, orange over
+    blue where they overlap, no blend of the two.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

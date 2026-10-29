@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cells spanning collapsed tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 30px; height: 20px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.11 Positioning of cells, captions and other internal table boxes, spanning cells</div>
+  <h1>Cells spanning collapsed tracks</h1>
+  <p class=pr-lede>A cell spanning a collapsed track is as wide or tall as its visible tracks. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#bounding-box-assignment">CSS Table 3 §3.11</a></span> <a href="https://github.com/w3c/csswg-drafts/issues/478">csswg-drafts#478</a> resolved that cells spanning collapsed tracks are clipped to their resulting bounds. Grey tables have <code>border-spacing: 10px</code>; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>A cell spanning a collapsed track</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><col><col style="visibility: collapse"><col><tr><td colspan=2 style="background: #8e44ad; color: white">aaaaa</td><td></td></tr><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>A purple cell spans blue and the collapsed orange column: it is blue's 30px only, and its text, 50px,
+    is clipped to it (<a href="https://drafts.csswg.org/css-tables-3/#visibility-collapse-cell-rendering">§5.4.1</a>).
+    <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> let the text spill over orange. <span class=pr-flag>Safari</span> does not collapse
+    the column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

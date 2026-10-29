@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Parallel flows break on their own</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .fl { float: left; width: 30px; background: #f6d7b4; }
+  .fl .pr-a { padding: 0 9px; }
+  .t { display: table; border-spacing: 0; }
+  .t > div { display: table-row; }
+  .t > div > div { display: table-cell; width: 30px; vertical-align: top; }
+  .t > div > div + div { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.1 Parallel Fragmentation Flows</div>
+  <h1>Parallel flows break on their own</h1>
+  <p class=pr-lede><q>When multiple formatting contexts are laid out parallel to each other, fragmentation is
+  performed independently in each formatting context.</q> UAs <q>may (but are not required to) adjust the placement
+  of unforced breaks in parallel formatting contexts to visually balance such side-by-side content, but must not do
+  so to match a forced break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#parallel-flows">CSS Fragmentation 4 §2.1</a></span>
+  Each stage has three columns 60px tall. In each, the second A has <code>break-before: column</code>.</p>
+</header>
+
+<section>
+  <h2>A float and the content around it</h2>
+  <p><q>For example, if an element is floated, then a forced break inside the float will not affect the content
+  outside the float (except insofar as it may increase the height of the float).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=fl style="background: none"><div class=pr-a>A</div><div class=pr-a style="break-before: column">A</div></div>ab cd ef gh ij</div>
+    <figcaption>The float's first A in the first column, its second atop the second. The text beside it is not broken
+    there: "ab", "cd" and "ef" fill the first column, "gh" and "ij" go on in the second. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No break in the float: both As in the first column. Firefox fits "ef gh" on a line
+    under the float; Safari, breaking after two lines, puts "ef gh" in the second column and "ij" in the third.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=fl style="background: none"><div class=pr-a>A</div><div class=pr-a style="break-before: column">A</div></div><div class=fl>one two six ten</div></div>
+    <figcaption>Two floats side by side. The left one breaks after its first A; the tinted one after three lines,
+    where it runs out of room: "ten" beside the second A. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Both As in the first column. Safari breaks the tinted float after two
+    lines.</figcaption>
+  </figure>
+</section>
+
+<p class=pr-note>The other parallel flows the section lists are shown with their layouts: <a
+href="../css-flexbox/fragmentation-breaks.html">flex items in a row</a>, <a href="../css-grid/fragmentation.html">grid
+items in a row</a>, and <a href="../css-position/abspos-fragmentation.html">absolutely positioned boxes</a>.</p>
+
+</body>
+</html>

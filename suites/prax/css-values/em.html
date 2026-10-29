@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>em: the element's font size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font-family: "PR Arimo"; line-height: 1; white-space: nowrap; }
+  .bar { height: 10px; margin: 4px 0; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, em</div>
+  <h1>em: the element's font size</h1>
+  <p class=pr-lede>An em is <q>equal to the computed value of the 'font-size' property of the element on which it is
+  used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span>
+  Each blue bar is <code>5em</code> wide.</p>
+</header>
+
+<section>
+  <h2>The element's own font size</h2>
+  <p>The same declaration, <code>width: 5em</code>, in text of two sizes.</p>
+  <figure>
+    <div class=pr-stage><div class=t style="font-size: 20px">Em<div class=bar style="width: 5em"></div></div></div>
+    <figcaption>At <code>font-size: 20px</code>, the bar is 100px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t style="font-size: 36px">Em<div class=bar style="width: 5em"></div></div></div>
+    <figcaption>At 36px, 180px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In line-height and in font-size</h2>
+  <p><q>h1 { line-height: 1.2em } means that the line height of h1 elements will be 20% greater than the font size of
+  h1 element. On the other hand: h1 { font-size: 1.2em } means that the font size of h1 elements will be 20% greater
+  than the computed font size inherited by h1 elements.</q></p>
+  <figure>
+    <div class=pr-stage style="font: 25px/1 'PR Arimo'"><div style="line-height: 2em; background: #f9cc9d">Em Em</div></div>
+    <figcaption>25px text with <code>line-height: 2em</code>: a line 50px tall, twice its own font size.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 20px"><div class=t style="font-size: 1.5em">Em<div class=bar style="width: 5em"></div></div></div>
+    <figcaption><code>font-size: 1.5em</code> inside 20px text is 30px, so its <code>5em</code> bar is 150px
+    wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

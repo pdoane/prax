@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Values and Units 4 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · Support</div>
+  <h1>CSS Values and Units 4 declaration support</h1>
+  <p class=pr-lede>A declaration for each unit and function the pages use, in a property they use it in; whether they
+  parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Functions</h2>
+  <code class=pr-decl>width: calc(50px + 50%)</code>
+  <code class=pr-decl>width: min(50%, 120px)</code>
+  <code class=pr-decl>width: max(50%, 120px)</code>
+  <code class=pr-decl>width: clamp(none, 90%, 140px)</code>
+  <code class=pr-decl>width: round(up, 117px, 50px)</code>
+  <code class=pr-decl>width: calc(100px + mod(-18px, 5px))</code>
+  <code class=pr-decl>width: calc(100px + rem(-18px, 5px))</code>
+  <code class=pr-decl>width: calc(200px * sin(30deg))</code>
+  <code class=pr-decl>rotate: atan2(1, -1)</code>
+  <code class=pr-decl>width: calc(10px * pow(2, 4))</code>
+  <code class=pr-decl>width: hypot(60px, 80px)</code>
+  <code class=pr-decl>width: calc(50px * log(1000, 10))</code>
+  <code class=pr-decl>width: abs(-120px)</code>
+  <code class=pr-decl>width: calc(100px + 50px * sign(-5px))</code>
+  <code class=pr-decl>width: calc(pi * 50px)</code>
+  <code class=pr-decl>width: calc(infinity * 1px)</code>
+  <code class=pr-decl>width: calc(120px * 120px / 144px)</code>
+  <code class=pr-decl>column-count: calc(5 / 2)</code>
+  <code class=pr-decl>z-index: calc(-3 / 2)</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

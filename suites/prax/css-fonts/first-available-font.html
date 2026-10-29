@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The first available font</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: "No Space"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+41-5A; }
+  .pr-sample { font-size: 40px; line-height: normal; }
+  .bar { height: 8px; width: 10ex; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles: the first available font</div>
+  <h1>The first available font</h1>
+  <p class=pr-lede>The first available font, <q>used for example in the definition of font-relative lengths such as 'ex'
+  or in the definition of the 'line-height' property, is defined to be the first font for which the character U+0020
+  (space) is not excluded by a 'unicode-range'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>A face whose range excludes the space is skipped</h2>
+  <p>"No Space" is Cousine for A to Z only. Each stage is 40px with <code>line-height: normal</code>; its bar is
+  <code>10ex</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Space', 'PR Tinos'">AB<div class=bar></div></div>
+    <figcaption><code>'No Space', 'PR Tinos'</code>: "AB" monospace, but the line's height and the ex are PR
+    Tinos's: a bar of about 184px, as in the next stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'">AB<div class=bar></div></div>
+    <figcaption><code>'PR Tinos'</code>: the same line height and bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

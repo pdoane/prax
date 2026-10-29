@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-break: what only loose allows</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 100px; font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+  .k { background: #b9cde6; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.2 Line Breaking Strictness: the line-break property</div>
+  <h1>line-break: what only loose allows</h1>
+  <p class=pr-lede><code>loose</code>: <q>Breaks text using the least restrictive set of line-breaking rules.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-property">CSS Text 4 §6.2</a></span>
+  In each figure, <code>lang=ja</code>, 100px wide, five 20px characters to a line, the stage above is
+  <code>normal</code> and the one below <code>loose</code>. The character the rule is about is blue.</p>
+</header>
+
+<section>
+  <h2>Iteration marks and inseparables</h2>
+  <p>Forbidden for <code>normal</code> and <code>strict</code>, allowed in <code>loose</code>: <q>breaks before
+  iteration marks</q>, <q>breaks between inseparable characters (such as ‥ U+2025, … U+2026)</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえ人<span class=k>々</span></span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえ人<span class=k>々</span></span></div>
+    <figcaption>々: above, "人々" kept together; below, a break before 々.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえ…<span class=k>…</span></span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえ…<span class=k>…</span></span></div>
+    <figcaption>"……": above, kept together; below, a break between.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Centered punctuation, suffixes and prefixes</h2>
+  <p>Allowed for <code>loose</code> if the writing system is Chinese or Japanese: <q>breaks before certain
+  centered punctuation marks</q>, <q>breaks before suffixes</q>, <q>breaks after prefixes</q>. And if the preceding
+  character is of class ID, <q>breaks before hyphens</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえお<span class=k>！</span></span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえお<span class=k>！</span></span></div>
+    <figcaption>！ U+FF01: below, a break before it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいう１２<span class=k>％</span></span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいう１２<span class=k>％</span></span></div>
+    <figcaption>The suffix ％: below, a break before it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえ<span class=k>￥</span>１</span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえ<span class=k>￥</span>１</span></div>
+    <figcaption>The prefix ￥: below, a break after it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="line-break: normal"><span class=t>あいうえ漢<span class=k>‐</span></span></div>
+    <div class="pr-stage ja" lang=ja style="line-break: loose"><span class=t>あいうえ漢<span class=k>‐</span></span></div>
+    <figcaption>‐ U+2010 after an ideograph: below, a break before it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

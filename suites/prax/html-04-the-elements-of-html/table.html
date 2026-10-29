@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td, .t th { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.1 The table element</div>
+  <h1>The table element</h1>
+  <p class=pr-lede><q>The table element represents data with more than one dimension, in the form of a table.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-table-element">HTML §4.9.1</a></span>
+  Each table's edge is dashed; its cells have a blue border, which only the figures set.</p>
+</header>
+<section>
+  <h2>Rows and columns form a grid</h2>
+  <p><q>Tables have rows, columns, and cells given by their descendants. The rows and columns form a grid; a table's
+  cells must completely cover that grid without overlap.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-table-element">§4.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td>A<td>B<td>C<tr><td>Delta<td>E<td>F</table>
+    </div>
+    <figcaption>Two rows of three cells. "Delta" widens the first column, so A's cell above it is as wide; B over E,
+    C over F.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td>A<tr><td>B<td>C<td>D</table>
+    </div>
+    <figcaption>A row of one cell over a row of three: the grid has three columns, and nothing is drawn in the two
+    slots right of A.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The table's default look</h2>
+  <p><code>table { border-spacing: 2px; border-collapse: separate }</code>, <code>td, th { padding: 1px }</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t style="font-size: 0"><tr><td style="width: 18px; height: 18px"><td style="width: 18px; height: 18px"></table>
+    </div>
+    <figcaption>Two empty cells, each 18 by 18 inside 1px of padding and the figure's 1px border, so 22 by 22: separate
+    borders, 2px apart and 2px inside the dashed edge, which is 50 by 26.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

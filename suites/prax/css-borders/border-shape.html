@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: any shape for the border</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.1 The border-shape property</div>
+  <h1>border-shape: any shape for the border</h1>
+  <p class=pr-lede><q>The 'border-shape' property defines custom shapes for element borders using one or two basic shape values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-func">CSS Borders and Box Decorations 4 §7.1</a></span> Each box is 112 by 72 with a 6px blue border.</p>
+</header>
+
+<section>
+  <h2>Basic shapes</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: circle(50%)"></div></div>
+    <figcaption><code>circle(50%)</code>: a circle stroked in blue. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%)"></div></div>
+    <figcaption>A diamond stroked in blue. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: none"></div></div>
+    <figcaption><code>none</code>: the usual rectangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

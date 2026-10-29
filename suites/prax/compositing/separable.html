@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Separable blend modes: channel by channel</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .over > div > div { height: 20px; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  pre.pr-source { margin-right: 14px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.1 Separable blend modes</div>
+  <h1>Separable blend modes: channel by channel</h1>
+  <p class=pr-lede><q>A blend mode is termed separable if each component of the result color is completely determined by the corresponding components of the constituent backdrop and source colors — that is, if the mixing formula is applied separately to each set of corresponding components.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blendingseparable">Compositing and Blending 2 §10.1</a></span></p>
+</header>
+
+<section>
+  <h2>One channel at a time</h2>
+  <p>Rows, top to bottom: the backdrop, black, white, grey 50%, blue and orange; the source; <code>mix-blend-mode</code>; <code>background-blend-mode</code> over the backdrop as <code>background-color</code>; the formula's color and its hex.</p>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div><div style="background: #ff0000"></div></div><div class=over><div style="background: #000000"><div style="background: #ff0000; mix-blend-mode: difference"></div></div><div style="background: #ffffff"><div style="background: #ff0000; mix-blend-mode: difference"></div></div><div style="background: #808080"><div style="background: #ff0000; mix-blend-mode: difference"></div></div><div style="background: #4f81bd"><div style="background: #ff0000; mix-blend-mode: difference"></div></div><div style="background: #d68a3c"><div style="background: #ff0000; mix-blend-mode: difference"></div></div></div><div><div style="background: linear-gradient(#ff0000, #ff0000) #000000; background-blend-mode: difference"></div><div style="background: linear-gradient(#ff0000, #ff0000) #ffffff; background-blend-mode: difference"></div><div style="background: linear-gradient(#ff0000, #ff0000) #808080; background-blend-mode: difference"></div><div style="background: linear-gradient(#ff0000, #ff0000) #4f81bd; background-blend-mode: difference"></div><div style="background: linear-gradient(#ff0000, #ff0000) #d68a3c; background-blend-mode: difference"></div></div><div><div style="background: #ff0000"></div><div style="background: #00ffff"></div><div style="background: #7f8080"></div><div style="background: #b081bd"></div><div style="background: #298a3c"></div></div><div class=hex><div>ff0000</div><div>00ffff</div><div>7f8080</div><div>b081bd</div><div>298a3c</div></div></div>
+    <figcaption><code>difference</code> with pure red: only each backdrop's red changes, 255 minus it; blue gives <code>#b081bd</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend"><div><div style="background: #000000"></div><div style="background: #ffffff"></div><div style="background: #808080"></div><div style="background: #4f81bd"></div><div style="background: #d68a3c"></div></div><div><div style="background: #00ff00"></div><div style="background: #00ff00"></div><div style="background: #00ff00"></div><div style="background: #00ff00"></div><div style="background: #00ff00"></div></div><div class=over><div style="background: #000000"><div style="background: #00ff00; mix-blend-mode: multiply"></div></div><div style="background: #ffffff"><div style="background: #00ff00; mix-blend-mode: multiply"></div></div><div style="background: #808080"><div style="background: #00ff00; mix-blend-mode: multiply"></div></div><div style="background: #4f81bd"><div style="background: #00ff00; mix-blend-mode: multiply"></div></div><div style="background: #d68a3c"><div style="background: #00ff00; mix-blend-mode: multiply"></div></div></div><div><div style="background: linear-gradient(#00ff00, #00ff00) #000000; background-blend-mode: multiply"></div><div style="background: linear-gradient(#00ff00, #00ff00) #ffffff; background-blend-mode: multiply"></div><div style="background: linear-gradient(#00ff00, #00ff00) #808080; background-blend-mode: multiply"></div><div style="background: linear-gradient(#00ff00, #00ff00) #4f81bd; background-blend-mode: multiply"></div><div style="background: linear-gradient(#00ff00, #00ff00) #d68a3c; background-blend-mode: multiply"></div></div><div><div style="background: #000000"></div><div style="background: #00ff00"></div><div style="background: #008000"></div><div style="background: #008100"></div><div style="background: #008a00"></div></div><div class=hex><div>000000</div><div>00ff00</div><div>008000</div><div>008100</div><div>008a00</div></div></div>
+    <figcaption><code>multiply</code> with pure green: red and blue go to 0, green is kept: orange gives <code>#008a00</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

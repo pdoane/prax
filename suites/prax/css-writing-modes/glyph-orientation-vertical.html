@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>glyph-orientation-vertical, a shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 18px/30px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 90px; padding: 0 6px; }
+  figure.s figcaption { max-width: 88px; }
+  figure.s { margin-right: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1.3 Obsolete: the SVG1.1 glyph-orientation-vertical property</div>
+  <h1>glyph-orientation-vertical, a shorthand</h1>
+  <p class=pr-lede><q>While supporting this property is optional, UAs that do so must alias glyph-orientation-vertical
+  as a shorthand of text-orientation</q>: <code>auto</code> as <code>mixed</code>, <code>0deg</code> and
+  <code>0</code> as <code>upright</code>, <code>90deg</code> and <code>90</code> as <code>sideways</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#glyph-orientation">CSS Writing Modes 4 §5.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>The mapped values</h2>
+  <p>Each stage holds "日本abc" under the caption's <code>glyph-orientation-vertical</code>. A UA that does not support
+  the property keeps the <code>text-orientation</code> before it; Chrome and Firefox do not support it.</p>
+  <figure class="s pr-erratum">
+    <div id=g1 class=pr-stage style="text-orientation: upright; glyph-orientation-vertical: auto">日本abc</div>
+    <figcaption><code>auto</code> after <code>upright</code>: sideways. <span class=pr-flag>Safari</span> upright.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div id=g2 class=pr-stage style="glyph-orientation-vertical: 0deg">日本abc</div>
+    <figcaption><code>0deg</code>: upright. <span class=pr-flag>Safari</span> mixed.</figcaption>
+  </figure>
+  <figure class=s>
+    <div id=g3 class=pr-stage style="glyph-orientation-vertical: 0">日本abc</div>
+    <figcaption><code>0</code>: upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div id=g4 class=pr-stage style="glyph-orientation-vertical: 90deg">日本abc</div>
+    <figcaption><code>90deg</code>: all sideways.</figcaption>
+  </figure>
+  <figure class=s>
+    <div id=g5 class=pr-stage style="glyph-orientation-vertical: 90">日本abc</div>
+    <figcaption><code>90</code>: all sideways.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

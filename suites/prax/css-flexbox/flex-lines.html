@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 6 Flex Lines</div>
+  <h1>Flex lines</h1>
+  <p class=pr-lede><q>Flex items in a flex container are laid out and aligned within flex lines</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-lines">CSS Flexible Box Layout 2 §6</a></span></p>
+</header>
+
+<section>
+  <h2>Each line laid out on its own</h2>
+  <p><q>Once content is broken into lines, each line is laid out independently; flexible lengths and the
+  justify-content and align-self properties only consider the items on a single line at a time.</q> The first two stages wrap A 60px, B 60px, C 50px onto a first line and D 80px, E 60px onto a second. <q>The main size of a line is always the same as the main size of the flex container's content box.</q></p>
+  <figure>
+    <div class="pr-stage w"><div class="pr-a pr-fit" style="width: 60px; flex: auto">A</div><div class="pr-b pr-fit" style="width: 60px; flex: auto">B</div><div class="pr-c pr-fit" style="width: 50px; flex: auto">C</div><div class="pr-d pr-fit" style="width: 80px; flex: auto">D</div><div class="pr-a pr-fit" style="width: 60px; flex: auto">E</div></div>
+    <figcaption><code>flex: auto</code>: the first line shares out its 30px, A 70, B 70, C 60; the second its 60px,
+    D 110, E 90.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage w" style="justify-content: center"><div class="pr-a pr-fit" style="width: 60px">A</div><div class="pr-b pr-fit" style="width: 60px">B</div><div class="pr-c pr-fit" style="width: 50px">C</div><div class="pr-d pr-fit" style="width: 80px">D</div><div class="pr-a pr-fit" style="width: 60px">E</div></div>
+    <figcaption><code>justify-content: center</code>: the first line from 15px, the second from 30px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="padding: 0 20px; width: 60px; justify-content: space-between"><div class="pr-a pr-fit" style="width: 20px">A</div><div class="pr-b pr-fit" style="width: 20px">B</div></div>
+    <figcaption style="max-width: 100px"><code>padding: 0 20px</code>, <code>space-between</code>: A from 20px, B to
+    80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A line's cross size</h2>
+  <p><q>In a multi-line flex container (even one with only a single line), the cross size of each line is the
+  minimum size necessary to contain the flex items on the line</q>. <q>In a
+  single-line flex container, the cross size of the line is the cross size of the flex container, and align-content
+  has no effect.</q> Each stage is 40px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px"><div class="pr-a pr-fit" style="width: 30px">A</div><div class="pr-b pr-fit" style="width: 30px">B</div></div>
+    <figcaption><code>nowrap</code>: the line is 40px; A and B stretch to it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px; align-content: flex-end"><div class="pr-a pr-fit" style="width: 30px">A</div><div class="pr-b pr-fit" style="width: 30px">B</div></div>
+    <figcaption><code>nowrap</code>, <code>align-content: flex-end</code>: no effect; the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow w" style="height: 40px; align-content: flex-start"><div class="pr-a pr-fit" style="width: 30px">A</div><div class="pr-b pr-fit" style="width: 30px">B</div></div>
+    <figcaption><code>wrap</code>, one line, <code>align-content: flex-start</code>: the line is 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow w" style="height: 40px; align-content: flex-start"><div class="pr-a pr-fit" style="width: 30px">A</div><div class="pr-b pr-fit" style="width: 30px; height: 30px">B</div></div>
+    <figcaption>The same, B 30px tall: the line is 30px; A stretches to it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

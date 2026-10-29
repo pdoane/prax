@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 3, case E: sized into the available space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; }
+  .t { background: #b9cde6; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.2 Line Length Determination, step 3, case E</div>
+  <h1>Step 3, case E: sized into the available space</h1>
+  <p class=pr-lede><q>Otherwise, size the item into the available space using its used flex basis in place of its
+  main size, treating a value of content as max-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#line-sizing">CSS Flexible Box Layout 2 §9.2</a></span>
+  Every item here is <code>flex-grow: 0; flex-shrink: 0</code>, so the flex base size is the size it shows.</p>
+</header>
+
+<section>
+  <h2>content is max-content</h2>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t style="flex: none">aa bbb</div></div>
+    <figcaption><code>flex: none</code> and <code>width: auto</code>, so <code>content</code>: "aa bbb" on one line, 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t style="flex: 0 0 content; width: 30px">aa bbb</div></div>
+    <figcaption><code>flex-basis: content</code> with <code>width: 30px</code>: the width is not consulted, so
+    60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A basis that depends on the available space</h2>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t style="flex: none; width: fit-content">aaaa bbbb cccc dddd eeee</div></div>
+    <figcaption><code>width: fit-content</code>, 240px at most: fitted to the 200px available, so 200px, on two
+    lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t style="flex: none">aaaa bbbb cccc dddd eeee</div></div>
+    <figcaption><code>width: auto</code>, so max-content: 240px on one line, overflowing the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A cross size of fit-content</h2>
+  <p><q>If a cross size is needed to determine the main size (e.g. when the flex item’s main size is in its block
+  axis, or when it has a preferred aspect ratio) and the flex item’s cross size is auto and not definite, in this
+  calculation use fit-content as the flex item’s cross size.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 60px"><div class="flex" style="flex-direction: column; align-items: flex-start; width: 100px"><div class=t style="flex: none">aaa bbb ccc ddd</div></div></div>
+    <figcaption>A column container 100px wide: the item's height comes from a width of fit-content, 100px, so it is
+    40px tall, two lines, not max-content's one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical pr-measure" style="height: 100px"><div class="flex" style="flex-direction: column; align-items: flex-start"><div class=t style="flex: none">aaa bbb ccc ddd</div></div></div>
+    <figcaption>The same in <code>vertical-rl</code>, a column container 100px tall: the item is 40px wide, two
+    columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

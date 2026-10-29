@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gaps, alignment and breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); gap: 10px; column-rule: 2px solid #c0392b; }
+  .f { display: flex; gap: 10px; column-rule: 2px solid #c0392b; }
+  .f > div { width: 40px; padding: 0; box-sizing: border-box; }
+  .frag { column-count: 2; column-fill: auto; height: 50px; column-gap: 20px; }
+  .frag .g2 { display: grid; grid-auto-rows: 20px; row-gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2 Gaps Between Boxes, alignment and fragmentation</div>
+  <h1>Gaps, alignment and breaks</h1>
+  <p class=pr-lede><q>Gutters effect a minimum spacing between items: additional spacing may be added by
+  'justify-content'/'align-content'. Such additional space increases the size of the corresponding gaps.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gaps">CSS Gaps 1 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Distributed space widens the gap</h2>
+  <p>Each stage has three 40px items and <code>column-gap: 10px</code>; where gap decorations are drawn, a red
+  <code>column-rule</code> marks the middle of each gap.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Grid, <code>justify-content: normal</code>: 10px gaps: B starts at 50px, C at 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Grid, <code>space-between</code>: the 60px left over joins the gaps, each 40px: B starts at
+    80px, C at 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="justify-content: space-around"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Flex, <code>space-around</code>: 10px at each end and 30px gaps: A starts at 10px, B at 80px, C
+    at 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A gap at a break disappears</h2>
+  <p><q>In all cases, the gap disappears when it coincides with a fragmentation break.</q> The stage is a multicol
+  container 50px tall, filled column by column, holding a grid of 20px rows with <code>row-gap: 10px</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=frag><div class=g2><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div></div>
+    <figcaption>Rows 1 and 2 fill the first column; the gap after row 2 falls at the break and disappears,
+    so row 3 starts at the top of the second. <span class=pr-flag>Safari</span> Row 3 starts 10px down, and row 4
+    runs on into a third column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

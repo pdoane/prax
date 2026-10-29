@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>path-length: the author's length from CSS</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .twelve { path-length: 12px; }
+  .four { path-length: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.6.2 The ‘path-length’ property</div>
+  <h1>path-length: the author's length from CSS</h1>
+  <p class=pr-lede><q>The path-length property provides the author's computation of the total length of the path.
+  This value is used to calibrate the user agent's own distance-along-a-path calculations with that of the
+  author.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathLengthProperty">SVG 2 §9.6.2</a></span>
+  Each stage is an SVG 160 by 60 with a shape stroked dark blue, 6 wide, and dashed.</p>
+</header>
+
+<section>
+  <h2>From a style sheet</h2>
+  <p>It applies to ‘path’ and the basic shapes, and affects <q>stroke operations ('stroke-dasharray',
+  'stroke-dashoffset')</q>. <q>The SVG ‘pathLength’ attribute maps to the path-length CSS property as a
+  presentation attribute.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=twelve d="M 20 30 H 140" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 30 H 140</code>, 120 long, <code>path-length: 12px</code>, dashes of 1: six dashes 10
+    long, from 20, 40, 60, 80, 100 and 120. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Dashes 1 long.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=twelve d="M 20 30 H 140" pathLength="6" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption>The same, with <code>pathLength="6"</code>: the style sheet's 12 wins over the attribute's 6, so
+    again six dashes 10 long. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Three dashes 20 long.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle class=four cx="80" cy="30" r="20" stroke-dasharray="1 1" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption>A <code>circle</code> of radius 20, <code>path-length: 4px</code>: dashed in quarters, from 100,
+    30 down to 80, 50, and from 60, 30 up to 80, 10. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Dashes 1 long.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

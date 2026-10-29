@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow: clip is not hidden</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .fl { float: left; width: 60px; height: 50px; }
+  .txt { font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, clip and hidden</div>
+  <h1>overflow: clip is not hidden</h1>
+  <p class=pr-lede><q>A block box that becomes a scroll container also establishes an independent formatting
+  context.</q> <code>clip</code> <q>does not cause the element to establish a new formatting context.</q> <q>Authors
+  who also want the box to establish a formatting context can use display: flow-root together with overflow:
+  clip.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Margins collapse through it</h2>
+  <p>Each dashed parent has a 20px top margin and its child B a 40px one.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; overflow: hidden"><div class=pr-b style="margin-top: 40px">B: mt 40</div></div></div>
+    <figcaption><code>hidden</code>, a formatting context root: 20px above the parent and 40px inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent style="margin-top: 20px; overflow: clip"><div class=pr-b style="margin-top: 40px">B: mt 40</div></div></div>
+    <figcaption><code>clip</code>: not a root; the margins collapse into one 40px gap above both.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not a scroll container</h2>
+  <p>Each dashed box is 40px tall and holds A, B and C, 60px; a script sets its <code>scrollTop</code> to 20.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div id=h1 class=pr-frame style="overflow: hidden; height: 40px; margin: 10px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c id=c1>C</div></div></div>
+    <figcaption><code>hidden</code>: scrolled 20px down: B and C show.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div id=h2 class=pr-frame style="overflow: clip; height: 40px; margin: 10px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c id=c2>C</div></div></div>
+    <figcaption><code>clip</code>: it does not move: A and B show, C is cut off.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const id of ["h1", "h2"]) document.getElementById(id).scrollTop = 20;
+</script>
+</body>
+</html>

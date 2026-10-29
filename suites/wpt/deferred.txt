@@ -1,0 +1,64 @@
+# Pages that a plain run or a run of modules leaves out until the engine has what they need. They
+# cannot complete without it. An entry is the file on one line, then the reason, indented. The reason
+# starts with the need the run reports. A page that completes without the need has no entry here. A
+# listed file that no longer exists fails the run. --match and --all run these pages like any other.
+
+css/css-cascade/all-prop-initial-xml.html
+css/cssom-view/scrolling-quirks-vs-nonquirks.html
+html/syntax/parsing/html5lib_url.html
+    blobs: they load a document from a Blob's URL, which the host lacks.
+
+css/css-contain/content-visibility/content-visibility-auto-state-changed-first-observation.html
+css/css-contain/content-visibility/content-visibility-auto-state-changed-removed.html
+css/css-contain/content-visibility/content-visibility-vs-scrollIntoView-003.html
+    rendering: they wait for content-visibility's state, which a rendering update decides.
+
+css/css-masking/idlharness.html
+    svg interfaces: its objects are an SVGClipPathElement and an SVGMaskElement, which idlharness
+    tells apart by their interfaces.
+
+css/css-navigation/tentative/crossdoc-002.html
+css/css-view-transitions/navigation/pageswap-push-navigation.html
+css/css-view-transitions/navigation/pageswap-push-with-redirect.html
+css/css-view-transitions/navigation/pageswap-replace-navigation.html
+css/css-view-transitions/navigation/pageswap-traverse-navigation-no-bfcache.https.html
+css/css-view-transitions/navigation/prerender-coop.https.html
+css/css-view-transitions/navigation/zero-named-elements.html
+    navigation: they navigate between documents and hear of it through a BroadcastChannel or
+    speculation rules.
+
+css/css-scroll-anchoring/anchor-inside-iframe.html
+css/css-sizing/responsive-iframe/responsive-iframe-allow-origins.html
+css/css-values/viewport-units-after-font-load.html
+css/cssom-view/scrollIntoView-fixed.html
+css/cssom-view/scrollIntoView-iframes.html
+css/cssom-view/smooth-scrollIntoView-with-smooth-fragment-scroll.html
+    frames: they wait on a frame's layout, scrolling, transitions or cross-origin content.
+
+css/css-sizing/aspect-ratio/replaced-element-036.html
+    document collections: it iterates document.images.
+
+css/css-values/dynamic-viewport-units-rule-cache.html
+    layout: it waits for a resize event of a frame whose used size its style sets.
+
+css/cssom-view/scroll-behavior-smooth-navigation.html
+    history: it waits for the scroll of a traversal of the session history.
+
+css/mediaqueries/test_media_queries.html
+    computed style: its setup reads a computed font-size, and sizes its frame by style.
+
+css/selectors/invalidation/has-with-pseudo-class.html
+    forms: it sets the selectedness, checkedness and values of form controls through their IDL
+    attributes and reads their validity.
+
+css/selectors/invalidation/media-loading-pseudo-classes-in-has.sub.html
+css/selectors/media/media-loading-state-timing.sub.html
+css/selectors/media/media-loading-state.sub.html
+    server handlers: a Python handler of WPT's server stalls the media resource they load, and
+    the runner answers from the files of the checkout.
+
+html/document-isolation-policy/shared-workers.tentative.https.html
+    workers: it waits on a SharedWorker, which the engine lacks.
+
+shadow-dom/scroll-to-the-fragment-in-shadow-tree.html
+    fragments: it scrolls to a fragment by activating a link, and the engine scrolls to none.

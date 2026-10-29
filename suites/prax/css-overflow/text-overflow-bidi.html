@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow in bidi text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 9ch; margin: 10px 30px; overflow: hidden; white-space: pre; text-overflow: ellipsis; background: #f4f5f7; font: 20px/30px "PR Cousine"; }
+  .stage { height: 52px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1.1 Bidi ellipsis examples</div>
+  <h1>text-overflow in bidi text</h1>
+  <p class=pr-lede><q>These examples demonstrate which characters get hidden to make room for the ellipsis in a bidi
+  situation: those visually at the end edge of the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#bidi-ellipsis">CSS Overflow 3 §6.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The example's two lines</h2>
+  <p>Each dashed box is <code>overflow: hidden; white-space: pre; width: 9ch; text-overflow: ellipsis</code> with
+  "שלום 123456" in PR Cousine, a monospace font with Hebrew. The digits follow the Hebrew word with only a space between, so word,
+  space and digits make one right-to-left run, the digits visually at its left.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame t">שלום 123456</div></div>
+    <figcaption>Left to right: the run reads, from the left, "123456", the space, then the word, its last letter
+    ם first. The end is the right, so the word's other letters are hidden: the specification's reference rendering is
+    "123456 ם…".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame t" dir=rtl>שלום 123456</div></div>
+    <figcaption><code>dir=rtl</code>: the same run, now from the right edge: the word whole at the right, then
+    the space and the digits. The end is the left, so "123" is hidden: the reference rendering is "…456" and the
+    word. <span class=pr-flag>Safari</span> hides the word as well.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-size: sizing the mask</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6;
+          mask-image: url(support/disc.svg); mask-repeat: no-repeat; }
+  .gradient { mask-image: radial-gradient(closest-side, black 99%, transparent); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.7 Sizing Mask Images: the mask-size property</div>
+  <h1>mask-size: sizing the mask</h1>
+  <p class=pr-lede><q>Specifies the size of the mask layer images.</q> <q>See background-size property for the
+  definitions of the property values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-size">CSS Masking 1 §7.7</a></span>
+  Each box is 100 by 70 at 10, 10, masked by one disc, <code>no-repeat</code>. The sizes are a background's;
+  the area they size against is the mask positioning area, the border box.</p>
+</header>
+
+<section>
+  <h2>Against the border box</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj></div></div>
+    <figcaption>The initial <code>auto</code>: the disc's natural 20 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-size: contain"></div></div>
+    <figcaption><code>contain</code>: 70 by 70, as tall as the border box, at its left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-size: 50% 100%"></div></div>
+    <figcaption><code>50% 100%</code>: an ellipse 50 by 70 on the box's left half.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="subj gradient"></div></div>
+    <figcaption>A radial gradient, no natural size, <code>auto</code>: the whole border box, an ellipse 100 by
+    70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

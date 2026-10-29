@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-inset, row-rule-inset and rule-inset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; column-rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.3.3 Universal shorthands</div>
+  <h1>column-rule-inset, row-rule-inset and rule-inset</h1>
+  <p class=pr-lede><q>These shorthands allow authors to achieve uniform treatments throughout a container.</q> The
+  order of values is <q>cap-start cap-end? [/ junction-start junction-end?]?</q>; <q>If the junction values are
+  omitted, they are copied from the cap values.</q> <q>Any omitted end value is copied from the corresponding start
+  value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#insets-universal">CSS Gaps 1 §3.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>One value for every end</h2>
+  <p>Each grid has <code>column-rule-break: intersection</code>; column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: 0px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset: 0px</code>: the red rules end flush with the items. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: 5px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>5px</code>: each end 5px short of the items' edges. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: -5px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>-5px</code>: each end 5px past the items' edges, into the junction and outside the container.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Caps / junctions</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset: 8px 0 / 3px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset: 8px 0 / 3px</code>: the red rules start 8px below the top edge and run to
+    the bottom one; at the junction both ends stop 3px short. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-inset: 0 / -5px; rule-break: intersection"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-inset: 0 / -5px</code>, with both axes broken at intersections: red and black rules
+    alike reach the middle of each junction, and stop at the edges. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

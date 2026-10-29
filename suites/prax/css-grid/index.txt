@@ -1,0 +1,210 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+00-supports-4.html
+css-grid-2/#intro 1 Introduction
+    grid-layout.html
+# css-grid-2/#background 1.1 Background and Motivation: no page; it says why grid layout exists, which 1.1.1 and 1.1.2 show
+css-grid-2/#adapting-to-available-space 1.1.1 Adapting Layouts to Available Space
+    adapting-to-space.html
+css-grid-2/#source-independence 1.1.2 Source-Order Independence
+    source-independence.html
+# css-grid-2/#values 1.2 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+# css-grid-2/#overview 2 Overview: no page; it lists the features, which 2.1 to 2.3 show
+css-grid-2/#overview-grid 2.1 Declaring the Grid
+    overview-grid.html
+css-grid-2/#overview-placement 2.2 Placing Items
+    overview-placement.html
+css-grid-2/#overview-sizing 2.3 Sizing the Grid
+    overview-sizing.html
+css-grid-2/#grid-concepts 3 Grid Layout Concepts and Terminology
+    grid-concepts.html
+css-grid-2/#grid-line-concept 3.1 Grid Lines
+    grid-lines.html
+css-grid-2/#grid-track-concept 3.2 Grid Tracks and Cells
+    grid-tracks.html
+css-grid-2/#grid-area-concept 3.3 Grid Areas
+    grid-areas.html
+css-grid-2/#subgrid-items 3.4 Nested vs. Subgridded Items
+    subgrid-items.html
+css-grid-2/#order-accessibility 4 Reordering and Accessibility
+    order-accessibility.html
+# css-grid-2/#grid-model 5 Grid Containers: no page; it introduces the subsections
+css-grid-2/#grid-containers 5.1 Establishing Grid Containers: the grid and inline-grid display values
+    grid-containers.html
+    grid-containers-not-blocks.html
+css-grid-2/#intrinsic-sizes 5.2 Sizing Grid Containers
+    container-sizing.html
+css-grid-2/#overflow 5.3 Scrollable Grid Overflow
+    grid-overflow.html
+css-grid-2/#overlarge-grids 5.4 Limiting Large Grids
+    large-grids.html
+css-grid-2/#grid-items 6 Grid Items
+    grid-items.html
+css-grid-2/#grid-item-display 6.1 Grid Item Display
+    item-display.html
+css-grid-2/#grid-item-sizing 6.2 Grid Item Sizing
+    item-sizing.html
+    item-sizing-replaced.html
+css-grid-2/#order-property 6.3 Reordered Grid Items: the order property
+    order.html
+css-grid-2/#item-margins 6.4 Grid Item Margins and Paddings
+    item-margins.html
+css-grid-2/#z-order 6.5 Z-axis Ordering: the z-index property
+    z-order.html
+css-grid-2/#min-size-auto 6.6 Automatic Minimum Size of Grid Items
+    min-size-auto.html
+    min-size-auto-fixed.html
+    min-size-auto-suggestions.html
+    min-size-auto-percentages.html
+# css-grid-2/#grid-definition 7 Defining the Grid: no page; it introduces the subsections
+css-grid-2/#explicit-grids 7.1 The Explicit Grid
+    explicit-grid.html
+css-grid-2/#track-sizing 7.2 Explicit Track Sizing: the grid-template-rows and grid-template-columns properties
+    template-tracks.html
+    subgrid-value.html
+css-grid-2/#track-sizes 7.2.1 Track Sizes
+    track-lengths.html
+    track-percentages.html
+    track-minmax.html
+    track-auto.html
+    track-content.html
+    track-fit-content.html
+css-grid-2/#named-lines 7.2.2 Naming Grid Lines: the [<custom-ident>*] syntax
+    named-lines.html
+css-grid-2/#repeat-notation 7.2.3 Repeating Rows and Columns: the repeat() notation
+    repeat.html
+css-grid-2/#repeat-syntax 7.2.3.1 Syntax of repeat()
+    repeat-syntax.html
+css-grid-2/#auto-repeat 7.2.3.2 Repeat-to-fill: auto-fill and auto-fit repetitions
+    auto-fill.html
+    auto-fill-count.html
+    auto-fit.html
+css-grid-2/#repeat-interpolation 7.2.3.3 Interpolation/Combination of repeat()
+    repeat-interpolation.html
+css-grid-2/#fr-unit 7.2.4 Flexible Lengths: the fr unit
+    fr-unit.html
+    fr-indefinite.html
+# css-grid-2/#computed-tracks 7.2.5 Computed Value of a Track Listing: no page; it says how a track listing computes, which nothing draws
+# css-grid-2/#resolved-track-list 7.2.6 Resolved Value of a Track Listing: no page; it, and its subsections, are about what getComputedStyle() reports
+# css-grid-2/#resolved-track-list-standalone 7.2.6.1 Resolved Value of a Standalone Track Listing: no page; it says how getComputedStyle() reports the used tracks, which the pages of 7.2 and 12 draw
+# css-grid-2/#resolved-track-list-subgrid 7.2.6.2 Resolved Value of a Subgridded Track Listing: no page; it says how getComputedStyle() reports a subgrid's line names, which 9 draws
+css-grid-2/#grid-template-areas-property 7.3 Named Areas: the grid-template-areas property
+    template-areas.html
+# css-grid-2/#serialize-template 7.3.1 Serialization Of Template Strings: no page; it says how a template string serializes, and 7.3 draws the null cell tokens it collapses
+css-grid-2/#implicit-named-lines 7.3.2 Implicitly-Assigned Line Names
+    implicit-line-names.html
+css-grid-2/#implicit-named-areas 7.3.3 Implicitly-Named Areas
+    implicit-areas.html
+css-grid-2/#explicit-grid-shorthand 7.4 Explicit Grid Shorthand: the grid-template property
+    grid-template.html
+css-grid-2/#implicit-grids 7.5 The Implicit Grid
+    implicit-grid.html
+css-grid-2/#auto-tracks 7.6 Implicit Track Sizing: the grid-auto-rows and grid-auto-columns properties
+    grid-auto-tracks.html
+css-grid-2/#grid-auto-flow-property 7.7 Automatic Placement: the grid-auto-flow property
+    grid-auto-flow.html
+css-grid-2/#grid-shorthand 7.8 Grid Definition Shorthand: the grid property
+    grid-shorthand.html
+css-grid-2/#placement 8 Placing Grid Items
+    placement.html
+# css-grid-2/#common-uses 8.1 Common Patterns for Grid Placement: no page; it names the shorthands, which 8.1.1 to 8.1.4 use
+css-grid-2/#common-uses-named-areas 8.1.1 Named Areas
+    common-named-areas.html
+css-grid-2/#common-uses-numeric 8.1.2 Numeric Indexes and Spans
+    common-numeric.html
+css-grid-2/#common-uses-named-lines 8.1.3 Named Lines and Spans
+    common-named-lines.html
+css-grid-2/#common-uses-auto-placement 8.1.4 Auto Placement
+    common-auto-placement.html
+# css-grid-2/#placement-a11y 8.2 Grid Item Placement vs. Source Order: no page; it is advice to authors, and order-accessibility.html, under 4, shows a visual order apart from the source order
+css-grid-2/#line-placement 8.3 Line-based Placement: the grid-row-start, grid-column-start, grid-row-end, and grid-column-end properties
+    line-placement.html
+    line-placement-names.html
+    line-placement-span.html
+css-grid-2/#grid-placement-errors 8.3.1 Grid Placement Conflict Handling
+    placement-conflicts.html
+css-grid-2/#placement-shorthands 8.4 Placement Shorthands: the grid-column, grid-row, and grid-area properties
+    placement-shorthands.html
+css-grid-2/#auto-placement-algo 8.5 Grid Item Placement Algorithm
+    auto-placement.html
+    auto-placement-columns.html
+    auto-placement-cursor.html
+    auto-placement-dense.html
+css-grid-2/#subgrids 9 Subgrids
+    subgrid-tracks.html
+    subgrid-span.html
+    subgrid-line-names.html
+    subgrid-area-names.html
+    subgrid-implicit.html
+    subgrid-sizing.html
+    subgrid-margins.html
+    subgrid-gaps.html
+    subgrid-edges.html
+    subgrid-alignment.html
+# css-grid-2/#abspos 10 Absolute Positioning: no page; it introduces the subsections
+css-grid-2/#abspos-items 10.1 With a Grid Container as Containing Block
+    abspos-grid-area.html
+    abspos-lines.html
+css-grid-2/#static-position 10.2 With a Grid Container as Parent
+    abspos-static-position.html
+    abspos-static-position-cb.html
+css-grid-2/#alignment 11 Alignment and Spacing
+    alignment.html
+css-grid-2/#gutters 11.1 Gutters: the row-gap, column-gap, and gap properties
+    gutters.html
+    gutters-collapsed.html
+css-grid-2/#auto-margins 11.2 Aligning with auto margins
+    auto-margins.html
+css-grid-2/#row-align 11.3 Inline-axis Alignment: the justify-self and justify-items properties
+    justify-self.html
+css-grid-2/#column-align 11.4 Block-axis Alignment: the align-self and align-items properties
+    align-self.html
+css-grid-2/#grid-align 11.5 Aligning the Grid: the justify-content and align-content properties
+    content-alignment.html
+    content-alignment-gutters.html
+css-grid-2/#grid-baselines 11.6 Grid Container Baselines
+    grid-baselines.html
+    grid-baselines-order.html
+css-grid-2/#layout-algorithm 12 Grid Layout Algorithm
+    layout-algorithm.html
+css-grid-2/#algo-grid-sizing 12.1 Grid Sizing Algorithm
+    sizing-algorithm.html
+    sizing-algorithm-rerun.html
+# css-grid-2/#algo-terms 12.2 Track Sizing Terminology: no page; it defines the terms that 12.4 to 12.8 show at work
+# css-grid-2/#algo-track-sizing 12.3 Track Sizing Algorithm: no page; it lists the steps, which 12.4 to 12.8 show
+css-grid-2/#algo-init 12.4 Initialize Track Sizes
+    algo-init.html
+css-grid-2/#algo-content 12.5 Resolve Intrinsic Track Sizes
+    algo-baseline-shims.html
+    algo-single-span.html
+    algo-single-span-auto.html
+    algo-spanning-minimums.html
+    algo-spanning-maximums.html
+    algo-spanning-order.html
+    algo-spanning-flex.html
+css-grid-2/#extra-space 12.5.1 Distributing Extra Space Across Spanned Tracks
+    extra-space.html
+    extra-space-beyond.html
+    extra-space-planned.html
+css-grid-2/#algo-grow-tracks 12.6 Maximize Tracks
+    algo-maximize.html
+css-grid-2/#algo-flex-tracks 12.7 Expand Flexible Tracks
+    algo-flex.html
+    algo-flex-indefinite.html
+css-grid-2/#algo-find-fr-size 12.7.1 Find the Size of an fr
+    algo-fr-size.html
+css-grid-2/#algo-stretch 12.8 Stretch auto Tracks
+    algo-stretch.html
+css-grid-2/#pagination 13 Fragmenting Grid Layout
+    fragmentation.html
+css-grid-2/#fragmentation-alg 13.1 Sample Fragmentation Algorithm
+    fragmentation-sample.html
+# css-grid-2/#privacy 14 Privacy Considerations: no page; it says the module raises none
+# css-grid-2/#security 15 Security Considerations: no page; it says the module raises none
+# css-grid-2/#changes 16 Changes: no page; it lists changes to the draft
+# css-grid-2/#changes-202012 16.1 Changes since the 18 December 2020 CR: no page; it lists changes to the draft
+# css-grid-2/#changes-202008 16.2 Changes since the August 2020 CR: no page; it lists changes to the draft
+# css-grid-2/#changes-20180904 16.3 Changes since the December 2019 CSS Grid Layout Level 2 Working Draft: no page; it lists changes to the draft
+# css-grid-2/#changes-2 16.3 Additions Since Level 1: no page; it lists subgrid and the other additions, which 9 shows
+# css-grid-2/#acknowledgements 17 Acknowledgements: no page

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: the table of sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .keys { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.15; white-space: nowrap; }
+  .keys .pr-computed { font-size: 12px; font-weight: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: the table of sizes</h1>
+  <p class=pr-lede><q>Implementors should build a table of scaling factors for absolute-size keywords relative to the
+  'medium' font size and the particular device and its characteristics</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/absolute-sizes.html">The absolute size keywords</a>.</p>
+</header>
+
+<section>
+  <h2>HTML font sizes</h2>
+  <p><q>The following table provides user agent guidelines for the absolute-size mapping to HTML heading and absolute
+  font-sizes.</q> The table pairs HTML sizes 1 to 6 with <code>xx-small</code>, <code>small</code>,
+  <code>medium</code>, <code>large</code>, <code>x-large</code> and <code>xx-large</code>, skipping
+  <code>x-small</code>; size 7 is past the keywords. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide keys">
+      <div><font id=h1 size=1>size=1</font> <code class=pr-computed data-of=h1 data-property=font-size></code></div>
+      <div><font id=h2 size=2>size=2</font> <code class=pr-computed data-of=h2 data-property=font-size></code></div>
+      <div><font id=h3 size=3>size=3</font> <code class=pr-computed data-of=h3 data-property=font-size></code></div>
+      <div><font id=h4 size=4>size=4</font> <code class=pr-computed data-of=h4 data-property=font-size></code></div>
+      <div><font id=h5 size=5>size=5</font> <code class=pr-computed data-of=h5 data-property=font-size></code></div>
+      <div><font id=h6 size=6>size=6</font> <code class=pr-computed data-of=h6 data-property=font-size></code></div>
+      <div><font id=h7 size=7>size=7</font> <code class=pr-computed data-of=h7 data-property=font-size></code></div>
+    </div>
+    <figcaption>HTML's <code>&lt;font size&gt;</code> 1 to 7. By the table, size 1 is <code>xx-small</code>, 2 is
+    <code>small</code>, 3 <code>medium</code> and so on to 6, <code>xx-large</code>; 7 is larger still.
+    <span class="pr-flag pr-since">Since CSS 2</span> HTML's rendering rules, which govern the font element, map 1 to
+    <code>x-small</code>, 10px, and 7 to <code>xxx-large</code> (next page).</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

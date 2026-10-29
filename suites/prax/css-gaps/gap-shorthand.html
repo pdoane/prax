@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The gap shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2.2 Gap Shorthand</div>
+  <h1>The gap shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand that sets 'row-gap' and 'column-gap' in one declaration. If
+  &lt;'column-gap'&gt; is omitted, it's set to the same value as &lt;'row-gap'&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-shorthand">CSS Gaps 1 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>One value or two</h2>
+  <p>Each grid has three 40px columns.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 20px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>gap: 20px</code>: 20px between the columns and 20px between the rows.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 4px 30px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>gap: 4px 30px</code>: the row gap first, 4px; then the column gap, 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 20px; row-gap: 0"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>gap: 20px</code>, then <code>row-gap: 0</code>: the longhand after it wins, so D sits right
+    under A while the columns stay 20px apart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A gap is only part of the gutter</h2>
+  <p><q>The 'gap' property is only one component of the visible “gutter” or “alley” created between boxes. Margins,
+  padding, or the use of distributed alignment may increase the visible separation between boxes beyond what is
+  specified in 'gap'.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 10px"><div class=pr-a>A</div><div class=pr-b style="margin: 0 10px">B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>gap: 10px</code>, and B has 10px margins in its 40px column: A and B are 20px apart, B and C
+    too, while the columns are 10px apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

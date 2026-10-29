@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The draggable attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .card { margin: 0 0 10px; padding: 0 6px; background: #f6d7b4; font-size: 12px; line-height: 20px }
+  .row img, .row a { vertical-align: top; margin-right: 10px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.7 The draggable attribute</div>
+  <h1>The draggable attribute</h1>
+  <p class=pr-lede><q>Generally, only text selections are draggable, but elements whose draggable IDL attribute is true become
+  draggable as well.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#the-draggable-attribute">HTML §6.11.7</a></span></p>
+</header>
+<section>
+  <h2>True, false, and auto</h2>
+  <p>In the Auto state, <q>If the element is an img element, an object element that represents an image, or an a
+  element with an href content attribute, the draggable IDL attribute must return true; otherwise, the draggable IDL
+  attribute must return false.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#the-draggable-attribute">§6.11.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0">
+        <div class=card id=yes draggable=true>a div, draggable=true</div>
+        <div class=card id=auto>a div, no attribute</div>
+        <div class="row" style="margin: 0 0 10px; font-size: 12px; line-height: 20px">
+          <img id=img src=../shared/resources/flag-40x20.png width=40 height=20 alt="">
+          <img id=img-no src=../shared/resources/flag-40x20.png width=40 height=20 alt="" draggable=false>
+          <a id=link href="#the-draggable-attribute">a link</a>
+          <a id=link-no href="#the-draggable-attribute" draggable=false>draggable=false</a>
+          <a id=anchor>no href</a>
+        </div>
+      </div>
+      <ol class="pr-log drag-log" data-log="dragstart" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Try to drag each: dragstart at <code>yes</code>, at the first flag <code>img</code>, and at the link
+    <code>link</code>, each drawn under the pointer. The div without the attribute, the second flag and the link with
+    <code>draggable=false</code>, and the <code>a</code> without <code>href</code> do not start a drag; the pointer
+    selects text instead, where there is some.</figcaption>
+  </figure>
+</section>
+<script src=support/drag-log.js></script>
+</body>
+</html>

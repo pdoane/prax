@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Image buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .padded { padding: 10px; border: 5px solid #8a93a1; background: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.19 Image Button state (type=image)</div>
+  <h1>Image buttons</h1>
+  <p class=pr-lede><q>The input element represents either an image from which a user can select a coordinate and submit
+  the form, or alternatively a button from which the user can submit the form.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#image-button-state-(type=image)">HTML §4.10.5.1.19</a></span></p>
+</header>
+
+<section>
+  <h2>A coordinate on the image</h2>
+  <p>A click submits the coordinate as two entries, the name with <q>".x" and ".y" appended</q>, from the image's edge,
+  reaching into its border and padding: <q>−(borderleft+paddingleft) ≤ x</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#image-button-state-(type=image)">§4.10.5.1.19</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=where-result>
+        <div><input type=image name=where src=../shared/resources/flag-40x20.svg width=120 height=60 alt="Show the list"></div>
+      </form>
+      <iframe class=pr-result name=where-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>A flag 120 by 60. Click the middle of its lower right quarter: about <code>where.x=90</code>,
+    <code>where.y=45</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=padded-result>
+        <div><input type=image name=p class=padded src=../shared/resources/flag-40x20.svg width=80 height=40 alt="Padded"></div>
+      </form>
+      <iframe class=pr-result name=padded-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>5px of border and 10px of padding around the flag. Click left of the flag: a negative
+    <code>p.x</code>, down to -15.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Without its image, a button</h2>
+  <p><q>Otherwise, the element represents a submit button whose label is given by the value of the alt attribute.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#image-button-state-(type=image)">§4.10.5.1.19</a></span>
+  It is drawn as one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#images-3">§15.4.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=alt-result>
+        <div><input type=image name=list src=support/missing.png alt="Show the list"></div>
+      </form>
+      <iframe class=pr-result name=alt-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>The image is missing: a button, "Show the list". Click it: <code>list.x=0</code>, <code>list.y=0</code>.
+    <span class=pr-flag>Chrome</span> a broken-image icon and the text, no button. <span class=pr-flag>Safari</span> a
+    broken-image icon alone. <span class=pr-flag>Firefox</span> the text alone, not drawn as a button.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

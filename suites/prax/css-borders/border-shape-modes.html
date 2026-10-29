@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: stroke and fill</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.2 Syntax and Usage Modes</div>
+  <h1>border-shape: stroke and fill</h1>
+  <p class=pr-lede><q>Single &lt;basic-shape&gt; (Stroke mode): The border is rendered as a stroke along the shape's path, with the stroke width determined by the relevant side's computed border width.</q> <q>Two &lt;basic-shape&gt;s (Fill mode): The border is rendered as the area between the two paths.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-syntax">CSS Borders and Box Decorations 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>One shape or two</h2>
+  <p>Each box is 112 by 72 with a 6px blue border.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: ellipse(50% 50%)"></div></div>
+    <figcaption>Stroke: an ellipse 6px wide. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: ellipse(50% 50%) ellipse(30% 30%)"></div></div>
+    <figcaption>Fill: blue between the outer ellipse and an inner one. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

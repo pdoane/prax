@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clip property: what it clips</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .all { position: absolute; top: 20px; left: 40px; width: 92px; height: 32px; border: 4px solid #2c5a8f; outline: 4px solid #6aa36a; background: #f9cc9d; font-size: 13px; line-height: 20px; text-decoration: underline; }
+  .all .pr-b { position: absolute; top: 20px; left: 60px; width: 50px; text-decoration: none; }
+  .wide-a { position: absolute; width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.2 Clipping: the 'clip' property</div>
+  <h1>The clip property: what it clips</h1>
+  <p class=pr-lede>A clipping region cuts all that the element draws, and its ancestors' clipping adds to it.</p>
+</header>
+
+<section>
+  <h2>Every part of the element</h2>
+  <p><q>An element's clipping region clips out any aspect of the element (e.g., content, children, background, borders,
+  text decoration, outline and visible scrolling mechanism — if any) that is outside the clipping region.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class=all>underlined<div class="pr-b pr-fit">child</div></div></div>
+    <figcaption>A 100 by 40 border box at 40, 20, with a 4px blue border, a 4px green outline, underlined text, and a
+    child at 60, 20 in it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class=all style="clip: rect(-8px, 70px, 60px, -8px)">underlined<div class="pr-b pr-fit">child</div></div></div>
+    <figcaption><code>rect(-8px, 70px, 60px, -8px)</code>: outline, border, background, text, underline and child are
+    all cut 70px across, at 110 in the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cumulative intersection</h2>
+  <p><q>The element's ancestors may also clip portions of their content (e.g., via their own 'clip' property and/or if
+  their 'overflow' property is not 'visible'); what is rendered is the cumulative intersection.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class=pr-frame style="position: relative; overflow: hidden; width: 120px; height: 60px; margin: 10px 20px"><div class="pr-a pr-fit wide-a" style="top: 10px; left: 40px; clip: rect(auto, auto, 15px, 20px)">clipped</div></div></div>
+    <figcaption>The dashed parent, 120 wide, has <code>overflow: hidden</code>; its 120px child at 40, 10 has
+    <code>rect(auto, auto, 15px, 20px)</code>: seen from 60 to the parent's edge at 120, 15px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class=pr-ghost style="position: absolute; top: 10px; left: 20px; width: 160px; height: 60px"></div><div style="position: absolute; top: 10px; left: 20px; width: 160px; height: 60px; clip: rect(auto, 100px, auto, auto)"><div class="pr-a pr-fit wide-a" style="top: 20px; left: 40px; clip: rect(auto, auto, auto, 20px)">clipped</div></div></div>
+    <figcaption>An absolutely positioned parent, dashed, with <code>rect(auto, 100px, auto, auto)</code>; its 120px child
+    at 40, 20, with <code>rect(auto, auto, auto, 20px)</code>: seen from 60 to 100 in the parent.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

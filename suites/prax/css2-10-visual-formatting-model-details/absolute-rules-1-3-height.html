@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: rules 1 to 3</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; left: 70px; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.4 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute heights: rules 1 to 3</h1>
+  <p class=pr-lede>When one or two of 'top', 'height' and 'bottom' are 'auto', one of six rules applies, and auto margins
+  are 0. Each stage, 200 by 100, is the containing block of the orange box, which holds two 20px lines of text.</p>
+</header>
+
+<section>
+  <h2>Heights from the content, or tops from the static position</h2>
+  <p><q>1. 'top' and 'height' are 'auto' and 'bottom' is not 'auto', then the height is based on the content per
+  10.6.7, set 'auto' values for 'margin-top' and 'margin-bottom' to 0, and solve for 'top'</q> <q>2. 'top' and 'bottom'
+  are 'auto' and 'height' is not 'auto', then set 'top' to the static position, set 'auto' values for 'margin-top' and
+  'margin-bottom' to 0, and solve for 'bottom'</q> <q>3. 'height' and 'bottom' are 'auto' and 'top' is not 'auto', then
+  the height is based on the content per 10.6.7, set 'auto' values for 'margin-top' and 'margin-bottom' to 0, and solve
+  for 'bottom'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class="pr-chip abs" style="bottom: 10px; margin: auto 0">rule 1<br>two lines</div></div>
+    <figcaption>1. <code>bottom: 10px; margin: auto 0</code>: 40px of content, ending 10px from the
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class=pr-a style="height: 30px; box-sizing: border-box">A: 30 tall</div><div class="pr-chip abs" style="height: 50px">rule 2</div></div>
+    <figcaption>2. <code>height: 50px</code>: the top is the static position, 30px, below A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class="pr-chip abs" style="top: 20px; margin: auto 0">rule 3<br>two lines</div></div>
+    <figcaption>3. <code>top: 20px; margin: auto 0</code>: from 20, 40px of content.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

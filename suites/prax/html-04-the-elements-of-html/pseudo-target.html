@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:target</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; line-height: 20px; }
+  .rows nav a { margin: 0 12px 0 0; color: #2c5a8f; }
+  .rows .goal { margin: 8px 0 0; padding: 0 6px; background: var(--pr-plain); border: 3px solid #d5d9e0; }
+  .rows .goal:target { background: #8fd18f; border-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:target</h1>
+  <p class=pr-lede><q>For the purposes of the CSS :target pseudo-class, the Document's target elements are a list
+  containing the Document's target element, if it is not null, or containing no elements, if it is.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>The fragment's element</h2>
+  <p>Following a link to a fragment of this page makes the element with that id the document's target element.
+  Green is <code>:target</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <nav><a href="#first-goal">#first-goal</a><a href="#second-goal">#second-goal</a><a href="#no-such-id">#no-such-id</a></nav>
+        <div class=goal id=first-goal>id=first-goal</div>
+        <div class=goal id=second-goal>id=second-goal</div>
+      </div>
+    </div>
+    <figcaption>Click <code>#first-goal</code>: its box turns green. Click <code>#second-goal</code>: that one is
+    green, and the first grey again. Click <code>#no-such-id</code>: neither is green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

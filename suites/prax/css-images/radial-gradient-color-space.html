@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): the interpolation color space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.2.1 Adding &lt;color-interpolation-method&gt;</div>
+  <h1>radial-gradient(): the interpolation color space</h1>
+  <p class=pr-lede><q>This level adds a &lt;color-interpolation-method&gt; argument to radial-gradient() and
+  repeating-radial-gradient(), indicating the color space and path to use when interpolating colors on the gradient
+  line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#radial-color-interpolation">CSS Images 4 §3.2.1</a></span>
+  Each box is 160 by 80.</p>
+</header>
+
+<section>
+  <h2>The same stops in three spaces</h2>
+  <p>The specification's example: <q>The middle gradient uses gamma-encoded sRGB, the result is clearly too dark at
+  the midpoint.</q> Each is <code>farthest-side at left bottom, color(display-p3 0.918 0.2 0.161), #081</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(in lab farthest-side at left bottom, color(display-p3 0.918 0.2 0.161), #081)"></div></div>
+    <figcaption><code>in lab</code>: red to green through a light olive.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(in srgb farthest-side at left bottom, color(display-p3 0.918 0.2 0.161), #081)"></div></div>
+    <figcaption><code>in srgb</code>: through a darker, browner olive.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(in oklab farthest-side at left bottom, color(display-p3 0.918 0.2 0.161), #081)"></div></div>
+    <figcaption><code>in oklab</code>: much as <code>in lab</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A hue path</h2>
+  <p>In a polar space the method names a path for the hue. From red to red, <code>shorter hue</code> stays red;
+  <code>longer hue</code> goes the whole way round, so halfway out the hue is 180°, cyan.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(in hsl shorter hue, red, red)"></div></div>
+    <figcaption><code>in hsl shorter hue, red, red</code>: all red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(in hsl longer hue, red, red)"></div></div>
+    <figcaption><code>in hsl longer hue, red, red</code>: rings of every hue, red at the center and the corners, a
+    cyan ring halfway.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 40px in hsl longer hue, red, red)"></div></div>
+    <figcaption><code>circle 40px in hsl longer hue</code>, the method after the size: the rainbow within radius
+    40, cyan at radius 20, red beyond.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

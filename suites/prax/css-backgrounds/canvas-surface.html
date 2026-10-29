@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas background and the canvas surface</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 4 Backgrounds of Special Elements</div>
+  <h1>The canvas background and the canvas surface</h1>
+  <p class=pr-lede><q>Since no element corresponds to the canvas, in order to allow styling of the canvas CSS propagates
+  the background of the root element (or, in the case of HTML, the &lt;body&gt; element) as described below.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#special-backgrounds">CSS Backgrounds 4 §4</a></span>
+  Each figure is a frame, a document of its own, whose root element has <code>margin: 20px; height: 60px</code> and
+  a dashed outline.</p>
+</header>
+
+<section>
+  <h2>display: none gives a transparent canvas</h2>
+  <p><q>However, if the element whose background would be used for the canvas is display: none, then the canvas
+  background is transparent.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430 } body { display: none; background: #d68a3c }</style><body>"></iframe></div>
+    <figcaption>The root has no background and the body, whose background would be used, is
+    <code>display: none</code>: no orange anywhere.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430 } body { visibility: hidden; height: 20px; background: #d68a3c }</style><body>"></iframe></div>
+    <figcaption>With <code>visibility: hidden</code> instead, the body's box exists: the whole frame is orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The surface shows through</h2>
+  <p><q>If the canvas background is not opaque, the canvas surface below it shows through. The texture of the canvas
+  surface is UA-dependent (but is typically an opaque white).</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: rgba(214, 138, 60, 0.3) }</style>"></iframe></div>
+    <figcaption>A canvas of orange at 30%: what is below it is up to the user agent. For a frame, browsers leave the
+    surface transparent, so the stage's guides show through.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

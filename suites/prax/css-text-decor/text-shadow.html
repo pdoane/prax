@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-shadow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: bold 36px/60px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 4 Text Shadows: the text-shadow property</div>
+  <h1>text-shadow</h1>
+  <p class=pr-lede><q>This property accepts a comma-separated list of shadow effects to be applied to the text of the
+  element. Values are interpreted as for 'box-shadow'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-shadow-property">CSS Text Decoration 4 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Offset, blur and color</h2>
+  <figure>
+    <div class="pr-stage t" style="text-shadow: 6px 6px #d68a3c">Shadow</div>
+    <figcaption><code>6px 6px</code> orange: a sharp orange copy of the word, 6px right and down, behind it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="text-shadow: 0 0 6px #2c5a8f">Shadow</div>
+    <figcaption><code>0 0 6px</code> blue: a soft blue glow around every letter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Several, the first on top; decorations shadowed too</h2>
+  <p><q>Each layer shadows the element's text and all its text decorations (composited together). The shadow effects
+  are applied front-to-back: the first shadow is on top.</q></p>
+  <figure>
+    <div class="pr-stage t" style="text-shadow: 4px 4px #c0392b, 8px 8px #2c5a8f, 12px 12px #3f7a3f">Shadow</div>
+    <figcaption>Red 4px off, blue 8px, green 12px: red covers blue, blue covers green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="font-weight: normal; text-decoration: underline line-through #8e44ad 3px; text-decoration-skip-ink: none; text-shadow: 0 10px #d68a3c">Shadow</div>
+    <figcaption>Purple underline and line-through: each has an orange copy 10px below, with the text's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

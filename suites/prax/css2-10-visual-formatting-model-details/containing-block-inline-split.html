@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks: an inline in several boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .host { position: relative; padding: 0 6px; }
+  .fill { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: rgba(79, 129, 189, 0.25); outline: 2px solid #2c5a8f; outline-offset: -2px; }
+  .rtl { direction: rtl; unicode-bidi: bidi-override; }
+  .blk { background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.1 Definition of "containing block"</div>
+  <h1>Containing blocks: an inline in several boxes</h1>
+  <p class=pr-lede>An absolute box's nearest positioned ancestor here is an orange inline: relative, with 6px of padding
+  at each side, and generating more than one inline box. The absolute box has insets 0, and is tinted and outlined in
+  blue.</p>
+</header>
+
+<section>
+  <h2>Undefined in CSS 2</h2>
+  <p><q>In CSS 2.2, if the inline element is split across multiple lines, the containing block is undefined.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2 §10.1</a></span>
+  Chrome, Safari and Firefox agree on what they draw: a rectangle from the start and top of the inline's first box to
+  the end and bottom of its last, first and last as placed on the line. CSS Positioned Layout 3 says the same with
+  content edges, and keeps it open as <a href="https://github.com/w3c/csswg-drafts/issues/8284">csswg-drafts#8284</a>.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px 0">one <span class="pr-chip host">two three four five six seven<span class=fill></span></span> eight</div>
+    <figcaption>Over two lines: the blue box's left edge is where the first box starts, before "two", and its right
+    edge where the last ends, after "seven": a narrow strip down both lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px 0">abc <span class="pr-chip host">def<span class=rtl>GHI</span><span class=fill></span></span><span class=rtl>JKL</span></div>
+    <figcaption>"GHI" and the "JKL" after the inline are written right to left together, as "LKJIHG": the inline's
+    two boxes, "def" and "IHG", have "LKJ" between them, and the blue box covers it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px 0"><span class="pr-chip host">one<div class=blk>a block in the inline</div>two<span class=fill></span></span></div>
+    <figcaption>Around a block: from "one"'s line down to "two"'s, and from "one"'s start to "two"'s end, over the
+    block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

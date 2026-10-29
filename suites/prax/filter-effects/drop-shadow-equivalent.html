@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>drop-shadow() as primitives</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="drop-shadow-equivalent-0" color-interpolation-filters="sRGB" x="-0.7" y="-1" width="2.4" height="3">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="0"/><feOffset dx="10" dy="10" result="offsetblur"/><feFlood flood-color="#1f2430"/><feComposite in2="offsetblur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="drop-shadow-equivalent-1" color-interpolation-filters="sRGB" x="-0.7" y="-1" width="2.4" height="3">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="4"/><feOffset dx="10" dy="10" result="offsetblur"/><feFlood flood-color="#1f2430"/><feComposite in2="offsetblur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.10 drop-shadow</div>
+  <h1>drop-shadow() as primitives</h1>
+  <p class=pr-lede>The function is a chain: the input's alpha blurred by <code>[radius]</code>, offset, flooded with <code>[color]</code> inside it, and merged under the input. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#dropshadowEquivalent">Filter Effects 1 §13.1.10</a></span></p>
+</header>
+
+<section>
+  <h2>Two shadows</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function, at the right the same box with <code>filter: url()</code> to the equivalent. Each equivalent's filter region runs 40px or more past the box on every side, as the shorthand's must cover what it draws (<a href="https://drafts.csswg.org/filter-effects-1/#filter-region-for-shorthands">§13.2</a>); the default region of an SVG filter, 10% past the box, would clip it.</p>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class=row style="margin-left: 20px"><div class=src style="filter: drop-shadow(10px 10px 0 #1f2430)"></div><span style="display: inline-block; width: 20px"></span><div class=src style="filter: url(#drop-shadow-equivalent-0)"></div></div></div>
+    <figcaption><code>drop-shadow(10px 10px 0 #1f2430)</code> and its equivalent alike: a dark box 60 by 40, 10px right and down, under the colors.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class=row style="margin-left: 20px"><div class=src style="filter: drop-shadow(10px 10px 4px #1f2430)"></div><span style="display: inline-block; width: 20px"></span><div class=src style="filter: url(#drop-shadow-equivalent-1)"></div></div></div>
+    <figcaption><code>drop-shadow(10px 10px 4px #1f2430)</code> and its equivalent alike: the same, its edges blurred by a standard deviation of 4px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

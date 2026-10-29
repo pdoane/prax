@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Multi-line text via white-space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .pre { white-space: pre; }
+  .pre-line { white-space: pre-line; }
+  .loose { line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.6.1 Multi-line text via 'white-space'</div>
+  <h1>Multi-line text via white-space</h1>
+  <p class=pr-lede><q>Multi-line pre-formatted text may be created by using the white-space values pre or pre-line. In
+  these cases, a line-feed or carriage return is preserved as a forced line break which creates a new line box. The
+  line boxes are stacked following the rules of CSS.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPreMultiline">SVG 2 §11.6.1</a></span>
+  Each stage is an SVG 160 by 80. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code> on 20px lines, each
+  letter 10 wide, at <code>x="20" y="25"</code>, each line written on a line of its own in the source, the second
+  indented two spaces. The expected baselines are dashed in red.</p>
+</header>
+
+<section>
+  <h2>pre and pre-line</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 25H160 M0 45H160 M0 65H160" class=pr-baseline /><text class="pr-measure pre" x="20" y="25">one
+  two
+three</text></svg></div>
+    <figcaption><code>pre</code>: three lines, on y 25, 45 and 65, "two" indented to 40. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 25H160 M0 45H160 M0 65H160" class=pr-baseline /><text class="pr-measure pre-line" x="20" y="25">one
+  two
+three</text></svg></div>
+    <figcaption><code>pre-line</code>: three lines, each from 20, the indent collapsed away.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stacked by line-height</h2>
+  <p><q>Use a single ‘text’ element with white-space set to pre or pre-line. Line spacing is set by line-height.</q>
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPre">§11.6</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 15H160 M0 45H160 M0 75H160" class=pr-baseline /><text class="pr-measure pre-line loose" x="20" y="15">one
+two
+three</text></svg></div>
+    <figcaption><code>line-height: 30px</code> at <code>y="15"</code>: lines on 15, 45 and 75.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

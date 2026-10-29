@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feBlend: blending two inputs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40, and it computes in sRGB. The backdrop, in2, is a blue flood from
+     x 60 to 160; the source, in, is the canvas's orange rectangle from x 0 to 100. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="normal" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" x="60" width="100" result="backdrop"/>
+    <feBlend in="SourceGraphic" in2="backdrop"/>
+  </filter>
+  <filter id="multiply" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" x="60" width="100" result="backdrop"/>
+    <feBlend in="SourceGraphic" in2="backdrop" mode="multiply"/>
+  </filter>
+  <filter id="difference" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" x="60" width="100" result="backdrop"/>
+    <feBlend in="SourceGraphic" in2="backdrop" mode="difference"/>
+  </filter>
+  <filter id="half" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" x="60" width="100" result="backdrop"/>
+    <feBlend in="SourceGraphic" in2="backdrop"/>
+  </filter>
+  <filter id="no-composite" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" x="60" width="100" result="backdrop"/>
+    <feBlend in="SourceGraphic" in2="backdrop" no-composite/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.5 Filter primitive feBlend</div>
+  <h1>feBlend: blending two inputs</h1>
+  <p class=pr-lede><q>One of the blend modes defined by “Compositing and Blending Level 1” with the input in
+  representing the source Cs and the second input in2 representing the backdrop Cb.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feBlendElement">Filter Effects 1 §9.5</a></span>
+  In each canvas, 160 by 40, the source is an orange rectangle from x 0 to 100 and the backdrop a blue flood from x 60
+  to 160. Each filter computes in sRGB. The bar below a canvas is the color the mode gives where they overlap.</p>
+</header>
+
+<section>
+  <h2>The modes, with Source Over</h2>
+  <p><q>Otherwise, implementations must combine the blend mode specified by mode with the Source Over composite
+  operator.</q> Both inputs are opaque where they overlap, so the overlap is the blend itself.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="100" height="40" fill="#d68a3c" filter="url(#normal)"/><rect x="60" y="45" width="40" height="10" fill="#d68a3c"/></svg></div>
+    <figcaption><code>normal</code>, the initial value: orange over blue, so orange to x 100, then blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="100" height="40" fill="#d68a3c" filter="url(#multiply)"/><rect x="60" y="45" width="40" height="10" fill="#42462c"/></svg></div>
+    <figcaption><code>multiply</code>: from x 60 to 100, <code>#42462c</code>, the product of the two.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="100" height="40" fill="#d68a3c" filter="url(#difference)"/><rect x="60" y="45" width="40" height="10" fill="#870981"/></svg></div>
+    <figcaption><code>difference</code>: from x 60 to 100, <code>#870981</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>no-composite</h2>
+  <p><q>If the no-composite attribute is present, the specified blend mode must not apply alpha compositing.</q> The
+  source here is half opaque. Without compositing the result keeps the source's alpha, and nothing of the backdrop
+  shows where the source is absent.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="100" height="40" fill="#d68a3c" fill-opacity="0.5" filter="url(#half)"/><rect x="60" y="45" width="40" height="10" fill="#92857d"/></svg></div>
+    <figcaption><code>normal</code>, composited: pale orange to x 60, <code>#92857d</code> from 60 to 100, then
+    blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="100" height="40" fill="#d68a3c" fill-opacity="0.5" filter="url(#no-composite)"/></svg></div>
+    <figcaption><code>normal no-composite</code>: pale orange to x 100, and no blue at all. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As
+    composited.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

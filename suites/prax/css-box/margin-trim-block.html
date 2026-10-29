@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>margin-trim in a block container</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { border: 1px dashed #6b7381; background: rgba(79, 129, 189, 0.16); }
+  .m { margin: 20px 0; }
+  .ib { display: inline-block; width: 60px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.3.1 Trimming Block Container Content</div>
+  <h1>margin-trim in a block container</h1>
+  <p class=pr-lede><q>For block containers specifically, 'margin-trim' discards: The block-start margin of a
+  block-level first child, when trimming at the block-start edge. The block-end margin of a block-level last child,
+  when trimming at the block-end edge. Any margin collapsed with these margins.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-trim-block">CSS Box Model 4 §3.3.1</a></span> Each dashed
+  container has <code>margin-trim: block</code>.</p>
+</header>
+
+<section>
+  <h2>Margins collapsed with the trimmed ones</h2>
+  <p>A trimmed margin <q>also truncates any descendant margins collapsed with such a margin (but not its own, its
+  siblings’, or its ancestors’).</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block"><div><div class="pr-a m">A</div></div><div><div class="pr-b m">B</div></div></div></div>
+    <figcaption>A and B each inside a plain block, their 20px margins collapsing through it: A at the top, B at the
+    bottom, 60px tall. <span class=pr-flag>Firefox</span> 100px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block"><div style="margin: 20px 0"></div><div class="pr-a m">A</div></div></div>
+    <figcaption>An empty first child with 20px margins, which collapse with A's: all trimmed, A at the top. <span
+    class=pr-flag>Firefox</span> A 20px down.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div style="margin-trim: block; margin-top: 10px; background: rgba(79, 129, 189, 0.16)"><div class="pr-a" style="margin-top: 40px">A</div></div></div>
+    <figcaption>A container with no border and <code>margin-top: 10px</code>, A with 40px: A's is trimmed, the
+    container's own kept, so A is 10px down. <span class=pr-flag>Firefox</span> 40px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only block-level children</h2>
+  <p><q>It has no effect on any margins of inline-level descendants.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-row" style="margin-trim: block"><div class="pr-a m ib">A</div></div></div>
+    <figcaption>An inline-block A with <code>margin: 20px 0</code>: kept, A 20px down in a container 60px
+    tall.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block"><div class="pr-a m">A</div><div class="pr-b m ib">B</div></div></div>
+    <figcaption>A block A, then an inline-block B: A at the top, B's margins kept. <span
+    class=pr-flag>Firefox</span> A 20px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

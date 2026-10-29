@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>blur() and drop-shadow()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 20px 0; }
+  .box { width: 60px; height: 30px; margin: 0 20px; background: #4f81bd; }
+  .ring { width: 40px; height: 40px; margin: 0 20px; border: 10px solid #4f81bd; border-radius: 50%; box-sizing: border-box; }
+  .word { margin: 0 20px; font: bold 30px/30px "PR Arimo"; color: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 6.1 Supported Filter Functions</div>
+  <h1>blur() and drop-shadow()</h1>
+  <p class=pr-lede><q>Applies a Gaussian blur to the input image. The passed parameter defines the value of the standard
+  deviation to the Gaussian function.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#supported-filter-functions">Filter Effects 1 §6.1</a></span>
+  Each blue box is 60 by 30, 20px in from the stage's edge.</p>
+</header>
+
+<section>
+  <h2>blur()</h2>
+  <p><q>The ink overflow rectangle for a Gaussian blur is the axis-aligned boundary of the area in which the
+  implementation draws the blur.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: blur(2px)"></div></div>
+    <figcaption><code>blur(2px)</code>: the edges soft over about 4px each way.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: blur(6px)"></div></div>
+    <figcaption><code>blur(6px)</code>: softer, spilling about 10px past the box.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: blur(0)"></div></div>
+    <figcaption><code>blur(0)</code>: sharp.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>drop-shadow()</h2>
+  <p><q>A drop shadow is effectively a blurred, offset version of the input image's alpha mask drawn in a particular
+  color, composited below the image.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: drop-shadow(10px 10px #8e44ad)"></div></div>
+    <figcaption><code>10px 10px</code>, purple: a sharp shadow 10px right and down, below the box.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=ring style="filter: drop-shadow(10px 0 #8e44ad)"></div></div>
+    <figcaption>A ring: the shadow a ring too, the hole clear, not a box's shadow.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=word style="filter: drop-shadow(4px 4px #8e44ad)">Ag</div></div>
+    <figcaption>Text: each letter's shadow, 4px right and down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: drop-shadow(10px 10px 4px #8e44ad)"></div></div>
+    <figcaption>A third length, 4px, the blur's standard deviation: a soft shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hues: angles and numbers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 4.3 Representing Cylindrical-coordinate Hues: the &lt;hue&gt; syntax</div>
+  <h1>Hues: angles and numbers</h1>
+  <p class=pr-lede><q>Hue is represented as an angle of the color circle</q>: <code>&lt;hue&gt; = &lt;number&gt; |
+  &lt;angle&gt;</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-syntax">CSS Color 4
+  §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>A number is degrees</h2>
+  <p><q>the argument can also be given as a number, which is interpreted as a number of degrees</q>. Each swatch is
+  <code>hsl(H 100% 25%)</code>, a dark green, with H written another way.</p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: hsl(120 100% 25%)"></div><div class=sw style="background: hsl(120deg 100% 25%)"></div><div class=sw style="background: hsl(0.33333turn 100% 25%)"></div><div class=sw style="background: hsl(2.0944rad 100% 25%)"></div><div class=sw style="background: hsl(133.333grad 100% 25%)"></div></div>
+    <figcaption><code>120</code>, <code>120deg</code>, <code>0.33333turn</code>, <code>2.0944rad</code> and
+    <code>133.333grad</code>: five squares of the same green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Normalized to [0,360)</h2>
+  <p><q>This number is normalized to the range [0,360).</q></p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: hsl(120 100% 25%)"></div><div class=sw style="background: hsl(480 100% 25%)"></div><div class=sw style="background: hsl(-240 100% 25%)"></div><div class=sw style="background: hsl(840deg 100% 25%)"></div></div>
+    <figcaption><code>120</code>, <code>480</code>, <code>-240</code> and <code>840deg</code>: the same green
+    four times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(0 100% 50%)"></div><div class=sw style="background: hsl(360 100% 50%)"></div><div class=sw style="background: hsl(-360 100% 50%)"></div></div>
+    <figcaption><code>0</code>, <code>360</code> and <code>-360</code>: red three times.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: larger and smaller by a ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sizes { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.25; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: larger and smaller by a ratio</h1>
+  <p class=pr-lede><q>A &lt;relative-size&gt; keyword is interpreted relative to the table of font sizes and the font
+  size of the parent element. Possible values are: [ larger | smaller ].</q> Each grey bar is 10em wide, ten times its
+  box's font size. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/absolute-sizes.html">The absolute size keywords</a>.</p>
+</header>
+
+<section>
+  <h2>Between the entries</h2>
+  <p><q>If the parent element's size is not close to a table entry, the UA is free to interpolate between table
+  entries or round off to the closest one.</q> The specification's <code>blockquote { font-size: larger }</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide sizes" style="font-size: 20px"><div id=r5 style="font-size: larger">larger<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>larger</code> in a 20px parent, between <code>large</code> and <code>x-large</code>: <code
+    class=pr-computed data-of=r5 data-property=font-size></code>, larger than 20px.
+    <span class="pr-flag pr-since">Since CSS 2</span> a ratio needs no table: 20px times 1.2.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-size-prop">CSS Fonts 4 §2.5</a></div>
+  <h2>The next entry, or a ratio</h2>
+  <p>The table is now optional: <q>larger may compute the font size to the next entry in the table</q>, but <q>User
+  agents may instead use a simple ratio to increase or decrease the font size relative to the parent element. The
+  specific ratio is unspecified, but should be around 1.2–1.5.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-size-prop">CSS Fonts 4 §2.5</a></span></p>
+  <figure>
+    <div class="pr-stage sizes" style="font-size: 10px"><div id=q1 style="font-size: larger">larger<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>larger</code> in a 10px parent: <code class=pr-computed data-of=q1 data-property=font-size></code>,
+    10px times 1.2; the bar is 10em.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide sizes" style="font-size: 30px"><div id=q2 style="font-size: smaller">smaller<div class=pr-expect style="width: 10em"></div></div></div>
+    <figcaption><code>smaller</code> in a 30px parent: <code class=pr-computed data-of=q2 data-property=font-size></code>,
+    30px divided by 1.2, so the bar is 250px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

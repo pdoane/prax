@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>blur</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.4.1 blur</div>
+  <h1>blur</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when an event target loses focus. The focus MUST be taken
+  from the element before the dispatch of this event type.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-blur">UI Events §3.3.4.1</a></span></p>
+</header>
+<section>
+  <h2>The focus is already gone</h2>
+  <p>The page's script records which element has the focus, <code>document.activeElement</code>, as each event
+  reaches the stage, as <code>focused</code>. When blur arrives, the element losing the focus no longer has it.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-blur">§3.3.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="blur focusout" data-fields="target focused" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>: blur and focusout at <code>one</code>, each with
+    <code>focused=body</code>, since <code>one</code> has lost the focus and <code>two</code> is yet to receive it.
+    HTML's focus update steps (<a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">HTML §6.6.4</a>) fire blur before they designate a new focused area, which gives <code>focused=one</code>; Chrome,
+    Safari and Firefox give <code>body</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the element that has the focus as each focus event reaches the stage, before the log reads it.
+  const stage = document.querySelector(".pr-stage");
+  for (const type of ["blur", "focusout"])
+      stage.addEventListener(type, event => { event.focused = document.activeElement; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

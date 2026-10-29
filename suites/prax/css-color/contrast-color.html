@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>contrast-color()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .chip { display: inline-block; vertical-align: top; font: 15px/40px "PR Arimo"; padding: 0 10px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 8 Dynamically specifying a text color with adequate contrast: the contrast-color() Function</div>
+  <h1>contrast-color()</h1>
+  <p class=pr-lede><q>contrast-color() resolves to either white or black, whichever produces <strong>maximum</strong> color
+  contrast for text when the input color is used as a solid background.</q> Each chip has <code>background: B; color:
+  contrast-color(B)</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#contrast-color">CSS Color 5
+  §8</a></span></p>
+</header>
+
+<section>
+  <h2>White or black</h2>
+  <p><q>The precise color contrast algorithm for determining whether to output a light or
+  dark color is UA-defined at this level.</q></p>
+  <figure>
+    <div class=pr-stage><span class=chip style="background: navy; color: contrast-color(navy)">Aa</span><span class=chip style="background: #2c5a8f; color: contrast-color(#2c5a8f)">Aa</span><span class=chip style="background: firebrick; color: contrast-color(firebrick)">Aa</span></div>
+    <figcaption><code>navy</code>, <code>#2c5a8f</code>, <code>firebrick</code>: white text on each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=chip style="background: yellow; color: contrast-color(yellow)">Aa</span><span class=chip style="background: #f6d7b4; color: contrast-color(#f6d7b4)">Aa</span><span class=chip style="background: lime; color: contrast-color(lime)">Aa</span></div>
+    <figcaption><code>yellow</code>, <code>#f6d7b4</code>, <code>lime</code>: black text on each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Colors in other spaces</h2>
+  <figure>
+    <div class=pr-stage><span class=chip style="background: oklch(0.3 0.1 260); color: contrast-color(oklch(0.3 0.1 260))">Aa</span><span class=chip style="background: oklch(0.95 0.05 100); color: contrast-color(oklch(0.95 0.05 100))">Aa</span></div>
+    <figcaption><code>oklch(0.3 0.1 260)</code>, a dark blue: white. <code>oklch(0.95 0.05 100)</code>, a cream: black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

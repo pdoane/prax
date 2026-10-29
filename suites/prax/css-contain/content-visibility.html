@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>content-visibility: visible, hidden, auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 80px; }
+  .box { width: 100px; margin: 10px; padding: 5px; border: 5px solid #2c5a8f; background: #b9cde6; }
+  .t { position: relative; left: 40px; background: #f6d7b4; }
+  .sq { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4 Suppressing An Element’s Contents Entirely</div>
+  <h1>content-visibility: visible, hidden, auto</h1>
+  <p class=pr-lede><q>The 'content-visibility' property controls whether or not an element renders its contents at
+  all, along with forcing a strong set of containments</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#content-visibility">CSS Containment 2 §4</a></span>
+  Each stage is positioned. Its blue box, 100 wide with 5px padding and a 5px border, holds a line "contents"
+  shifted 40px right, and an orange square with <code>position: absolute; right: 0; bottom: 0</code>.</p>
+</header>
+
+<section>
+  <h2>The three values</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=box style="content-visibility: visible"><div class=t>contents</div><i class=sq></i></div></div>
+    <figcaption><code>visible</code>: <q>No effect.</q> The box is 40 tall around its line, the line runs out of it,
+    and the square is at the stage's corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=box style="content-visibility: hidden"><div class=t>contents</div><i class=sq></i></div></div>
+    <figcaption><code>hidden</code>: the box <q>skips its contents</q>. Its border and background are drawn, 20 tall,
+    sized as if empty, and nothing in it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=box style="content-visibility: auto"><div class=t>contents</div><i class=sq></i></div></div>
+    <figcaption><code>auto</code>, on screen: layout, style and paint containment. 40 tall, the line cut at the
+    padding edge, and the square at the box's own corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sizes while skipped, and where it applies</h2>
+  <p>Skipping turns on size containment, so <code>contain-intrinsic-size</code> gives the box a size in place of
+  its contents, <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override">CSS Box Sizing 4 §5.2</a></span>
+  and the property applies to <q>elements for which size containment can apply</q>.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=box style="content-visibility: hidden; contain-intrinsic-size: auto 40px"><div class=t>contents</div><i class=sq></i></div></div>
+    <figcaption><code>hidden</code>, <code>contain-intrinsic-size: auto 40px</code>: 60 tall, still
+    empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">an <span style="content-visibility: hidden; background: #b9cde6">inline box</span> here</div>
+    <figcaption>On a <code>span</code>: no effect; "inline box" is drawn.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=pr-table><div class=pr-table-cell style="content-visibility: hidden">cell</div></div></div>
+    <figcaption>On a table cell: no effect; "cell" is drawn. <span class=pr-flag>Chrome</span> skips it: an empty cell.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

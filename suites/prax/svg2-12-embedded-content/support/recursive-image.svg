@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60" viewBox="0 0 160 60">
+  <!-- SVG 2 §12.3's recursive-image example, drawn to the suite's stage: a ring round 80, 30, then the file itself at
+       half size by its own name, and again at a fifth by a target-only URL, whose :target fills its circle. -->
+  <style>#target:target { fill: #d68a3c; }</style>
+  <circle id="target" cx="80" cy="30" r="24" fill="none" stroke="#2c5a8f" stroke-width="6" />
+  <image href="recursive-image.svg" x="40" y="15" width="80" height="30" />
+  <image href="#target" x="64" y="24" width="32" height="12" />
+</svg>

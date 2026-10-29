@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas color spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.4 Color spaces and color space conversion</div>
+  <h1>Canvas color spaces</h1>
+  <p class=pr-lede><q>The PredefinedColorSpace enumeration is used to specify the color space of the canvas's backing
+  store.</q> <q>Color space conversion must be applied to the canvas's backing store when rendering the canvas to the
+  output device.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#colour-spaces-and-colour-correction">HTML §4.12.5.4</a></span></p>
+</header>
+<section>
+  <h2>A wider gamut</h2>
+  <p>Drawing converts <q>the image A to the context's color space</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-model">§4.12.5.1.22</a></span>
+  Each canvas is filled with <code>color(display-p3 1 0 0)</code>, a red past sRGB.</p>
+  <figure>
+    <div class=pr-stage><canvas width=100 height=60 data-draw=red data-space=srgb></canvas><canvas width=100 height=60 data-draw=red data-space=display-p3 style="margin: -60px 0 0 100px"></canvas></div>
+    <figcaption>Left, an <code>srgb</code> canvas: the red mapped into sRGB, the reference. Right, a
+    <code>display-p3</code> canvas: on a wide-gamut display, a more vivid red; on an sRGB one, the same as the
+    left.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Gradients in the context's space</h2>
+  <p><q>Between each such stop, the colors and the alpha component must be linearly interpolated in the context's color
+  space without premultiplying the alpha value</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#fill-and-stroke-styles">§4.12.5.1.10</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=30 data-draw=ramp data-space=srgb></canvas><canvas width=200 height=30 data-draw=ramp data-space=srgb-linear></canvas></div>
+    <figcaption>Black to white across 200: in an <code>srgb</code> canvas, mid-grey at x 100; below, in an
+    <code>srgb-linear</code> canvas, lighter there, the dark end short. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> The lower canvas empty.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    red(context, canvas) {
+      context.fillStyle = "color(display-p3 1 0 0)";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    },
+    ramp(context, canvas) {
+      const gradient = context.createLinearGradient(0, 0, 200, 0);
+      gradient.addColorStop(0, "black");
+      gradient.addColorStop(1, "white");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]")) {
+    try {
+      draw[canvas.dataset.draw](canvas.getContext("2d", {colorSpace: canvas.dataset.space}), canvas);
+    } catch (error) {
+      // A color space the engine lacks leaves its canvas empty.
+    }
+  }
+</script>
+</body>
+</html>

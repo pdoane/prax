@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendering markers: whose properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #styled circle { fill: #4f81bd; }
+  .referencing circle { fill: #8e44ad; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="plain" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" /></marker>
+  <g fill="#d68a3c"><marker id="inherits" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" /></marker></g>
+  <marker id="styled" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.4 Rendering markers</div>
+  <h1>Rendering markers: whose properties</h1>
+  <p class=pr-lede><q>Properties do not inherit from the element referencing the ‘marker’ into the contents of the
+  marker.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">SVG 2 §13.7.4</a></span>
+  Each stage is an SVG 160 by 60 with a green path from 20, 50 up to 80, 10 and down to 140, 50, filled and stroked
+  green, its three vertices marked by a circle 16 across whose own <code>fill</code> is not set.</p>
+</header>
+
+<section>
+  <h2>Inherited from the marker's own tree</h2>
+  <p><q>The conceptual deep cloning of the referenced ‘marker’ element into a non-exposed DOM tree also copies any
+  property values resulting from the CSS cascade and property inheritance on the referenced element and its
+  contents.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="#6aa36a" fill-opacity="0.4" stroke="#3f7a3f" stroke-width="2" marker-start="url(#plain)" marker-mid="url(#plain)" marker-end="url(#plain)" /></svg></div>
+    <figcaption>Black circles, the initial <code>fill</code>, not the path's green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="#6aa36a" fill-opacity="0.4" stroke="#3f7a3f" stroke-width="2" marker-start="url(#inherits)" marker-mid="url(#inherits)" marker-end="url(#inherits)" /></svg></div>
+    <figcaption>The <code>marker</code> inside a <code>g</code> with <code>fill="#d68a3c"</code>: orange circles,
+    from the <code>g</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Selectors match the original</h2>
+  <p><q>CSS selectors can be applied to the original (i.e., referenced) elements because they are part of the formal
+  document structure. CSS selectors cannot be applied to the (conceptually) cloned DOM tree because its contents are
+  not part of the formal document structure.</q> The page's style sheet has <code>#styled circle { fill: #4f81bd
+  }</code> and <code>.referencing circle { fill: #8e44ad }</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=referencing d="M 20 50 L 80 10 L 140 50" fill="#6aa36a" fill-opacity="0.4" stroke="#3f7a3f" stroke-width="2" marker-start="url(#styled)" marker-mid="url(#styled)" marker-end="url(#styled)" /></svg></div>
+    <figcaption>The marker <code>#styled</code>, on a path of class <code>referencing</code>: blue circles; the
+    clones are not the path's descendants, so not purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

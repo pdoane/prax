@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Replaced elements with a natural size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 60px; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.1 Intrinsic Sizes, natural sizes</div>
+  <h1>Replaced elements with a natural size</h1>
+  <p class=pr-lede><q>Replaced elements frequently derive their intrinsic size from their natural dimensions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#auto-box-sizes">CSS Box Sizing 3 §2.1</a></span>
+  The min-content size is the box's size as a float, auto-sized in that axis: <q>When the box has a preferred aspect
+  ratio, size constraints in the opposite dimension will transfer through and can affect the auto size in the
+  considered one.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">§5.1</a></span>
+  Each image is 80 by 40 by nature.</p>
+</header>
+
+<section>
+  <h2>Natural size, or the height through the ratio</h2>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" id=d2 style="width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: min-content</code>: its natural 80px. Reads <code class=pr-computed data-of=d2 data-dom=width></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=r1a style="height: 20px; width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>height: 20px; width: min-content</code>: the height through the ratio, 40px. Reads <code class=pr-computed data-of=r1a data-dom=width></code>.
+    <span class=pr-flag>Safari</span> 80px, the natural width.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div style="height: 40px"><img alt="" id=r1b style="height: 50%; width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a block 40px tall, <code>height: 50%; width: min-content</code>: 40px. Reads <code class=pr-computed data-of=r1b data-dom=width></code>.
+    <span class=pr-flag>Safari</span> 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A maximum height through the ratio, and floats around the image</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=r1e style="max-height: 20px; width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>max-height: 20px; width: min-content</code>: the maximum carries through the ratio, 40 by 20.
+    Reads <code class=pr-computed data-of=r1e data-dom=width></code>. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 80px wide, squashed to 20px tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="float: left"><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a dashed float, <code>height: 20px</code>: the image and the float are 40px wide.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="float: left"><img alt="" style="min-height: 60px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In a float, <code>min-height: 60px</code>: 120 by 60, and the float 120px wide.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

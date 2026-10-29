@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns across pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2.2 Nested Fragmentation Flows</div>
+  <h1>Columns across pages</h1>
+  <p class=pr-lede><q>Breaking a fragmentainer F effectively splits the fragmentainer into two fragmentainers (F1 and
+  F2).</q> <q>the type of break between the two pieces F1 and F2 is the type of break created by the fragmentation
+  context that split F, not the type of break normally created by F’s own fragmentation context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#nested-flows">CSS Fragmentation 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>A new row of columns on each page</h2>
+  <p><q>Note that when a multi-column container breaks across pages, it generates a new row of columns on the next
+  page for the rest of its content, so that a page break within a multi-column container is always both a page break
+  and a column break.</q> Two columns, 100px wide, of twenty lines; a page holds seven.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381 }</style><body class=pr-measure><div class=m>line 1<br>line 2<br>line 3<br>line 4<br>line 5<br>line 6<br>line 7<br>line 8<br>line 9<br>line 10<br>line 11<br>line 12<br>line 13<br>line 14<br>line 15<br>line 16<br>line 17<br>line 18<br>line 19<br>line 20</div>"></iframe>
+    <figcaption>Printed: lines 1 to 7 and 8 to 14 in the columns of the first page; on the second, a new row of
+    columns, balanced, lines 15 to 17 and 18 to 20. <span class=pr-flag>Safari</span> Prints one column across four pages, cutting lines
+    in two at the page edges.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

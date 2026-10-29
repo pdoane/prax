@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table layers: the areas they cover</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f2e394; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.2); }
+  .red { background: #c0392b; }
+  .blue { background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.1 Table layers and transparency</div>
+  <h1>Table layers: the areas they cover</h1>
+  <p class=pr-lede>Each table is yellow, with transparent cells 40 by 20 and a thin border. A column or row's
+  background covers its cells, including cells that start in it and span out of it.</p>
+</header>
+
+<section>
+  <h2>Columns and rows cover the cells that start in them</h2>
+  <p>A column's <q>background covers exactly the full area of all cells that originate in the column, even if they span
+  outside the column, but this difference in area does not affect background image positioning.</q> For rows, <q>As
+  with columns, the background covers exactly the full area of all cells that originate in the row, even if they span
+  outside the row</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layers">CSS 2 §17.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><col class=red><col><col><tr><td colspan=2>1<td>2<tr><td>3<td>4<td>5</table></div>
+    <figcaption>The first column is red. Cell 1 starts in it and spans two columns: all 80px of it is red; 4, below
+    its second half, is not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr class=blue><td rowspan=2>1<td>2<td>3<tr><td>4<td>5</table></div>
+    <figcaption>The first row is blue. Cell 1 starts in it and spans two rows: all 40px of it is blue; 4 and 5 are
+    not.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

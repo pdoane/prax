@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Event attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.8 Event attributes</div>
+  <h1>Event attributes</h1>
+  <p class=pr-lede><q>For every event type that the user agent supports, SVG supports that as an event attribute,
+  following the same requirements as for event handler content attributes [HTML]. The event attributes are available on
+  all SVG elements.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#EventAttributes">SVG 2 §15.8</a></span></p>
+</header>
+
+<section>
+  <h2>onclick, and evt</h2>
+  <p><q>this function receives an Event object as a parameter, and the name of the Event object is evt.</q> Each rect is
+  light blue; its <code>onclick</code> attribute changes it.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><rect x="20" y="5" width="70" height="40" fill="#b9cde6" onclick="this.setAttribute('fill', '#4f81bd')" /><rect x="115" y="5" width="70" height="40" fill="#b9cde6" onclick="evt.target.setAttribute('fill', '#d68a3c')" /><circle cx="245" cy="25" r="20" fill="#b9cde6" onclick="event.target.setAttribute('r', '10')" /></svg>
+    </div>
+    <figcaption>Click each: the first, <code>this</code>, turns blue; the second, by <code>evt.target</code>, orange;
+    the circle, by <code>event.target</code>, shrinks to radius 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On non-graphics elements, bubbling</h2>
+  <p><q>Such event listeners are invoked only for the "bubbling" and "at target" phases</q>. A <code>g</code> whose
+  <code>onclick</code> fills its target purple, around two light rects.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><g onclick="evt.target.setAttribute('fill', '#8e44ad')"><rect x="60" y="5" width="70" height="40" fill="#b9cde6" /><rect x="170" y="5" width="70" height="40" fill="#b9cde6" /></g></svg>
+    </div>
+    <figcaption>Click either rect: the event bubbles to the <code>g</code>, and that rect turns purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>moveto: a new subpath</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.3 The "moveto" commands</div>
+  <h1>moveto: a new subpath</h1>
+  <p class=pr-lede><q>The "moveto" commands (<b>M</b> or <b>m</b>) must establish a new initial point and a new
+  current point. The effect is as if the "pen" were lifted and moved to a new location.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataMovetoCommands">SVG 2 §9.3.3</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>M: the pen lifted</h2>
+  <p><q>Subsequent "moveto" commands (i.e., when the "moveto" is not the first command) represent the start of a
+  new subpath</q>. <q>If a moveto is followed by multiple pairs of coordinates, the subsequent pairs are treated as
+  implicit lineto commands.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 L 60 20 M 100 40 L 140 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 20 L 60 20 M 100 40 L 140 40</code>, stroked dark blue: two lines, and nothing
+    between 60, 20 and 100, 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 L 60 10 L 40 50 M 100 10 L 140 10 L 120 50" fill="#4f81bd" /></svg></div>
+    <figcaption><code>M 20 10 L 60 10 L 40 50 M 100 10 …</code>, filled blue: each subpath closed on its own, two
+    triangles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 80 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 80 10 140 50</code>: a moveto, then two linetos, a caret with its apex at 80,
+    10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>m: relative to the current point</h2>
+  <p><q>When a relative <b>m</b> command is used, the position moved to is (cpx + x, cpy + y).</q> <q>If a
+  relative moveto (<b>m</b>) appears as the first element of the path, then it is treated as a pair of absolute
+  coordinates. In this case, subsequent pairs of coordinates are treated as relative</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="m 20 50 60 -40 60 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>m 20 50 60 -40 60 40</code>: first to 20, 50, then relative linetos: the same caret.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 l 40 0 m 40 20 l 40 0" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 20 l 40 0 m 40 20 l 40 0</code>: from 60, 20, by 40, 20 to 100, 40, so the lines
+    from 20 to 60 on y 20 and from 100 to 140 on y 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 l 30 -40 l 30 40 z m 60 0 l 30 -40 l 30 40 z" fill="#4f81bd" /></svg></div>
+    <figcaption><code>M 20 50 l 30 -40 l 30 40 z m 60 0 …</code>: after <b>z</b> the current point is back at
+    20, 50, so the second triangle from 80, 50 to 140, 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

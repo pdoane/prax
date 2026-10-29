@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definitions: tree order across the flow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { position: relative; }
+  .p { position: absolute; box-sizing: border-box; }
+  .ib { display: inline-block; vertical-align: top; box-sizing: border-box; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.1 Definitions</div>
+  <h1>Definitions: tree order across the flow</h1>
+  <p class=pr-lede>Each stage forms the stacking context, and every box in it that is positioned is at
+  <code>z-index: auto</code>: all are painted in step 8, <q>All positioned descendants with 'z-index: auto' or
+  'z-index: 0', in tree order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+</header>
+
+<section>
+  <h2>Out of the flow, in the tree where it is</h2>
+  <p>Tree order is the <q>Preorder depth-first traversal of the rendering tree</q>, whatever box a positioned box is
+  placed against. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2 §E.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 80px"><div><div class="pr-a r" style="width: 60px">R</div><div class="pr-b pr-light p" style="top: 0; left: 20px; width: 120px; height: 60px">X: absolute</div></div><div class="pr-c r" style="width: 150px; height: 40px; box-sizing: border-box">S</div></div>
+    <figcaption>A static block holds relative R and absolute X, which the stage holds; relative S follows the block.
+    In tree order R, X, S: X covers R, and S covers X.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking pr-row"><span class="pr-b r" style="float: left; width: 60px; height: 40px"></span><span class=r><i class="pr-a ib" style="width: 40px; margin-left: -30px"></i></span></div>
+    <figcaption>A relative orange float, then on its line a relative span whose blue inline block is pulled 30px
+    back over the float: the float is first in tree order, and the span covers it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

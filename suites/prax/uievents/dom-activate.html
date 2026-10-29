@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>DOMActivate</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.1.1.1 DOMActivate</div>
+  <h1>DOMActivate</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a button, link, or other state-changing element is
+  activated.</q> It is deprecated, and a user agent need not support it. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-DOMActivate">UI Events §8.1.1.1</a></span></p>
+</header>
+<section>
+  <h2>After a click</h2>
+  <p><q>Implementations which support the DOMActivate event type SHOULD also dispatch a DOMActivate event as a default
+  action of a click event which is associated with an activation trigger. However, such implementations SHOULD only
+  initiate the associated activation behavior once for any given occurrence of an activation trigger.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-DOMActivate">§8.1.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 10px"><input type=checkbox id=box></div>
+      <ol class=pr-log data-log="click DOMActivate" data-fields="target isTrusted" data-lines=4></ol>
+    </div>
+    <figcaption>Click the checkbox: click, then DOMActivate with <code>isTrusted</code>, and the box is checked; click
+    it again and it is cleared. Each click toggles it once. A browser without DOMActivate logs click alone, which is
+    allowed.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

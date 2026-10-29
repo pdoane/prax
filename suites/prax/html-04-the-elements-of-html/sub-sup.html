@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The sub and sup elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 20px/40px "PR Noto Sans"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.19 The sub and sup elements</div>
+  <h1>The sub and sup elements</h1>
+  <p class=pr-lede><q>The sup element represents a superscript and the sub element represents a subscript.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-sub-and-sup-elements">HTML §4.5.19</a></span></p>
+</header>
+<section>
+  <h2>Raised and lowered, smaller</h2>
+  <p><q>sub { vertical-align: sub; }</q> <q>sup { vertical-align: super; }</q> <q>sub, sup { line-height: normal;
+  font-size: smaller; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> The stage's text is 20px on 40px lines; the dashed red line is the baseline.</p>
+  <figure>
+    <div class="pr-stage t"><span class=pr-baseline></span>E = mc<sup>2</sup></div>
+    <figcaption>The 2 smaller than the text, its baseline raised above the line's.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span class=pr-baseline></span>H<sub>2</sub>O</div>
+    <figcaption>The 2 smaller, its baseline lowered below the line's.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

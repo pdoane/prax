@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-orientation: mixed, upright, sideways</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/28px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 170px; padding: 0 6px; }
+  .pr-stage.h { writing-mode: horizontal-tb; height: auto; width: 150px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5.1 Orienting Text: the text-orientation property</div>
+  <h1>text-orientation: mixed, upright, sideways</h1>
+  <p class=pr-lede><q>This property specifies the orientation of text within a line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-orientation">CSS Writing Modes 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The three values</h2>
+  <p><q>sideways: Causes all text to be typeset sideways, as if in a horizontal layout, but rotated 90°
+  clockwise.</q> <q>UAs may accept sideways-right as a value that computes to sideways</q>. Each
+  <code>vertical-rl</code> stage holds "日本語abc123".</p>
+  <figure class=s>
+    <div class=pr-stage>日本語abc123</div>
+    <figcaption><code>mixed</code>: horizontal-only scripts sideways: "abc123" turned clockwise.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: upright">日本語abc123</div>
+    <figcaption><code>upright</code>: every letter and digit upright, one below the next.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: sideways">日本語abc123</div>
+    <figcaption><code>sideways</code>: all turned clockwise, the Japanese too.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: sideways-right">日本語abc123</div>
+    <figcaption><code>sideways-right</code>: where accepted, as <code>sideways</code>; else
+    <code>mixed</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No effect in a horizontal typographic mode</h2>
+  <p><q>the property has no effect in horizontal typographic modes.</q></p>
+  <figure>
+    <div class="pr-stage h" style="text-orientation: upright">日本語abc123</div>
+    <figcaption><code>horizontal-tb</code> and <code>upright</code>: one horizontal line, as without it.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-rl; text-orientation: upright; height: 110px">日本語abc123</div>
+    <figcaption><code>sideways-rl</code> and <code>upright</code>: all turned clockwise, as without it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

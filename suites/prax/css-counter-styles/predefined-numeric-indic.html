@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Numeric styles: Arabic, Persian and Indic digits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.1 Numeric, Arabic, Persian and Indic</div>
+  <h1>Numeric styles: Arabic, Persian and Indic digits</h1>
+  <p class=pr-lede><q>The following stylesheet uses the @counter-style rule to redefine all of the counter styles defined in CSS 2 and CSS 2.1. This stylesheet is normative-- UAs must include it in their UA stylesheet</q>. The markers are inside; each item's text is its value in decimal. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-numeric">CSS Counter Styles 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Digits of their own, 0 to 9</h2>
+  <p>Each is <code>numeric</code> with ten digits; 100 shows the digit 0.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: arabic-indic; font-family: "PR Noto Sans Arabic", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>arabic-indic</code>: <bdi dir=ltr>"١."</bdi>, <bdi dir=ltr>"٢."</bdi>, <bdi dir=ltr>"٩٩."</bdi>, <bdi dir=ltr>"١٠٠."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: persian; font-family: "PR Noto Sans Arabic", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>persian</code>: <bdi dir=ltr>"۱."</bdi>, <bdi dir=ltr>"۲."</bdi>, <bdi dir=ltr>"۹۹."</bdi>, <bdi dir=ltr>"۱۰۰."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: bengali; font-family: "PR Noto Sans Bengali", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>bengali</code>: <bdi dir=ltr>"১."</bdi>, <bdi dir=ltr>"২."</bdi>, <bdi dir=ltr>"৯৯."</bdi>, <bdi dir=ltr>"১০০."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: devanagari; font-family: "PR Noto Sans Devanagari", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>devanagari</code>: <bdi dir=ltr>"१."</bdi>, <bdi dir=ltr>"२."</bdi>, <bdi dir=ltr>"९९."</bdi>, <bdi dir=ltr>"१००."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: gujarati; font-family: "PR Noto Sans Gujarati", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>gujarati</code>: <bdi dir=ltr>"૧."</bdi>, <bdi dir=ltr>"૨."</bdi>, <bdi dir=ltr>"૯૯."</bdi>, <bdi dir=ltr>"૧૦૦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: gurmukhi; font-family: "PR Noto Sans Gurmukhi", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>gurmukhi</code>: <bdi dir=ltr>"੧."</bdi>, <bdi dir=ltr>"੨."</bdi>, <bdi dir=ltr>"੯੯."</bdi>, <bdi dir=ltr>"੧੦੦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: kannada; font-family: "PR Noto Sans Kannada", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>kannada</code>: <bdi dir=ltr>"೧."</bdi>, <bdi dir=ltr>"೨."</bdi>, <bdi dir=ltr>"೯೯."</bdi>, <bdi dir=ltr>"೧೦೦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: malayalam; font-family: "PR Noto Sans Malayalam", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>malayalam</code>: <bdi dir=ltr>"൧."</bdi>, <bdi dir=ltr>"൨."</bdi>, <bdi dir=ltr>"൯൯."</bdi>, <bdi dir=ltr>"൧൦൦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: oriya; font-family: "PR Noto Sans Oriya", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>oriya</code>: <bdi dir=ltr>"୧."</bdi>, <bdi dir=ltr>"୨."</bdi>, <bdi dir=ltr>"୯୯."</bdi>, <bdi dir=ltr>"୧୦୦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: tamil; font-family: "PR Noto Sans Tamil", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>tamil</code>: <bdi dir=ltr>"௧."</bdi>, <bdi dir=ltr>"௨."</bdi>, <bdi dir=ltr>"௯௯."</bdi>, <bdi dir=ltr>"௧௦௦."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: telugu; font-family: "PR Noto Sans Telugu", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>telugu</code>: <bdi dir=ltr>"౧."</bdi>, <bdi dir=ltr>"౨."</bdi>, <bdi dir=ltr>"౯౯."</bdi>, <bdi dir=ltr>"౧౦౦."</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The object element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 12px; line-height: 20px; }
+  .pic object.doc { width: 140px; height: 40px; }
+  .fallback { display: inline-block; padding: 0 6px; background: #f6d7b4; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.7 The object element</div>
+  <h1>The object element</h1>
+  <p class=pr-lede><q>The object element can represent an external resource, which, depending on the type of the
+  resource, will either be treated as an image or as a child navigable.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-object-element">HTML §4.8.7</a></span>
+  Each object's fallback content is an orange "fallback".</p>
+</header>
+
+<section>
+  <h2>An image, or a document</h2>
+  <p>A type that starts with <q>image/</q>: <q>The object element represents the specified image.</q> Otherwise, as
+  for HTML: <q>The object element represents its content navigable.</q> <q>The element's contents are not part of
+  what the object element represents.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object data="support/blue-80x40.png"><span class=fallback>fallback</span></object></div>
+    <figcaption>A PNG: the image, blue, its natural 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object class=doc data="support/doc.html"><span class=fallback>fallback</span></object></div>
+    <figcaption>doc.html: green, in the object's 140 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its children, when the resource cannot be shown</h2>
+  <p><q>Fallback: The object element represents the element's children. This is the element's fallback content.</q>
+  It follows <q>If the load failed (e.g. there was an HTTP 404 error, there was a DNS error)</q>, an image that
+  <q>cannot be rendered</q>, a type <q>not supported</q>, and an object with no data.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object data="support/missing.png"><span class=fallback>fallback</span></object></div>
+    <figcaption>A 404: "fallback", in orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object class=doc data="support/landed.html" type="image/png"><span class=fallback>fallback</span></object></div>
+    <figcaption>HTML served as text/html, <code>type="image/png"</code>: the Content-Type decides. Green
+    landed.html in 140 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object><span class=fallback>fallback</span></object></div>
+    <figcaption>No data: "fallback".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

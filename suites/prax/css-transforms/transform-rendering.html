@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The transformation matrix, and what it does not move</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; width: 60px; height: 40px; }
+  .par { position: absolute; left: 40px; top: 0; width: 80px; height: 80px; transform: rotate(90deg); }
+  .c { width: 40px; height: 20px; }
+  .flow { height: 20px; margin: 0 0 0 20px; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>The transformation matrix, and what it does not move</h1>
+  <p class=pr-lede><q>Specifying a value other than none for the transform property establishes a new local coordinate
+  system at the element that it is applied to.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  The dashed outline is where a box was laid out.</p>
+</header>
+
+<section>
+  <h2>About the origin</h2>
+  <p><q>Translate by the computed X and Y of transform-origin; Multiply by each of the transform functions in transform
+  property from left to right; Translate by the negated computed X and Y values of transform-origin.</q> Each 60 by 40
+  box has <code>rotate(90deg)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g" style="left: 50px; top: 20px"></div><div class="pr-a pr-fit p" style="left: 50px; top: 20px; transform: rotate(90deg)">A</div></div>
+    <figcaption>About its center, (80, 40): 60 to 100 across, 10 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g" style="left: 60px; top: 10px"></div><div class="pr-a pr-fit p" style="left: 60px; top: 10px; transform-origin: 0 0; transform: rotate(90deg)">A</div></div>
+    <figcaption>Origin <code>0 0</code>, (60, 10): 20 to 60 across, 10 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g" style="left: 20px; top: 20px"></div><div class="pr-a pr-fit p" style="left: 20px; top: 20px; transform-origin: 100% 100%; transform: rotate(90deg)">A</div></div>
+    <figcaption>Origin <code>100% 100%</code>, (80, 60): 80 to 120 across, 0 to 60 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Cumulative, and no effect on layout</h2>
+  <p><q>elements establish their local coordinate system within the coordinate system of their parent.</q> An 80px
+  square with <code>rotate(90deg)</code> holds an orange 40 by 20 box at its top left corner. And <q>the transform
+  property does not affect the flow of the content surrounding the transformed element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-parent par"><div class="pr-b pr-fit c">B</div></div></div>
+    <figcaption>The box turns with the square: 100 to 120 across, 0 to 40 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-parent par"><div class="pr-b pr-fit c" style="transform: translateX(40px)">B</div></div></div>
+    <figcaption>Its <code>translateX(40px)</code> is in the turned coordinates: 40px down, not right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-c pr-fit flow" style="margin-top: 10px">1</div><div class="pr-ghost flow" style="position: absolute; top: 30px"></div><div class="pr-a pr-fit flow" style="transform: translate(70px, 10px)">2</div><div class="pr-c pr-fit flow">3</div></div>
+    <figcaption>Block 2 moves 70px right, 10px down; block 3 stays at 50 to 70.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

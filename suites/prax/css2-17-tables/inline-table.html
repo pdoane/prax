@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table wrapper box: inline tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border: 3px solid #2c5a8f; }
+  .t .pr-table-cell { width: 50px; }
+  .cap { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.4 Tables in the visual formatting model</div>
+  <h1>The table wrapper box: inline tables</h1>
+  <p class=pr-lede>Each table has a 3px blue border, cells with 12px text, and an orange caption.</p>
+</header>
+
+<section>
+  <h2>Block-level and inline-level wrappers</h2>
+  <p><q>The table wrapper box is block-level for 'display: table', and inline-level; for 'display: inline-table'.</q>
+  <q>The table box (not the table wrapper box) is used when doing baseline vertical alignment for an
+  'inline-table'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class="pr-inline-table t"><span class="pr-table-caption cap">caption</span><span class=pr-table-row><span class=pr-table-cell>cell</span><span class=pr-table-cell>cell</span></span><span class=pr-table-row><span class=pr-table-cell>two</span><span class=pr-table-cell>two</span></span></span> after</div>
+    <figcaption>An <code>inline-table</code> with a caption: "before" and "after" sit on the baseline of the first
+    row's text, not at the bottom of the wrapper, and the caption is above the line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <div class="pr-table t"><span class="pr-table-caption cap">caption</span><span class=pr-table-row><span class=pr-table-cell>cell</span><span class=pr-table-cell>cell</span></span></div> after</div>
+    <figcaption>The same with <code>display: table</code>: the wrapper is a block, between the line "before" and the
+    line "after".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two formatting contexts</h2>
+  <p><q>The table wrapper box establishes a block formatting context, and the table box establishes a table formatting
+  context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#model">CSS 2 §17.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent><div class="pr-table t"><div class="pr-table-caption cap" style="margin-top: 20px">caption</div><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div></div></div></div></div>
+    <figcaption>The caption's 20px top margin stays inside the wrapper, which is a formatting context root: the
+    dashed parent starts at the stage's top, and the caption 20px below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

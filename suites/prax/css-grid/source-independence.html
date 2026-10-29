@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Source-order independence</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .game { display: grid; color: var(--pr-ink); }
+  .game > div { outline: 1px solid rgba(31, 36, 48, 0.4); outline-offset: -1px; }
+  .portrait { grid-template-areas: "title stats" "score stats" "board board" "ctrls ctrls";
+              grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr auto; height: 120px; }
+  .landscape { grid-template-areas: "title board" "stats board" "score ctrls";
+               grid-template-columns: auto 1fr; grid-template-rows: auto 1fr auto; height: 100px; }
+  .title { grid-area: title; background: #b9cde6; }
+  .score { grid-area: score; background: #f6d7b4; }
+  .stats { grid-area: stats; background: #c8e0c8; }
+  .board { grid-area: board; background: #d9c3e3; }
+  .controls { grid-area: ctrls; background: #f4e3a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 1.1.2 Source-Order Independence</div>
+  <h1>Source-order independence</h1>
+  <p class=pr-lede><q>By combining grid layout with media queries, the author is able to use the same semantic markup,
+  but rearrange the layout of elements independent of their source order</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#source-independence">CSS Grid Layout 2 §1.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>One source, two templates</h2>
+  <p>Each stage holds the same five elements in the same order: Title, Score, Stats, Board, Ctrls. Each is placed by
+  <code>grid-area</code> into the area of its name; only the container's <code>grid-template-areas</code> and track
+  sizes differ, and <q>The reordering capabilities of grid layout intentionally affect only the visual
+  rendering, leaving speech order and navigation based on the source order.</q> <q>The rows, columns and areas of the grid are defined visually using the grid-template-areas
+  property. Each string is a row, and each word an area.</q></p>
+  <figure>
+    <pre class=pr-source style="margin-bottom: 6px">"title stats"
+"score stats"
+"board board"
+"ctrls ctrls"</pre>
+    <div class="pr-stage pr-measure game portrait"><div class=title>Title</div><div class=score>Score</div><div class=stats>Stats</div><div class=board>Board</div><div class=controls>Ctrls</div></div>
+    <figcaption>Portrait: Title over Score at the left, 50px wide, Stats beside both, 40px tall; Board the full width
+    below, 60px tall, and Ctrls across the bottom.</figcaption>
+  </figure>
+  <figure>
+    <pre class=pr-source style="margin-bottom: 6px">"title board"
+"stats board"
+"score ctrls"</pre>
+    <div class="pr-stage pr-measure game landscape"><div class=title>Title</div><div class=score>Score</div><div class=stats>Stats</div><div class=board>Board</div><div class=controls>Ctrls</div></div>
+    <figcaption>Landscape: Title, Stats and Score down the left, 50px wide; Board to their right across the first two
+    rows, 80px tall, and Ctrls under it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Path data: commands, absolute and relative</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.1 General information about path data</div>
+  <h1>Path data: commands, absolute and relative</h1>
+  <p class=pr-lede><q>The path data contains the moveto, lineto, curveto (both cubic and quadratic Béziers), arc and
+  closepath instructions.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataGeneralInformation">SVG 2 §9.3.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide.</p>
+</header>
+
+<section>
+  <h2>A command, then its parameters</h2>
+  <p><q>The <b>M</b> indicates a moveto, the <b>L</b>s indicate linetos, and the <b>z</b> indicates a
+  closepath</q>. <q>A command letter may be eliminated if an identical command letter would otherwise precede
+  it</q>: each further pair is another lineto.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 L 120 50 L 80 10 z" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 40 50 L 120 50 L 80 10 z</code>: a triangle, its base on y 50 and its apex at 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 10 L 80 50 L 110 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 50 10 L 80 50 L 110 10 L 140 50</code>: a zigzag, peaks at x 50 and 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 10 80 50 110 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 50 10 80 50 110 10 140 50</code>, one <b>L</b>: the same zigzag.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Relative coordinates</h2>
+  <p><q>uppercase means absolute coordinates, lowercase means relative coordinates</q>. <q>For the relative
+  versions of the commands, all coordinate values are relative to the current point at the start of the
+  command.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 l 60 -40 l 60 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 l 60 -40 l 60 40</code>: from 20, 50 up to 80, 10, then down to 140, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 l 60 -40 60 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 l 60 -40 60 40</code>: the second pair is a lineto of its own, from 80, 10, so the
+    same caret.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 c 0 -40 120 -40 120 0" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 20 10 M 140 10 L 140 50" /><circle cx="20" cy="10" r="2.5" fill="#fff" /><circle cx="140" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 c 0 -40 120 -40 120 0</code>: both control points, ringed grey, and the end from
+    20, 50: 20, 10 and 140, 10, so an arch to 140, 50, its top on y 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

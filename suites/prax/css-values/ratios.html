@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ratios: width to height</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 110px; }
+  .box { background: #4f81bd; color: white; font: 600 12px/20px sans-serif; padding: 0 6px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.7 Ratios</div>
+  <h1>Ratios: width to height</h1>
+  <p class=pr-lede>A ratio <q>most often represents an aspect ratio, relating a width (first) to a height (second).</q>
+  <q>The second &lt;number&gt; is optional, defaulting to 1.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#ratios">CSS Values and Units 4 §5.7</a></span>
+  Each blue box has a width and <code>aspect-ratio</code>, and its height from them.</p>
+</header>
+
+<section>
+  <h2>Width first, height second</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 100px; aspect-ratio: 2 / 1">2 / 1</div></div>
+    <figcaption>100px wide at <code>2 / 1</code>: 50px tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 100px; aspect-ratio: 2">2</div></div>
+    <figcaption><code>2</code>, the same as <code>2 / 1</code>: 50px tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 50px; aspect-ratio: 1 / 2">1 / 2</div></div>
+    <figcaption>50px wide at <code>1 / 2</code>: 100px tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 100px; aspect-ratio: 0.5 / 0.25">.5 / .25</div></div>
+    <figcaption><code>0.5 / 0.25</code> is 2: 50px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Degenerate ratios</h2>
+  <p><q>If either number in the &lt;ratio&gt; is 0 or infinite, it represents a degenerate ratio (and, generally, won't
+  do anything).</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 100px; aspect-ratio: 0 / 1">0 / 1</div></div>
+    <figcaption><code>0 / 1</code>: no ratio, so the box is its one line tall, 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="width: 100px; aspect-ratio: 1 / 0">1 / 0</div></div>
+    <figcaption><code>1 / 0</code>: the same, 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

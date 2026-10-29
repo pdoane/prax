@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>abs() and sign()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { height: 60px; background: linear-gradient(to right, #4f81bd, #d68a3c) no-repeat; background-size: 300px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.6 Sign-Related Functions</div>
+  <h1>abs() and sign()</h1>
+  <p class=pr-lede><q>The abs(A) function contains one calculation A, and returns the absolute value of A</q>. <q>The
+  sign(A) function contains one calculation A, and returns -1 if A's numeric value is negative, +1 if A's numeric
+  value is positive</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#sign-funcs">CSS Values and Units 4 §10.6</a></span></p>
+</header>
+
+<section>
+  <h2>On lengths</h2>
+  <p>Each bar's <code>width</code> is under it.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: abs(-120px)">A</div></div>
+    <figcaption><code>abs(-120px)</code>: 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + 50px * sign(-5px))">A</div></div>
+    <figcaption><code>100px + 50px * sign(-5px)</code>: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 10px"><div class="pr-a pr-fit" style="width: calc(100px + 50px * sign(2em - 30px))">A</div></div>
+    <figcaption><code>sign(2em - 30px)</code> in 10px text, of −10px: −1, so 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On a resolved percentage</h2>
+  <p>The functions <q>operate on the fully simplified/resolved form of their arguments</q>. <q>in 'background-position'
+  positive percentages resolve to a negative length</q> <q>if the background image is larger than the background
+  area.</q> The image is 300px wide in a 200px area, so 10% is −10px.</p>
+  <figure>
+    <div class="pr-stage img" style="background-position: calc(40px * sign(10%)) 10px"></div>
+    <figcaption><code>calc(40px * sign(10%))</code>: −40px, the image shifted left, its blue end cut off.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: -40px 10px"></div>
+    <figcaption><code>-40px</code>, for comparison.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default features</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 26px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 7.1 Default features</div>
+  <h1>Default features</h1>
+  <p class=pr-lede><q>Required ligatures, common ligatures and contextual forms must be enabled by default</q>, with
+  <code>locl</code>, <code>ccmp</code>, <code>mark</code> and <code>mkmk</code>. <q>For upright text within vertical text
+  runs, vertical alternates (OpenType feature: vert) must be enabled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#default-features">CSS Fonts 4
+  §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>On with no properties set</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'">fit The</div>
+    <figcaption><code>liga</code>: fi and Th joined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Noto Sans'">x&#x301;&#x323; q&#x30C;</div>
+    <figcaption><code>mark</code> and <code>mkmk</code>: the marks centered on their bases, the dot below the
+    x.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" dir=rtl lang=ar style="font-family: serif">سلام</div>
+    <figcaption>Arabic's required features: the letters joined in their initial, medial and final forms.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical alternates in vertical text</h2>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-family: 'PR Noto Sans JP'; writing-mode: vertical-rl; height: 140px">「あ、い。」</div>
+    <figcaption><code>vert</code>: the brackets turned and the comma and period in the top right of their
+    cells.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-family: 'PR Noto Sans JP'">「あ、い。」</div>
+    <figcaption>The same horizontally: the comma and period in the bottom left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

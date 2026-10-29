@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Headers across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 100px; }
+  table { border-spacing: 0; width: 100%; }
+  td { padding: 0; background: #b9cde6; }
+  thead td, tfoot td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 6.2 Repeating headers across pages, columns</div>
+  <h1>Headers across columns</h1>
+  <p class=pr-lede>Header rows repeat on pages; elsewhere it is the UA's choice. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#repeated-headers">CSS Table 3 §6.2</a></span> The header is green, body rows blue; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>In columns, if the UA chooses</h2>
+  <p><q>User agents may decide to extend this behavior to more fragmentation contexts, for instance repeat headers/rows
+  across columns in addition to pages.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><table><thead><tr><td>head</td></tr></thead><tr><td>1</td></tr><tr><td>2</td></tr><tr><td>3</td></tr><tr><td>4</td></tr><tr><td>5</td></tr><tr><td>6</td></tr><tr><td>7</td></tr></table></div>
+    <figcaption>Two columns of 100px: a UA that repeats it puts "head" over each column; one that does not, only over
+    the first. Chrome and Safari do not repeat it; Firefox does not fragment the table at all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

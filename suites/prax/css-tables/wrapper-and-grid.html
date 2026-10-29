@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Terms: wrapper, grid box, consecutive boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  caption { background: #c3d08b; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .t { font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.1.1 Terminology</div>
+  <h1>Terms: wrapper, grid box, consecutive boxes</h1>
+  <p class=pr-lede>A <dfn>table wrapper box</dfn> is <q>A block container box generated around table grid boxes to
+  account for any space occupied by each table-caption it owns.</q> A <dfn>table grid box</dfn> is <q>A block-level box
+  containing the table-internal boxes, excluding its captions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#terminology">CSS Table 3 §2.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The grid box excludes the captions</h2>
+  <p>The table's background is the grid box's, not the wrapper's (<a href="https://drafts.csswg.org/css-tables-3/#drawing-table-backgrounds-and-borders">§5.3.1</a>).
+  Text is <code>.pr-measure</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="padding: 10px"><table style="background: #c0392b; border-spacing: 4px"><caption>caption</caption><tr><td>aaa</td><td>bb</td></tr></table></div>
+    <figcaption>A table with a red background and a green caption on top: red only round the row, below the caption.
+    <span class=pr-flag>Firefox</span> keeps the row narrower than the caption, as on <a href="table-width-captions.html">the table
+    width page</a>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Consecutive boxes</h2>
+  <p><q>Two sibling boxes are consecutive if they have no intervening siblings other than, optionally, an anonymous
+  inline containing only white spaces.</q> Each stage holds two blue cell elements in a plain block.</p>
+  <figure>
+    <div class="pr-stage t"><div class="pr-table-cell blue">A</div>
+      <div class="pr-table-cell blue">B</div></div>
+    <figcaption>White space between A and B: consecutive, so one anonymous row and table, A and B side by
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><div class="pr-table-cell blue">A</div><span>x</span><div class="pr-table-cell blue">B</div></div>
+    <figcaption>A <code>span</code> between them: not consecutive, so two tables, A above "x" and B below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

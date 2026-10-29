@@ -1,0 +1,28 @@
+00-supports-1.html
+# SVG2/interact.html#Introduction 15.1 Introduction: no page; it lists the chapter's features, which its sections show
+SVG2/interact.html#SVGEvents 15.2 Supported events
+    supported-events.html
+SVG2/interact.html#RelationshipWithUIEVENTS 15.2.1 Relationship with UI Events
+    ui-events.html
+# SVG2/interact.html#UIEvents 15.3 User interface events: no page; it describes what authors commonly do with them
+SVG2/interact.html#PointerEvents 15.4 Pointer events
+    pointer-events-target.html
+# SVG2/interact.html#pointer-processing 15.5 Hit-testing and processing order for user interface events: no page; its subsections have them
+# SVG2/interact.html#hit-testing 15.5.1 Hit-testing: no page; it defers to 'pointer-events', whose pages show the regions, and leaves the outermost svg's behavior in a document to the implementation
+SVG2/interact.html#event-processing 15.5.2 Event processing
+    event-processing.html
+SVG2/interact.html#PointerEventsProp 15.6 The ‘pointer-events’ property
+    pointer-events.html
+    pointer-events-bounding-box.html
+    pointer-events-text-image.html
+SVG2/interact.html#Focus 15.7 Focus
+    focus.html
+    focus-not-rendered.html
+SVG2/interact.html#EventAttributes 15.8 Event attributes
+    event-attributes.html
+SVG2/interact.html#AnimationEvents 15.8.1 Animation event attributes
+    animation-events.html
+SVG2/interact.html#ScriptElement 15.9 The ‘script’ element
+    script-element.html
+# SVG2/interact.html#DOMInterfaces 15.10 DOM interfaces: no page; it is object model
+# SVG2/interact.html#InterfaceSVGScriptElement 15.10.1 Interface SVGScriptElement: no page; it is object model

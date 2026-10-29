@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-image: the mask layer image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.small { width: 120px; }
+  .small + figcaption { max-width: 120px; }
+  .subj { width: 40px; height: 10px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; mask-repeat: no-repeat; }
+  .pr-stage { position: relative; z-index: 0; }
+  .under { position: relative; z-index: -1; width: 40px; height: 40px; margin: -20px 0 0 30px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <mask id="local" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.1 Mask Image Source: the mask-image property</div>
+  <h1>mask-image: the mask layer image</h1>
+  <p class=pr-lede><q>This property sets the mask layer image of an element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-image">CSS Masking 1 §7.1</a></span>
+  Each box is 80 by 50 at 10, 10: an orange 10px border, light blue padding and blue content, masked with
+  <code>no-repeat</code>.</p>
+</header>
+
+<section>
+  <h2>An image, or a mask element; and a stacking context</h2>
+  <p><q>A computed value of other than none results in the creation of a stacking context</q> the way <code>opacity</code>
+  does.</p>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: linear-gradient(to right, black, transparent)"></div></div>
+    <figcaption>A gradient, opaque to transparent: the box fades from whole at 10 to gone at 90.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: url(support/disc.svg)"></div></div>
+    <figcaption>An SVG image, a 20px black disc: only a disc of the border's corner, at 10, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: url(#local)"></div></div>
+    <figcaption><code>url(#local)</code>, a <code>mask</code> of white over the left half: the box from 10 to
+    50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: linear-gradient(black, black)"><div class=under></div></div></div>
+    <figcaption>An opaque mask: the green child, <code>z-index: -1</code>, stacks in the box, over its
+    background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layers that draw nothing</h2>
+  <p><q>A value of none counts as a transparent black image layer.</q> A reference that fails <q>still counts as an
+  image layer of transparent black.</q></p>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: url(no-such-image.svg)"></div></div>
+    <figcaption>An image that fails to load: the box is gone.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-image: url(#no-such-mask)"></div></div>
+    <figcaption>A reference to no element: gone too.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class=subj style="mask-image: none, url(support/disc.svg)"></div></div>
+    <figcaption><code>none</code> over the disc: transparent added over it changes nothing, so the disc.
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

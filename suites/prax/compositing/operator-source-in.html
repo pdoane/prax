@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The source-in operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.6 Source In</div>
+  <h1>The source-in operator</h1>
+  <p class=pr-lede><q>With the source-in compositing operator, the parts of the source that overlap with the desitnation are placed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_srcin">Compositing and Blending 2 §9.1.6</a></span>
+  On white, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code> at (10, 10), then the source, orange
+  <code>rgb(100% 60% 0% / 0.6)</code> at (60, 30), each 90 by 60, the source with <code>"source-in"</code>.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = αb; Fb = 0
+co = αs x Cs x αb
+αo = αs x αb</pre>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op="source-in"></canvas></div>
+    <figcaption>Source only: nothing. Both, (60, 30) to (100, 70): <code>rgb(100% 60% 0% / 0.48)</code>. Destination only: nothing.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: transparent">source</div><div class=pd-swatch style="background: rgb(100% 60% 0% / 0.48)">both</div><div class=pd-swatch style="background: transparent">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+
+  <p>In CSS, <code>mask-composite: intersect</code>: <q>The parts of source that overlap the destination, replace the destination.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-composite">CSS Masking 1 §7.8</a></span>
+  Green, with two mask layers where the rectangles are: the first, the source, alpha 0.6, the second 0.8.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pd-stage pd-white"><div class="pd-mask" style="mask-composite: intersect, add"></div></div>
+    <figcaption>The mask's alpha over the green: source only 0; both 0.48; destination only 0. <span class=pr-flag>Safari</span> Both layers, as with add.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Patterns, gradients and clip paths: their own coordinate systems</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .g { fill: none; stroke: #6b7381; stroke-dasharray: 2 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 6.4 User coordinate space</div>
+  <h1>Patterns, gradients and clip paths: their own coordinate systems</h1>
+  <p class=pr-lede><q>For all other transformable elements the transform attribute and transform property define a
+  transformation in the current user coordinate system of the parent.</q> A pattern, a gradient and a clip path are
+  transformed in their own instead. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#svg-user-coordinate-space">CSS Transforms 1 §6.4</a></span>
+  Each stage is an <code>svg</code>, 160 by 80.</p>
+</header>
+
+<section>
+  <h2>A pattern, a gradient and a clip path</h2>
+  <p><q>The reference box of the referencing rect element is used instead to solve the relative values of the
+  transform-origin property.</q> A pattern holds a blue rect, on the dashed
+  outline, and fills the svg. Transforms are <q>in the gradient coordinate system</q> and <q>in the clipping path
+  coordinate space</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><defs><pattern id=p1 patternUnits=userSpaceOnUse width=400 height=400><rect x=60 y=30 width=40 height=20 fill="#4f81bd" /></pattern></defs><rect width=160 height=80 fill="url(#p1)" /><rect class=g x=60.5 y=30.5 width=40 height=20 /></svg></div>
+    <figcaption>No transform: on the outline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><defs><pattern id=p2 patternUnits=userSpaceOnUse width=400 height=400 style="transform: rotate(90deg); transform-origin: 50% 50%"><rect x=60 y=30 width=40 height=20 fill="#4f81bd" /></pattern></defs><rect width=160 height=80 fill="url(#p2)" /><rect class=g x=60.5 y=30.5 width=40 height=20 /></svg></div>
+    <figcaption><code>rotate(90deg)</code> about <code>50% 50%</code> of the filled rect, (80, 40): 70 to 90 across,
+    20 to 60 down. <span class=pr-flag>Safari</span> does not turn it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><defs><linearGradient id=h1 style="transform: rotate(90deg)"><stop offset=0.5 stop-color="#4f81bd" /><stop offset=0.5 stop-color="#d68a3c" /></linearGradient></defs><rect x=20 y=10 width=120 height=60 fill="url(#h1)" /></svg></div>
+    <figcaption>A gradient, blue then orange across its bounding box, with <code>rotate(90deg)</code>: top to bottom,
+    blue to 40, orange below. <span class=pr-flag>Safari</span> does not turn it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><defs><clipPath id=c1 style="transform: translateX(80px)"><rect width=40 height=80 /></clipPath></defs><rect class=g x=0.5 y=0.5 width=40 height=79 /><rect width=160 height=80 fill="#4f81bd" clip-path="url(#c1)" /></svg></div>
+    <figcaption>A clip path of a 40px band at the left, <code>translateX(80px)</code>: blue shows at 80 to
+    120.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

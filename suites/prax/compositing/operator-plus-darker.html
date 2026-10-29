@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The plus-darker operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.14 Plus-darker</div>
+  <h1>The plus-darker operator</h1>
+  <p class=pr-lede><q>With the plus-darker compositing operator, the following steps are performed:</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_plus_darker">Compositing and Blending 2 §9.1.14</a></span>
+  On a white canvas, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code>, is drawn first, 90 by 60 at (10, 10);
+  the source, orange <code>rgb(100% 60% 0% / 0.6)</code>, is drawn over it at (60, 30) with
+  <code>globalCompositeOperation = "plus-darker"</code>.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = 1; Fb = 1
+co = max(0, 1 - αs x Cs + 1 - αb x Cb);
+αo = max(0, 1 - αs + 1 - αb);</pre>
+  <p>As written, the formula gives no color to expect: where neither rectangle is, αo is max(0, 2), and in the overlap
+  co's red is 1.4 against an αo of 0.6, more color than alpha. What plus-darker should draw is open in <a href="https://github.com/w3c/fxtf-drafts/issues/447">fxtf-drafts#447</a>,
+  which the working group resolved to define from research into what implementations draw.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op=plus-darker></canvas></div>
+    <figcaption>The two rectangles with <code>"plus-darker"</code>. Safari darkens the overlap almost to black.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> do not take the value and draw source over.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

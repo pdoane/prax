@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins: negative values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3 Margin properties</div>
+  <h1>Margins: negative values</h1>
+  <p class=pr-lede><code>margin-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>margin</code> take <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. The orange tint is each box's margin area.</p>
+</header>
+
+<section>
+  <h2>Negative values</h2>
+  <p><q>Negative values for margin properties are allowed, but there may be implementation-specific limits.</q> A
+  negative margin pulls the box's edge outward past where the containing block or a sibling would put it.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#margin-properties">CSS 2 §8.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin: 30px"><div class=pr-a style="margin-left: -20px">box</div></div></div>
+    <figcaption><code>margin-left: -20px</code>: the box starts 20px left of the dashed containing block.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin: 30px"><div class=pr-a style="margin-right: -20px">box</div></div></div>
+    <figcaption><code>margin-right: -20px</code>: an auto width grows 20px past the containing block.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><div class=pr-a>first</div><div class=pr-b style="margin-top: -10px; margin-left: 20px">second</div></div>
+    <figcaption><code>margin-top: -10px</code> on the second: it overlaps the first by 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><div class=pr-a style="margin-bottom: -10px">first</div><div class=pr-b style="margin-left: 20px">second</div></div>
+    <figcaption><code>margin-bottom: -10px</code> on the first does the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

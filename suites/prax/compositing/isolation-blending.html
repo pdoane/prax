@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blending inside an isolated group</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .scene { position: relative; height: 80px; background: linear-gradient(#b9cde6 50%, #6aa36a 50%); }
+  .plane { position: absolute; inset: 0; }
+  .plane > div { position: absolute; top: 20px; width: 40px; height: 40px; mix-blend-mode: multiply; }
+  .a { left: 60px; background: #d68a3c; }
+  .b { left: 80px; background: #4f81bd; }
+  .key { display: flex; height: 20px; }
+  .key > div { flex: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10.3 Effect of group isolation on blending</div>
+  <h1>Blending inside an isolated group</h1>
+  <p class=pr-lede><q>In the isolated group, the elements within the group are composited onto an empty initial
+  backdrop, this stops the elements within the group multiplying with the backdrop. In the normal group, the elements
+  within the group are composited onto the initial backdrop containing the land and sky.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#isolationblending">Compositing and Blending 2 §10.3</a></span></p>
+</header>
+
+<section>
+  <h2>The section's example</h2>
+  <p>Each stage is 200 by 80: sky, <code>#b9cde6</code>, above land, <code>#6aa36a</code>, split at 40. In a group
+  are two 40px squares, orange, <code>#d68a3c</code>, from x 60, and blue, <code>#4f81bd</code>, from x 80 over it,
+  both <code>mix-blend-mode: multiply</code>. Below each scene, the colors it should show. <q>In both instances, the
+  result of the group composite is composited onto the land and sky using the normal mix-blend-mode</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=scene><div class=plane><div class=a></div><div class=b></div></div></div><div class=key><div style="background: #9b6f36"></div><div style="background: #595819"></div><div style="background: #303828"></div><div style="background: #1c2d13"></div><div style="background: #3968aa"></div><div style="background: #21524f"></div></div></div>
+    <figcaption>A normal group: both squares multiply with the sky and land. Orange alone is <code>#9b6f36</code> on
+    sky and <code>#595819</code> on land, the overlap <code>#303828</code> and <code>#1c2d13</code>, blue alone
+    <code>#3968aa</code> and <code>#21524f</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=scene><div class=plane style="isolation: isolate"><div class=a></div><div class=b></div></div></div><div class=key><div style="background: #d68a3c"></div><div style="background: #42462c"></div><div style="background: #4f81bd"></div></div></div>
+    <figcaption><code>isolation: isolate</code>: the squares multiply only with each other. Orange and blue are
+    themselves on sky and land alike, and only their overlap is dark, <code>#42462c</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

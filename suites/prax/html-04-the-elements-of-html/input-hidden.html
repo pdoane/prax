@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hidden inputs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  label { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.1 Hidden state (type=hidden)</div>
+  <h1>Hidden inputs</h1>
+  <p class=pr-lede><q>The input element represents a value that is not intended to be examined or manipulated by the
+  user.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#hidden-state-(type=hidden)">HTML §4.10.5.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Nothing to see, and still submitted</h2>
+  <p>A hidden input is not interactive content and not labelable, and it generates no box: the rendering section's style
+  sheet gives <code>input[type=hidden i]</code> <code>display: none !important</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=hidden-result>
+        <div>[<input type=hidden name=token value=s3cret style="display: inline-block">]</div>
+        <div><input type=submit value=Submit></div>
+      </form>
+      <iframe class=pr-result name=hidden-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>"[]", with nothing between the brackets, though the input's own style asks for an inline-block. Click
+    Submit: the frame turns green, <code>token=s3cret</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><label for=secret>a label for it</label><input type=hidden id=secret></div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The label's <code>for</code> names the hidden input, which is not labelable, so the label has no
+    control: a click logs <code>click</code> at the label alone.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

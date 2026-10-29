@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-autospace: insert, replace, punctuation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 6px; font: 40px/60px "PR Noto Sans JP"; white-space: nowrap; }
+  .fr { padding: 0 6px; font: 24px/40px "PR Noto Sans"; }
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 220px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.4 Automatic Contextual Spacing: the text-autospace property</div>
+  <h1>text-autospace: insert, replace, punctuation</h1>
+  <p class=pr-lede><code>insert</code>: <q>The specified spacing is automatically inserted if there are no space
+  characters of any kind (Unicode general category Z) already there.</q> <code>replace</code>: <q>The specified
+  spacing is automatically inserted even if there is already a space (U+0020) at that point; additionally, the space
+  (U+0020) is removed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-autospace-property">CSS Text 4 §8.4</a></span>
+  Ideographs are 40px; the autospace is 5px.</p>
+</header>
+
+<section>
+  <h2>A space already there</h2>
+  <p>Each stage is "漢", a space, "A", "字".</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: ideograph-alpha insert">漢 A字</div>
+    <figcaption><code>insert</code>: the space stays and nothing is added beside it; 5px between "A" and
+    "字". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None
+    there either.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: ideograph-alpha replace">漢 A字</div>
+    <figcaption><code>replace</code>: the space becomes 5px, as on the other side. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Keep the space.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>punctuation, in French</h2>
+  <p><q>if the element's content language is French, narrow no-break space (U+202F) and no-break space (U+00A0) is
+  inserted where required by French typographic guidelines. Otherwise this value has no effect.</q> The stages are
+  « Oui ! » with no spaces in the source.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage fr" lang=fr style="text-autospace: punctuation">«Oui!»</div>
+    <figcaption><code>lang=fr</code>: spaces inside the guillemets and before "!", as French sets them. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage fr" lang=en style="text-autospace: punctuation">«Oui!»</div>
+    <figcaption><code>lang=en</code>: no effect, "«Oui!»".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

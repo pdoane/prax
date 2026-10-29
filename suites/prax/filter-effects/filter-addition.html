@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adding filter lists</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 20px 20px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: #4f81bd; filter: drop-shadow(10px 10px #8e44ad); animation: 100s linear -50s infinite alternate both turn; }
+  @keyframes turn { from { filter: hue-rotate(180deg); } to { filter: hue-rotate(180deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 14.2 Addition</div>
+  <h1>Adding filter lists</h1>
+  <p class=pr-lede><q>Given two filter values representing an base value (base filter list) and a value to add (added
+  filter list), returns the concatenation of the the two lists: ‘base filter list added filter list’.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#addition">Filter Effects 1 §14.2</a></span>
+  Each box is 60 by 30 and blue. Its own <code>filter</code> is a purple <code>drop-shadow(10px 10px)</code>; an
+  animation holds <code>hue-rotate(180deg)</code>.</p>
+</header>
+
+<section>
+  <h2>The added list after the base</h2>
+  <p>With <code>animation-composition</code>, the animation's value is combined with the box's own: <q>add</q> by this
+  section's rule.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=box style="animation-composition: add"></div></div>
+    <figcaption><code>add</code>: <code>drop-shadow(…) hue-rotate(180deg)</code>, so the shadow is turned with the box:
+    a brown box with a green shadow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=box></div></div>
+    <figcaption><code>replace</code>, the initial value: the animation's <code>hue-rotate(180deg)</code> alone, a brown
+    box with no shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

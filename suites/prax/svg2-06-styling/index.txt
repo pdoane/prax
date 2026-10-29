@@ -1,0 +1,20 @@
+00-supports-1.html
+SVG2/styling.html#StylingUsingCSS 6.1 Styling SVG content using CSS
+    styling-svg.html
+SVG2/styling.html#StyleElement 6.2 Inline style sheets: the ‘style’ element
+    style-element.html
+SVG2/styling.html#LinkElement 6.3 External style sheets: the effect of the HTML ‘link’ element
+    link-element.html
+SVG2/styling.html#StyleSheetsInHTMLDocuments 6.4 Style sheets in HTML documents
+    html-style-sheets.html
+SVG2/styling.html#ElementSpecificStyling 6.5 Element-specific styling: the ‘class’ and ‘style’ attributes
+    class-and-style.html
+SVG2/styling.html#PresentationAttributes 6.6 Presentation attributes
+    presentation-attributes.html
+# SVG2/styling.html#RequiredProperties 6.7 Required properties: no page; it lists the properties an SVG user agent supports, which their own chapters and modules walk
+SVG2/styling.html#UAStyleSheet 6.8 User agent style sheet
+    ua-style-sheet.html
+SVG2/styling.html#RequiredCSSFeatures 6.9 Required CSS features
+    required-css-features.html
+# SVG2/styling.html#DOMInterfaces 6.10 DOM interfaces: no page; it is object model
+# SVG2/styling.html#InterfaceSVGStyleElement 6.10.1 Interface SVGStyleElement: no page; it is object model

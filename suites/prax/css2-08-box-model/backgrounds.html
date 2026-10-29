@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box dimensions: backgrounds</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.1 Box dimensions</div>
+  <h1>Box dimensions: backgrounds</h1>
+  <p class=pr-lede>Which of a box's areas its background covers.</p>
+</header>
+
+<section>
+  <h2>Backgrounds</h2>
+  <p><q>The background style of the content, padding, and border areas of a box is specified by the background
+  property of the generating element. Margin backgrounds are always transparent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#box-dimensions">CSS 2
+  §8.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div style="margin: 20px; padding: 10px; border: 10px dashed #2c5a8f; background: #d68a3c"><div
+      class=pr-content-area></div></div>
+    </div>
+    <figcaption>The orange background runs under the dashed border's gaps, out to the border edge. The guides show
+    through the 20px margin.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div style="margin: 20px; padding: 10px; border: 10px dotted #2c5a8f; background: #d68a3c"><div
+      class=pr-content-area></div></div>
+    </div>
+    <figcaption>The same with a dotted border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

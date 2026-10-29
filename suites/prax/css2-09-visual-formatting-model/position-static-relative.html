@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The position property: static and relative</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.1 Choosing a positioning scheme</div>
+  <h1>The position property: static and relative</h1>
+  <p class=pr-lede><code>position</code> takes <code>static | relative | absolute | fixed</code>. Initial
+  <code>static</code>, not inherited. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>static</h2>
+  <p><q>The box is a normal box, laid out according to the normal flow. The 'top', 'right', 'bottom', and 'left'
+  properties do not apply.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#choose-position">CSS 2 §9.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div>
+    <figcaption>Three boxes in normal flow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b style="top: 10px; left: 40px">B: top 10, left 40</div><div class=pr-c>C</div></div>
+    <figcaption>B with <code>top: 10px; left: 40px</code> and <code>position: static</code>: it does not
+    move.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>relative</h2>
+  <p><q>The box's position is calculated according to the normal flow ... Then the box is offset relative to its
+  normal position. When a box B is relatively positioned, the position of the following box is calculated as though B
+  were not offset.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#choose-position">CSS 2 §9.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b style="position: relative; top: 10px; left: 40px">B: top 10, left 40</div><div class=pr-c>C</div></div>
+    <figcaption><code>position: relative</code>: B moves 10px down and 40px right, over half of C, which stays where
+    it was.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

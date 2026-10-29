@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters: none, names and inheritance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .list > div::before, .kids > div > div::before { content: counter(n) ". "; font-weight: 600; color: #2c5a8f; }
+  .two > div::before { content: counter(n) "/" counter(m) " "; font-weight: 600; color: #2c5a8f; }
+  .r0 { counter-reset: n; }
+  .i1 > div { counter-increment: n; }
+  .i1 > .off { counter-increment: none; }
+  .both { counter-reset: n 1 m 5; }
+  .both > div { counter-increment: n m 2; }
+  .wrap { counter-increment: n; }
+  .wrap-reset { counter-reset: n 7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4 Automatic counters and numbering</div>
+  <h1>Counters: none, names and inheritance</h1>
+  <p class=pr-lede>Each div shows its counters in blue.</p>
+</header>
+
+<section>
+  <h2>none, and several names</h2>
+  <p><q>The 'counter-increment' property accepts one or more names of counters (identifiers), each one optionally
+  followed by an integer.</q> <q>The keywords 'none', 'inherit' and 'initial' must not be used as counter names. A
+  value of 'none' on its own means no counters are reset, resp. incremented.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2
+  §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text list r0 i1"><div>one</div><div class=off>two</div><div>three</div></div>
+    <figcaption>The second div has <code>counter-increment: none</code>: 1, 1, 2.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text two both"><div>one</div><div>two</div></div>
+    <figcaption><code>counter-reset: n 1 m 5</code> and <code>counter-increment: n m 2</code>: "2/7", then
+    "3/9".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not inherited</h2>
+  <p>Neither property is inherited: a counter is reset or incremented once, by the element that has the property, not
+  again by its children. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counters">CSS 2 §12.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text kids r0"><div class=wrap><div>one</div><div>two</div></div></div>
+    <figcaption>The outer div has <code>counter-increment: n</code>; its two children show 1 and 1.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text kids"><div class=wrap-reset><div>one</div><div>two</div></div></div>
+    <figcaption>The outer div has <code>counter-reset: n 7</code>; its children show 7 and 7.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

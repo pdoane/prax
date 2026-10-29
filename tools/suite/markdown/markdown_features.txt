@@ -1,0 +1,28 @@
+# The engine's ruling on each extension to CommonMark that it has considered, as docs/markdown.md describes how
+# Markdown's sources are weighed. Each line holds the extension's name, its ruling, and the reason for the ruling.
+# An extension that is built is an option of lib/markdown (PrMarkdownExtensionFlag).
+#
+#   build     lib/markdown parses it
+#   cut       lib/markdown does not parse it
+#   open      undecided, and not parsed until it is decided
+
+tables                  build   # GFM
+task-lists              build   # GFM
+strikethrough           build   # GFM: one or two tildes
+autolinks               build   # GFM's extended autolinks
+tag-filter              build   # GFM, as a policy for raw HTML rather than an extension
+footnotes               build   # GitHub, as cmark-gfm parses and numbers them
+alerts                  build   # GitHub; another renderer shows an alert as a plain block quote
+heading-ids             build   # GitHub's slugs, so that a #fragment reaches its heading
+math                    build   # GitHub's $, $$ and $`; the TeX is text until it typesets as MathML
+smart-punctuation       build   # cmark's, as an option
+front-matter            build   # docs sites lead with it; its YAML is a client's to read
+highlight               build   # ==text==: Obsidian, markdown-it and pandoc agree on the syntax
+scripts                 build   # pandoc's ~sub~ and ^sup^, off by default since one tilde is GFM's strikethrough
+underline               cut     # no syntax is common, and __text__ is CommonMark's strong emphasis
+wikilinks               cut     # a host that wants [[page]] resolves its links itself
+inserted-text           open    # markdown-it's ++text++, for <ins>
+generic-directives      open    # CommonMark's proposed :::name blocks, as micromark parses them
+definition-lists        open    # docs use them, but no syntax is common
+emoji-shortcodes        open    # GitHub renders them, but generated Markdown rarely uses them, and they cost a table
+attributes              open    # {#id .class} after a heading or a block

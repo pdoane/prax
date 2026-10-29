@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Upgrading custom elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .stage button { font-size: 12px; margin: 0 0 10px; }
+  x-late, x-later, x-refused { display: block; height: 20px; padding: 0 6px; box-sizing: border-box; border: 2px solid #4f81bd; }
+  :is(x-late, x-later, x-refused):not(:defined) { border: 2px dashed #c0392b; color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.5 Upgrades</div>
+  <h1>Upgrading custom elements</h1>
+  <p class=pr-lede>To upgrade an element: <q>Set element's custom element state to "custom".</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#upgrades">HTML §4.13.5</a></span>
+  <q>The :defined pseudo-class must match any element that is defined.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span>
+  Here an element that is not defined has a red dashed border; a defined one, a solid blue one.</p>
+</header>
+<section>
+  <h2>Upgraded when defined, once connected</h2>
+  <p>Defining a name upgrades the connected elements of that name. <q>Note that upgrades only apply to elements in the
+  document tree.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-upgrades-examples">§4.13.1.6</a></span>
+  Each definition's <code>connectedCallback</code> writes "upgraded" into the element.</p>
+  <figure>
+    <div class="pr-stage stage pr-text"><button id=define-late>define x-late</button><x-late>waiting</x-late></div>
+    <figcaption>At first red and dashed, "waiting". Click "define x-late": blue and solid, "upgraded".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text" id=later-stage><button id=insert-later>insert</button></div>
+    <figcaption>An <code>x-later</code> made by <code>createElement</code> after its definition, but not inserted. Click
+    "insert": it appears blue and solid, "upgraded", when it is connected.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A failed upgrade</h2>
+  <p><q>If definition's disable shadow is true and element's shadow root is non-null, then throw a "NotSupportedError"
+  DOMException.</q> <q>If the above steps threw an exception, then element's custom element state will remain "failed"
+  or "precustomized".</q></p>
+  <figure>
+    <div class="pr-stage stage pr-text"><x-refused><template shadowrootmode=open>shadow, not upgraded</template></x-refused></div>
+    <figcaption><code>x-refused</code> has a declarative shadow root; its definition has <code>disabledFeatures =
+    ["shadow"]</code>: the upgrade fails, and it stays red and dashed, "shadow, not upgraded".</figcaption>
+  </figure>
+</section>
+<script>
+  class Upgraded extends HTMLElement {
+    connectedCallback() { this.textContent = "upgraded"; }
+  }
+  document.getElementById("define-late").onclick = () => customElements.define("x-late", class extends Upgraded {});
+  customElements.define("x-later", class extends Upgraded {});
+  const later = document.createElement("x-later");
+  document.getElementById("insert-later").onclick = () => document.getElementById("later-stage").append(later);
+  customElements.define("x-refused", class extends HTMLElement {
+    static disabledFeatures = ["shadow"];
+  });
+</script>
+</body>
+</html>

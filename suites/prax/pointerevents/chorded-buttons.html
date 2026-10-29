@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Chorded buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.1.1 Chorded button interactions</div>
+  <h1>Chorded buttons</h1>
+  <p class=pr-lede><q>Pointer Events do not fire overlapping pointerdown and pointerup events for chorded button presses
+  (depressing an additional button while another button on the pointer device is already depressed).</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#chorded-button-interactions">Pointer Events §3.1.1.1</a></span></p>
+</header>
+<section>
+  <h2>One pointerdown, two mousedowns</h2>
+  <p><q>Instead, chorded button presses can be detected by inspecting changes to the button and buttons properties.</q>
+  <q>In the Mouse Event model, each button press produces a mousedown and mouseup event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#chorded-button-interactions">§3.1.1.1</a></span>
+  The page cancels <code>contextmenu</code> over the box, so the right button opens no menu.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press left, add right, release both.</div>
+      <ol class=pr-log data-log="pointerdown pointerup mousedown mouseup" data-fields="button buttons" data-on="#pad" data-lines=6></ol>
+      <ol class=pr-log data-log="pointermove" data-fields="button buttons" data-on="#pad" data-lines=1></ol>
+    </div>
+    <figcaption>Keep the mouse still over the box. Press the left button: <code>pointerdown</code> and
+    <code>mousedown</code>, <code>button=0</code>. Add the right: a <code>mousedown</code> with
+    <code>button=2 buttons=3</code>, and no second <code>pointerdown</code>; the last line shows the
+    <code>pointermove</code> that carries the change instead. Release the left, then the right: a
+    <code>mouseup</code> for each, and one <code>pointerup</code>, at the last.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the right button's context menu from opening over the box.
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

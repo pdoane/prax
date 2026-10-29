@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Headers and footers on every page</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 100px; }
+  table { border-spacing: 0; width: 100%; }
+  td { padding: 0; background: #b9cde6; }
+  thead td, tfoot td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 6.2 Repeating headers across pages</div>
+  <h1>Headers and footers on every page</h1>
+  <p class=pr-lede><q>When rendering the document into a paged media, user agents must repeat header rows and footer
+  rows on each page spanned by a table if the page is the table's fragmentainer, if the header/footer has avoid
+  'break-inside' applied to it, if the height required to do so is inferior to two quarters of the page height (up to
+  one quarter for header rows, and up to one quarter for footer rows), and if that doesn't cause a row to be displayed
+  twice on that page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#repeated-headers">CSS Table 3 §6.2</a></span>
+  Headers and footers are green, body rows blue; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Printed</h2>
+  <p>Pages of 240 by 160 with 10px margins: 140px of page, so a header or footer of 20px is under a quarter. HTML's
+  style sheet gives <code>thead</code> and <code>tfoot</code> <code>break-inside: avoid</code>.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; background: white } table { border-spacing: 0; width: 100% } td { padding: 0; background: #b9cde6 } thead td, tfoot td { background: #c3d08b }</style><body class=pr-measure><table><thead><tr><td>head</td></tr></thead><tfoot><tr><td>foot</td></tr></tfoot><tr><td>1</td></tr><tr><td>2</td></tr><tr><td>3</td></tr><tr><td>4</td></tr><tr><td>5</td></tr><tr><td>6</td></tr><tr><td>7</td></tr><tr><td>8</td></tr><tr><td>9</td></tr><tr><td>10</td></tr></table>"></iframe>
+    <figcaption>Ten rows over several pages: "head" at the top of each page and "foot" at the bottom.
+    <span class=pr-flag>Safari</span> draws "head" on the first page only and "foot" on the last only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

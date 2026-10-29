@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column and avoid-column on pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.3 Column Break Values</div>
+  <h1>column and avoid-column on pages</h1>
+  <p class=pr-lede><q>These values only have an effect in multi-column contexts; if the flow is not within a
+  multi-column context, they have no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#column-break-values">CSS Fragmentation 4 §3.1.3</a></span>
+  Their effect in columns is shown in <a href="../css-multicol/break-between.html">break-before and break-after in
+  columns</a> and <a href="../css-multicol/break-avoid.html">avoiding breaks between boxes</a>; here the flow is
+  printed. B (and C) have the value.</p>
+</header>
+
+<section>
+  <h2>column and avoid-column</h2>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: column'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Not in columns: no effect. A, B and C on one page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto }</style><body class=pr-measure><div class=m><div class=pr-a>A</div><div class=pr-b style='break-before: column'>B</div><div class=pr-c style='break-before: column'>C</div></div>"></iframe>
+    <figcaption>In two columns: A in the first, B in the second; the next column for C is on the next page, so the
+    column break is a page break too. <span class=pr-flag>Safari</span> Prints only A, across the page. <span class=pr-flag>Firefox</span> No breaks: A, B and C in
+    the first column.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<br>six<div class=pr-b style='height: 40px; box-sizing: border-box; break-inside: avoid; break-before: avoid-column'>B</div>"></iframe>
+    <figcaption>Not in columns: no effect. B, 40px and kept whole (<code>break-inside: avoid</code>), does not fit under "six", and the page breaks before it: B alone
+    on the second page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

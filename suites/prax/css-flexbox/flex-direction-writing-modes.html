@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-direction in other writing modes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .h > div { width: 40px; }
+  .h.c { height: 80px; }
+  .v { writing-mode: vertical-rl; height: 100px; }
+  .v.lr { writing-mode: vertical-lr; }
+  .v > div { width: 20px; height: 30px; text-orientation: upright; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.1 Flex Flow Direction: the flex-direction property, writing modes</div>
+  <h1>flex-direction in other writing modes</h1>
+  <p class=pr-lede><code>row</code>: <q>The flex container's main axis has the same orientation as the inline axis of
+  the current writing mode.</q> <code>column</code>: <q>The flex container's main axis has the same orientation as
+  the block axis of the current writing mode.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-direction-property">CSS Flexible Box Layout 2 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Right to left</h2>
+  <p>Each container is <code>direction: rtl</code>, and holds A, B and C, 40px wide.</p>
+  <figure>
+    <div class="pr-stage h" style="direction: rtl"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row</code>: A at the right edge, B and C leftward, C from 80px to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage h" style="direction: rtl; flex-direction: row-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>row-reverse</code>: A at the left edge, then B and C.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage h c" style="direction: rtl; flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>column</code>: A, B, C down from the top, against the right edge, the cross-start
+    side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical</h2>
+  <p>Each container is 100px wide and tall, and holds A, B and C, 20px wide and 30px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>vertical-rl</code>, <code>row</code>: A, B, C down from the top, against the right
+    edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>vertical-rl</code>, <code>column</code>: A at the right edge, B and C leftward, along the
+    top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v lr" style="flex-direction: column"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>vertical-lr</code>, <code>column</code>: A at the left edge, B and C rightward.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow v" style="direction: rtl"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>vertical-rl</code>, <code>rtl</code>, <code>row</code>: A at the bottom, B and C
+    upward.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto minimums of non-spanning items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .a { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 2, auto minimums</div>
+  <h1>Auto minimums of non-spanning items</h1>
+  <p class=pr-lede><q>If the track has an auto min track sizing function and the grid container is being sized under
+  a min-/max-content constraint, set the track's base size to the maximum of its items’ limited min-content
+  contributions</q>; <q>Otherwise</q>, of their <q>minimum contributions</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Blue holds "abcd efgh": min-content 40px, max-content 90px.</p>
+</header>
+
+<section>
+  <h2>The minimum contribution</h2>
+  <p>Where its preferred size is <code>auto</code>, <q>its minimum contribution is the outer size that would result
+  from assuming the item’s used minimum size as its preferred size; else the item’s minimum contribution is its
+  min-content contribution.</q> Each dashed
+  grid is 10px wide, its column <code>auto</code>, so there is no free space and the column is its base size.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto; width: 10px"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>min-width: auto</code>: the min-content size, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto; width: 10px"><div class=a style="min-width: 20px">abcd efgh</div></div></div>
+    <figcaption><code>min-width: 20px</code>: 20px, and the words spill out of it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto; width: 10px"><div class=a style="width: 60px; min-width: 20px">abcd efgh</div></div></div>
+    <figcaption><code>width: 60px</code>, <code>min-width: 20px</code>: its min-content contribution,
+    60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Under an intrinsic constraint: the limited min-content contribution</h2>
+  <p>The limited contribution is the min-content contribution <q>limited by the max track sizing function</q>, or a
+  <code>fit-content()</code> argument, <q>if that is fixed and ultimately floored by its minimum contribution</q>. Each grid is <code>width:
+  min-content</code>; blue has <code>min-width: 10px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto; width: min-content"><div class=a style="min-width: 10px">abcd efgh</div></div></div>
+    <figcaption><code>auto</code>: its min-content contribution, 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 10px: the minimum contribution.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(auto, 30px); width: min-content"><div class=a style="min-width: 10px">abcd efgh</div></div></div>
+    <figcaption><code>minmax(auto, 30px)</code>: 40px limited to 30px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(auto, 30px); width: min-content"><div class=a style="min-width: 50px">abcd efgh</div></div></div>
+    <figcaption><code>min-width: 50px</code>: 30px floored by the minimum contribution: 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

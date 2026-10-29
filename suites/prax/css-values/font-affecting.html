@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font-relative lengths in font-size and line-height</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .load { position: absolute; color: transparent; font-size: 1px; }
+  .bar { height: 20px; background: #4f81bd; }
+  .line { background: #f9cc9d; font-family: "PR Arimo"; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, in font-affecting properties</div>
+  <h1>Font-relative lengths in font-size and line-height</h1>
+  <p class=pr-lede><q>When used in the value of any font-affecting property on the element they refer to, the
+  font-relative lengths resolve against the computed metrics of the parent element</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>In font-size, the parent's font, or the initial one</h2>
+  <figure>
+    <div class=pr-stage style="font-size: 20px"><div class=bar style="font-size: 2em; width: 2em"></div></div>
+    <figcaption>In 20px text, <code>font-size: 2em; width: 2em</code>: the font size is twice the parent's, 40px,
+    and the width twice that, 80px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="font: 80px 'PR Baseline Diagnostic Zero'"><span class=load>x</span><div class=bar style="font-size: 1ex; width: 5em"></div></div>
+    <figcaption>In 80px PR Baseline Diagnostic Zero, whose ex is 20px, <code>font-size: 1ex</code> is 20px: the
+    <code>5em</code> bar is 100px. <span class=pr-flag>Firefox</span> makes the font size 36px, 0.45em, not the
+    font's x-height, and the bar 180px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 40px" srcdoc="<!doctype html><html style='font-size: 2rem'><body style='margin: 10px 0'><div style='width: 5em; height: 20px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption>A frame's root, which has no parent, at <code>font-size: 2rem</code>: against the initial
+    <code>medium</code>, 16px, its font size is 32px and its <code>5em</code> bar 160px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In line-height, the parent's lh, and the element's own em</h2>
+  <p><q>when lh or rlh units are used in the value of the 'line-height' property</q> <q>they resolve against
+  the computed 'line-height' and font metrics of the parent element</q>
+  <q>(The other font-relative lengths continue to resolve against the element’s own metrics when used in
+  'line-height'.)</q></p>
+  <figure>
+    <div class=pr-stage style="font-size: 10px; line-height: 20px"><div class=line style="line-height: 2lh">Lines</div></div>
+    <figcaption>On 20px lines, <code>line-height: 2lh</code> is 40px, twice the parent's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 20px"><div class=line style="font-size: 10px; line-height: 3em">Lines</div></div>
+    <figcaption>10px text in 20px, at <code>line-height: 3em</code>: a 30px line, from its own em.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

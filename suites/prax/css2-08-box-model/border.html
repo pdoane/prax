@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border shorthands: border</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.4 Border shorthand properties</div>
+  <h1>Border shorthands: border</h1>
+  <p class=pr-lede><code>border-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>border</code> take a width, a style and a color, each at most once, in any order.</p>
+</header>
+
+<section>
+  <h2>border</h2>
+  <p><q>The 'border' property is a shorthand property for setting the same width, color, and style for all four
+  borders of a box. Unlike the shorthand 'margin' and 'padding' properties, the 'border' property cannot set different
+  values on the four borders. To do so, one or more of the other border properties must be used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-shorthand-properties">CSS 2 §8.5.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid #c0392b"></div></div>
+    <figcaption><code>border: 10px solid #c0392b</code>: the same on all four sides.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border: 10px solid #c0392b; border-top: 10px dotted #2c5a8f"></div></div>
+    <figcaption><code>border: 10px solid #c0392b; border-top: 10px dotted #2c5a8f</code>: a side differs only
+    through another property.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-top: 10px dotted #2c5a8f; border: 10px solid #c0392b"></div></div>
+    <figcaption>The other way round, <code>border</code> last: it sets all four, and the top is red and solid
+    again.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

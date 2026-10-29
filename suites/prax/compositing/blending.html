@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blending: mixing, then weighting by the backdrop's alpha</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .blend > div { display: flex; height: 20px; }
+  .blend > div > div { flex: 1; }
+  .blend .group > div { position: relative; isolation: isolate; }
+  .blend .group > div > div { height: 20px; }
+  .blend .group > div > div + div { position: absolute; inset: 0; background: #ff0000; }
+  .blend .hex > div { font: 9px/20px "PR Cousine"; color: var(--pr-ink); text-align: center; }
+  .g100 { background: rgb(106 163 106 / 1); }
+  .g75 { background: rgb(106 163 106 / 0.75); }
+  .g50 { background: rgb(106 163 106 / 0.5); }
+  .g25 { background: rgb(106 163 106 / 0.25); }
+  .g0 { background: rgb(106 163 106 / 0); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 10 Blending</div>
+  <h1>Blending: mixing, then weighting by the backdrop's alpha</h1>
+  <p class=pr-lede><q>The result of the mixing function is modulated by the backdrop alpha. A fully opaque backdrop
+  allows the mixing function to be fully realized. A transparent backdrop will cause the final result to be a weighted
+  average between the source color and mixed color with the weight controlled by the backdrop alpha.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#blending">Compositing and Blending 2 §10</a></span></p>
+</header>
+
+<section>
+  <h2>Cr = (1 - αb) x Cs + αb x B(Cb, Cs)</h2>
+  <p>The section's example: a red source, <code>#ff0000</code>, blended over green, <code>#6aa36a</code>, at alpha 1,
+  0.75, 0.5, 0.25 and 0. Each column is an isolated group, so the green's alpha is the backdrop's. Rows, top to
+  bottom: the green alone; the red with <code>mix-blend-mode</code>; the red as a background layer over the green
+  <code>background-color</code> with <code>background-blend-mode</code>, which blends as an isolated group; the
+  formula's color, from <q>The blending calculations must not use pre-multiplied color values</q>; its hex.</p>
+  <figure>
+    <div class="pr-stage blend">
+      <div><div class=g100></div><div class=g75></div><div class=g50></div><div class=g25></div><div class=g0></div></div>
+      <div class=group><div><div class=g100></div><div style="mix-blend-mode: multiply"></div></div><div><div class=g75></div><div style="mix-blend-mode: multiply"></div></div><div><div class=g50></div><div style="mix-blend-mode: multiply"></div></div><div><div class=g25></div><div style="mix-blend-mode: multiply"></div></div><div><div class=g0></div><div style="mix-blend-mode: multiply"></div></div></div>
+      <div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 1); background-blend-mode: multiply"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.75); background-blend-mode: multiply"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.5); background-blend-mode: multiply"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.25); background-blend-mode: multiply"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0); background-blend-mode: multiply"></div></div>
+      <div><div style="background: #6a0000"></div><div style="background: #8f0000"></div><div style="background: #b40000"></div><div style="background: #da0000"></div><div style="background: #ff0000"></div></div>
+      <div class=hex><div>6a0000</div><div>8f0000</div><div>b40000</div><div>da0000</div><div>ff0000</div></div>
+    </div>
+    <figcaption><code>multiply</code>: the product, 106 0 0, over opaque green, and more of the red as the green
+    fades: at 0.5, (255 + 106) / 2 = 180 or 181; red itself over nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blend">
+      <div><div class=g100></div><div class=g75></div><div class=g50></div><div class=g25></div><div class=g0></div></div>
+      <div class=group><div><div class=g100></div><div style="mix-blend-mode: screen"></div></div><div><div class=g75></div><div style="mix-blend-mode: screen"></div></div><div><div class=g50></div><div style="mix-blend-mode: screen"></div></div><div><div class=g25></div><div style="mix-blend-mode: screen"></div></div><div><div class=g0></div><div style="mix-blend-mode: screen"></div></div></div>
+      <div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 1); background-blend-mode: screen"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.75); background-blend-mode: screen"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.5); background-blend-mode: screen"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0.25); background-blend-mode: screen"></div><div style="background: linear-gradient(#ff0000, #ff0000) rgb(106 163 106 / 0); background-blend-mode: screen"></div></div>
+      <div><div style="background: #ffa36a"></div><div style="background: #ff7a50"></div><div style="background: #ff5235"></div><div style="background: #ff291a"></div><div style="background: #ff0000"></div></div>
+      <div class=hex><div>ffa36a</div><div>ff7a50</div><div>ff5235</div><div>ff291a</div><div>ff0000</div></div>
+    </div>
+    <figcaption><code>screen</code>: 255 163 106 over opaque green, the green and blue weighted by the alpha, 0.5
+    giving 82 and 53, down to red over nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .brk > div { break-after: column; }
+  figure { margin-right: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 8.2 Pagination and Overflow Outside Multicol Containers</div>
+  <h1>Overflow columns</h1>
+  <p class=pr-lede><q>Columns that appear outside the multicol container in continuous contexts are called
+  overflow columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#pagination-and-overflow-outside-multicol">CSS Multi-column Layout 1 §8.2</a></span>
+  Each stage has three columns of 60px; its overflow is visible.</p>
+</header>
+
+<section>
+  <h2>A constrained height</h2>
+  <p><q>a declaration that constrains the column height (e.g., using height or max-height). In this case, additional
+  column boxes are created in the inline direction</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="max-height: 40px">one two six ten red big fat sun</div>
+    <figcaption><code>max-height: 40px</code>: two lines to a column, and a fourth column, "fat" and "sun", from
+    210 to 270px, past the stage, with a rule before it. <span class=pr-flag>Safari</span> One line to a column, five columns
+    past the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks</h2>
+  <p><q>explicit column breaks. In this case, additional column boxes are created in the inline direction for
+  continuous contexts</q>. Each word is a block with <code>break-after: column</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure brk"><div>one</div><div>two</div><div>six</div><div>ten</div></div>
+    <figcaption>Four columns: "ten" in a fourth, past the stage. <span class=pr-flag>Firefox</span> No forced
+    breaks: two columns of two words.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

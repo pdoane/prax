@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self and flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.4 Flex Items</div>
+  <h1>justify-self and flex items</h1>
+  <p class=pr-lede><q>This property does not apply to flex items, because there is more than one item in the main
+  axis. See 'flex' for stretching and 'justify-content' for main-axis alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-flex">CSS Box Alignment 3 §6.1.4</a></span>
+  Flex layout's own rules: <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#auto-margins">CSS Flexible Box Layout 2 §8.1</a></span>,
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#justify-content-property">§8.2</a></span>.</p>
+</header>
+
+<section>
+  <h2>No effect</h2>
+  <p>Each stage is a row flexbox of A and B.</p>
+  <figure>
+    <div class=pr-stage><div class=f><div class=pr-a style="justify-self: end">A</div><div class=pr-b style="justify-self: center">B</div></div></div>
+    <figcaption>A <code>justify-self: end</code>, B <code>center</code>: both at the left, A first.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="justify-items: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>The container <code>justify-items: end</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What does the work instead</h2>
+  <figure>
+    <div class=pr-stage><div class=f><div class=pr-a style="flex: 1">A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>flex: 1</code> on A: A stretches to fill all but B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f><div class=pr-a>A</div><div class=pr-b style="margin-left: auto">B</div></div></div>
+    <figcaption><code>margin-left: auto</code> on B: B alone at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="justify-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>justify-content: end</code>: A and B together at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

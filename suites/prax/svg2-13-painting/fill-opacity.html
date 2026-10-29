@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>fill-opacity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.4.3 Fill paint opacity: the ‘fill-opacity’ property</div>
+  <h1>fill-opacity</h1>
+  <p class=pr-lede><q>'fill-opacity' specifies the opacity of the painting operation used to paint the fill the
+  current object.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#FillOpacity">SVG 2 §13.4.3</a></span>
+  Each stage is an SVG 160 by 60; all but the last have an orange band 10 tall across them at y 25, under a blue
+  rectangle 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>The opacity of the fill alone</h2>
+  <p><b>&lt;number&gt;</b>: <q>The opacity of the fill.</q> <b>&lt;percentage&gt;</b>: <q>The opacity of the fill
+  expressed as a percentage of the range 0 to 1.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="25" width="160" height="10" fill="#d68a3c" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" fill-opacity="0.5" /></svg></div>
+    <figcaption><code>fill-opacity="0.5"</code>: the band shows through the blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="25" width="160" height="10" fill="#d68a3c" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" style="fill-opacity: 50%" /></svg></div>
+    <figcaption><code>fill-opacity: 50%</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="25" width="160" height="10" fill="#d68a3c" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" fill-opacity="0.5" stroke="#2c5a8f" stroke-width="8" /></svg></div>
+    <figcaption>Stroked dark blue, 8 wide: the stroke stays opaque, and hides the band where it crosses it, at x
+    16 to 24 and 136 to 144.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clamped, and inherited</h2>
+  <p><q>Any values outside the range 0 (fully transparent) to 1 (fully opaque) must be clamped to this range.</q> The
+  property is inherited, and each element's fill is painted at its opacity.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="25" width="160" height="10" fill="#d68a3c" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" fill-opacity="2" /></svg></div>
+    <figcaption><code>fill-opacity="2"</code>, clamped to 1: opaque, the band hidden from x 20 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="25" width="160" height="10" fill="#d68a3c" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" fill-opacity="-1" /></svg></div>
+    <figcaption><code>fill-opacity="-1"</code>, clamped to 0: no blue at all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g fill="#4f81bd" fill-opacity="0.5"><rect x="20" y="10" width="70" height="40" /><rect x="70" y="10" width="70" height="40" /></g></svg></div>
+    <figcaption>Two rectangles in a <code>g</code> with <code>fill-opacity="0.5"</code>: each half opaque, darker
+    where they overlap, from x 70 to 90.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

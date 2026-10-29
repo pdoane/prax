@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretching auto tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.8 Stretch auto Tracks</div>
+  <h1>Stretching auto tracks</h1>
+  <p class=pr-lede><q>When the content-distribution property of the grid container is normal or stretch in this axis,
+  this step expands tracks that have an auto max track sizing function by dividing any remaining positive, definite
+  free space equally amongst them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-stretch">CSS Grid Layout 2 §12.8</a></span>
+  Each grid fills its 150px stage.</p>
+</header>
+
+<section>
+  <h2>normal and stretch, not start</h2>
+  <p>Columns <code>auto auto</code> hold "ab" and "abcd"; maximized, they are 20 and 40px, and 90px are left.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto"><div class=a>ab</div><div class=b>abcd</div></div></div>
+    <figcaption><code>justify-content: normal</code>: 45px more each, 65 and 85px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto; justify-content: stretch"><div class=a>ab</div><div class=b>abcd</div></div></div>
+    <figcaption><code>stretch</code>: the same, 65 and 85px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto; justify-content: start"><div class=a>ab</div><div class=b>abcd</div></div></div>
+    <figcaption><code>start</code>: no stretching; 20 and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto max-content 30px"><div class=a>ab</div><div class=b>abcd</div><div style="background: #cfe6c4"></div></div></div>
+    <figcaption><code>auto max-content 30px</code>: only the <code>auto</code> column stretches, to 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A minimum height for indefinite free space</h2>
+  <p><q>If the free space is indefinite, but the grid container has a definite min-width/height, use that size to
+  calculate the free space for this step instead.</q> Rows <code>auto auto</code>, outlined grids.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-rows: auto auto; min-height: 100px"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>min-height: 100px</code>: 60px free, 30px more each: rows of 50px, orange from 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-rows: auto auto"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption>No height: rows of 20px, the grid 40px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

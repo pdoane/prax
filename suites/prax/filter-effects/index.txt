@@ -1,0 +1,171 @@
+00-supports-1.html
+# filter-effects-1/#intro 1 Introduction: no page; it introduces filters, which the later sections show
+# filter-effects-1/#placement 2 Module interactions: no page; it says which properties the module affects, which 5's pages show
+# filter-effects-1/#values 3 Values: no page; it defines the notation and the CSS-wide keywords
+# filter-effects-1/#definitions 4 Terminology: no page; it defines terms
+filter-effects-1/#FilterProperty 5 Graphic filters: the filter property
+    filter-property.html
+    filter-stacking.html
+    filter-drawing.html
+# filter-effects-1/#filter-functions 6 Filter Functions: no page; it introduces the subsections
+filter-effects-1/#supported-filter-functions 6.1 Supported Filter Functions
+    filter-functions-color.html
+    filter-functions-shape.html
+filter-effects-1/#computed-values-of-filter-functions 6.2 Computed Values of Filter Functions
+    filter-function-defaults.html
+# filter-effects-1/#serialization-of-filter-functions 6.3 Serialization of Filter Functions: no page; it is serialization
+filter-effects-1/#interpolation-of-filter-functions 6.4 Interpolation of Filter Functions
+    filter-function-interpolation.html
+filter-effects-1/#FilterElement 7 SVG Filter Sources: the filter element
+    filter-element.html
+filter-effects-1/#FilterEffectsRegion 8 Filter Region
+    filter-region.html
+# filter-effects-1/#FilterPrimitivesOverview 9 Filter primitives: no page; it introduces the subsections
+# filter-effects-1/#FilterPrimitivesOverviewIntro 9.1 Overview: no page; it introduces the primitives, which 9.5 to 9.21 show
+filter-effects-1/#CommonAttributes 9.2 Common filter primitive attributes
+    common-attributes.html
+filter-effects-1/#FilterPrimitiveTree 9.3 Filter primitive tree
+    primitive-tree.html
+filter-effects-1/#FilterPrimitiveSubRegion 9.4 Filter primitive subregion
+    primitive-subregion.html
+filter-effects-1/#feBlendElement 9.5 Filter primitive feBlend
+    fe-blend.html
+filter-effects-1/#feColorMatrixElement 9.6 Filter primitive feColorMatrix
+    fe-color-matrix.html
+filter-effects-1/#feComponentTransferElement 9.7 Filter primitive feComponentTransfer
+    fe-component-transfer.html
+    fe-component-transfer-types.html
+# filter-effects-1/#feFuncRElement 9.7.1 Transfer function feFuncR: no page; it names the red channel's function, which 9.7's pages show
+# filter-effects-1/#feFuncGElement 9.7.2 Transfer function feFuncG: no page; it names the green channel's function, which 9.7's pages show
+# filter-effects-1/#feFuncBElement 9.7.3 Transfer function feFuncB: no page; it names the blue channel's function, which 9.7's pages show
+# filter-effects-1/#feFuncAElement 9.7.4 Transfer function feFuncA: no page; it names the alpha channel's function, which 9.7's pages show
+filter-effects-1/#feCompositeElement 9.8 Filter primitive feComposite
+    fe-composite.html
+filter-effects-1/#feConvolveMatrixElement 9.9 Filter primitive feConvolveMatrix
+    fe-convolve-matrix.html
+filter-effects-1/#feDiffuseLightingElement 9.10 Filter primitive feDiffuseLighting
+    fe-diffuse-lighting.html
+filter-effects-1/#feDisplacementMapElement 9.11 Filter primitive feDisplacementMap
+    fe-displacement-map.html
+filter-effects-1/#feDropShadowElement 9.12 Filter primitive feDropShadow
+    fe-drop-shadow.html
+filter-effects-1/#feFloodElement 9.13 Filter primitive feFlood
+    fe-flood.html
+filter-effects-1/#FloodColorProperty 9.13.1 The flood-color property
+    flood-color.html
+filter-effects-1/#FloodOpacityProperty 9.13.2 The flood-opacity property
+    flood-opacity.html
+filter-effects-1/#feGaussianBlurElement 9.14 Filter primitive feGaussianBlur
+    fe-gaussian-blur.html
+filter-effects-1/#feImageElement 9.15 Filter primitive feImage
+    fe-image.html
+filter-effects-1/#feMergeElement 9.16 Filter primitive feMerge
+    fe-merge.html
+# filter-effects-1/#feMergeNodeElement 9.16.1 Merge node feMergeNode: no page; it names the inputs of feMerge, whose page shows them
+filter-effects-1/#feMorphologyElement 9.17 Filter primitive feMorphology
+    fe-morphology.html
+filter-effects-1/#feOffsetElement 9.18 Filter primitive feOffset
+    fe-offset.html
+filter-effects-1/#feSpecularLightingElement 9.19 Filter primitive feSpecularLighting
+    fe-specular-lighting.html
+filter-effects-1/#feTileElement 9.20 Filter primitive feTile
+    fe-tile.html
+filter-effects-1/#feTurbulenceElement 9.21 Filter primitive feTurbulence
+    fe-turbulence.html
+filter-effects-1/#ColorInterpolationFiltersProperty 10 The color-interpolation-filters property
+    color-interpolation-filters.html
+# filter-effects-1/#LightSourceDefinitions 11 Light source elements and properties: no page; it introduces the subsections
+# filter-effects-1/#LightSourceIntro 11.1 Introduction: no page; it introduces the light sources, which 11.2 to 11.4 show
+filter-effects-1/#feDistantLightElement 11.2 Light source feDistantLight
+    fe-distant-light.html
+filter-effects-1/#fePointLightElement 11.3 Light source fePointLight
+    fe-point-light.html
+filter-effects-1/#feSpotLightElement 11.4 Light source feSpotLight
+    fe-spot-light.html
+filter-effects-1/#LightingColorProperty 11.5 The lighting-color property
+    lighting-color.html
+filter-effects-1/#FilterCSSImageValue 12 Filter CSS <image> values
+    filter-image.html
+filter-effects-1/#interpolating-filter-image 12.1 Interpolating filter()
+    filter-image-interpolation.html
+# filter-effects-1/#ShorthandEquivalents 13 Shorthands defined in terms of the filter element: no page; it introduces the subsections
+# filter-effects-1/#FilterPrimitiveRepresentation 13.1 Filter primitive representation: no page; it introduces the equivalents, which 13.1.1 to 13.1.10 show
+filter-effects-1/#grayscaleEquivalent 13.1.1 grayscale
+    grayscale-equivalent.html
+filter-effects-1/#sepiaEquivalent 13.1.2 sepia
+    sepia-equivalent.html
+filter-effects-1/#saturateEquivalent 13.1.3 saturate
+    saturate-equivalent.html
+filter-effects-1/#huerotateEquivalent 13.1.4 hue-rotate
+    hue-rotate-equivalent.html
+filter-effects-1/#invertEquivalent 13.1.5 invert
+    invert-equivalent.html
+filter-effects-1/#opacityEquivalent 13.1.6 opacity
+    opacity-equivalent.html
+filter-effects-1/#brightnessEquivalent 13.1.7 brightness
+    brightness-equivalent.html
+filter-effects-1/#contrastEquivalent 13.1.8 contrast
+    contrast-equivalent.html
+filter-effects-1/#blurEquivalent 13.1.9 blur
+    blur-equivalent.html
+filter-effects-1/#dropshadowEquivalent 13.1.10 drop-shadow
+    drop-shadow-equivalent.html
+filter-effects-1/#filter-region-for-shorthands 13.2 Filter region for shorthands
+    shorthand-filter-region.html
+# filter-effects-1/#animation-of-filters 14 Animation of Filters: no page; it introduces the subsections
+filter-effects-1/#interpolation-of-filters 14.1 Interpolation of Filter Function Lists
+    filter-list-interpolation.html
+filter-effects-1/#addition 14.2 Addition
+    filter-addition.html
+filter-effects-1/#accumulation 14.3 Accumulation
+    filter-accumulation.html
+# filter-effects-1/#privacy 15 Privacy Considerations: no page; it introduces the subsections
+filter-effects-1/#tainted-filter-primitives 15.1 Tainted Filter Primitives
+    tainted-primitives.html
+# filter-effects-1/#fedisplacemnentmap-restrictions 15.2 feDisplacementMap Restrictions: no page; what a tainted map draws is 15.1's page's to show
+# filter-effects-1/#origin-restrictions 15.3 Origin Restrictions: no page; it restricts fetching, which draws nothing of its own
+# filter-effects-1/#timing-attack 15.4 Timing Attacks: no page; it is about timing, which a still cannot show
+# filter-effects-1/#security 16 Security Considerations: no page; nothing to see
+# filter-effects-1/#AccessBackgroundImage A The deprecated enable-background property: no page; the property is deprecated and has no effect
+# filter-effects-1/#DOMInterfaces B DOM interfaces: no page; it is object model
+# filter-effects-1/#InterfaceSVGFilterElement B.1 Interface SVGFilterElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFilterPrimitiveStandardAttributes B.2 Interface SVGFilterPrimitiveStandardAttributes: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEBlendElement B.3 Interface SVGFEBlendElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEColorMatrixElement B.4 Interface SVGFEColorMatrixElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEComponentTransferElement B.5 Interface SVGFEComponentTransferElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGComponentTransferFunctionElement B.6 Interface SVGComponentTransferFunctionElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEFuncRElement B.7 Interface SVGFEFuncRElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEFuncGElement B.8 Interface SVGFEFuncGElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEFuncBElement B.9 Interface SVGFEFuncBElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEFuncAElement B.10 Interface SVGFEFuncAElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFECompositeElement B.11 Interface SVGFECompositeElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEConvolveMatrixElement B.12 Interface SVGFEConvolveMatrixElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEDiffuseLightingElement B.13 Interface SVGFEDiffuseLightingElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEDistantLightElement B.14 Interface SVGFEDistantLightElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEPointLightElement B.15 Interface SVGFEPointLightElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFESpotLightElement B.16 Interface SVGFESpotLightElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEDisplacementMapElement B.17 Interface SVGFEDisplacementMapElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEDropShadowElement B.18 Interface SVGFEDropShadowElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEFloodElement B.19 Interface SVGFEFloodElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEGaussianBlurElement B.20 Interface SVGFEGaussianBlurElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEImageElement B.21 Interface SVGFEImageElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEMergeElement B.22 Interface SVGFEMergeElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEMergeNodeElement B.23 Interface SVGFEMergeNodeElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEMorphologyElement B.24 Interface SVGFEMorphologyElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFEOffsetElement B.25 Interface SVGFEOffsetElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFESpecularLightingElement B.26 Interface SVGFESpecularLightingElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFETileElement B.27 Interface SVGFETileElement: no page; it is object model
+# filter-effects-1/#InterfaceSVGFETurbulenceElement B.28 Interface SVGFETurbulenceElement: no page; it is object model
+# filter-effects-2/#intro 1 Introduction: no page; it says the level is a delta over level 1
+filter-effects-2/#BackdropFilterProperty 2 Backdrop filters: the backdrop-filter property
+    backdrop-filter.html
+filter-effects-2/#backdrop-filter-operation 2.1 Filtering and Clipping
+    backdrop-filter-clipping.html
+filter-effects-2/#BackdropRoot 3 Backdrop Root
+    backdrop-root.html
+# filter-effects-2/#BackdropRootMotivation 3.1 Motivation: no page; it is informative, and 3's and 3.2's pages show what it motivates
+filter-effects-2/#BackdropRootTriggers 3.2 Backdrop Root Triggers
+    backdrop-root-triggers.html
+filter-effects-2/#mix-blend-mode 3.3 Mix Blend Mode
+    backdrop-root-blending.html
+# filter-effects-2/#priv-sec 4 Privacy and Security Considerations: no page; nothing to see

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .dots { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='6' fill='%234f81bd'/></svg>"); }
+  .broken { background-image: url("data:image/svg+xml,not an image"); }
+  .filled { height: 60px; margin: 10px; }
+  .holder { margin: 10px; padding: 10px; }
+  .inner { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background image</h1>
+  <p class=pr-lede><code>background-image</code> takes <code>&lt;uri&gt; | none | inherit</code>. Initial
+  <code>none</code>, applies to all elements, not inherited. The image here is a blue dot in a 20px square.</p>
+</header>
+
+<section>
+  <h2>On top of the background color</h2>
+  <p><q>When the image is available, it is rendered on top of the background color. (Thus, the color is visible in the
+  transparent parts of the image).</q> The color <q>will be used when the image is unavailable.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="filled dots" style="background-color: #d68a3c"></div></div>
+    <figcaption>Dots and <code>background-color: #d68a3c</code>: blue dots, every 20px, on orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="filled broken" style="background-color: #d68a3c"></div></div>
+    <figcaption>A <code>data:</code> URI that is not an image, and the same color: plain orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none, and not inherited</h2>
+  <p><q>Values for this property are either &lt;uri&gt;, to specify the image, or 'none', when no image is used.</q>
+  <code>p { background-image: none }</code> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>A dotted parent with 10px padding holds a child, outlined, whose top left corner is half a dot's square,
+  10px, into the dots.</p>
+  <figure>
+    <div class=pr-stage><div class="holder dots"><div class="inner pr-ghost" style="background-image: none"></div></div></div>
+    <figcaption>The child's <code>none</code>, as if not given: it paints no image, and the parent's dots show through
+    it in rows that run on unbroken.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="holder dots"><div class="inner pr-ghost" style="background-image: inherit"></div></div></div>
+    <figcaption><code>inherit</code>: the child paints the dots afresh from its own corner, 10px off the parent's: inside
+    the outline its dots fall between the parent's, which show through around them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

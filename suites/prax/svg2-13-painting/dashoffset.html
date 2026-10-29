@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-dashoffset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.6 Dashing strokes: the ‘stroke-dasharray’ and ‘stroke-dashoffset’ properties</div>
+  <h1>stroke-dashoffset</h1>
+  <p class=pr-lede><q>The 'stroke-dashoffset' property specifies the distance into the repeated dash pattern to start
+  the stroke dashing at the beginning of the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeDashing">SVG 2 §13.5.6</a></span>
+  Each stage is an SVG 160 by 60; the lines run from x 20 to 140, stroked dark blue 10 wide, dashed
+  <code>20 10</code>, whose pattern is 30 long.</p>
+</header>
+
+<section>
+  <h2>Into the pattern</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" /></svg></div>
+    <figcaption>The initial offset, 0: dashes from 20, 50, 80 and 110, each 20 long.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" stroke-dashoffset="15" /></svg></div>
+    <figcaption><code>stroke-dashoffset="15"</code>: the rest of a dash, 20 to 25, then dashes 35 to 55, 65 to
+    85, 95 to 115 and 125 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" stroke-dashoffset="45" /></svg></div>
+    <figcaption><code>45</code>, past the pattern's 30: the same as 15.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative offsets</h2>
+  <p><q>If the value is negative, then the effect is the same as dash offset d: d = s - (abs(stroke-dashoffset) mod
+  s)</q>, <q>where s is the sum of the dash array values.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" stroke-dashoffset="-5" /></svg></div>
+    <figcaption><code>-5</code>, as 30 − 5 = 25: the last 5 of a gap, then dashes 25 to 45, 55 to 75, 85 to 105
+    and 115 to 135.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" stroke-width="10" stroke-dasharray="20 10" stroke-dashoffset="-45" /></svg></div>
+    <figcaption><code>-45</code>, as 30 − (45 mod 30) = 15: the same as 15, a dash 20 to 25 first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

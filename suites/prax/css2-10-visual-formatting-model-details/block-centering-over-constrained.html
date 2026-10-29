@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block widths: centering and over-constraint</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.3 Block-level, non-replaced elements in normal flow</div>
+  <h1>Block widths: centering and over-constraint</h1>
+  <p class=pr-lede>Each blue box is a block in a 200px containing block, with no border or padding that counts: its width
+  is what it shows.</p>
+</header>
+
+<section>
+  <h2>Both margins auto</h2>
+  <p><q>If both 'margin-left' and 'margin-right' are 'auto', their used values are equal. This horizontally centers the
+  element with respect to the edges of the containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin: 0 auto">box</div></div>
+    <figcaption><code>width: 100px; margin: 0 auto</code>: 50px each side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 160px; margin: 0 auto">box</div></div>
+    <figcaption><code>width: 160px; margin: 0 auto</code>: 20px each side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over-constrained</h2>
+  <p><q>If all of the above have a computed value other than 'auto', the values are said to be "over-constrained" and
+  one of the used values will have to be different from its computed value. If the 'direction' property of the
+  containing block has the value 'ltr', the specified value of 'margin-right' is ignored and the value is calculated so
+  as to make the equality true. If the value of 'direction' is 'rtl', this happens to 'margin-left' instead.</q> Each
+  box has <code>width: 100px; margin: 0 20px</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#blockwidth">CSS 2 §10.3.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin: 0 20px">box</div></div>
+    <figcaption>In an <code>ltr</code> containing block, <code>margin-right</code> becomes 80px: the box is 20px from
+    the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><div class="pr-a pr-fit" style="width: 100px; margin: 0 20px">box</div></div>
+    <figcaption>In an <code>rtl</code> containing block, <code>margin-left</code> becomes 80px: the box is 20px from
+    the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

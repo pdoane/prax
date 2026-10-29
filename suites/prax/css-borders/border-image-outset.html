@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-image-outset: beyond the border box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 20px; margin: 20px; border: 10px solid #2c5a8f; background: #f4f5f7; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='10' height='10' fill='%23d68a3c'/><rect x='20' width='10' height='10' fill='%23d68a3c'/><rect y='20' width='10' height='10' fill='%23d68a3c'/><rect x='20' y='20' width='10' height='10' fill='%23d68a3c'/><circle cx='15' cy='5' r='4' fill='%234f81bd'/><circle cx='5' cy='15' r='4' fill='%234f81bd'/><circle cx='25' cy='15' r='4' fill='%234f81bd'/><circle cx='15' cy='25' r='4' fill='%234f81bd'/><rect x='10' y='10' width='10' height='10' fill='%236aa36a'/></svg>") 10; }
+  .scroller { width: 140px; height: 60px; margin: 10px; overflow: auto; outline: 1px dashed #6b7381; }
+  .scroller .box { margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 4.4 Edge Overhang: the border-image-outset property</div>
+  <h1>border-image-outset: beyond the border box</h1>
+  <p class=pr-lede><q>The values specify the amount by which the border image area extends beyond the border box.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-image-outset">CSS Borders and Box Decorations 4 §4.4</a></span>
+  Each box is 100 by 40 with a 10px border, its light background showing where it is, and the image of orange corners
+  and blue dots.</p>
+</header>
+
+<section>
+  <h2>Lengths and multiples of the border width</h2>
+  <p><q>&lt;number [0,∞]&gt;: Represents an outset of the specified multiple of the corresponding computed
+  border-width.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-outset: 10px"></div></div>
+    <figcaption><code>10px</code>: the image drawn 10px outside the box all round.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-image-outset: 1 0"></div></div>
+    <figcaption><code>1 0</code>: 10px above and below, flush at the sides.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ink overflow</h2>
+  <p><q>Portions of the border-image that are rendered outside the border box are ink overflow and do not trigger
+  scrolling.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=scroller><div class=box style="border-image-outset: 20px"></div></div></div>
+    <figcaption>In a dashed scroll container 140 by 60, the box with a 20px outset: no scrollbar; the image is cut at
+    the container's edges.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

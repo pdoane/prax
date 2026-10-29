@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>bolder and lighter</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ladder { padding: 0 6px; font: 16px/22px 'PR Roboto Flex'; white-space: nowrap; }
+  .ref { color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.2.1 Relative weights</div>
+  <h1>bolder and lighter</h1>
+  <p class=pr-lede><q>Specified values of 'bolder' and 'lighter' indicate weights relative to the weight of the parent
+  element. The computed weight is calculated based on the inherited 'font-weight' value</q>: <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#relative-weights">CSS Fonts 4 §2.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The table</h2>
+  <p>Below 100, bolder is 400 and lighter no change; from 100, bolder 400 and lighter 100; from 350, 700 and 100;
+  from 550, 900 and 400; from 750, 900 and 700; from 900, no change and 700. Each line is set at its parent's weight; on it,
+  "Weight" set <code>bolder</code> or <code>lighter</code>, then, in blue, set at the weight the table gives.</p>
+  <figure>
+    <div class="pr-stage ladder">
+      <div style="font-weight: 50">50: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 400">Weight</span></div>
+      <div style="font-weight: 300">300: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 400">Weight</span></div>
+      <div style="font-weight: 400">400: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 700">Weight</span></div>
+      <div style="font-weight: 600">600: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 900">Weight</span></div>
+      <div style="font-weight: 800">800: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 900">Weight</span></div>
+      <div style="font-weight: 950">950: <span style="font-weight: bolder">Weight</span> <span class=ref style="font-weight: 950">Weight</span></div>
+    </div>
+    <figcaption><code>bolder</code>: on each line the black word as dark as the blue one, set at 400, 400, 700, 900,
+    900 and 950.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ladder">
+      <div style="font-weight: 50">50: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 50">Weight</span></div>
+      <div style="font-weight: 300">300: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 100">Weight</span></div>
+      <div style="font-weight: 400">400: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 100">Weight</span></div>
+      <div style="font-weight: 600">600: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 400">Weight</span></div>
+      <div style="font-weight: 800">800: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 700">Weight</span></div>
+      <div style="font-weight: 950">950: <span style="font-weight: lighter">Weight</span> <span class=ref style="font-weight: 700">Weight</span></div>
+    </div>
+    <figcaption><code>lighter</code>: on each line the black word as dark as the blue one, set at 50, 100, 100, 400,
+    700 and 700.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nested: each step from the last</h2>
+  <figure>
+    <div class="pr-stage ladder" style="font-weight: 100">100
+      <span style="font-weight: bolder">bolder <span style="font-weight: bolder">bolder <span style="font-weight: bolder">bolder</span></span></span></div>
+    <figcaption>100, then 400, 700 and 900: three darker steps.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

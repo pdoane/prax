@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The colgroup element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td { border: 1px solid #2c5a8f; font-size: 12px; line-height: 18px; }
+  .orange { background: #f6d7b4; }
+  .blue { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.3 The colgroup element</div>
+  <h1>The colgroup element</h1>
+  <p class=pr-lede><q>The colgroup element represents a group of one or more columns in the table that is its parent,
+  if it has a parent and that is a table element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-colgroup-element">HTML §4.9.3</a></span>
+  The cells have no background, so a column group's shows through them.</p>
+</header>
+<section>
+  <h2>A span of columns</h2>
+  <p><q>If the colgroup element contains no col elements, then the element may have a span content attribute
+  specified</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-colgroup-element">§4.9.3</a></span>
+  <q>the colgroup element, if it contains no col element, is expected to be treated as if it had as many such
+  children as its span attribute specifies.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><colgroup span=2 class=orange></colgroup><tr><td>A<td>B<td>C<tr><td>D<td>E<td>F</table>
+    </div>
+    <figcaption><code>span=2</code>: the first two columns orange, behind A, B, D and E; C and F on the stage's
+    grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><colgroup class=blue></colgroup><colgroup span=2 class=orange></colgroup><tr><td>A<td>B<td>C<tr><td>D<td>E<td>F</table>
+    </div>
+    <figcaption>A group with no <code>span</code>, then one with <code>span=2</code>: the first column blue, the
+    other two orange.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Columns of its own</h2>
+  <p>When the colgroup <q>has any col element children</q>, each col gives columns, and <q>all the last columns in the
+  table from x=xstart to x=xwidth-1 form a new column group</q>: the span attribute has no part in it.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#forming-a-table">§4.9.12.1</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><colgroup span=3 class=orange><col></colgroup><tr><td>A<td>B<td>C<tr><td>D<td>E<td>F</table>
+    </div>
+    <figcaption><code>span=3</code> on a group holding one <code>col</code>: one column orange, behind A and D.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

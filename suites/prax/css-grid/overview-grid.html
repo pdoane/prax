@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Declaring the grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage > div { display: grid; }
+  .pr-stage > div > div { outline: 1px solid rgba(31, 36, 48, 0.4); outline-offset: -1px; color: var(--pr-ink); }
+  .h { grid-area: H; background: #b9cde6; }
+  .a { grid-area: A; background: #f6d7b4; }
+  .b { grid-area: B; background: #c8e0c8; }
+  .f { grid-area: F; background: #d9c3e3; }
+  .n > div:nth-child(odd) { background: #b9cde6; }
+  .n > div:nth-child(even) { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 2.1 Declaring the Grid</div>
+  <h1>Declaring the grid</h1>
+  <p class=pr-lede><q>The tracks (rows and columns) of the grid are declared and sized either explicitly through the
+  explicit grid properties or are implicitly created when items are placed outside the explicit grid. The grid
+  shorthand and its sub-properties define the parameters of the grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overview-grid">CSS Grid Layout 2 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's three grids</h2>
+  <p>Each stage is the example's grid, scaled down; its items are named for where they go.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style='grid: "H H" "A B" "F F" 30px / auto 1fr'><div class=h>H</div><div class=a>Aaa</div><div class=b>B</div><div class=f>F</div></div></div>
+    <figcaption><code>grid: "H H" "A B" "F F" 30px / auto 1fr</code>: <q>four named areas</q>. The first column fits
+    "Aaa", 30px, the second <q>takes up the remaining space</q>, 170px; the rows are 20, 20 and 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=n style="grid: repeat(auto-fill, 20px) / auto-flow 1fr; height: 100px"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div></div></div>
+    <figcaption><code>grid: repeat(auto-fill, 20px) / auto-flow 1fr</code> in 100px: <q>as many rows of at least</q>
+    20px <q>as will fit</q>, five. <q>columns are added as content is added</q>: 1–5 fill the first column, 6 and 7
+    the second, each 100px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=n style="grid: auto 1fr auto / repeat(5, 1fr); min-height: 100px"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div></div></div>
+    <figcaption><code>grid: auto 1fr auto / repeat(5, 1fr)</code>, <code>min-height: 100px</code>: <q>5 evenly-sized
+    columns</q>, 40px each, <q>with the middle row taking up all remaining space</q>: rows of 20, 60 and 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

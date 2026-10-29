@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scripting and Interactivity declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15 Scripting and Interactivity · Support</div>
+  <h1>Scripting and Interactivity declaration support</h1>
+  <p class=pr-lede>One declaration for each property the chapter's pages set from CSS, and the interfaces and members
+  their scripts use. This checks that they parse or exist, not what they do; the chapter's other pages show that.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>pointer-events: auto</code>
+  <code class=pr-decl>pointer-events: bounding-box</code>
+  <code class=pr-decl>pointer-events: visiblePainted</code>
+  <code class=pr-decl>pointer-events: visibleFill</code>
+  <code class=pr-decl>pointer-events: visibleStroke</code>
+  <code class=pr-decl>pointer-events: visible</code>
+  <code class=pr-decl>pointer-events: painted</code>
+  <code class=pr-decl>pointer-events: fill</code>
+  <code class=pr-decl>pointer-events: stroke</code>
+  <code class=pr-decl>pointer-events: all</code>
+  <code class=pr-decl>pointer-events: none</code>
+  <code class=pr-decl>fill-opacity: 0.6</code>
+  <code class=pr-decl>stroke: #2c5a8f</code>
+  <code class=pr-decl>stroke-width: 10</code>
+  <code class=pr-decl>stroke-opacity: 0.4</code>
+  <code class=pr-decl>outline: none</code>
+  <code class=pr-decl>display: inline</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<section>
+  <h2>Interface support</h2>
+  <code class=pr-api>SVGScriptElement</code>
+  <code class=pr-api>SVGAnimateElement</code>
+  <code class=pr-api>SVGElement.prototype.focus</code>
+  <code class=pr-api>SVGElement.prototype.onclick</code>
+  <code class=pr-api>Event.prototype.preventDefault</code>
+  <code class=pr-api>Event.prototype.defaultPrevented</code>
+  <p class=pr-note>green is an interface or member this engine exposes, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

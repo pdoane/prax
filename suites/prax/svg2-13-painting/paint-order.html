@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>paint-order</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 36px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><marker id="square" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#6aa36a" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.8 Controlling paint operation order: the ‘paint-order’ property</div>
+  <h1>paint-order</h1>
+  <p class=pr-lede><q>The 'paint-order' property controls the order that the three paint operations that shapes and
+  text are rendered with: their fill, their stroke and any markers they might have.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#PaintOrder">SVG 2 §13.8</a></span>
+  Each stage is an SVG 160 by 60 with a path round the rectangle from 30, 15 to 130, 45, filled blue, stroked orange
+  10 wide, and a green square 20 across on each corner.</p>
+</header>
+
+<section>
+  <h2>normal, and a first operation</h2>
+  <p><q>When the value of this property is normal, the element is painted with the standard order of painting
+  operations: the fill is painted first, then its stroke and finally its markers.</q> <q>If any of the three
+  keywords are omitted, they are painted last, in the order they would be painted with paint-order: normal.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 15 H 130 V 45 H 30 Z" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" marker-start="url(#square)" marker-mid="url(#square)" /></svg></div>
+    <figcaption><code>normal</code>: the whole stroke, 10 wide, over the fill; the squares on top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 15 H 130 V 45 H 30 Z" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" marker-start="url(#square)" marker-mid="url(#square)" style="paint-order: stroke" /></svg></div>
+    <figcaption><code>stroke</code>, as <code>stroke fill markers</code>: the fill hides the stroke's inner half, so
+    5 wide outside; the squares on top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 15 H 130 V 45 H 30 Z" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" marker-start="url(#square)" marker-mid="url(#square)" style="paint-order: markers" /></svg></div>
+    <figcaption><code>markers</code>, as <code>markers fill stroke</code>: of each square only an L 5 wide shows,
+    outside the stroke.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other orders</h2>
+  <p><q>When any of the other keywords are used, the order of the paint operations for painting the element is as
+  given, from left to right.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 15 H 130 V 45 H 30 Z" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" marker-start="url(#square)" marker-mid="url(#square)" style="paint-order: fill markers" /></svg></div>
+    <figcaption><code>fill markers</code>, then the stroke: an orange band 10 wide across each square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 15 H 130 V 45 H 30 Z" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" marker-start="url(#square)" marker-mid="url(#square)" style="paint-order: markers stroke" /></svg></div>
+    <figcaption><code>markers stroke</code>, then the fill: the stroke 5 wide outside, and an L of each square
+    outside it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="44" fill="#4f81bd" stroke="#d68a3c" stroke-width="8" stroke-linejoin="round" style="paint-order: stroke">Paint</text></svg></div>
+    <figcaption>Text, stroked 8 wide, <code>stroke</code>: whole blue glyphs, with an orange edge 4 wide
+    outside them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

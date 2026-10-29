@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- An email-style newsletter with a header band, teaser columns, and a footer. Email layout: fixed-width body, full-bleed header, paired teasers, image strip, action button and footer links. -->
+<title>Newsletter</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.mail { width:560px; margin:0 auto; background:#fff; border:1px solid #d3d8de; color:#22282f; font-size:12px; line-height:1.5 }
+.pre { text-align:center; font-size:9.5px; color:#8a93a0; padding:6px 0 }
+.band { background:#22303f; color:#fff; padding:14px 18px; display:flex; align-items:center; justify-content:space-between }
+.band .nm { font-size:17px; font-weight:bold; letter-spacing:-.01em }
+.band .no { font-size:10px; color:#9fb0c2; text-align:right; line-height:1.4 }
+.lead { padding:14px 18px 10px; border-bottom:1px solid #e6e9ed }
+.lead h2 { font-size:17px; margin:0 0 4px; line-height:1.25 }
+.lead p { color:#4a5561 }
+.lead img { display:block; width:100%; height:120px; object-fit:cover; margin-bottom:9px }
+.cols { display:flex; gap:0; border-bottom:1px solid #e6e9ed }
+.cols section { flex:1; padding:12px 14px }
+.cols section + section { border-left:1px solid #e6e9ed }
+.cols h3 { font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:#8a93a0; margin-bottom:6px }
+.item { margin-bottom:9px }
+.item:last-child { margin-bottom:0 }
+.item b { display:block; font-size:12px; line-height:1.3 }
+.item p { font-size:11px; color:#5d6673; margin-top:1px }
+.item .more { font-size:10px; color:#1c5b96; font-weight:bold }
+.strip { display:flex; align-items:center; gap:12px; padding:12px 18px; background:#f4f7fa; border-bottom:1px solid #e6e9ed }
+.strip img { width:88px; height:66px; object-fit:cover; flex:none }
+.strip b { display:block; font-size:12px }
+.strip p { font-size:11px; color:#5d6673 }
+.cta { text-align:center; padding:14px 18px; border-bottom:1px solid #e6e9ed }
+.cta .btn { display:inline-block; background:#3d82c4; color:#fff; font-weight:bold; font-size:12px; padding:8px 22px; border-radius:4px }
+.cta .fine { font-size:10px; color:#8a93a0; margin-top:6px }
+.foot { padding:12px 18px; background:#22303f; color:#9fb0c2; font-size:10px; text-align:center; line-height:1.7 }
+.foot .links a { color:#cfe0ef; text-decoration:none; margin:0 6px }
+.foot .addr { color:#7d8fa2; margin-top:4px }
+</style>
+</head>
+<body>
+<div class="mail">
+  <div class="pre">The mill is hiring, and the rye is back. View in browser.</div>
+
+  <div class="band">
+    <div class="nm">The Grist</div>
+    <div class="no">Issue 48<br />14 March 2026</div>
+  </div>
+
+  <div class="lead">
+    <img src="support/landscape.jpg" alt="The valley above the weir at first light" />
+    <h2>The weir survey is finished, and the fish pass works</h2>
+    <p>Two years of counting, one very cold February, and a result nobody
+    expected: 1,180 trout passed upstream last season, against 240 before the
+    rebuild. The full report goes out to subscribers on Friday.</p>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h3>From the mill</h3>
+      <div class="item"><b>Dark rye is milling again</b>
+        <p>The second stone is dressed and the rye run restarts on 18 March.</p>
+        <span class="more">Read the note &#8594;</span></div>
+      <div class="item"><b>We are hiring a miller</b>
+        <p>Four days a week, training given, some early mornings.</p>
+        <span class="more">See the post &#8594;</span></div>
+    </section>
+    <section>
+      <h3>Around the valley</h3>
+      <div class="item"><b>Bread market moves to the square</b>
+        <p>From April the Saturday market sets up outside the church.</p>
+        <span class="more">Details &#8594;</span></div>
+      <div class="item"><b>Low water in June</b>
+        <p>The region has published its abstraction limits for the summer.</p>
+        <span class="more">The figures &#8594;</span></div>
+    </section>
+  </div>
+
+  <div class="strip">
+    <img src="support/cat.jpg" alt="Beatrix the mill cat" />
+    <div>
+      <b>Beatrix has a rival</b>
+      <p>A second cat arrived in February and has claimed the warm end of the
+      grain loft. Names are being taken by return of post.</p>
+    </div>
+  </div>
+
+  <div class="cta">
+    <span class="btn">Order the March batch</span>
+    <div class="fine">Deliveries every Tuesday to Li&#232;ge, Huy, and Namur.</div>
+  </div>
+
+  <div class="foot">
+    <div class="links"><a href="#">Archive</a>&#183;<a href="#">Shop</a>&#183;<a href="#">Visit the mill</a>&#183;<a href="#">Unsubscribe</a></div>
+    <div class="addr">Moulin de Vierset, Rue du Moulin 3, 4577 Modave, Belgium</div>
+    <div class="addr">You get this because you bought flour or asked us to write.</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <!-- No width, height or viewBox: an image with neither natural dimensions nor a natural aspect ratio. It fills
+       whatever box it is drawn in, blue, with a white dot at the center. -->
+  <rect width="100%" height="100%" fill="#4f81bd"/>
+  <circle cx="50%" cy="50%" r="5" fill="white"/>
+</svg>

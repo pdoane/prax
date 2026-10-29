@@ -1,0 +1,73 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-gaps-1/#intro 1 Introduction: no page; it says what the module adds to CSS Multicol 1's column gaps and rules, which 2 and 3 show
+# css-gaps-1/#values 1.1 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+css-gaps-1/#gaps 2 Gaps Between Boxes
+    gaps.html
+    gaps-grid-lanes.html
+    gaps-alignment.html
+css-gaps-1/#column-row-gap 2.1 Row and Column Gutters: the row-gap and column-gap properties
+    column-row-gap.html
+css-gaps-1/#gap-shorthand 2.2 Gap Shorthand: the gap property
+    gap-shorthand.html
+css-gaps-1/#gap-percent 2.3 Percentages In gap Properties
+    gap-percent.html
+    gap-percent-flex.html
+css-gaps-1/#gap-legacy 2.4 Legacy Gap Properties: the grid-row-gap, grid-column-gap, and grid-gap properties
+    gap-legacy.html
+css-gaps-1/#gap-decorations 3 Gap decorations
+    gap-decorations.html
+    gap-decorations-axes.html
+# css-gaps-1/#geometry 3.1 Geometry: no page; it says decorations are painted as segments, which 3.1.1 and 3.1.2 show
+css-gaps-1/#segment-endpoints 3.1.1 Segment endpoints
+    segment-endpoints.html
+# css-gaps-1/#segments 3.1.2 Gap decoration segments: no page; it introduces 3.1.2.1 and 3.1.2.2
+css-gaps-1/#segments-definitions 3.1.2.1 Definitions
+    segments-definitions.html
+css-gaps-1/#segments-algorithms 3.1.2.2 Algorithms
+    segments-algorithm.html
+css-gaps-1/#break 3.2 Break behaviors at intersections: The column-rule-break, row-rule-break, and rule-break properties
+    rule-break.html
+    rule-break-flex-multicol.html
+    rule-break-more.html
+css-gaps-1/#inset 3.3 Adjusting gap decoration endpoints: The rule-inset properties
+    rule-inset.html
+    rule-inset-percent.html
+css-gaps-1/#insets-start-end 3.3.1 -start and -end shorthands
+    rule-inset-start-end.html
+css-gaps-1/#insets-cap-junction 3.3.2 -cap- and -junction- shorthands
+    rule-inset-cap-junction.html
+css-gaps-1/#insets-universal 3.3.3 Universal shorthands
+    rule-inset-shorthand.html
+css-gaps-1/#visibility 3.4 Gap decoration visibility: The rule-visibility-items properties
+    rule-visibility-items.html
+    rule-visibility-normal.html
+css-gaps-1/#overlap 3.5 Gap decoration overlap: The rule-overlap property
+    rule-overlap.html
+css-gaps-1/#fragmentation 3.6 Fragmentation
+    rule-fragmentation.html
+# css-gaps-1/#color-style-width 4 Color, style, and width: no page; it says these properties supersede CSS Multicol 1's, which 4.1 shows for multicol
+css-gaps-1/#column-row-rule-color 4.1 Gap decoration color: The column-rule-color, row-rule-color, and rule-color properties
+    rule-color.html
+css-gaps-1/#column-row-rule-style 4.2 Gap decoration style: The column-rule-style, row-rule-style, and rule-style properties
+    rule-style.html
+css-gaps-1/#column-row-rule-width 4.3 Gap decoration width: The column-rule-width, row-rule-width, and rule-width properties
+    rule-width.html
+css-gaps-1/#gap-decoration-shorthands 4.4 Gap decoration shorthands: The column-rule, row-rule, and rule properties
+    rule-shorthands.html
+css-gaps-1/#lists-repeat 4.5 Lists of values and the repeat() notation
+    rule-lists.html
+css-gaps-1/#assigning 4.6 Assigning gap decoration values to gaps
+    rule-assigning.html
+    rule-assigning-gaps.html
+css-gaps-1/#interpolation-behavior 4.7 Interpolation of list values
+    rule-interpolation.html
+# css-gaps-1/#serialization 4.8 Serialization: no page; it says how the shorthands serialize, which a script reads back and a page does not draw
+# css-gaps-1/#acknowledgements 5 Acknowledgements: no page; nothing to see
+# css-gaps-1/#privacy 6 Privacy Considerations: no page; nothing to see
+# css-gaps-1/#security 7 Security Considerations: no page; nothing to see
+# css-gaps-1/#changes 8 Changes: no page; it lists changes to the draft
+# css-gaps-1/#changes-20260624 8.1 Changes since the 24 June 2026 Working Draft: no page; it lists changes to the draft
+# css-gaps-1/#changes-20260227 8.2 Changes since the 27 February 2026 Working Draft: no page; it lists changes to the draft
+# css-gaps-1/#changes-20250417 8.3 Changes since the 17 April 2025 Working Draft: no page; it lists changes to the draft

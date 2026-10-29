@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>cx: the horizontal center</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { cx: 110px; }
+  .percent { cx: 25%; }
+  /* To and fro between 30 and 130 over 4 seconds; a still shows it a quarter of the way, at 55. */
+  .slide { animation: slide 4s linear -1s infinite alternate both; }
+  @keyframes slide { from { cx: 30px; } to { cx: 130px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.1 Horizontal center coordinate: The ‘cx’ property</div>
+  <h1>cx: the horizontal center</h1>
+  <p class=pr-lede><q>The ‘cx’ property describes the horizontal center coordinate of the position of the
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#CX">SVG 2 §7.1</a></span>
+  It applies to <code>circle</code> and <code>ellipse</code>. Each stage is an SVG 160 by 60, in user units of
+  1px.</p>
+</header>
+
+<section>
+  <h2>A property, from CSS, and animated</h2>
+  <p>A style sheet's <code>cx: 110px</code> over <code>cx="40"</code>. Its animation type is <q>by computed value</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle class=styled cx="40" cy="30" r="20" fill="#4f81bd" /></svg></div>
+    <figcaption>A circle of radius 20: centered on 110, 30, from x 90 to 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><ellipse class=styled cx="40" cy="30" rx="40" ry="20" fill="#4f81bd" /></svg></div>
+    <figcaption>An ellipse 80 by 40: centered on 110, 30, from x 70 to 150.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="60"><circle class=slide cx="0" cy="30" r="20" fill="#4f81bd" /></svg></div>
+    <figcaption>From <code>cx: 30px</code> to <code>130px</code> over 4 seconds: a quarter of the way, centered on
+    x 55. It slides to and fro.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage, of the viewport's width, or negative</h2>
+  <p>Percentages <q>refer to the width of the current SVG viewport</q>. <q>Negative values are permitted for ‘cx’; a negative value translates the center of the shape and does not
+  disable rendering</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle class=percent cx="0" cy="30" r="20" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cx: 25%</code> of 160: centered on x 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80.5" y="0.5" width="79" height="59" /><svg x="80" width="80" height="60"><circle class=percent cx="0" cy="30" r="20" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>The same circle in a nested <code>svg</code> 80 wide at x 80, outlined: 25% of 80, so x 20 in it,
+    centered on x 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="-10" cy="30" r="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cx="-10"</code>, radius 30: centered left of the stage, its right side from x 0 to 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

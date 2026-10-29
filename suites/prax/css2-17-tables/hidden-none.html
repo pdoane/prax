@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: hidden and none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { width: 50px; height: 30px; padding: 0 6px; border: 6px solid #4f81bd; }
+  .n td { border-style: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: hidden and none</h1>
+  <p class=pr-lede><q>The rule of thumb is that at each edge the most "eye catching" border style is chosen, except that
+  any occurrence of the style 'hidden' unconditionally turns the border off.</q> Every table collapses its borders;
+  cells have 6px solid blue borders unless the caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>1. hidden</h2>
+  <p><q>Borders with the 'border-style' of 'hidden' take precedence over all other conflicting borders. Any border with
+  this value suppresses all borders at this location.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 2px hidden">1<td style="border-left-width: 12px">2</table></div>
+    <figcaption>Cell 1's right border is a 2px <code>hidden</code>; cell 2's left a 12px solid one: no border between
+    them.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="border-style: hidden"><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption>The table's border is <code>hidden</code>: the cells' outer borders are gone, and only the lines
+    inside the table remain.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>2. none</h2>
+  <p><q>Borders with a style of 'none' have the lowest priority. Only if the border properties of all the elements
+  meeting at this edge are 'none' will the border be omitted (but note that 'none' is the default value for the border
+  style.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 12px none">1<td style="border-left: 2px solid #d68a3c">2</table></div>
+    <figcaption>A 12px <code>none</code> against a 2px solid orange border: the 2px orange border wins, width and
+    all.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table class=n><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption>Every cell's border is <code>none</code>, and so are the table's and rows': no borders at
+    all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

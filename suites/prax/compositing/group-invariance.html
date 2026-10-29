@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Group invariance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .w { position: absolute; left: 0; top: 0; width: 160px; height: 60px; }
+  .sq { position: absolute; top: 10px; width: 60px; height: 40px; }
+  .A { left: 10px; background: rgb(255 0 0 / 0.5); }
+  .B { left: 50px; background: rgb(0 255 0 / 0.5); }
+  .C { left: 90px; background: rgb(0 0 255 / 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 8.1 Group invariance</div>
+  <h1>Group invariance</h1>
+  <p class=pr-lede><q>Adding or removing grouping with default attributes shall not show visual differences.</q>
+  <q>so: A + B + C = A + (B + C) = (A + B) + C</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#groupinvariance">Compositing and Blending 2 §8.1</a></span>
+  Each stage holds red, lime and blue squares at 0.5, 60 by 40 at x 10, 50 and 90.</p>
+</header>
+
+<section>
+  <h2>Three groupings, one picture</h2>
+  <p>The groups are <code>div</code>s with default attributes: no stacking context, no blending.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class="sq A"></div><div class="sq B"></div><div class="sq C"></div></div>
+    <figcaption><code>A + B + C</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class="sq A"></div><div class=w><div class="sq B"></div><div class="sq C"></div></div></div>
+    <figcaption><code>A + (B + C)</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=w><div class="sq A"></div><div class="sq B"></div></div><div class="sq C"></div></div>
+    <figcaption><code>(A + B) + C</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Isolated, with normal blending</h2>
+  <p><q>When adding attributes to the group such as isolate, blending modes other than normal or Porter Duff
+  compositing operators other than source-over, groups may no longer be invariant.</q> With source-over and normal
+  blending alone, an isolated group is still the same.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class="sq A"></div><div class=w style="isolation: isolate"><div class="sq B"></div><div class="sq C"></div></div></div>
+    <figcaption><code>A + (B + C)</code>, the group isolated: the same as above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

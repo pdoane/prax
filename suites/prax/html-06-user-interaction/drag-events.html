@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The drag-and-drop events</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .card { margin: 0 0 10px; padding: 0 6px; background: #f6d7b4; font-size: 12px; line-height: 20px }
+  .zone { height: 30px; margin: 0 0 10px; padding: 0 6px; outline: 1px dashed var(--pr-line); background: var(--pr-plain);
+          font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.6 Events summary</div>
+  <h1>The drag-and-drop events</h1>
+  <p class=pr-lede>dragstart, drag and dragend go to the <q>Source node</q>; dragenter to the <q>Immediate user selection or the
+  body element</q>; dragleave to the <q>Previous target element</q>; dragover and drop to the <q>Current target
+  element</q>. <q>All of these events bubble, are composed, and the effectAllowed attribute always has the value it
+  had after the dragstart event</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#dndevents">HTML §6.11.6</a></span></p>
+</header>
+<section>
+  <h2>A drag from the card to the zone</h2>
+  <p>The zone cancels dragenter, dragover and drop. The log leaves out a repeat of the line above it, as drag and
+  dragover repeat while the drag goes on. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#dndevents">§6.11.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0">
+        <div class=card id=card draggable=true>drag me</div>
+        <div style="height: 20px; margin: 0 0 10px; font-size: 12px; line-height: 20px" id=between>between</div>
+        <div class=zone id=zone>the zone</div>
+      </div>
+      <ol class="pr-log drag-log" data-log="dragstart drag dragenter dragleave dragover drop dragend" data-fields="target relatedTarget dataTransfer.dropEffect" data-lines=9 data-on=document></ol>
+    </div>
+    <figcaption>Drag the card down onto the zone and release: dragstart and drag at <code>card</code>. As the pointer enters each element that does not cancel, the card
+    then <code>between</code>, dragenter at it and then at the <code>body</code>, which stays the target, with
+    dragover at the <code>body</code>. Over the zone: dragenter at <code>zone</code>, dragleave at the
+    <code>body</code> with <code>relatedTarget=zone</code>, dragover at <code>zone</code>. Then drop at
+    <code>zone</code>, and dragend at <code>card</code> with <code>dropEffect=copy</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The card allows copy and move; the zone accepts a copy.
+  document.getElementById("card").addEventListener("dragstart", event => {
+      event.dataTransfer.setData("text/plain", "the card");
+      event.dataTransfer.effectAllowed = "copyMove";
+  });
+  const zone = document.getElementById("zone");
+  for (const type of ["dragenter", "dragover", "drop"]) {
+      zone.addEventListener(type, event => {
+          event.dataTransfer.dropEffect = "copy";
+          event.preventDefault();
+      });
+  }
+</script>
+<script src=support/drag-log.js></script>
+</body>
+</html>

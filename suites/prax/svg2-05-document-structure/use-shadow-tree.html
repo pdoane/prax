@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>use: the shadow tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <rect id="plain" width="40" height="40" />
+  <rect id="changed" width="40" height="40" fill="#d68a3c" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5.1 The use-element shadow tree</div>
+  <h1>use: the shadow tree</h1>
+  <p class=pr-lede><q>Elements in the shadow tree are rendered as if the ‘use’ element was a container and they were its
+  children.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseShadowTree">SVG 2 §5.5.1</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>A container for its copies</h2>
+  <p><q>The cloned content inherits styles from the ‘use’ element</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseElement">§5.5</a></span>.
+  A rect 40 by 40 with no <code>fill</code> of its own.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#plain" x="20" y="10" fill="#4f81bd" /><use href="#plain" x="100" y="10" fill="#6aa36a" /></svg></div>
+    <figcaption>Two <code>use</code>, blue and green: the copies inherit, blue at 20, 10, green at 100, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#plain" x="20" y="10" fill="#4f81bd" opacity="0.5" /><use href="#plain" x="40" y="10" fill="#4f81bd" opacity="0.5" /></svg></div>
+    <figcaption>Two at half opacity, overlapping from 40 to 60: darker where they overlap, each a group of its
+    own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Kept in step with the original</h2>
+  <p><q>The user agent must ensure that all mutations to the referenced document subtree are reflected in the shadow
+  tree.</q> The page's script sets the original rect's <code>fill</code> to blue, after it is drawn orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#changed" x="60" y="10" /></svg></div>
+    <figcaption>A <code>use</code> of the rect, at 60, 10: blue, the mutation reflected.</figcaption>
+  </figure>
+</section>
+
+<script>
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.getElementById("changed").setAttribute("fill", "#4f81bd");
+  }));
+</script>
+</body>
+</html>

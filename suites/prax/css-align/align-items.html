@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-auto-flow: column; grid-auto-columns: 40px; height: 60px; }
+  .f { display: flex; height: 60px; }
+  .t { font-size: 13px; line-height: 1; background: #f9cc9d; padding: 0 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 7.2 Block-Axis (or Cross-Axis) Default Alignment</div>
+  <h1>align-items</h1>
+  <p class=pr-lede><q>This property specifies the default 'align-self' for all of the child boxes (including anonymous
+  boxes) participating in this box's formatting context.</q> <q>Values have no special handling and are merely
+  referenced by 'align-self'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-items-property">CSS Box Alignment 3 §7.2</a></span>
+  Each stage is 60px tall; A and B are <code>align-self: auto</code>, C <code>start</code>.</p>
+</header>
+
+<section>
+  <h2>Grid and flex containers</h2>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="align-self: start">C</div></div></div>
+    <figcaption>A grid, initial <code>normal</code>: A and B
+    stretched; C at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="align-items: center"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="align-self: start">C</div></div></div>
+    <figcaption>A grid, <code>center</code>: A and B centered; C at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="align-items: end"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="align-self: start">C</div></div></div>
+    <figcaption>A flexbox, <code>end</code>: A and B at the bottom; C at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="align-items: baseline"><div class=t>Ag</div><div class=t style="font-size: 32px">Ag</div><div class="t" style="align-self: end">Ag</div></div></div>
+    <figcaption>A flexbox, <code>baseline</code>: the first two on one baseline; the third, <code>end</code>, at
+    the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No effect on blocks</h2>
+  <p><code>align-self</code> does not apply to block-level boxes, so neither does the default.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px; align-items: end"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption>A block, <code>align-items: end</code>: A and B at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

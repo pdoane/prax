@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline style: the 3D values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ol { outline: 10px solid #2c5a8f; }
+  .warm { outline-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline style: the 3D values</h1>
+  <p class=pr-lede><code>outline-style</code> takes <code>&lt;border-style&gt; | inherit</code>, without
+  <code>hidden</code>. Every figure's outline is 10px wide, drawn round a light box 20px tall.</p>
+</header>
+
+<section>
+  <h2>groove, ridge, inset and outset</h2>
+  <p><q>The 'outline-style' property accepts the same values as 'border-style'</q>: four styles that draw the outline in
+  shades of its color. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a>, <a href="https://drafts.csswg.org/css2/#border-style-properties">§8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-style: groove"></div></div>
+    <figcaption><code>groove</code>: carved into the canvas.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-style: ridge"></div></div>
+    <figcaption><code>ridge</code>: coming out of the canvas, the opposite of <code>groove</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-style: inset"></div></div>
+    <figcaption><code>inset</code>: the box looks embedded in the canvas.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="outline-style: outset"></div></div>
+    <figcaption><code>outset</code>: the box looks as though it comes out of the canvas.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In another color</h2>
+  <p>The shades follow the outline's color; the user agent chooses how. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol warm" style="outline-style: groove"></div></div>
+    <figcaption><code>groove</code> in orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol warm" style="outline-style: outset"></div></div>
+    <figcaption><code>outset</code> in orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

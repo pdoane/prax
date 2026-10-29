@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: only text</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .u { text-decoration: underline; color: #c0392b; }
+  .u .pr-chip { color: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: only text</h1>
+  <p class=pr-lede>In each figure, the underlined element has a red <code>color</code>.</p>
+</header>
+
+<section>
+  <h2>Text, not margins, borders, padding or images</h2>
+  <p><q>Underlines, overlines, and line-throughs are applied only to text (including white space, letter spacing, and
+  word spacing): margins, borders, and padding are skipped. User agents must not render these text decorations on
+  content that is not text. For example, images and inline blocks must not be underlined.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2
+  §16.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class="u pr-chip" style="margin: 0 10px; padding: 0 10px">padded</span> b</div>
+    <figcaption>The underline is under "padded" only: not under the span's 10px of padding, 2px borders, or 10px
+    margins.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=u style="letter-spacing: 6px; word-spacing: 20px">wide words</span></div>
+    <figcaption>With <code>letter-spacing: 6px</code> and <code>word-spacing: 20px</code>, the underline runs on,
+    unbroken, under the spacing and the space.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=u>text <img alt="" width=40 height=14 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='%234f81bd'/%3E%3C/svg%3E"> text</span></div>
+    <figcaption>The blue rectangle is an image: the underline skips it.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-decor-3/#line-decoration">CSS Text Decoration 3 §2</a></div>
+  <h2>Descendants' boxes are decorated; line ends are not</h2>
+  <p>Lines <q>are drawn across all text (including white space, letter spacing, and word spacing) except spacing
+  (white space, letter spacing, and word spacing) at the beginning and end of a line.</q> <q>Margins, borders, and
+  padding of the decorating box are always skipped, however the margins, border, and padding of descendant inline
+  boxes are not.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-3/#line-decoration">CSS Text Decoration 3 §2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><span class=u>a <span class=pr-chip style="margin: 0 10px; padding: 0 10px">chip</span> b</span></div>
+    <figcaption>The underline is on the outer span: it runs on, unbroken, under the orange child's margins, border
+    and padding. <span class=pr-flag>Chrome</span> skips them, as CSS 2 did.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text u" style="white-space: pre">   lead  trail   </div>
+    <figcaption><code>pre</code>, three spaces each side: the underline starts under "lead" and ends under "trail".
+    <span class=pr-flag>Chrome</span> also underlines the spaces at both ends.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

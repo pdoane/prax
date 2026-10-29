@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+  <!-- A mask, which a mask-image url() with this fragment refers to as an element: white keeps, black hides. -->
+  <mask id="disc" maskContentUnits="objectBoundingBox">
+    <circle cx="0.5" cy="0.5" r="0.5" fill="white"/>
+  </mask>
+  <!-- Not a mask, so a mask-image url() with this fragment is an image of the whole file. -->
+  <g id="bar">
+    <rect width="40" height="10" fill="black"/>
+  </g>
+</svg>

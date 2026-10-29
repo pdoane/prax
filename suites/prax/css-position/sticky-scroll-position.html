@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scrolling to a sticky box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .gap { height: 40px; }
+  .rest { height: 300px; }
+  .st { position: sticky; top: 0; width: 100px; }
+  .pr-stage { width: 160px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4.1 Scroll Position of Sticky-Positioned Boxes</div>
+  <h1>Scrolling to a sticky box</h1>
+  <p class=pr-lede><q>For the purposes of any operation targeting the scroll position of a sticky positioned element
+  (or one of its descendants), the sticky positioned element must be considered to be at its offsetted position.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-scroll">CSS Positioned Layout 3 §3.4.1</a></span>
+  Each stage scrolls; a light blue block 40px tall comes before the orange box. Each is scrolled 100px, then a
+  script calls <code>scrollIntoView({block: "nearest"})</code> on the box or on what the caption says.</p>
+</header>
+
+<section>
+  <h2>At its offset position, already in view</h2>
+  <figure>
+    <div class="pr-stage sc" id=s1><div class="gap pr-a pr-light"></div><div class="pr-b st" id=t1>sticky</div><div class=rest></div></div>
+    <figcaption><code>top: 0</code>: held at the top, the box is in view, and nothing scrolls: the light blue
+    block stays scrolled out of view.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" id=s2><div class="gap pr-a pr-light"></div><div class="pr-b st"><span id=t2>child</span></div><div class=rest></div></div>
+    <figcaption>The same, scrolling to a span inside the box: nothing scrolls.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" id=s3><div class="gap pr-a pr-light"></div><div class="pr-b st" id=t3 style="position: relative">relative</div><div class=rest></div></div>
+    <figcaption>For comparison, a relative box at 40, scrolled out of view: the stage scrolls back to show it at its
+    top, the light blue block above it, out of view.</figcaption>
+  </figure>
+</section>
+
+<script>
+for (const n of [1, 2, 3]) {
+    document.getElementById("s" + n).scrollTop = 100;
+    document.getElementById("t" + n).scrollIntoView({block: "nearest", inline: "nearest"});
+}
+</script>
+</body>
+</html>

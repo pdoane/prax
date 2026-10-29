@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The wbr element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: calc(50px / 3)/20px "PR Noto Sans Mono"; overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.28 The wbr element</div>
+  <h1>The wbr element</h1>
+  <p class=pr-lede><q>The wbr element represents a line break opportunity.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-wbr-element">HTML §4.5.28</a></span></p>
+</header>
+<section>
+  <h2>A place to break</h2>
+  <p><q>wbr { display-outside: break-opportunity; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> Each stage is 100px wide and holds one word of 14
+  letters, each 10px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t">breakable<wbr>words</div>
+    <figcaption>A wbr after "breakable": "breakable" on the first line, "words" on the second.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t">breakablewords</div>
+    <figcaption>None: one line, cut off at the stage's right edge.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

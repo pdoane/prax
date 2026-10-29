@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-fill, spanners and overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .all { column-span: all; }
+  figure { margin-bottom: 16px; }
+  .over .pr-stage { width: 130px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 7.1 Column Balancing, lines and overflow</div>
+  <h1>column-fill, spanners and overflow</h1>
+  <p class=pr-lede><q>This property specifies whether content in a multi-column line that does not immediately
+  precede a spanner is balanced across columns or not.</q> <q>In continuous contexts, this property does not have any
+  effect when there are overflow columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cf">CSS Multi-column Layout 1 §7.1</a></span>
+  Each stage has three columns of 60px; each word is on a line of its own.</p>
+</header>
+
+<section>
+  <h2>Before a spanner, always balanced</h2>
+  <p>The stages are 80px tall with <code>column-fill: auto</code>; A spans the columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 80px; column-fill: auto">one two six<div class="pr-a all">A</div>red big</div>
+    <figcaption>Above A, balanced, a line in each column; below it, filled in order, "red" and "big" in the
+    first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 80px">one two six<div class="pr-a all">A</div>red big</div>
+    <figcaption><code>balance</code>: below A too, "red" and "big" balanced.</figcaption>
+  </figure>
+</section>
+
+<section class=over>
+  <h2>No effect with overflow columns</h2>
+  <p>The stages are 40px tall and hold eight lines, more than the three columns hold: a fourth goes past the stage's
+  right edge. These stages are 130px wide, with columns of 36.67px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="height: 40px; column-fill: auto">one two six ten red big fat sun</div>
+    <figcaption><code>auto</code>: two lines to each column, "fat" and "sun" in the fourth, past the stage.
+    <span class=pr-flag>Safari</span> One line to a column, five columns past the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="height: 40px">one two six ten red big fat sun</div>
+    <figcaption><code>balance</code>: the same, not balanced. <span class=pr-flag>Safari</span> As with
+    <code>auto</code>, one line to a column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>resize: the resizing mechanism</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; }
+  .r { width: 80px; height: 40px; padding: 0 6px; overflow: auto; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f;
+       font-size: 12px; line-height: 20px; }
+  .gen::before { content: "::before"; display: block; width: 80px; height: 40px; padding: 0 6px; overflow: auto;
+                 resize: both; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f; font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 4.1 Resizing Boxes: the resize property</div>
+  <h1>resize: the resizing mechanism</h1>
+  <p class=pr-lede><q>The resize property allows the author to specify whether or not an element is resizable by the
+  user, and if so, along which axis/axes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#resize">CSS Basic User Interface 4 §4.1</a></span>
+  A still shows the mechanism, not its use: dragging a box's corner sets its <code>width</code> and
+  <code>height</code>, held only by <code>min-</code> and <code>max-</code> sizes.</p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><q>The UA presents a bidirectional resizing mechanism</q> for <code>both</code>, a horizontal or vertical one
+  for <code>horizontal</code> and <code>vertical</code>, and none for <code>none</code>. Each box has
+  <code>overflow: auto</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: none">none</div></div>
+    <figcaption>No mechanism.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: both">both</div></div>
+    <figcaption>A grip in the bottom right corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: horizontal">horizontal</div></div>
+    <figcaption>A grip that resizes the width. Chrome, Safari and Firefox draw the same grip as for <code>both</code>, and for <code>vertical</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scroll containers, and not generated content</h2>
+  <p><q>The resize property applies to elements that are scroll containers.</q> <q>Implementations should not apply
+  the resize property to generated content.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: both; overflow: visible">visible</div></div>
+    <figcaption><code>resize: both</code> with <code>overflow: visible</code>: not a scroll container, no grip.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: both; overflow: hidden">hidden</div></div>
+    <figcaption>With <code>overflow: hidden</code>, a scroll container: a grip.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=gen></div></div>
+    <figcaption>A <code>::before</code> with <code>overflow: auto; resize: both</code>: no grip.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

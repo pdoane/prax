@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentages inside a content-sized containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 100px; }
+  figure.f figcaption { max-width: 152px; }
+  .aside { background: rgba(79, 129, 189, 0.45); }
+  .sec { height: 20px; background: #d68a3c; }
+  .bar { display: inline-block; height: 20px; background: #d68a3c; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2.1 Intrinsic Contributions of Percentage-Sized Boxes, the contents</div>
+  <h1>Percentages inside a content-sized containing block</h1>
+  <p class=pr-lede><q>If the cyclic dependency was introduced due to a block-axis size other than a minimum size on the
+  containing block (i.e. a block-size or max-block-size in most layout modes, or a flex-basis in flex layout) that
+  causes it to depend on the size of its contents, the box’s percentage is not resolved and instead behaves as
+  auto.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#cyclic-percentage-contribution">CSS Box Sizing 3 §5.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A block size from the content: as auto</h2>
+  <p>The spec's example at a smaller scale: a dashed article holds a blue aside of <code>height: 50%</code> around 70px
+  of content, then an orange section 20px tall. Heights read back below.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div id=x1 class=pr-parent><div id=x1a class=aside style="height: 50%"><div style="height: 70px"></div></div><div class=sec></div></div></div>
+    <figcaption>Article <code>height: auto</code>: the aside as auto, 70px, and the article 90px. Reads
+    <code class=pr-computed data-of=x1 data-dom=offsetHeight></code> and <code class=pr-computed data-of=x1a data-dom=offsetHeight></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=x2 class=pr-parent style="height: max-content"><div id=x2a class=aside style="height: 50%"><div style="height: 70px"></div></div><div class=sec></div></div></div>
+    <figcaption>Article <code>height: max-content</code>: the same, 90px and 70px. Reads
+    <code class=pr-computed data-of=x2 data-dom=offsetHeight></code> and <code class=pr-computed data-of=x2a data-dom=offsetHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise resolved, and the parent not resized</h2>
+  <p><q>Otherwise, the percentage is resolved against the containing block’s size. (The containing block’s size
+  is not re-resolved based on the resulting size of the box; the contents might thus overflow or underflow the
+  containing block).</q></p>
+  <figure class=f>
+    <div class="pr-stage s" style="height: auto"><div id=y1 class=pr-parent style="width: max-content"><div class=aside style="width: 50%; height: 28px; white-space: nowrap; outline: 1px solid #2c5a8f"><span class=bar style="width: 60px"></span><span class=bar style="width: 60px; background: #6aa36a"></span></div></div></div>
+    <figcaption>A <code>width: max-content</code> parent, 120px from its <code>width: 50%</code> child's two bars;
+    the blue child is then 60px, and the green bar overflows it.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sunken initials</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .s::first-letter { initial-letter: 3 2; color: #2c5a8f; }
+  .d::first-letter { initial-letter: 2; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.1.2 Sunken Initial Letters</div>
+  <h1>Sunken initials</h1>
+  <p class=pr-lede><q>Some styles of drop initials do not align with the first line of text. A sunken initial (or
+  “sunken cap”) both sinks below the first baseline, and extends above the first line of text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#sunk-initial">CSS Inline Layout 3 §7.1.2</a></span>
+  Each paragraph is 13px PR Literata on 20px lines, its first letter in blue.</p>
+</header>
+
+<section>
+  <h2>Three lines tall, two lines deep</h2>
+  <p>The spec's figure: <q>The letter drops two lines, but is the size of a three-line initial letter.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p s">Sunken: this letter is as tall as three lines, its foot on the second line's baseline.</p></div>
+    <figcaption><code>initial-letter: 3 2</code>: the S's foot on the second baseline, its top a line above the
+    first line's capitals, and the paragraph pushed down to make room. <span class=pr-flag>Safari</span> Supports only
+    <code>-webkit-initial-letter</code>: a plain S. <span class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d">Dropped: this letter is as tall as two lines, its foot on the second line's baseline.</p></div>
+    <figcaption><code>initial-letter: 2</code>, for comparison: the same foot, its top level with the first line's
+    capitals. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A plain D.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

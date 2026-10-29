@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: one line per line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .u { text-decoration: underline; color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: one line per line</h1>
+  <p class=pr-lede>In each figure, the underlined element has a red <code>color</code>.</p>
+</header>
+
+<section>
+  <h2>The same baseline and thickness on each line</h2>
+  <p><q>In determining the position of and thickness of text decoration lines, user agents may consider the font sizes
+  of and dominant baselines of descendants, but must use the same baseline and thickness on each line.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2 §16.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="line-height: 30px"><span class=u>small <span style="font-size: 24px">BIG</span> <span style="vertical-align: super">up</span> small</span></div>
+    <figcaption>One straight underline, of one thickness, under the small text, the big text and the raised
+    "up".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="line-height: 30px"><span class=u>small, <span style="font-size: 24px">BIG</span> on the first line, small on the second</span></div>
+    <figcaption>Two lines of one span: each line has one straight underline, of the same thickness on both.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-decor-3/#text-underline-position-property">CSS Text Decoration 3 §2.5</a></div>
+  <h2>Not moved by a descendant's vertical-align</h2>
+  <p><q>UAs must adjust line positions to match the shifted metrics of decorating boxes shifted with vertical-align
+  values other than baseline [CSS2] or subscripted/superscripted via font-variant-position [CSS-FONTS-3], but must not
+  adjust the line position or thickness in response to descendants of a decorating box that are so styled.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-3/#text-underline-position-property">CSS Text Decoration 3 §2.5</a></span> CSS 2 let the descendants' baselines be considered; a raised or
+  lowered descendant may no longer move its ancestor's line (Text Decoration 4 <a href="https://drafts.csswg.org/css-text-decor-4/#text-line-constancy">§2.9</a> keeps this).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="padding-top: 10px"><span class=u style="text-decoration: overline">over <span style="vertical-align: 6px">raised</span> over</span></div>
+    <figcaption>The span's red overline is one straight line at the height it has over "over"; "raised", 6px up,
+    reaches into it. <span class=pr-flag>Chrome</span> draws the overline 6px higher over "raised".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=u>under <span style="vertical-align: 6px">raised</span> under</span></div>
+    <figcaption>The same with an underline: one straight line at the height it has under "under", 6px below
+    "raised".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

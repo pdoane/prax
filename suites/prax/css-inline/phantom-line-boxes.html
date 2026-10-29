@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Phantom line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .gap { margin: 20px 0; }
+  .abs { position: absolute; width: 20px; height: 10px; }
+  .fl::first-line { color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 2.3 Phantom Line Boxes</div>
+  <h1>Phantom line boxes</h1>
+  <p class=pr-lede><q>Line boxes that contain no text, no preserved white space, no inline boxes with non-zero
+  inline-axis margins, padding, or borders, and no other in-flow content … and do not end with a forced line break
+  are phantom line boxes.</q> <q>Such boxes must be treated as zero-height line boxes for the purposes of determining
+  the positions of any descendant content … and both the line box and its in-flow content must be treated as not
+  existing for any other layout or rendering purpose.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#invisible-line-boxes">CSS Inline Layout 3 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Zero height, or a line</h2>
+  <p>Each stage holds "above", then a block of what the caption says, then "below", on 20px lines.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">above<div><span></span> <span class=abs style="background: #c0392b"></span></div>below</div>
+    <figcaption>An empty span, a space, an absolutely positioned red box: phantom.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">above<div><span style="padding-top: 10px; border-bottom: 4px solid"></span></div>below</div>
+    <figcaption>A span with only block-axis padding and border: phantom, no line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">above<div><span style="padding-left: 1px"></span></div>below</div>
+    <figcaption>A span with 1px of left padding: a 20px line between them.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow">above<div style="white-space: pre"> </div>below</div>
+    <figcaption>A preserved space: a 20px line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not there for margins or the first line</h2>
+  <p>A phantom line box is ignored <q>for example, for: margin collapsing, finding the first formatted line, applying
+  text-box-trim</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="gap pr-hl">first</div><div><span></span></div><div class="gap pr-hl">third</div></div>
+    <figcaption>Blocks with 20px margins about one of an empty span: the margins collapse, 20px apart.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow fl"><div>A first line in a block</div></div>
+    <figcaption><code>::first-line</code> in red, the line in a child block: red. <span class=pr-flag>Firefox</span>
+    No red.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow fl"><div><span></span></div><div>A first line after one</div></div>
+    <figcaption>The same after a block of an empty span: its line is phantom, so this first line is red.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    No red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

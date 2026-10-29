@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A key's value</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3 Keyboard Event key Values</div>
+  <h1>A key's value</h1>
+  <p class=pr-lede><q>A key value indicates the current value of the event with consideration to the current state of
+  all active keys and key input modes (including shift modes), as reflected in the operating-system mapping of the
+  keyboard and reported to the implementation.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-keyvalues">UI Events §4.3</a></span></p>
+</header>
+<section>
+  <h2>Shifted and not</h2>
+  <p><q>the key value for the key labeled O on a QWERTY keyboard has the key value o in an unshifted state and O in a
+  shifted state.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-keyvalues">§4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key shiftKey" data-on="#field" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box and press O: <code>key="o"</code>. Hold Shift and press O: <code>key="O"</code>. Turn
+    on Caps Lock and press O: <code>key="O"</code>, without <code>shiftKey</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>One value, two keys</h2>
+  <p><q>A particular key value might be associated with multiple keys.</q> Many keyboards have <q>more than one key
+  with the Shift key value (normally distinguished by the location values DOM_KEY_LOCATION_LEFT and
+  DOM_KEY_LOCATION_RIGHT) or 8 key value (normally distinguished by the location values DOM_KEY_LOCATION_STANDARD and
+  DOM_KEY_LOCATION_NUMPAD)</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-keyvalues">§4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=eight tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#eight" data-lines=2></ol>
+    </div>
+    <figcaption>Click the box and press 8 above the letters, then 8 on a numpad with Num Lock on: <code>key="8"</code>
+    both times, with <code>location=0</code> and then <code>location=3</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

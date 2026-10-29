@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The dl element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 140px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.9 The dl element</div>
+  <h1>The dl element</h1>
+  <p class=pr-lede><q>The dl element represents an association list consisting of zero or more name-value groups (a description list).</q> Names are dt elements, values dd elements. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-dl-element">HTML §4.4.9</a></span></p>
+</header>
+<section>
+  <h2>Names, then values set in by 40px</h2>
+  <p><q>dir, dd, dl, dt, menu, ol, ul { display: block; }</q> <q>dir, dl, menu, ol, ul { margin-block: 1em; }</q>
+  <q>dd { margin-inline-start: 40px; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span> The frame's text is 10px on 20px lines; the list is tinted orange, the
+  dt elements green, the dd elements blue.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { margin: 0 10px; font: 10px/20px &quot;PR Noto Sans&quot; } dl { background: rgba(214, 138, 60, 0.12) } dt { background: rgba(106, 163, 106, 0.25) } dd { background: rgba(79, 129, 189, 0.16) }</style><dl><dt>Term<dd>Its definition<dt>Name<dt>Other name<dd>A value<dd>Another value</dl>"></iframe></div>
+    <figcaption>10px below the frame's top, six lines with no space between: each dt at the left, each dd set in
+    40px.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

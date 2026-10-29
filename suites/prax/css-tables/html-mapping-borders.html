@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>HTML's attributes: border, frame, rules</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  td { background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 10.1 Mapping between CSS &amp; HTML attributes, borders</div>
+  <h1>HTML's attributes: border, frame, rules</h1>
+  <p class=pr-lede>The style sheet maps the border attributes to borders on the table and its cells. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#mapping">CSS Table 3 §10.1</a></span>
+  Each table has two rows of two cells, <code>cellspacing=0</code>; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>border</h2>
+  <p><q>table[border=$border]</q> gets <q>outset rgb(128, 128, 128)</q> at that many pixels, and its cells <q>border: 1px
+  inset rgb(128, 128, 128)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table border=5 cellspacing=0><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></div>
+    <figcaption><code>border=5</code>: a 5px grey outset border round the table, 1px inset borders round each cell.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>rules</h2>
+  <p>Any <code>rules</code> makes the table <q>border-collapse: collapse; border-style: hidden;</q>; then <q>table[rules=rows
+  i]</q> cells get <q>border: 1px solid grey; border-left: none; border-right: none;</q>, and <code>cols</code> the
+  reverse.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table rules=rows cellspacing=0><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></div>
+    <figcaption><code>rules=rows</code>: one grey line between the rows, none between the columns, none round the
+    table.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table rules=cols cellspacing=0><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></div>
+    <figcaption><code>rules=cols</code>: one line between the columns only.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table rules=groups cellspacing=0><thead><tr><td>a</td><td>b</td></tr></thead><tbody><tr><td>c</td><td>d</td></tr></tbody></table></div>
+    <figcaption><code>rules=groups</code>, a header and a body: one line between the groups.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

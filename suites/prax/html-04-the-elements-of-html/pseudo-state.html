@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:state()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px; font-size: 12px; }
+  x-switch { display: block; margin: 0 0 8px; padding: 0 6px; line-height: 20px; background: var(--pr-plain); border: 3px solid #b5bcc7; }
+  x-switch:state(on) { background: #8fd18f; border-color: #3f9a3f; }
+  x-switch:state(on)::after { content: " (on)"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:state()</h1>
+  <p class=pr-lede><q>The :state(identifier) pseudo-class must match all custom elements whose states set's set entries
+  contains identifier.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>A custom element's own state</h2>
+  <p>Each <code>x-switch</code> adds <code>on</code> to its states set when clicked, and deletes it when clicked
+  again, through its <code>ElementInternals</code>. <code>:state(on)</code> is green. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <x-switch>first switch</x-switch>
+        <x-switch data-on>second switch, on at load</x-switch>
+      </div>
+    </div>
+    <figcaption>The second is green and reads "(on)". Click either: it turns green with "(on)", or back to grey.</figcaption>
+  </figure>
+</section>
+<script>
+  // A custom element that keeps "on" in its states set.
+  customElements.define("x-switch", class extends HTMLElement {
+    constructor() {
+      super();
+      this.internals = this.attachInternals();
+      this.addEventListener("click", () => this.toggle());
+    }
+    connectedCallback() {
+      if (this.hasAttribute("data-on"))
+        this.internals.states.add("on");
+    }
+    toggle() {
+      const states = this.internals.states;
+      if (states.has("on"))
+        states.delete("on");
+      else
+        states.add("on");
+    }
+  });
+</script>
+</body>
+</html>

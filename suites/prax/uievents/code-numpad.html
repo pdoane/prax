@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The numpad</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.4 Numpad Section</div>
+  <h1>The numpad</h1>
+  <p class=pr-lede><q>The numpad section is the set of keys on the keyboard arranged in a grid like a calculator or mobile phone.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-numpad-section">UI Events KeyboardEvent code Values §3.4</a></span></p>
+</header>
+<section>
+  <h2>The same code with Num Lock on or off</h2>
+  <p><q>Often this section will contain a NumLock key which causes the keys to switch between the standard numeric functions and mimicking the keys of the control pad and arrow pad.</q> <q>On the Mac, the "NumLock" code should be used for the numpad Clear key.</q> The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-numpad-section">§3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="numpad" data-unit=34></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=4></ol>
+    </div>
+    <figcaption>Click the keys and press the numpad's 7 with Num Lock on, then off: <code>key="7"</code>, then <code>key="Home"</code>, with <code>code="Numpad7"</code> both times, lit at the same place. A Mac keyboard's Clear key lights <code>NumLock</code>.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

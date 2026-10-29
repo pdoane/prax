@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The width of a collapsed margin</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>The width of a collapsed margin</h1>
+  <p class=pr-lede><q>When two or more margins collapse, the resulting margin width is the maximum of the collapsing margins' widths.</q> Negative margins: the largest of them is deducted from the largest positive one, or from zero. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Positive margins: the largest</h2>
+  <p>Every box is 20px tall and the guides are 10px apart.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div class=pr-b style="margin-top: 30px">B: mt 30</div></div>
+    <figcaption>max(10, 30) = 30</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class=pr-b style="margin-top: 0">B: mt 0</div></div>
+    <figcaption>max(30, 0) = 30</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">A: mb 10</div><div class=pr-parent style="margin-top: 20px"><div class=pr-b style="margin-top: 30px">B: mt 30</div></div></div>
+    <figcaption>Three margins, 10, 20 and B's 30 through its parent: 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative margins only: the most negative</h2>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><div class=pr-a style="margin-bottom: -10px">A: mb −10</div><div class=pr-b style="margin: -20px 0 0 70px; opacity: 0.85">B: mt −20</div></div>
+    <figcaption>0 − max(10, 20) = −20: B overlaps all of A, not 30px up.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding-top: 20px"><div class=pr-a style="margin-bottom: 0">A: mb 0</div><div class=pr-b style="margin: -10px 0 0 70px; opacity: 0.85">B: mt −10</div></div>
+    <figcaption>A margin of 0 is not positive: 0 − 10 = −10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

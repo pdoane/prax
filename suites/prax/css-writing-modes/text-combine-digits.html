@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright: digits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/24px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 136px; padding: 0 6px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1 Horizontal-in-Vertical Composition: the text-combine-upright property, digits</div>
+  <h1>text-combine-upright: digits</h1>
+  <p class=pr-lede><q>digits &lt;integer [2,4]&gt;?: Attempt to typeset horizontally each maximal sequence of
+  consecutive ASCII digits (U+0030–U+0039) that has as many or fewer digits than the specified integer such that it
+  takes up the space of a single typographic character unit within the vertical line box. If the integer is omitted,
+  it computes to 2.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-upright">CSS Writing Modes 4 §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>Up to the integer</h2>
+  <p>The first two stages hold 1年12月123日1234. No browser supports <code>digits</code>: each turns every number.
+  The last is the specification's warning: <q>applying text-combine-upright: digits 2 to an entire document, rather
+  than to a segment with a known type of numeric content, can have unintended consequences</q>.</p>
+  <figure class="s pr-erratum">
+    <div id=d2 class=pr-stage style="text-combine-upright: digits">1年12月123日1234</div>
+    <figcaption><code>digits</code>, so 2: "1" and "12" combined; the rest turned. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span></figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-combine-upright: digits 4">1年12月123日1234</div>
+    <figcaption><code>digits 4</code>: every number combined. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span></figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-combine-upright: digits 2">あれは10,000円ですよ！</div>
+    <figcaption><code>digits 2</code>: <q>the first two digits of the number are rendered as tate-chu-yoko while the
+    rest of the number is rendered sideways.</q> <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

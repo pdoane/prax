@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The last remembered size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 150px; height: 90px; }
+  figure.f figcaption { max-width: 152px; }
+  .c { background: #b9cde6; outline: 1px solid #2c5a8f; font: 13px/20px "PR Arimo"; width: 120px; }
+  .hidden { content-visibility: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.2.1 Last Remembered Size</div>
+  <h1>The last remembered size</h1>
+  <p class=pr-lede><q>if an element is ever not size-contained, this value causes the element to remember its size
+  (calculated as normal by layout); then, if the element gains size containment later, it will use the remembered
+  size</q>. <q>If auto is specified and the element has a last remembered size and is currently skipping its contents,
+  its explicit intrinsic inner size in the corresponding axis is the last remembered size in that axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#last-remembered">CSS Box Sizing 4 §5.2.1</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#intrinsic-size-override">§5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Laid out, then hidden</h2>
+  <p>Each blue box first lays out three lines of text, 60px; once its size has been observed, a script gives it
+  <code>content-visibility: hidden</code>, which skips its contents and gives it size containment. Its height reads
+  back below.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div id=m1 class=c style="contain-intrinsic-size: auto 10px">one<br>two<br>three</div></div>
+    <figcaption><code>contain-intrinsic-size: auto 10px</code>: it remembers 60px, and keeps it, its text hidden.
+    Reads <code class=pr-computed data-of=m1 data-dom=offsetHeight></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=m2 class=c style="contain-intrinsic-size: 10px">one<br>two<br>three</div></div>
+    <figcaption><code>contain-intrinsic-size: 10px</code>, no <code>auto</code>: nothing remembered, 10px. Reads
+    <code class=pr-computed data-of=m2 data-dom=offsetHeight></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=m3 class="c hidden" style="contain-intrinsic-size: auto 10px">one<br>two<br>three</div></div>
+    <figcaption>Hidden from the start, so never laid out without containment: no remembered size, so 10px. Reads
+    <code class=pr-computed data-of=m3 data-dom=offsetHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Hide the first two as soon as a ResizeObserver has delivered their sizes, then read the heights back, as
+  // computed.js would, but only once they are hidden.
+  const boxes = [document.getElementById("m1"), document.getElementById("m2")];
+  const observer = new ResizeObserver(() => {
+    observer.disconnect();
+    for (const box of boxes) box.classList.add("hidden");
+    for (const out of document.querySelectorAll(".pr-computed"))
+      out.textContent = String(document.getElementById(out.dataset.of).offsetHeight);
+  });
+  for (const box of boxes) observer.observe(box);
+</script>
+</body>
+</html>

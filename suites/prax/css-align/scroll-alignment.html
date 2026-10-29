@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Alignment in scroll containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .sc { display: flex; flex-direction: column; height: 60px; overflow-y: auto; overflow-x: hidden; }
+  .sc > div { flex: none; }
+  .bl { height: 60px; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .ab { position: absolute; top: -30px; left: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.3 Alignment Overflow and Scroll Containers</div>
+  <h1>Alignment in scroll containers</h1>
+  <p class=pr-lede><q>When the content-distribution properties are set in a scrollable axis of a scroll container
+  with an overflowing alignment subject, they reduce the clipping of the unreachable scrollable overflow region just
+  enough to ensure that alignment subject can be scrolled into its start-aligned position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overflow-scroll-position">CSS Box Alignment 3 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>End-aligned, and scrollable up</h2>
+  <p><q>its in-flow content will be initially positioned to align the main-end edge of its content to the main-end
+  edge of the flex container</q>; <q>the viewer will be able to scroll up to view the overflowing in-flow
+  content</q>. Each stage is a column flexbox 60px tall that scrolls, holding A to D, 80px.</p>
+  <figure>
+    <div class="pr-stage sc" id=n><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div>
+    <figcaption><code>normal</code>: A, B, C in view; scroll height <code class=pr-computed data-of=n data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" id=e style="justify-content: flex-end"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div>
+    <figcaption><code>flex-end</code>: B, C, D in view, A above; the same scroll height, 80, so A can be scrolled
+    to: <code class=pr-computed data-of=e data-dom=scrollHeight></code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> 60: A out of reach.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overflow is not the subject</h2>
+  <p><q>positioned content can still be clipped if it is further into the unreachable scrollable overflow region
+  than the in-flow content forming the alignment subject.</q> A block 60px tall that scrolls holds A, B and D,
+  absolutely positioned 30px above its top.</p>
+  <figure>
+    <div class="pr-stage bl" id=b style="align-content: unsafe end"><div class=pr-a>A</div><div class=pr-b>B</div><div class="pr-d ab">D</div></div>
+    <figcaption><code>unsafe end</code>: A and B at the bottom; D cut off and out of reach: scroll height
+    <code class=pr-computed data-of=b data-dom=scrollHeight></code>, of the in-flow content only.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

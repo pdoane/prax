@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Submitted</title>
+<style>
+  html { color-scheme: light; }
+  body { margin: 0; padding: 0 6px; background: #dcefd6; color: #1f2430; font: 11px/20px ui-monospace, Menlo, monospace; }
+  body.none { background: #f4f5f7; color: #7b8494; }
+  p { margin: 0; white-space: nowrap; }
+</style>
+</head>
+<body>
+<script>
+  // A form's target: each time a form submits here, it shows the entries it was sent, one to a line, on green, and
+  // "no entries" for a submission without any. Loaded without a query, as before any submission, it says so on grey.
+  const line = text => document.body.append(Object.assign(document.createElement("p"), {textContent: text}));
+  if (!location.href.includes("?")) {
+      document.body.className = "none";
+      line("nothing submitted");
+  } else {
+      const entries = [...new URLSearchParams(location.search)];
+      for (const [name, value] of entries)
+          line(name + "=" + value);
+      if (!entries.length)
+          line("submitted, no entries");
+  }
+</script>
+</body>
+</html>

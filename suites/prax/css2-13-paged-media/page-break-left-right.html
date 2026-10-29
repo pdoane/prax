@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>page-break-before: left and right</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.3.1 Page break properties: page-break-before, page-break-after, page-break-inside</div>
+  <h1>page-break-before: left and right</h1>
+  <p class=pr-lede><q>A conforming user agent may interpret the values 'left' and 'right' as 'always'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#page-break-props">CSS 2 §13.3.1</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>left and right</h2>
+  <p><q>left: Force one or two page breaks before (after) the generated box so that the next page is formatted as a left page.</q> Left pages have a 60px left margin, right pages a 60px right margin.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } @page :right { margin-right: 60px } html { background: #8cb6c0 } .r { page-break-before: right }</style><div>line 1</div><div class=r><div>line 2</div></div>"></iframe>
+    <figcaption>Chrome, Safari and Firefox break once, as for <code>always</code>, which CSS 2 allows. <span class="pr-flag pr-since">Since CSS 2</span> A blank page is required.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></div>
+  <h2>Two breaks for left and right</h2>
+  <p><q>Force one or two page breaks before/after the principal box so that the next page is formatted as a right page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-values">CSS Fragmentation 4 §3.1.2</a></span> The <code>page-break-*</code> properties are <q>legacy shorthands for the 'break-*' properties</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-properties">§3.4</a></span></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } @page :right { margin-right: 60px } html { background: #8cb6c0 } .r { page-break-before: right }</style><div>line 1</div><div class=r><div>line 2</div></div>"></iframe>
+    <figcaption>Three pages: line 1 on a right page, a blank left page, line 2 on a right page. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Two pages: line 2 is on a left page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

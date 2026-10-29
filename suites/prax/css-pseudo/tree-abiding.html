@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tree-abiding pseudo-elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .host { margin: 10px; padding: 0 10px; color: #2c5a8f; font-style: italic; border: 2px solid #d68a3c; background: #f6d7b4; }
+  .host::before { content: "before "; }
+  .pad::before { padding: inherit; background: #b9cde6; }
+  .bd::before { border: inherit; }
+  ol { color: #8e44ad; font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 4 Tree-Abiding Pseudo-elements</div>
+  <h1>Tree-abiding pseudo-elements</h1>
+  <p class=pr-lede><q>Tree-abiding pseudo-elements always fit within the box tree. They inherit any inheritable
+  properties from their originating element; non-inheritable properties take their initial values as usual.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#treelike">CSS Pseudo-Elements 4 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Inherited from the originating element</h2>
+  <p>Each element is blue italic text on light orange, with a 2px orange border and 10px of padding; its
+  <code>::before</code> is <code>content: "before "</code> and nothing else.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=host>text</div></div>
+    <figcaption>"before text", all blue and italic: <code>color</code> and <code>font-style</code> inherit. One orange
+    border, the element's, around both words; the <code>::before</code> has none of its own.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol><li>item</ol></div>
+    <figcaption>A <code>::marker</code>: "1." purple and bold, as its list item.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Initial values, unless inherit asks</h2>
+  <p>Padding and border are not inherited, so the <code>::before</code> takes their initial values; the keyword
+  <code>inherit</code> still takes them from the originating element.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="host pad">text</div></div>
+    <figcaption><code>padding: inherit</code> on a light blue <code>::before</code>: the blue reaches 10px either side
+    of "before ".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="host bd">text</div></div>
+    <figcaption><code>border: inherit</code> on the <code>::before</code>: "before " gets a 2px orange border of its
+    own, inside the element's.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generic family keywords since CSS 2</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3 Font family: the 'font-family' property</div>
+  <h1>Generic family keywords since CSS 2</h1>
+  <p class=pr-lede>CSS 2 had five generic keywords, and kept <code>inherit</code>, <code>default</code> and
+  <code>initial</code> from naming a family unquoted. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/generic-families.html">Generic families</a>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-family-name-syntax">CSS Fonts 4 §2.1.1</a>, <a href="https://drafts.csswg.org/css-fonts-4/#generic-family-name-syntax">§2.1.2</a></div>
+  <h2>More generic keywords, and every CSS-wide keyword</h2>
+  <p>The generic families that always match are now <q>serif | sans-serif | system-ui | cursive | fantasy | math |
+  monospace</q>, and <q>Note that &lt;generic-font-family&gt; keywords cannot be quoted (otherwise they are interpreted
+  as a &lt;font-family-name&gt;).</q> Among unquoted names, <q>Any identifier which could be misinterpreted as a
+  pre-defined keyword in the font-family value definition, or the CSS-wide keywords, is not allowed.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-family-name-syntax">CSS Fonts 4 §2.1.1</a>–2</span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: system-ui, serif">Handgloves</div>
+    <figcaption><code>system-ui, serif</code>: the generic family of the platform's interface font, a
+    sans-serif here.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'system-ui', serif">Handgloves</div>
+    <figcaption><code>"system-ui", serif</code>: a family named "system-ui", which does not exist, so serif.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> take the quoted name for the keyword and
+    draw the interface font.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace"><span style="font-family: unset, serif">Mono iiii</span></div>
+    <figcaption><code>unset, serif</code>, a CSS-wide keyword CSS 2 did not list, beside a family: the text stays in the
+    stage's monospace, every letter as wide as the next, not serif.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

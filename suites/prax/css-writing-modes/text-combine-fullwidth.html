@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright: full-width characters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 18px/30px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 200px; padding: 0 6px; }
+  .tcy { text-combine-upright: all; background: #f9cc9d; }
+  figure.s figcaption { max-width: 150px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1.3.1 Full-width Characters</div>
+  <h1>text-combine-upright: full-width characters</h1>
+  <p class=pr-lede><q>In order to preserve typographic color when compressing the text to 1em, when the combined text
+  consists of more than one typographic character unit, then any full-width typographic character units should first
+  be converted to their non-full-width equivalents by reversing the algorithm defined for text-transform: full-width in
+  [CSS-TEXT-3] before applying other compression techniques.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-fullwidth">CSS Writing Modes 4 §9.1.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Full-width characters in a composition</h2>
+  <p>The specification's example is <code>date { text-combine-upright: digits 2; text-transform: full-width; }</code>
+  on 2010年2月23日: <q>The "2010" is too long to be combined (4 digits), but the "2" and "23" will be affected.</q>
+  <q>since the "2" is only one typographic character unit, it will be transformed to a fullwidth "２".</q></p>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy>１２</span>月<span class=tcy>12</span>日</div>
+    <figcaption>Full-width "１２" combined is converted to "12" first: both highlighted squares look the
+    same.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-combine-upright: digits 2; text-transform: full-width">2010年2月23日</div>
+    <figcaption>The example: ２, ０, １, ０ upright and full-width, 年, ２, 月, "23" combined, 日. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no
+    <code>digits</code>; Safari and Firefox set "23" full-width, Chrome turns every number.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-transform: full-width">2010年2月<span class=tcy>23</span>日</div>
+    <figcaption>The same with <code>all</code> on a span around "23": "23" combined from its non-full-width forms,
+    the rest as in the example. <span class=pr-flag>Chrome</span> has no <code>text-transform: full-width</code>:
+    "2010" and "2" turned.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

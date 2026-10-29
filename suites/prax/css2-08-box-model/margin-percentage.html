@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3 Margin properties</div>
+  <h1>Margins: percentages</h1>
+  <p class=pr-lede><code>margin-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>margin</code> take <code>&lt;length&gt; | &lt;percentage&gt; | auto</code>. The orange tint is each box's margin area.</p>
+</header>
+
+<section>
+  <h2>&lt;percentage&gt;</h2>
+  <p><q>The percentage is calculated with respect to the width of the generated box's containing block. Note that this
+  is true for 'margin-top' and 'margin-bottom' as well.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#margin-properties">CSS 2 §8.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-left: 10%">box</div></div></div>
+    <figcaption><code>margin-left: 10%</code> of 200px: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-top: 10%">box</div></div></div>
+    <figcaption><code>margin-top: 10%</code> is of the width too: 20px. <span class="pr-flag pr-since">Since CSS 2</span> Of the inline size, which is the width in horizontal writing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow"><div class=pr-margin-area><div class=pr-a style="margin-top: 10%">box</div></div></div>
+    <figcaption><code>margin-top: 10%</code> of 100px: 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="height: 150px"><div class=pr-a style="margin-top: 50%">box</div></div></div>
+    <figcaption>The dashed containing block is 150px tall, which does not matter: <code>margin-top: 50%</code> is
+    100px, half its width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating matrices</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 40px; top: 30px; width: 40px; height: 40px; }
+  .q, .h { position: absolute; left: 60px; top: 40px; width: 20px; height: 20px; }
+  .run { animation: 10s linear infinite alternate both; }
+  @keyframes turns { from { transform: rotate(45deg); } to { transform: translateX(40px) rotate(1215deg); } }
+  @keyframes singular { from { transform: matrix(2, 0, 0, 2, 0, 0); } to { transform: matrix(1, 1, 1, 1, 0, 0); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 11 Interpolation of Matrices</div>
+  <h1>Interpolating matrices</h1>
+  <p class=pr-lede><q>When interpolating between two matrices, each matrix is decomposed into the corresponding
+  translation, rotation, scale, skew. Each corresponding component of the decomposed matrices gets interpolated
+  numerically and recomposed back to a matrix in a final step.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#matrix-interpolation">CSS Transforms 1 §11</a></span>
+  Each box animates; a still shows the progress <i>p</i> that a negative delay picks.</p>
+</header>
+
+<section>
+  <h2>A matrix keeps no count of turns</h2>
+  <p><q>the information about the three turns gets lost</q>. A 40px square, its "A" at its top left, from
+  <code>rotate(45deg)</code> to <code>translateX(40px) rotate(1215deg)</code>: lists that differ at once, so matrices,
+  turned 45deg and 135deg.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p run" style="animation-name: turns; animation-delay: -5s">A</div></div>
+    <figcaption><i>p</i> = 0.5: a quarter turn, the "A" at the top right, and 20px right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateX(20px) rotate(90deg)">A</div></div>
+    <figcaption>For comparison, <code>translateX(20px) rotate(90deg)</code>, not 630deg.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A matrix that cannot be undone animates discretely</h2>
+  <p><q>If one of the matrices for interpolation is non-invertible, the used animation function must fall-back to a
+  discrete animation</q>, which switches at the middle. A 20px square at (60, 40), from <code>matrix(2, 0, 0, 2, 0,
+  0)</code> to <code>matrix(1, 1, 1, 1, 0, 0)</code>, a line.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost h"></div><div class="pr-a pr-fit q run" style="animation-name: singular; animation-delay: -4s"></div></div>
+    <figcaption><i>p</i> = 0.4: the first value whole, a 40px square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost h"></div><div class="pr-a pr-fit q run" style="animation-name: singular; animation-delay: -6s"></div></div>
+    <figcaption><i>p</i> = 0.6: the second, which is not displayed.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

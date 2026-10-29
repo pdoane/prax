@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative oklab()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.7 Relative Oklab Colors</div>
+  <h1>Relative oklab()</h1>
+  <p class=pr-lede><q>l is a &lt;number&gt; that corresponds to the origin color's Oklab Lightness</q>; <q>a and b are
+  &lt;number&gt;s that correspond to the origin color's Oklab a and b axes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-Oklab">CSS Color 5
+  §4.7</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>The opposite on the a and b axes</h2>
+  <p><code>#d68a3c</code> is <code>oklab(0.6979 0.059 0.1164)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #d68a3c"></div><div class=sw style="background: oklab(from #d68a3c l calc(-1 * a) calc(-1 * b))"></div><div class=sw style="background: oklab(0.6979 -0.059 -0.1164)"></div></div>
+    <figcaption>The orange, then a and b negated beside <code>oklab(0.6979 -0.059 -0.1164)</code>: one sky blue, as light.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklab(from #d68a3c calc(l - 0.2) a b)"></div><div class=sw style="background: oklab(0.4979 0.059 0.1164)"></div></div>
+    <figcaption><code>calc(l - 0.2)</code>: darker, as <code>oklab(0.4979 0.059 0.1164)</code>, a brown.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

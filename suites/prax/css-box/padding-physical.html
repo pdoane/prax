@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>padding-top, padding-right, padding-bottom, padding-left</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-box { border-color: #e6b54a; border-width: 4px; }
+  .pr-table-cell { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 4.1 Page-relative (Physical) Padding Properties</div>
+  <h1>padding-top, padding-right, padding-bottom, padding-left</h1>
+  <p class=pr-lede><q>These properties set the top, right, bottom, and left padding of a box, respectively.</q> Each
+  takes <code>&lt;length-percentage [0,∞]&gt;</code>, and is 0 initially. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#padding-physical">CSS Box Model 4 §4.1</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-border"></span>border<span class="pr-swatch pr-padding"></span>padding<span
+class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>Each side</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-box style="padding-top: 20px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-top: 20px</code></figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-box style="padding-right: 40px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-right: 40px</code></figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-box style="padding-bottom: 20px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-bottom: 20px</code></figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-box style="padding-left: 40px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-left: 40px</code></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On table cells, not other internal table elements</h2>
+  <p>They apply to <q>all elements except: internal table elements other than table cells, ruby base containers, and
+  ruby annotation containers</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="height: auto; padding: 10px 20px">cell</div><div class=pr-table-cell>cell</div></div></div></div>
+    <figcaption><code>padding: 10px 20px</code> on the first cell: its text 20px in; the row 40px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row style="padding: 10px 20px"><div class=pr-table-cell>cell</div><div class=pr-table-cell>cell</div></div></div></div>
+    <figcaption>The same on the row: nothing; the cells 20px tall at the stage's top left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

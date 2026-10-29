@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A drawing 160 by 60 in four quadrants, blue, orange, green and purple from the top left, each with a white dot in
+     its middle, and views of its right half and its top left quadrant. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60" viewBox="0 0 160 60">
+  <view id="right" viewBox="80 0 80 60" />
+  <view id="corner" viewBox="0 0 80 30" preserveAspectRatio="none" />
+  <rect width="80" height="30" fill="#4f81bd" />
+  <rect x="80" width="80" height="30" fill="#d68a3c" />
+  <rect y="30" width="80" height="30" fill="#6aa36a" />
+  <rect x="80" y="30" width="80" height="30" fill="#8e44ad" />
+  <circle cx="40" cy="15" r="5" fill="white" />
+  <circle cx="120" cy="15" r="5" fill="white" />
+  <circle cx="40" cy="45" r="5" fill="white" />
+  <circle cx="120" cy="45" r="5" fill="white" />
+</svg>

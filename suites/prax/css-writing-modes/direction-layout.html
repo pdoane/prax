@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>direction: alignment, columns and overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/20px "PR Arimo"; }
+  .wide { width: 180px; height: 20px; display: flex; justify-content: space-between; }
+  .scroller { overflow: auto; }
+  .over { margin-left: 80px; }
+  .pr-table-cell { font-family: "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.1 Specifying Directionality: the direction property</div>
+  <h1>direction: alignment, columns and overflow</h1>
+  <p class=pr-lede>The direction <q>informs the ordering of table column layout, the direction of horizontal overflow,
+  and the default alignment of text within a line, and other layout effects that depend on the box's inline base
+  direction.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#direction">CSS Writing Modes 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Default alignment and table columns</h2>
+  <p>Each stage is <code>rtl</code>.</p>
+  <figure>
+    <div class=pr-stage style="direction: rtl">ab cd</div>
+    <figcaption>A short line is aligned to the right, its start.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl">
+      <div class=pr-table><div class=pr-table-row><div class=pr-table-cell>1</div><div class=pr-table-cell>2</div><div class=pr-table-cell>3</div></div></div>
+    </div>
+    <figcaption>A table's first column, 1, is at the right; 3 is at the left. The table sits at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overflow toward the end</h2>
+  <p>Each stage is 100px wide and holds a 180px child whose content runs from "start" to "end".</p>
+  <figure>
+    <div class="pr-stage pr-narrow over" style="direction: rtl"><div class="wide pr-a pr-fit"><span>start</span><span>end</span></div></div>
+    <figcaption><code>rtl</code>: the child's right edge is at the stage's right, its start, and it overflows
+    80px past the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow scroller" style="direction: rtl"><div class="wide pr-a pr-fit"><span>start</span><span>end</span></div></div>
+    <figcaption><code>rtl</code> scroll container: it opens at the child's right edge, scrolled to 0; it scrolls
+    left to reach the rest.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow scroller"><div class="wide pr-a pr-fit"><span>start</span><span>end</span></div></div>
+    <figcaption><code>ltr</code>, for comparison: it opens at the child's left edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

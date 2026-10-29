@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Reordering, and the source order</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .page > * { display: block; outline: 1px solid rgba(31, 36, 48, 0.4); outline-offset: -1px; color: var(--pr-ink); }
+  .page header { background: #b9cde6; margin: 0; }
+  .page main { background: #c8e0c8; }
+  .page nav { background: #f6d7b4; }
+  .page aside { background: #d9c3e3; }
+  .page footer { background: #f4e3a1; }
+  .grail { display: grid; grid: "h h h" "a b c" "f f f"; grid-template-columns: auto 1fr 20%; }
+  .grail main { grid-area: b; min-width: 60px; }
+  .grail nav { grid-area: a; }
+  .grail aside { grid-area: c; min-width: 30px; }
+  .grail header { grid-area: h; }
+  .grail footer { grid-area: f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 4 Reordering and Accessibility</div>
+  <h1>Reordering, and the source order</h1>
+  <p class=pr-lede><q>Grid layout gives authors great powers of rearrangement over the document. However, these are not
+  a substitute for correct ordering of the document source. The order property and grid placement do not affect
+  ordering in non-visual media (such as speech).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#order-accessibility">CSS Grid Layout 2 §4</a></span></p>
+</header>
+
+<section>
+  <h2>The “Holy Grail” layout</h2>
+  <p><q>it's desirable that the content come first in the page's source code, before the additional columns.</q> Each
+  stage holds, in this order, a <code>header</code>, <code>main</code>, <code>nav</code>, <code>aside</code> and
+  <code>footer</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure page grail"><header>header</header><main>main</main><nav>nav</nav><aside>as</aside><footer>footer</footer></div>
+    <figcaption><code>grid: "h h h" "a b c" "f f f"</code>, columns <code>auto 1fr 20%</code>: nav at the left, 30px,
+    main in the middle, 130px, aside at the right, 40px; header above and footer below, across all three.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure page"><header>header</header><main>main</main><nav>nav</nav><aside>as</aside><footer>footer</footer></div>
+    <figcaption><code>display: block</code>, as the example's narrow-screen media query sets: the source order, main
+    above nav. Speech and tabbing follow this order in both stages.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Columns as tall as each other</h2>
+  <p><q>As an added bonus, the columns will all be equal-height by default, and the main content will be as wide as
+  necessary to fill the screen.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure page grail"><header>header</header><main>main text runs on</main><nav>nav</nav><aside>as</aside><footer>footer</footer></div>
+    <figcaption>Main's text takes two lines in its 130px, and nav and aside stretch to its 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

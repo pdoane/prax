@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters: inline kerning</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; background: #f9cc9d; }
+  .pad::first-letter { padding-left: 1px; }
+  .edge { border-left: 1px solid #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.6.2 Inline Kerning</div>
+  <h1>Initial letters: inline kerning</h1>
+  <p class=pr-lede><q>If the initial letter is a non-atomic inline with an automatic inline size and zero padding and
+  borders, its margin box is kerned (negatively inset) by the distance from the start edge of its content box to the
+  point in the content that would have been placed at the start edge of the line box if it were not an initial letter
+  (i.e. the distance between its glyph bounding box and its start side bearing).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-inline-position">CSS Inline Layout 3 §7.6.2</a></span></p>
+</header>
+
+<section>
+  <h2>Flush with the glyph's ink</h2>
+  <p>Each paragraph is 13px PR Literata on 20px lines; its first letter, a W blue on orange, has
+  <code>initial-letter: 3</code>. The red line is the block's start edge. <span class=pr-flag>Safari</span> supports
+  only <code>-webkit-initial-letter</code> and <span class=pr-flag>Firefox</span> none.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage edge"><p class=p>Without padding, the letter's ink is flush with the start edge.</p></div>
+    <figcaption>No padding: kerned, so the W's ink touches the red line, its side bearing to the left of
+    it. <span class=pr-flag>Chrome</span> Not kerned: the orange box at the red line, the ink a little in.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage edge"><p class="p pad">With 1px of padding, the letter keeps its side bearing.</p></div>
+    <figcaption>With <code>padding-left: 1px</code>: not kerned; the orange box starts 1px from the red line and the
+    W's side bearing shows before its ink.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which focus events bubble</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A log that the page's own script fills, drawn as .pr-log is. */
+  .bubble-log { height: 80px; margin: 0; padding: 0 6px; overflow: hidden; list-style: none; background: var(--pr-plain);
+                border-top: 1px solid var(--pr-stage-border); font: 11px/20px ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .log-label { padding: 0 6px; font-size: 11px; line-height: 20px; border-top: 1px solid var(--pr-stage-border); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.3.4 Focus Event Types</div>
+  <h1>Which focus events bubble</h1>
+  <p class=pr-lede>blur: <q>This event type is similar to focusout, but does not bubble.</q> focusin: <q>This event
+  type is similar to focus, but does bubble.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focus-types">UI Events §3.3.4</a></span></p>
+</header>
+<section>
+  <h2>At an ancestor</h2>
+  <p>Every focus event passes the parent of its target on the way down, in the capture phase; only focusin and
+  focusout come back up to it. The page's script listens at the parent, <code>#parent</code>, in the bubbling phase,
+  and lists what reaches it there in the second log. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-focusin">§3.3.4.3</a></span>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-focusout">§3.3.4.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div id=parent style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <div class=log-label>capturing at the parent</div>
+      <ol class=pr-log data-log="focus focusin blur focusout" data-fields="target" data-on="#parent" data-lines=4></ol>
+      <div class=log-label>bubbling at the parent</div>
+      <ol class=bubble-log id=bubbled></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>. The first log has blur, focusout, focus and focusin;
+    the second has focusin at <code>one</code>, focusout at <code>one</code> and focusin at <code>two</code>, and
+    never focus or blur.</figcaption>
+  </figure>
+</section>
+<script>
+  // Lists the focus events that reach the parent in the bubbling phase, newest last, four at most.
+  const parent = document.getElementById("parent");
+  const bubbled = document.getElementById("bubbled");
+  for (const type of ["focus", "focusin", "blur", "focusout"]) {
+      parent.addEventListener(type, event => {
+          if (event.eventPhase !== Event.BUBBLING_PHASE)
+              return;
+          const item = document.createElement("li");
+          item.textContent = type + " target=" + event.target.id;
+          bubbled.append(item);
+          while (bubbled.children.length > 4)
+              bubbled.firstElementChild.remove();
+      });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

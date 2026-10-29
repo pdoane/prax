@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>repeating-conic-gradient()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { display: inline-block; vertical-align: top; width: 80px; height: 80px; margin: 10px 0 10px 10px; }
+  .pr-stage.pr-row { width: auto; display: inline-block; padding-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.4 Repeating Gradients: the repeating-linear-gradient(), repeating-radial-gradient(), and repeating-conic-gradient() notations</div>
+  <h1>repeating-conic-gradient()</h1>
+  <p class=pr-lede><q>These notations take the same values and are interpreted the same as their respective
+  non-repeating siblings defined previously.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#repeating-gradients">CSS Images 4 §3.4</a></span>
+  As in level 3, <q>the color-stops are repeated infinitely in both directions, with their positions shifted by
+  multiples of the difference between the last specified color-stop's position and the first specified color-stop's
+  position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#repeating-gradients">CSS Images 3 §3.3</a></span>
+  Each box is 80 by 80.</p>
+</header>
+
+<section>
+  <h2>The stops again every interval</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: repeating-conic-gradient(gold, #f06 20deg)"></div><div class=box style="background: repeating-conic-gradient(#4f81bd 0 45deg, #d68a3c 0 90deg)"></div></div>
+    <figcaption>Left, <code>gold, #f06 20deg</code>: gold fading to pink 18 times round, with a sharp edge from pink
+    back to gold every 20deg. Right, <code>blue 0 45deg, orange 0 90deg</code>: eight wedges, blue first from the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: repeating-conic-gradient(from 22.5deg, #4f81bd 0 45deg, #d68a3c 0 90deg)"></div><div class=box style="background: repeating-conic-gradient(#d68a3c -45deg 0deg, #4f81bd 0 45deg)"></div></div>
+    <figcaption><code>from 22.5deg</code>: the eight wedges turned half of one. Right, stops from -45deg to 45deg:
+    the same eight as the first, repeated both ways.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A starburst and a checkerboard</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: repeating-conic-gradient(hsla(0,0%,100%,.2) 0deg 15deg, hsla(0,0%,100%,0) 0deg 30deg) #0ac"></div></div>
+    <figcaption>Twelve lighter rays on teal, each 15deg.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: repeating-conic-gradient(black 0deg 25%, white 0deg 50%); background-size: 40px 40px"></div><div class=box style="background: conic-gradient(black 25%, white 0deg 50%, black 0deg 75%, white 0deg); background-size: 40px 40px"></div></div>
+    <figcaption>Tiles 40px square, repeating and not: the same checkerboard of 20px squares, white at the top
+    left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

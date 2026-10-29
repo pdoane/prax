@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The quotes property: the parent's language</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .keep { quotes: bikeshed-this; }
+  .pairs { quotes: "<" ">" "(" ")"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.4.1 Quotation Mark System: the quotes property</div>
+  <h1>The quotes property: the parent's language</h1>
+  <p class=pr-lede><q>This property specifies the quotation mark system for the element, defining how the 'content'
+  property’s 'open-quote' and 'close-quote' values behave.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#quotes-property">CSS Generated Content 3 §2.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>auto: chosen by the parent's language</h2>
+  <p><q>A typographically appropriate quotation mark system is automatically chosen by the UA based on the content
+  language of the parent (or, if there is no parent, of the element itself).</q> Each stage is <code>lang=en</code>,
+  with a <code>q</code> in a French <code>span</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><span lang=fr>Il dit <q>oui</q>.</span></div>
+    <figcaption>The <code>q</code>'s parent is French: «oui», with French guillemets.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text">He said <q lang=fr>oui</q>.</div>
+    <figcaption>A French <code>q</code> whose parent is English: “oui”, English marks, as is customary for a
+    quotation in another language. <span class=pr-flag>Safari</span> Uses the <code>q</code>'s own language:
+    «oui».</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A language that is kept as it inherits</h2>
+  <p><code>bikeshed-this</code>: <q>If the inherited value is 'auto', computes to the content language of the parent,
+  which behaves like 'auto' as resolved by that content language. Otherwise, computes to the inherited value.</q> The
+  name is a placeholder (<a href="https://github.com/w3c/csswg-drafts/issues/5478">csswg-drafts#5478</a>); what it
+  does is defined.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><div lang=fr class=keep>Il dit <q>yes</q>.</div></div>
+    <figcaption>On a French <code>div</code> in an English stage: it computes to English, and the <code>q</code>
+    inherits that: “yes”. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> None has the value; the <code>q</code> takes its French parent's marks, «yes».</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pairs><div lang=fr class=keep>Il dit <q>yes</q>.</div></div></div>
+    <figcaption>Where the inherited value is two pairs, <code>"&lt;" "&gt;" "(" ")"</code>, it computes to them:
+    "&lt;yes&gt;". Lacking the value, the browsers draw the same by inheriting the pairs.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

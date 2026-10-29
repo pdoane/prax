@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: over-constrained, and rtl</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 10px; }
+  figure { display: block; }
+  .pair figure { display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: over-constrained, and rtl</h1>
+  <p class=pr-lede>Each stage is the 200px containing block of the absolute box in it, and sets its
+  <code>direction</code>.</p>
+</header>
+
+<section>
+  <h2>Over-constrained</h2>
+  <p>With none of 'left', 'width' and 'right' 'auto', and no auto margins: <q>If the values are over-constrained,
+  ignore the value for 'left' (in case the 'direction' property of the containing block is 'rtl') or 'right' (in case
+  'direction' is 'ltr') and solve for that value.</q> Each box has <code>left: 20px; width: 100px; right: 20px</code>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <div class=pair>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="left: 20px; right: 20px; width: 100px">box</div></div>
+    <figcaption><code>ltr</code>: <code>right</code> is ignored and becomes 80px. The box is 20px from the
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px; direction: rtl"><div class="pr-a abs pr-fit" style="left: 20px; right: 20px; width: 100px">box</div></div>
+    <figcaption><code>rtl</code>: <code>left</code> is ignored and becomes 80px. The box is 20px from the
+    right.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Auto margins that would be negative</h2>
+  <p><q>unless this would make them negative, in which case when direction of the containing block is 'ltr' ('rtl'),
+  set 'margin-left' ('margin-right') to zero and solve for 'margin-right' ('margin-left').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2
+  §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-b abs pr-fit" style="left: 0; right: 0; width: 250px; margin: 0 auto">250px</div></div>
+    <figcaption><code>left: 0; right: 0; width: 250px; margin: 0 auto</code>: equal margins would be −25px, so in <code>ltr</code>
+    <code>margin-left</code> is 0 and the box overflows 50px to the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px; direction: rtl; margin-left: 60px"><div class="pr-b abs pr-fit" style="left: 0; right: 0; width: 250px; margin: 0 auto">250px</div></div>
+    <figcaption><code>left: 0; right: 0; width: 250px; margin: 0 auto</code> in <code>rtl</code>:
+    <code>margin-right</code> is 0, so the box ends at the right edge and overflows 50px to the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

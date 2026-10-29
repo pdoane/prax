@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins and padding on ::first-letter and ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 13px/20px "PR Arimo"; }
+  .fl::first-letter { float: left; font-size: 30px; line-height: 40px; background: #f9cc9d; }
+  .p1::first-letter { padding: 0 10px; }
+  .m1::first-letter { margin-right: 20px; }
+  .i1::first-letter { padding: 0 10px; margin: 0 20px; background: #f9cc9d; }
+  .l1::first-line { padding-left: 40px; background: #f9cc9d; }
+  .l2::first-line { margin-left: 40px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 1.2 Module Interactions</div>
+  <h1>Margins and padding on ::first-letter and ::first-line</h1>
+  <p class=pr-lede><q>All properties in this module apply to the ::first-line and ::first-letter pseudo-elements.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#placement">CSS Box Model 4 §1.2</a></span> The tint
+  is each pseudo-element's background, which covers its padding but not its margin.</p>
+</header>
+
+<section>
+  <h2>::first-letter</h2>
+  <p>Each stage's first letter is a 30px float, tinted.</p>
+  <figure>
+    <div class="pr-stage t fl p1">Letters on lines that wrap beside the first one.</div>
+    <figcaption><code>padding: 0 10px</code>: the tint is 10px wider than the "L" on each side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t fl m1">Letters on lines that wrap beside the first one.</div>
+    <figcaption><code>margin-right: 20px</code>: a 20px gap, untinted, between the "L" and the lines beside
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t i1">Letters on a line.</div>
+    <figcaption>An inline first letter with <code>padding: 0 10px; margin: 0 20px</code>: the tint starts 20px in, 10px
+    either side of "L", and "etters" 20px after it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>::first-line</h2>
+  <p>Each stage's first line is tinted. The first line's inline box takes the padding and margin at its start.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage t l1">The first line, and then a second line.</div>
+    <figcaption><code>padding-left: 40px</code>: the tint starts at the stage's left and its text 40px in.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Ignore
+    it: the text starts at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t l2">The first line, and then a second line.</div>
+    <figcaption><code>margin-left: 40px</code>: the tint and the text start 40px in. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Ignore
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

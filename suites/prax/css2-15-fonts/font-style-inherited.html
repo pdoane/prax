@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font style is inherited</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .heading { padding: 0 6px; font-size: 20px; font-weight: bold; line-height: 40px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.4 Font styling: the 'font-style' property</div>
+  <h1>Font style is inherited</h1>
+  <p class=pr-lede><q>The 'font-style' property selects between normal (sometimes referred to as "roman" or
+  "upright"), italic and oblique faces within a font family.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-styling">CSS 2 §15.4</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-style.html">font-style: italic and oblique</a>.</p>
+</header>
+
+<section>
+  <h2>Inherited</h2>
+  <p>The specification's example: <code>h1, h2, h3 { font-style: italic } h1 em { font-style: normal }</code>. <q>In
+  the example above, emphasized text within 'H1' will appear in a normal face.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-styling">CSS 2
+  §15.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide heading" style="font-family: Georgia; font-style: italic">A heading <em style="font-style: normal">with emphasis</em></div>
+    <figcaption>"A heading" inherits italic from the heading; "with emphasis", its <code>em</code> set to
+    <code>normal</code>, is upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

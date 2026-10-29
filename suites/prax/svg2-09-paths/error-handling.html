@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Errors in path data: drawn up to the error</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.5.4 Error handling in path data</div>
+  <h1>Errors in path data: drawn up to the error</h1>
+  <p class=pr-lede><q>The general rule for error handling in path data is that the SVG user agent shall render a
+  ‘path’ element up to (but not including) the path command containing the first error in the path data
+  specification.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataErrorHandling">SVG 2 §9.5.4</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide.</p>
+</header>
+
+<section>
+  <h2>Up to the command in error</h2>
+  <p><q>Unrecognized contents within a path data stream</q> are an error. <q>A path data segment (if there is one) must begin with a "moveto" command.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataMovetoCommands">§9.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 10 L 80 50 # L 110 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 50 10 L 80 50 # L 110 10 L 140 50</code>: up to the <code>#</code>, a caret from
+    20 to 80; nothing right of 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 V 10 H 140 V 50 L 80 * 30 Z" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 V 10 H 140 V 50 L 80 * 30 Z</code>, filled: the <b>L</b> is in error, so no notch
+    to 80, 30, the fill a rectangle from 20, 10 to 140, 50, stroked on three
+    sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="L 20 50 L 80 10 L 140 50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>L 20 50 L 80 10 L 140 50</code>, no moveto first: the first command is in error, so
+    nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A command's parameters, up to the last whole segment</h2>
+  <p><q>If a path data command contains an incorrect set of parameters, then the given path data command is
+  rendered up to and including the last correctly defined path segment, even if that path segment is a
+  sub-component of a compound path data command, such as a "lineto" with several pairs of coordinates.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 140" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 140</code>, as the section's <code>M 10,10 L 20,20,30</code>: the line to
+    80, 10 alone.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 C 20 10 80 10 80 50 80 10 140 10 140" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 C 20 10 80 10 80 50 80 10 140 10 140</code>: the first set's arch, from 20 to 80;
+    the second set lacks a number.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 60 10 A 30 30 0 0 2 120 10" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 60 10 A 30 30 0 0 2 120 10</code>: a flag of 2 is in error, so the line to 60,
+    10 and no arc.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

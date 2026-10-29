@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid containers across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .pr-stage.cols { width: 140px; column-count: 2; column-gap: 20px; column-fill: auto; height: 60px; }
+  .g { display: grid; grid-template-columns: 30px 30px; grid-auto-rows: 20px; }
+  .after { height: 20px; background: #c9ced6; }
+  figure { margin-right: 10px; }
+  figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 13 Fragmenting Grid Layout</div>
+  <h1>Grid containers across columns</h1>
+  <p class=pr-lede><q>Grid containers can break across pages between rows or columns and inside items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#pagination">CSS Grid Layout 2 §13</a></span>
+  <q>The same rules apply in any other fragmentation context.</q> Each stage is two columns, 60px wide and 60px tall,
+  filled in order <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cc">CSS Multi-column Layout 1 §3.2</a></span>;
+  each grid has two 30px columns and rows of 20px.</p>
+</header>
+
+<section>
+  <h2>Between rows, and no gutter at the break</h2>
+  <p><q>Class A break opportunities occur between rows or columns</q>. <q>If a grid is fragmented between tracks,
+  the gutter spacing between those tracks must be suppressed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#gutters">§11.1</a></span></p>
+  <figure>
+    <div class="pr-stage cols"><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div><div class=pr-b>6</div><div class=pr-c>7</div><div class=pr-d>8</div></div></div>
+    <figcaption>Rows 1–2, 3–4 and 5–6 fill the first column; 7–8 tops the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g style="row-gap: 15px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div><div class=pr-a>5</div><div class=pr-b>6</div></div></div>
+    <figcaption><code>row-gap: 15px</code>: the third gap falls at the break, so 5–6 is at the very top of the
+    second column. <span class=pr-flag>Safari</span> puts it 10px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks</h2>
+  <p><q>The break-before and break-after properties on grid items are propagated to their grid row. The
+  break-before property on the first row and the break-after property on the last row are propagated to the grid
+  container.</q> Each starred item is <code>break-before: column</code>, or <code>break-after: column</code> where it
+  says so.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d style="break-before: column">4*</div><div class=pr-a>5</div><div class=pr-b>6</div></div></div>
+    <figcaption>4*: its whole row breaks; 1–2 alone in the first column. <span class=pr-flag>Safari</span> does not
+    break.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g><div class=pr-a>1</div><div class=pr-b style="break-after: column">2*</div></div><div class=after></div></div>
+    <figcaption>2*, <code>break-after</code>, in the last row: the grey block after the grid tops the second
+    column. <span class=pr-flag>Safari</span> does not break.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g style="grid-auto-rows: auto"><div><div class=pr-a>A1</div><div class=pr-a style="break-before: column">A2*</div></div><div class=pr-b style="height: 40px">B</div></div></div>
+    <figcaption>A2* in item A: <q>it does not trigger a forced break inside sibling items</q>; B, 40px, stays
+    whole. <span class=pr-flag>Firefox</span> does not break.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

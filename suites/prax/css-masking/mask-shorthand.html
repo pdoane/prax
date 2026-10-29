@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The mask shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 20px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; box-shadow: 0 0 0 10px #6aa36a; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <mask id="left" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.9 Mask Shorthand: the mask property</div>
+  <h1>The mask shorthand</h1>
+  <p class=pr-lede><q>If one &lt;geometry-box&gt; value and no no-clip keyword are present then &lt;geometry-box&gt;
+  sets both mask-origin and mask-clip to that value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask">CSS Masking 1 §7.9</a></span>
+  Each box is 100 by 70 at 20, 20, with a green 10px shadow; each mask an opaque gradient 40 by 30 at
+  <code>0 0</code>.</p>
+</header>
+
+<section>
+  <h2>One box, two boxes, and no-clip</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask: linear-gradient(black, black) 0 0 / 40px 30px no-repeat content-box"></div></div>
+    <figcaption><code>content-box</code> alone, both origin and clip: blue 40 by 30 at 40, 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask: linear-gradient(black, black) 0 0 / 40px 30px no-repeat border-box content-box"></div></div>
+    <figcaption><q>the first sets mask-origin and the second mask-clip</q>: the mask at 20, 20, clipped to the content
+    at 40, 40, so blue 20 by 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=subj style="mask: linear-gradient(black, black) -10px -10px / 40px 30px no-repeat no-clip"></div></div>
+    <figcaption><code>no-clip</code> sets the clip, the origin stays the border box: the mask at 10, 10, over the
+    shadow's corner. <span class=pr-flag>Safari</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A mask element decides its own area</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=subj style="mask: url(#left) 50px 0 / 10px 10px no-repeat content-box"></div></div>
+    <figcaption><code>url(#left)</code>, white over the left half; the position, size, repeat and box do nothing:
+    the box from 20 to 70. <span class=pr-flag>Safari</span> Only a sliver at 90, 40: it sizes and places the mask.
+    <span class=pr-flag>Firefox</span> The shadow too, at the left, top and bottom.</figcaption>
+  </figure>
+  <p style="display: inline-block; vertical-align: top; width: 300px"><q>The used value of the properties mask-repeat,
+  mask-position, mask-clip, mask-origin and mask-size must have no effect if &lt;mask-reference&gt; references a mask
+  element.</q></p>
+</section>
+
+</body>
+</html>

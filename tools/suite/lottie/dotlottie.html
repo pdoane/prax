@@ -1,0 +1,110 @@
+<!doctype html>
+<!--
+  A Lottie animation played by dotLottie's web player, which is ThorVG compiled to WebAssembly and
+  drawing into a canvas. The viewer compares the engine's Lottie with it, beside lottie-web
+  (player.html): dotlottie.html?src=<the animation's URL>. window.prSetTime, prPlay and prStats
+  behave as in player.html.
+
+  A page loaded from a file can neither import a module from a file nor fetch one. So the player,
+  its WebAssembly and the animation are read with XMLHttpRequest, which a file may use for the
+  files beside it, and the player and its WebAssembly are passed on as blobs.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #fff; overflow: hidden; }
+  #player { width: 100vw; height: 100vh; display: block; }
+</style>
+</head>
+<body>
+<canvas id="player"></canvas>
+<script>
+  function read(url, type) {
+    return new Promise(function (resolve, reject) {
+      var request = new XMLHttpRequest();
+      request.open('GET', new URL(url, location.href).href);
+      request.responseType = type;
+      request.onload = function () { resolve(request.response); };
+      request.onerror = function () { reject(new Error('cannot read ' + url)); };
+      request.send();
+    });
+  }
+  function blobUrl(data, type) {
+    return URL.createObjectURL(new Blob([data], { type: type }));
+  }
+
+  var player = '../../third_party/dotlottie-web/';
+  var ready = Promise.all([
+    read(player + 'index.js', 'text'),
+    read(player + 'dotlottie-player.wasm', 'arraybuffer'),
+    read(new URLSearchParams(location.search).get('src'), 'text'),
+  ]).then(function (loaded) {
+    return import(blobUrl(loaded[0], 'text/javascript')).then(function (module) {
+      module.DotLottie.setWasmUrl(blobUrl(loaded[1], 'application/wasm'));
+      return new Promise(function (resolve, reject) {
+        var animation = new module.DotLottie({
+          canvas: document.getElementById('player'),
+          data: loaded[2],
+          autoplay: false,
+          loop: false,
+          useFrameInterpolation: true,
+          renderConfig: { autoResize: false, devicePixelRatio: window.devicePixelRatio, freezeOnOffscreen: false },
+          layout: { fit: 'contain', align: [0.5, 0.5] },
+        });
+        animation.addEventListener('load', function () { resolve(animation); });
+        animation.addEventListener('loadError', function (event) { reject(event.error); });
+      });
+    });
+  });
+  function frameAt(animation, seconds) {
+    var length = animation.totalFrames;
+    var rate = animation.duration > 0 ? length / animation.duration : 0;
+    return length > 0 ? (seconds * rate) % length : 0;
+  }
+  // The viewer's clock, which the page follows while it plays, as player.html does.
+  var clock = null;
+  var drawn = 0;
+  var current = 0;
+  function follow(animation) {
+    if (clock === null)
+      return;
+    current = frameAt(animation, clock.seconds + (performance.now() - clock.at) / 1000);
+    animation.setFrame(current);
+    drawn += 1;
+    requestAnimationFrame(function () { follow(animation); });
+  }
+  window.prSetTime = function (seconds) {
+    clock = null;
+    return ready.then(function (animation) {
+      current = frameAt(animation, seconds);
+      // At the page's current size, which may have changed since the last frame. Drawn before the
+      // capture rather than when the canvas next observes its size.
+      animation.resize();
+      animation.setFrame(current);
+      return current;
+    });
+  };
+  // Plays from `seconds`, starting now, drawing the viewer's time at each of the page's frames.
+  window.prPlay = function (seconds) {
+    var told = { seconds: seconds, at: performance.now() };
+    return ready.then(function (animation) {
+      var following = clock !== null;
+      clock = told;
+      animation.resize();
+      if (!following)
+        requestAnimationFrame(function () { follow(animation); });
+    });
+  };
+  // The frames drawn per second since the last call, and the frame shown now.
+  var since = performance.now();
+  window.prStats = function () {
+    var now = performance.now();
+    var fps = now > since ? drawn * 1000 / (now - since) : 0;
+    drawn = 0;
+    since = now;
+    return { fps: fps, frame: current };
+  };
+</script>
+</body>
+</html>

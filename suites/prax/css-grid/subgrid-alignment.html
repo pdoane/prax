@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: stretched, aligned, clipped and shifted</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; }
+  .s { display: grid; grid-template-columns: subgrid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, alignment, overflow and positioning</div>
+  <h1>Subgrids: stretched, aligned, clipped and shifted</h1>
+  <p class=pr-lede><q>The subgrid is always stretched in its subgridded dimension(s): the align-self/justify-self
+  properties on it are ignored, as are any specified width/height constraints.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px; the tinted, outlined box is a subgrid of its columns 2 to 4, and
+  A is in its first column.</p>
+</header>
+
+<section>
+  <h2>Its own size and alignment are ignored</h2>
+  <p><q>Layoutwise, the subgrid’s grid is always aligned with the corresponding section of the parent grid; the
+  align-content/justify-content properties on it are also ignored in the subgridded dimension.</q></p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4; justify-self: center; width: 50px"><div class=pr-a>A</div></div></div></div>
+    <figcaption><code>justify-self: center; width: 50px</code>: the subgrid still fills its columns, 140px from
+    40px, and A 60px from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4; justify-content: end"><div class=pr-a>A</div></div></div></div>
+    <figcaption><code>justify-content: end</code>: its columns stay the parent's; A 60px from 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overflow and relative positioning</h2>
+  <p><q>The overflow property does apply to subgrids, so that overflowing contents of the subgrid can be scrolled
+  into view.</q> <q>Relative positioning applies to subgrids as normal, and shifts the box and its content together as
+  usual.</q> C, under the subgrid, is in the parent's second column.</p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4; overflow: hidden"><div class=pr-a style="grid-column: 2; width: 120px">A</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>overflow: hidden</code>, A 120px wide in the subgrid's second column: A from 100px, clipped at
+    180px, where the subgrid ends.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 4; position: relative; left: 20px"><div class=pr-a>A</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>position: relative; left: 20px</code>: the subgrid and A move 20px right, A from 60px; C
+    stays at 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

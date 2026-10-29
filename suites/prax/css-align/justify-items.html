@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 7.1 Inline-Axis (or Main-Axis) Default Alignment</div>
+  <h1>justify-items</h1>
+  <p class=pr-lede><q>This property specifies the default 'justify-self' for all of the child boxes (including
+  anonymous boxes) participating in this box's formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-items-property">CSS Box Alignment 3 §7.1</a></span>
+  Its initial value is <code>legacy</code>, which computes to <code>normal</code> where no ancestor sets a
+  <code>legacy</code> value.</p>
+</header>
+
+<section>
+  <h2>Grid items</h2>
+  <p>Each stage is a grid of one column; A and B are <code>justify-self: auto</code>, C <code>start</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="justify-self: start">C</div></div></div>
+    <figcaption>Initial, <code>legacy</code> with nothing to inherit, so <code>normal</code>:
+    A and B stretched; C at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: end"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="justify-self: start">C</div></div></div>
+    <figcaption><code>end</code>: A and B at the right; C still at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: center; direction: rtl"><div class=pr-a>A</div><div class=pr-b style="justify-self: right">B</div><div class=pr-c style="justify-self: start">C</div></div></div>
+    <figcaption><code>rtl</code>, <code>center</code>: A centered; B <code>right</code>; C, <code>start</code>, at
+    the right too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: end">anonymous<div class=pr-a>A</div></div></div>
+    <figcaption><code>end</code>: the text "anonymous", an anonymous grid item, at the right, as A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block containers</h2>
+  <p>It applies to all elements; the children of a block container take it as their <code>justify-self</code>, see
+  <a href="justify-self-block.html">justify-self on blocks</a>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="justify-items: end"><div class=pr-a>A</div><div class=pr-b style="justify-self: stretch">B</div></div>
+    <figcaption>The stage <code>justify-items: end</code>: block A as wide as its text, at the right; B,
+    <code>stretch</code>, the stage's width. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A as
+    wide as the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

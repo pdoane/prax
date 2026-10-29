@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>touch-action is decided at the start</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller .content { width: 500px; height: 300px; padding: 10px; }
+  .strip { height: 40px; width: 220px; padding: 0 6px; box-sizing: border-box; line-height: 38px;
+           background: #b9cde6; border: 1px solid #2c5a8f; }
+  #late { touch-action: auto; }
+  #vertical { touch-action: pan-y; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.2 Determining supported direct manipulation behavior</div>
+  <h1>touch-action is decided at the start</h1>
+  <p class=pr-lede><q>Once panning or zooming has been started, and the user agent has already determined whether or not
+  the gesture should be handled as a user agent direct manipulation behavior, any changes to the relevant touch-action
+  value will be ignored for the duration of the action.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">Pointer Events §7.2</a></span></p>
+</header>
+<section>
+  <h2>A change in pointerdown is too late</h2>
+  <p><q>For instance, programmatically changing the touch-action value for an element from auto to none as part of a
+  pointerdown handler script will not result in the user agent aborting or suppressing any of the pan or zoom behavior
+  for that input for as long as that pointer is active.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">§7.2</a></span>
+  A <code>pointerdown</code> listener sets <code>touch-action: none</code> on the strip.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller><div class=content><div class=strip id=late>auto, until pressed</div></div></div>
+    </div>
+    <figcaption>Needs a touch screen. Drag up on the strip: the box scrolls for the whole drag. Lift, and drag
+    again: now it starts as <code>none</code>, and does not scroll.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The direction is kept</h2>
+  <p><q>For instance, if an element has been set to touch-action: pan-y (meaning that only vertical panning is handled
+  by the user agent), and a touch gesture starts off horizontally, no vertical panning should occur if the user changes
+  the direction of their gesture to be vertical while their finger is still touching the screen.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">§7.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller><div class=content><div class=strip id=vertical>pan-y</div></div></div>
+    </div>
+    <figcaption>Needs a touch screen. Put a finger on the strip, drag sideways, then up without lifting: the box
+    never scrolls.</figcaption>
+  </figure>
+</section>
+<script>
+  // Sets touch-action: none on the strip as it is pressed.
+  const late = document.getElementById("late");
+  late.addEventListener("pointerdown", () => late.style.touchAction = "none");
+</script>
+</body>
+</html>

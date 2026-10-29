@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Slots of the table grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; height: 40px; background: #e0e3e8; box-shadow: inset 0 0 0 1px #8a93a1; }
+  td.a { background: #b9cde6; }
+  td.b { background: rgba(214, 138, 60, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.1.1 Terminology, slots</div>
+  <h1>Slots of the table grid</h1>
+  <p class=pr-lede>A slot <q>(r,c) is an available space created by the intersection of a row r and a column c in the
+  table grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#terminology">CSS Table 3 §2.1.1</a></span>
+  Grey cells are 40px square, each one slot.</p>
+</header>
+
+<section>
+  <h2>Spanning cells cover slots densely</h2>
+  <p><q>Table-cells which cover more than one slot do so densely, meaning the set of slots they cover can always be
+  described as a set of four strictly-positive integers (rowStart, colStart, rowSpan, colSpan)</q>.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td><td class=a rowspan=2 colspan=2>A<td><tr><td><td><tr><td><td><td><td></table></div>
+    <figcaption>A, <code>rowspan=2 colspan=2</code> from row 1, column 2: an 80px square over four slots, the grey
+    cells around it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At most two cells on a slot</h2>
+  <p><q>Each slot of the table grid is covered by at least one table-cell (some of them anonymous), and at most
+  two.</q></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><td class=a rowspan=2>A<td><tr><td class=b colspan=3>B</table></div>
+    <figcaption>A spans down from row 1 and B, in row 2, spans all three columns: both cover the middle slot of row
+    2, where translucent orange B lies over blue A.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

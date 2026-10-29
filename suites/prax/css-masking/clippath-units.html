@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clipPathUnits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg.art { display: block; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <clipPath id="user"><rect x="0" y="0" width="50" height="50" /></clipPath>
+  <clipPath id="box" clipPathUnits="objectBoundingBox"><rect x="0" y="0" width="0.5" height="0.5" /></clipPath>
+  <clipPath id="box-path" clipPathUnits="objectBoundingBox"><path d="M 0 0 L 1 0 L 0.5 1 Z" /></clipPath>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 6.1 The clipPath element</div>
+  <h1>clipPathUnits</h1>
+  <p class=pr-lede><q>Defines the coordinate system for the contents of the clipPath.</q> <q>If attribute
+  clipPathUnits is not specified, then the effect is as if a value of userSpaceOnUse were specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#ClipPathElement">CSS Masking 1 §6.1</a></span>
+  Each clip path is the rectangle 0, 0 to 50, 50, in user units or as 0.5 by 0.5 of the bounding box.</p>
+</header>
+
+<section>
+  <h2>userSpaceOnUse: the referencing element's user space</h2>
+  <p><q>the user coordinate system for the element referencing the clipPath element via the clip-path
+  property</q>. Each SVG is 160 by 80; its blue rectangle is 100 by 60 at 40, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect x="40" y="10" width="100" height="60" fill="#4f81bd" clip-path="url(#user)" /></svg></div>
+    <figcaption>No <code>clipPathUnits</code>: the SVG's 0, 0 to 50, 50, so the rectangle only from 40 to 50 across
+    and 10 to 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><g transform="translate(40 10)"><rect width="100" height="60" fill="#4f81bd" clip-path="url(#user)" /></g></svg></div>
+    <figcaption>The same rectangle placed by a <code>translate(40 10)</code>: user space moves with it, so 40 to 90
+    across and 10 to 60 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>objectBoundingBox: fractions of the bounding box</h2>
+  <p><q>The coordinate system has its origin at the top left corner of the bounding box of the element to which the
+  clipping path applies to and the same width and height of this bounding box.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect x="40" y="10" width="100" height="60" fill="#4f81bd" clip-path="url(#box)" /></svg></div>
+    <figcaption>The rectangle's top left quarter: 40 to 90 across and 10 to 40 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: url(#box-path)"></div></div>
+    <figcaption>On a CSS box 100 by 70 at 10, 10: a triangle from its top corners to the middle of its bottom, 60,
+    80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

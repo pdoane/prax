@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lazy loading an img</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; overflow: auto; font-size: 12px; line-height: 20px; }
+  .scroller p { margin: 0; padding: 0 6px; }
+  .far { height: 6000px; }
+  .scroller img { display: block; margin: 0 10px 10px; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.3 The img element</div>
+  <h1>Lazy loading an img</h1>
+  <p class=pr-lede><q>The loading attribute is a lazy loading attribute. Its purpose is to indicate the policy for
+  loading images that are outside the viewport.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element">HTML §4.8.3</a></span>
+  It is fetched once it comes within the implementation-defined <q>lazy load scroll margin</q> of the viewport. Each
+  img is 6000px down a scroller; the log lists its <code>load</code>.</p>
+</header>
+
+<section>
+  <h2>Fetched when scrolled to, or when made eager</h2>
+  <p><q>When the loading attribute's state is changed to the Eager state, the user agent must run these steps</q>,
+  which invoke the img's <q>lazy load resumption steps</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Scroll to the end.</p><div class=far></div><img id=lazy loading=lazy data-src="support/orange-160x80.png?lazy" width=80 height=40 alt=""></div>
+      <ol class=pr-log data-on="#lazy" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption><code>loading=lazy</code>: the log is empty until you scroll near the end, then <code>load</code>,
+    and an orange image 80 by 40 at the bottom. Chrome loads it at once, as a scroll margin of 6000px or more
+    would.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Scroll to the end.</p><div class=far></div><img id=eager data-src="support/orange-160x80.png?eager" width=80 height=40 alt=""></div>
+      <ol class=pr-log data-on="#eager" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption>No <code>loading</code>, so Eager: <code>load</code> as the page loads, before any scrolling.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=scroller><p>Out of view, 6000px down.</p><div class=far></div><img id=resume loading=lazy data-src="support/orange-160x80.png?resume" width=80 height=40 alt=""></div>
+      <div class=act><button class=pr-target id=make-eager>Set loading to eager</button></div>
+      <ol class=pr-log data-on="#resume" data-log="load" data-lines=2></ol>
+    </div>
+    <figcaption>Press the button without scrolling: <code>load</code>, though the img is still out of view. Chrome has
+    loaded it already.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+<script>
+  // The images' URLs are set once the logs listen, so that no load comes before them.
+  for (const img of document.querySelectorAll("img[data-src]"))
+      img.src = img.dataset.src;
+  document.getElementById("make-eager").addEventListener("click", () => {
+      document.getElementById("resume").loading = "eager";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-orientation: turning images upright</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 5.1 Orienting an Image on the Page: the image-orientation property</div>
+  <h1>image-orientation: turning images upright</h1>
+  <p class=pr-lede><q>The image-orientation property provides a way to apply an “out-of-band” rotation to image source
+  data to correctly orient an image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#the-image-orientation">CSS Images 3 §5.1</a></span>
+  <q>This property is optional for implementations.</q> Each image is encoded 100 by 50: green and yellow over blue
+  and red. Its EXIF metadata says how to turn it.</p>
+</header>
+
+<section>
+  <h2>from-image, the initial value, and none</h2>
+  <p>from-image <q>computes to the angle that the metadata specifies is necessary to correctly orient the
+  image.</q> none: <q>the image is oriented as encoded.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg" style="width: 30px" alt=""></div>
+    <figcaption>EXIF 6, a quarter turn right: blue and green over red and yellow.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-8-llo.jpg" style="width: 30px" alt=""></div>
+    <figcaption>EXIF 8, a quarter turn left: yellow and red over green and blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-3-lr.jpg" style="width: 80px" alt=""></div>
+    <figcaption>EXIF 3, a half turn: red and blue over yellow and green.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg" style="image-orientation: none; width: 80px" alt=""></div>
+    <figcaption><code>none</code>, EXIF 6: as encoded, green and yellow over blue and red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Layout uses the turned image</h2>
+  <p><q>All CSS layout and rendering processes use the image after rotation, exactly as if the image were originally
+  encoded in its rotated form.</q> <q>Other transformations, such as those in [CSS-TRANSFORMS-1], are applied to the
+  image after image-orientation is applied.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-8-llo.jpg" style="height: 40px" alt=""></div>
+    <figcaption>EXIF 8, <code>height: 40px</code>: the turned image's height, so 20px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src="../../../third_party/wpt/css/css-images/image-orientation/support/exif-orientation-6-ru.jpg" style="width: 30px; margin: 0 25px; transform: rotate(90deg)" alt=""></div>
+    <figcaption>EXIF 6, then <code>rotate(90deg)</code>: lying 60 by 30, 15px down, red and blue over yellow
+    and green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

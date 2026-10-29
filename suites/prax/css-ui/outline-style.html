@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>outline-style: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 120px; height: 40px; background: #b9cde6; outline-style: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.3 Outline Patterns: the outline-style property</div>
+  <h1>outline-style: auto</h1>
+  <p class=pr-lede><q>The auto value permits the user agent to render a custom outline style, typically a style which
+  is either a user interface default for the platform, or perhaps a style that is richer than can be described in
+  detail in CSS</q>. <q>User agents may treat auto as solid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-style">CSS Basic User Interface 4 §3.3</a></span>
+  The other styles are those of borders, on CSS 2's <a href="../css2-18-user-interface/outline-style.html">outline-style</a> pages.</p>
+</header>
+
+<section>
+  <h2>The width is ignored</h2>
+  <p><q>The outline-width property is ignored when outline-style is auto.</q></p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="outline-width: 1px"></div></div>
+    <figcaption><code>outline-width: 1px</code>: the browser's own outline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=box style="outline-width: 15px"></div></div>
+    <figcaption><code>outline-width: 15px</code>: the same outline as the first figure. <span
+    class=pr-flag>Safari</span> draws it wider and further out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A style of the browser's own</h2>
+  <p><q>User agents may enable authors to influence the rendering of auto style outlines via the outline-color
+  property, but this specification does not define how the rendering is impacted (if at all).</q></p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="outline-color: #c0392b; border-radius: 10px"></div></div>
+    <figcaption><code>outline-color: #c0392b</code> on a box with round corners: any outline is allowed.
+    Chrome draws it red and rounded, Safari and Firefox their blue rings, rounded.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

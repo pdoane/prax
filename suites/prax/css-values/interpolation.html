@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolation and addition</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .a { height: 20px; background: #4f81bd; animation: 1s linear infinite alternate; }
+  @keyframes w { from { width: 0; } to { width: 200px; } }
+  @keyframes op { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mix { from { width: 160px; } to { width: 20%; } }
+  @keyframes calc { from { width: calc(50% - 50px); } to { width: calc(100% + 50px); } }
+  @keyframes add { from, to { width: 100px; } }
+  @keyframes tx { from, to { translate: 60px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 3 Combining Values</div>
+  <h1>Interpolation and addition</h1>
+  <p class=pr-lede><q>interpolation: Given two property values V<sub>A</sub> and V<sub>B</sub>, produces an
+  intermediate value V<sub>result</sub> at a distance of p along the interval between V<sub>A</sub> and
+  V<sub>B</sub></q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combining-values">CSS Values and Units 4 §3</a></span>
+  Each blue bar runs a linear animation to and fro; a still shows it part of the way, at the frame its delay picks.</p>
+</header>
+
+<section>
+  <h2>Numbers, lengths, percentages, and their mixes</h2>
+  <p>Each is <q>(1 - p) × V<sub>A</sub> + p × V<sub>B</sub></q>: <a href="https://drafts.csswg.org/css-values-4/#combine-numbers">§5.3.1</a>,
+  <a href="https://drafts.csswg.org/css-values-4/#combine-dimensions">§5.4.2</a>, <a href="https://drafts.csswg.org/css-values-4/#combine-mixed">§5.6.1</a>,
+  and for a math function <q>V<sub>result</sub> = calc((1 - p) * V<sub>A</sub> + p * V<sub>B</sub>)</q> <a href="https://drafts.csswg.org/css-values-4/#combine-math">§10.14</a>.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="animation-name: w; animation-delay: -0.25s"></div></div>
+    <figcaption><code>width</code> from 0 to 200px, a quarter of the way: 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="width: 200px; animation-name: op; animation-delay: -0.25s"></div></div>
+    <figcaption><code>opacity</code> from 0 to 1, a quarter of the way: a bar at 0.25, pale.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="animation-name: mix; animation-delay: -0.5s"></div></div>
+    <figcaption>From 160px to 20%, halfway: 80px plus 10% of the 200px stage, 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="animation-name: calc; animation-delay: -0.5s"></div></div>
+    <figcaption>From <code>calc(50% - 50px)</code> to <code>calc(100% + 50px)</code>, halfway: 75%, 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Addition</h2>
+  <p><q>addition: Given two property values V<sub>A</sub> and V<sub>B</sub>, returns the sum of the two
+  properties</q>. Each bar's animation is <code>animation-composition: add</code> over its own value.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="width: 50px; animation-name: add; animation-composition: add"></div></div>
+    <figcaption><code>width: 50px</code>, plus an animation at 100px: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="width: 40px; translate: 40px; animation-name: tx; animation-composition: add"></div></div>
+    <figcaption><code>translate: 40px</code>, plus 60px: the 40px bar 100px from the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

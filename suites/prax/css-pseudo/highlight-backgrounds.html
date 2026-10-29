@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting a highlight's background</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  body { user-select: none; -webkit-user-select: none; }
+  .t { position: relative; padding: 0 10px; font: 20px/40px "PR Arimo"; color: #1f2430; }
+  .over .t { user-select: text; -webkit-user-select: text; }
+  ::highlight(h) { background-color: #4f81bd; color: white; }
+  .cover { position: absolute; left: 50px; top: 5px; width: 40px; height: 30px; background: #d68a3c; }
+  .flat { display: inline-block; vertical-align: top; width: 40px; height: 30px; margin: 5px -50px 0 10px; background: #d68a3c; }
+  .over ::selection { background-color: #6aa36a; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.6.1 Backgrounds</div>
+  <h1>Painting a highlight's background</h1>
+  <p class=pr-lede><q>Each highlight pseudo-element draws its background over the corresponding portion of the
+  highlight overlay, painting it immediately below any positioned descendants</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-backgrounds">CSS Pseudo-Elements 4 §3.6.1</a></span>
+  Each stage holds “Highlighted” in 20px Arimo, in a custom highlight drawn white on blue.</p>
+</header>
+
+<section>
+  <h2>Below positioned descendants, over the rest</h2>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=h>Highlighted</span><span class=cover></span></div></div>
+    <figcaption>An orange box, <code>position: absolute</code>, 40 by 30 at x 50: it covers the highlight there.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=t><span class=flat></span><span data-highlight=h>Highlighted</span></div></div>
+    <figcaption>The same box, an unpositioned inline-block before the text that overlaps it: the highlight covers
+    it. <span class=pr-flag>Safari</span> No highlight.</figcaption>
+  </figure>
+</section>
+
+<section class=over>
+  <h2>::selection over ::highlight()</h2>
+  <p><q>The ::selection overlay is drawn over the ::target-text overlay which is drawn over the ::spelling-error
+  overlay which is drawn over the ::grammar-error overlay which is drawn over the ::highlight overlays.</q> The
+  selection, white on green, is set by a script; Safari's stills show no selection: their window is never the focused
+  one.</p>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=h>Highlighted <span data-from=selection></span>and<span data-to=selection></span></span></div></div>
+    <figcaption>“Highlighted and” in the custom highlight, and “and” also selected: “and” white on green, over the
+    blue.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

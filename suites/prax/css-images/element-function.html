@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>element(): an element as an image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .src { width: fit-content; margin: 10px; isolation: isolate; }
+  .dst { width: 100px; height: 30px; margin: 10px; background-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.7 Using Elements as Images: the element() notation</div>
+  <h1>element(): an element as an image</h1>
+  <p class=pr-lede><q>The element() function allows an author to use an element in the document as an image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#element-notation">CSS Images 4 §2.7</a></span>
+  In each stage, box A is a stacking context (<code>isolation: isolate</code>), and the dashed box below it, 100 by
+  30, has <code>background: element(#…) no-repeat</code> naming it.</p>
+</header>
+
+<section>
+  <h2>The element as it is drawn</h2>
+  <p>Its natural size is the <q>decorated bounding box</q>, <q>the smallest axis-aligned rectangle that contains
+  the border image areas of all the fragments of the principal box</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=plain>A</div><div class="dst pr-ghost" style="background-image: element(#plain)"></div></div>
+    <figcaption>A copy of A at the top left of the dashed box. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=shadow style="box-shadow: 0 0 0 4px #8e44ad">A</div><div class="dst pr-ghost" style="background-image: element(#shadow)"></div></div>
+    <figcaption>A has a purple ring of shadow outside its border box: the copy has none. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=child>A <span class="pr-b" style="padding: 0 4px">B</span></div><div class="dst pr-ghost" style="background-image: element(#child)"></div></div>
+    <figcaption>A holds B: the copy holds B too. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Transforms are not copied, and the first match is</h2>
+  <p><q>If the referenced element has a transform applied to it or an ancestor, the transform must be ignored when
+  rendering the element as an image.</q> <q>If multiple elements are matched, the function references the first such
+  element.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=turned style="transform: rotate(30deg)">A</div><div class="dst pr-ghost" style="background-image: element(#turned)"></div></div>
+    <figcaption>A turned 30°: the copy upright, at the top left. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="src pr-a" id=twice>A</div><div class="src pr-b" id=twice>B</div><div class="dst pr-ghost" style="background-image: element(#twice)"></div></div>
+    <figcaption>A and B have the same ID: a copy of A, the first. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

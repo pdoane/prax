@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic sizes of flex containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: inline-flex; vertical-align: top; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10 Intrinsic Sizes</div>
+  <h1>Intrinsic sizes of flex containers</h1>
+  <p class=pr-lede><q>The intrinsic sizing of a flex container is used to produce various types of content-based
+  automatic sizing, such as shrink-to-fit logical widths (which use the fit-content formula) and content-based logical
+  heights (which use the max-content size).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-sizes">CSS Flexible Box Layout 2 §9.10</a></span></p>
+</header>
+
+<section>
+  <h2>Shrink-to-fit widths</h2>
+  <p>Each dashed flex container, the first three of "aaa" and "bb", 30px and 20px of text, is sized by the fit-content
+  formula <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#auto-box-sizes">CSS Box Sizing 3 §2.1</a></span>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent"><div class=i1>aaa</div><div class=i2>bb</div></div></div>
+    <figcaption><code>inline-flex</code>: 50px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class=pr-parent style="display: flex; float: left"><div class=i1>aaa</div><div class=i2>bb</div></div></div>
+    <figcaption>A floated <code>flex</code> container: 50px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class=pr-parent style="display: flex; width: fit-content"><div class=i1>aaa</div><div class=i2>bb</div></div></div>
+    <figcaption><code>width: fit-content</code>: 50px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class=pr-parent style="display: flex; float: left"><div class=i1>aaa bb</div><div class=i2>ccc dd</div></div></div>
+    <figcaption>A float of two 60px items: 120px does not fit, so 100px, and each item 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Content-based heights; auto margins as 0</h2>
+  <p>A <code>column</code> container's automatic height is its max-content height. <q>For these computations, auto
+  margins on flex items are treated as 0.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class=pr-parent style="display: flex; flex-direction: column"><div class=i1>aaa</div><div class=i2 style="height: 30px">bb</div><div class=i3>c</div></div></div>
+    <figcaption>A column of items 20, 30 and 20px tall: 70px tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent"><div class=i1 style="margin-left: auto">aaa</div></div></div>
+    <figcaption><code>margin-left: auto</code> on a 30px item: an <code>inline-flex</code> 30px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent"><div class=i1 style="margin-left: 20px">aaa</div></div></div>
+    <figcaption><code>margin-left: 20px</code>: 50px wide, the item from 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

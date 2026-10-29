@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Multi-valued feature values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-feature-values "PR Bungee Spice" {
+    @styleset { mn-and-e: 2 3; many: 2 3 125; }
+    @character-variant { first: 1 2; extra: 1 2 3; }
+  }
+  .pr-sample { font-family: 'PR Bungee Spice'; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.9.2 Multi-valued feature value definitions</div>
+  <h1>Multi-valued feature values</h1>
+  <p class=pr-lede>For 'styleset()', <q>multiple values indicate the style sets to be enabled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#multi-value-features">CSS Fonts 4 §6.9.2</a></span></p>
+</header>
+
+<section>
+  <h2>Several style sets at once</h2>
+  <p>PR Bungee Spice's <code>ss02</code> changes A, M and N, and its <code>ss03</code> E.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(mn-and-e)">EMMA</div>
+    <figcaption><code>2 3</code>: <code>ss02</code> and <code>ss03</code>: every letter alternate.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(many)">EMMA</div>
+    <figcaption><code>2 3 125</code>: 125 is past 99, which <q>enable[s] no OpenType features</q> but is not an
+    error: the same as <code>2 3</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

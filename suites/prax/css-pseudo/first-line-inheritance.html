@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inheriting from ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 0; }
+  .orange::first-line { color: #d68a3c; }
+  .chip { background: #f6d7b4; }
+  .var { --c: #4f81bd; }
+  .var::first-line { --c: #d68a3c; }
+  .var span { color: var(--c); }
+  .ib { display: inline-block; }
+  .dir { direction: ltr; }
+  .dir::first-line { direction: rtl; }
+  .dir span { unicode-bidi: bidi-override; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1.3 Inheritance and the ::first-line Pseudo-element</div>
+  <h1>Inheriting from ::first-line</h1>
+  <p class=pr-lede><q>the fragment of a child that occurs on the first line inherits any standard inherited
+  properties—except the properties excluded above—from the ::first-line pseudo-element. For all other properties,
+  including all custom properties, inheritance is from the non-pseudo parent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-line-inheritance">CSS Pseudo-Elements 4 §2.1.3</a></span>
+  The text is 10px a character, 20 to a line; each <code>p::first-line</code> is orange.</p>
+</header>
+
+<section>
+  <h2>A child across the break</h2>
+  <p><q>The portion of a child element that does not occur on the first line always inherits from the non-pseudo
+  parent.</q> The <code>span</code>s are light orange.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=orange>aaaa <span class=chip>bbbb cccc dddd eeee</span> ffff</p></div>
+    <figcaption>The <code>span</code> breaks after <q>dddd</q>: <q>bbbb cccc dddd</q> orange, <q>eeee</q> black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=orange><span class=chip>aaaa <span>bbbb</span></span> cccc dddd eeee</p></div>
+    <figcaption>Nested: the inner <code>span</code> inherits through the outer one, so the whole first line is
+    orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not custom properties, nor the writing mode</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><p class="orange var"><span>aaaa bbbb cccc dddd eeee</span></p></div>
+    <figcaption><code>--c</code> is blue on the <code>p</code> and orange on its <code>::first-line</code>; the
+    <code>span</code>'s <code>color: var(--c)</code> takes the <code>p</code>'s: blue on both lines. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Orange on the first line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><p class=dir><span>abcd</span> efgh</p></div>
+    <figcaption><code>direction: rtl</code> on the <code>::first-line</code> does not reach the
+    <code>span</code>, overridden, which keeps the <code>p</code>'s <code>ltr</code>: <q>abcd efgh</q> at the left, in
+    order. <span class=pr-flag>Safari</span> At the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

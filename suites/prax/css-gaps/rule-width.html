@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-width, row-rule-width and rule-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; gap: 20px; height: 60px; column-rule-style: solid; column-rule-color: #c0392b; }
+  .f > div { width: 40px; padding: 0; box-sizing: border-box; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; rule-style: solid; column-rule-color: #c0392b; row-rule-color: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.3 Gap decoration width</div>
+  <h1>column-rule-width, row-rule-width and rule-width</h1>
+  <p class=pr-lede><q>These properties set the widths of gap decorations.</q> Their initial value is
+  <code>medium</code>, and their computed value a <q>list of absolute lengths, snapped as a border width</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-rule-width">CSS Gaps 1 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Keywords and lengths</h2>
+  <p>Each flexbox has two items 20px apart and a solid red column rule; <code>thin</code>, <code>medium</code> and
+  <code>thick</code> are 1px, 3px and 5px, as for borders.</p>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-width: thin"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>thin</code>: 1px <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption>Not set: <code>medium</code>, 3px <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-width: thick"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>thick</code>: 5px <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-width: 20px"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>20px</code>: the whole gap <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+</section>
+
+<section>
+  <h2>Each axis, or both</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="column-rule-width: 2px; row-rule-width: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-width: 2px; row-rule-width: 8px</code>: thin red rules down, a thick black one
+    across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="rule-width: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-width: 8px</code> sets both: every rule 8px wide. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

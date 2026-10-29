@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-spacing: percentages and placement</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.1 Word Spacing: the word-spacing property</div>
+  <h1>word-spacing: percentages and placement</h1>
+  <p class=pr-lede><q>Specifies extra spacing in addition to the intrinsic inter-word spacing defined by the
+  font.</q> <q>Percentages inherit intact, and are resolved against the used 'font-size' of the current element</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-spacing-property">CSS Text 4 §8.1</a></span>
+  CSS 2's <a href="../css2-16-text/word-spacing.html">page</a> has lengths. Letters are 10px wide, so a space is 10px.</p>
+</header>
+
+<section>
+  <h2>A percentage of the font size</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="word-spacing: 60%"><span class=t>one two</span></div>
+    <figcaption><code>60%</code> of the 16.67px font: 10px more, so "two" at 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide pr-measure" style="word-spacing: 60%">one <span class=u style="font-size: calc(100px / 3)">two six</span></div>
+    <figcaption>The blue span's font is twice the size and inherits <code>60%</code>, not 10px: its space is 20px and
+    20px more, so "six" is 40px after "two".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only at separators left after collapsing</h2>
+  <p><q>Additional spacing is applied to each word separator left in the text after the white space processing rules
+  have been applied</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="word-spacing: 20px"><span class=t>one</span>   <span class=t>two</span></div>
+    <figcaption>Three spaces, collapsed to one: 20px added once, "two" at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="word-spacing: 20px"><span class=t>one&#x200B;two</span></div>
+    <figcaption>A zero width space: <q>the user agent must not create an additional spacing between words</q>:
+    "onetwo", 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

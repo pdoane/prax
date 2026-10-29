@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline-level boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.2 Inline-level elements and inline boxes</div>
+  <h1>Inline-level boxes</h1>
+  <p class=pr-lede><q>Inline-level elements generate inline-level boxes, which are boxes that participate in an inline
+  formatting context.</q> Their content is distributed in lines.</p>
+</header>
+
+<section>
+  <h2>Inline-level</h2>
+  <p><q>The following values of the 'display' property make an element inline-level: 'inline', 'inline-table', and
+  'inline-block'.</q> Each sits on the line between the words around it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-boxes">CSS 2 §9.2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-chip style="display: inline">inline</span> after</div>
+    <figcaption><code>display: inline</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-chip style="display: inline-block">inline-block</span> after</div>
+    <figcaption><code>display: inline-block</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-chip style="display: inline-table">inline-table</span> after</div>
+    <figcaption><code>display: inline-table</code></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline boxes and atomic inline-level boxes</h2>
+  <p>An inline box's contents take part in the line, so it splits across lines. <q>Inline-level boxes that are not
+  inline boxes (such as replaced inline-level elements, inline-block elements, and inline-table elements) are called
+  atomic inline-level boxes because they participate in their inline formatting context as a single opaque box.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-boxes">CSS 2 §9.2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">Words before the box <span class=pr-chip>a box that runs on</span> after.</div>
+    <figcaption><code>display: inline</code>: the box splits, part on each line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">Words before the box <span class=pr-chip style="display: inline-block">a box that runs on</span> after.</div>
+    <figcaption><code>display: inline-block</code>: the box does not split; it moves to the next line whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

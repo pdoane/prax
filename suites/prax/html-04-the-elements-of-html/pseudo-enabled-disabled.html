@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:enabled and :disabled</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows > *, .rows fieldset > *:not(legend) { display: block; box-sizing: border-box; width: 170px; margin: 0 0 8px; font-size: 12px; }
+  .rows x-face, .rows a, .rows div { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows fieldset { padding: 2px 6px 0; }
+  .rows fieldset > *:not(legend) { width: 140px; }
+  .rows legend input { width: 100px; font-size: 12px; }
+  .rows * { outline: 3px solid #b5bcc7; outline-offset: 1px; }
+  .rows :enabled { outline-color: #6aa36a; }
+  .rows :disabled { outline-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:enabled and :disabled</h1>
+  <p class=pr-lede><q>The :enabled pseudo-class must match any button, input, select, textarea, optgroup, option,
+  fieldset element, or form-associated custom element that is not actually disabled.</q> <q>The :disabled
+  pseudo-class must match any element that is actually disabled.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Enabled, disabled, or neither</h2>
+  <p>Outlines: green <code>:enabled</code>, orange <code>:disabled</code>, grey neither. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <div>a div</div>
+        <div disabled>a div with disabled</div>
+        <a href="#">a link</a>
+        <x-face>form-associated</x-face>
+        <x-face disabled>form-associated, disabled</x-face>
+      </div>
+    </div>
+    <figcaption>The two <code>div</code>s and the link are grey: neither pseudo-class applies to them. The first
+    custom element is green, the second orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <label style="outline: 0"><input type=checkbox id=toggle> disable the fieldset</label>
+        <fieldset id=set><legend><input value="in the legend"></legend><input value="in the fieldset"><button>button</button></fieldset>
+      </div>
+    </div>
+    <figcaption>The fieldset and the controls in it are green. Check the box: the fieldset, its field and its button
+    turn orange; the field in its first legend stays green.</figcaption>
+  </figure>
+</section>
+<script>
+  // A form-associated custom element, and a box that disables the fieldset.
+  customElements.define("x-face", class extends HTMLElement {
+    static formAssociated = true;
+  });
+  const set = document.getElementById("set");
+  document.getElementById("toggle").addEventListener("change", event => set.disabled = event.target.checked);
+</script>
+</body>
+</html>

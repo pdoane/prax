@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The white-space property: values that wrap</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .clip { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6 White space: the 'white-space' property</div>
+  <h1>The white-space property: values that wrap</h1>
+  <p class=pr-lede><code>white-space</code> takes <code>normal | pre | nowrap | pre-wrap | pre-line</code>. Initial
+  <code>normal</code>, inherited, applies to all elements. Each stage holds the same source: "one", three spaces, "two",
+  a newline, then a sentence too long for one line. Stages clip what overflows.</p>
+</header>
+
+<section>
+  <h2>pre-wrap and pre-line</h2>
+  <p><q>This value prevents user agents from collapsing sequences of white space. Lines are broken at preserved newline
+  characters, and as necessary to fill line boxes.</q> <q>This value directs user agents to collapse sequences of
+  white space. Lines are broken at preserved newline characters, and as necessary to fill line boxes.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-prop">CSS 2 §16.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: pre-wrap">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>pre-wrap</code>: three spaces, a break at the newline, and the text wraps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: pre-line">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>pre-line</code>: one space, a break at the newline, and the text wraps.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-4/#white-space-property">CSS Text 4 §3</a></div>
+  <h2>A shorthand of two properties</h2>
+  <p><q>This property is a shorthand for white-space-collapse, text-wrap-mode, and white-space-trim.</q> Its value is
+  <code>normal | pre | pre-wrap | pre-line | &lt;'white-space-collapse'&gt; || &lt;'text-wrap-mode'&gt; ||
+  &lt;'white-space-trim'&gt;</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-property">CSS Text 4 §3</a></span> Each CSS 2 keyword is a pair of
+  longhands: collapsing and wrapping are set apart.</p>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: pre-wrap">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>pre-wrap</code> is <code>white-space-collapse: preserve</code> with <code>text-wrap-mode:
+    wrap</code>: three spaces, and the text wraps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: nowrap">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>nowrap</code> is a value of <code>text-wrap-mode</code>, and collapsing is reset to
+    <code>collapse</code>: one space, and one line past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

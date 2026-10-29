@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-clip-margin: corners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .b { width: 60px; height: 30px; margin: 30px 50px; padding: 10px; border: 5px solid #8a93a1; background: #f4f5f7; background-clip: content-box; overflow: clip; }
+  .fill { height: 110px; margin: -40px -40px 0; background: repeating-linear-gradient(45deg, #4f81bd 0 6px, #d68a3c 6px 12px); opacity: 0.85; }
+  .stage { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.2 Expanding Clipping Bounds, corners</div>
+  <h1>overflow-clip-margin: corners</h1>
+  <p class=pr-lede><code>overflow-clip-margin: &lt;visual-box&gt; || &lt;length&gt;</code>, initial <code>0px</code>.
+  <q>This property defines the overflow clip edge of the box, i.e. precisely where the box's content is allowed to
+  paint before being clipped by effects (such as overflow: clip, above) that are defined to clip to the box's
+  overflow clip edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-clip-margin">CSS Overflow 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Corners shaped as a box shadow's</h2>
+  <p><q>The overflow clip edge is shaped in the corners exactly the same way as an outer box-shadow with a spread
+  radius of the same cumulative offset from the box's border edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-clip-margin">CSS Overflow 3 §3.2</a></span> The second and third boxes have
+  <code>border-radius: 15px</code>; beside the clipped box, the same box casts a box shadow of the same spread.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; overflow-clip-margin: content-box 5px"><div class=fill></div></div></div>
+    <figcaption><code>content-box 5px</code>: 5px out from the content, halfway into the padding. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; border-radius: 15px; overflow-clip-margin: border-box 15px"><div class=fill></div></div></div>
+    <figcaption><code>border-box 15px</code>: 15px out from the border edge, its corners rounded to 30px. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class=b style="margin: 20px 5px; border-radius: 15px; box-shadow: 0 0 0 15px #b9cde6"></div></div>
+    <figcaption>A box shadow with a 15px spread on the same box: the clip beside has its shape.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

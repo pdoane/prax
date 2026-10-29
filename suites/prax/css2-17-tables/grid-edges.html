@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Visual layout: the edges of rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 30px; height: 20px; padding: 0 6px; box-sizing: border-box; background: transparent; border: 3px solid rgba(44, 90, 143, 0.6); }
+  tr { background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5 Visual layout of table contents</div>
+  <h1>Visual layout: the edges of rows and columns</h1>
+  <p class=pr-lede>Where a row's box begins and ends in each border model. Each row is green; the cells are
+  transparent, with a 3px translucent blue border.</p>
+</header>
+
+<section>
+  <h2>Where the edges of rows and columns are</h2>
+  <p><q>The edges of the rows, columns, row groups and column groups in the collapsing borders model coincide with the
+  hypothetical grid lines on which the borders of the cells are centered.</q> <q>In the separated borders model, the
+  edges coincide with the border edges of cells.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="border-collapse: separate; border-spacing: 10px"><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption>Separated, with <code>border-spacing: 10px</code>: each green row ends at the cells' border edges,
+    10px gaps between.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="border-collapse: collapse"><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption>Collapsing: the rows are green from the middle of one border line to the middle of the next, and
+    cover the table with no gaps.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

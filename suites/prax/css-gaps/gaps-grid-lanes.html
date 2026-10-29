@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gaps in grid lanes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .lanes { display: grid-lanes; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2 Gaps Between Boxes, grid lanes</div>
+  <h1>Gaps in grid lanes</h1>
+  <p class=pr-lede>In a grid lanes container, a gap <q>applied to the grid axis</q> <q>refers to the gutter between
+  adjacent grid tracks</q>; <q>applied to the stacking axis</q>, it <q>refers to the gutter between items in each
+  grid track</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gaps">CSS Gaps 1 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Between the lanes, and between the items in a lane</h2>
+  <p>Each container has three lanes and <code>gap: 10px</code>; A is 40px tall, the others 20px. Each item goes to the
+  lane whose items end highest.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=lanes><div class=pr-a style="height: 40px">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption>Three lanes 10px apart; D goes under B and E under C, each 10px below the item above it, while A runs
+    on to 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No grid lanes: the items stack
+    as blocks.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=lanes><div class=pr-a style="height: 40px">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d style="grid-column: 1 / -1">D</div></div></div>
+    <figcaption>D spans all three lanes, so it goes below the lowest of them: 10px under A, at 50px, while under B
+    and C the space between is 30px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No grid
+    lanes: the items stack as blocks.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

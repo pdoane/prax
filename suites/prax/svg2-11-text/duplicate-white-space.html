@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>white-space over xml:space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.3.3 Duplicate white-space directives</div>
+  <h1>white-space over xml:space</h1>
+  <p class=pr-lede><q>If the white-space property is set on any element, then the value of ‘xml:space’ is
+  ignored.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#DuplicateWhiteSpace">SVG 2 §11.10.3.3</a></span>
+  Each stage is an SVG 160 by 60 holding "a", three spaces and "b" in PR Noto Sans Mono at
+  <code>calc(50px / 3)</code>, every character 10 wide, at <code>x="20" y="35"</code>; red ticks mark where the
+  letters are to start.</p>
+</header>
+
+<section>
+  <h2>The property wins</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M40 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="preserve" style="white-space: normal">a   b</text></svg></div>
+    <figcaption><code>xml:space="preserve"</code> and <code>white-space: normal</code>: collapsed, b at 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M60 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="default" style="white-space: pre">a   b</text></svg></div>
+    <figcaption><code>xml:space="default"</code> and <code>white-space: pre</code>: all three spaces, b at 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M40 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" xml:space="preserve"><tspan style="white-space: normal">a   b</tspan></text></svg></div>
+    <figcaption><code>xml:space="preserve"</code> on the <code>text</code>, <code>white-space: normal</code> on a
+    <code>tspan</code> of the text: collapsed, b at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

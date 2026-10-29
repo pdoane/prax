@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Emphasis marks and ruby</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 10px 6px 0; font: 24px/60px "PR Noto Sans JP"; }
+  .e { text-emphasis: dot #c0392b; }
+  .pr-stage.v { padding: 6px 10px; font: 24px/60px "PR Noto Sans JP"; height: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.4 Emphasis Mark Position: the text-emphasis-position property, ruby</div>
+  <h1>Emphasis marks and ruby</h1>
+  <p class=pr-lede><q>If emphasis marks are applied to characters for which ruby is drawn in the same position as the
+  emphasis mark, the emphasis marks are placed outside the ruby. This includes auto-hidden and empty ruby
+  annotations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-position-property">CSS Text Decoration 4 §3.4</a></span>
+  Each stage marks 東京都庁 with red dots; 東京 has ruby.</p>
+</header>
+
+<section>
+  <h2>Outside the ruby</h2>
+  <p>The specification's figure: four characters marked, two of them with ruby.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage j" lang=ja><span class=e><ruby>東京<rt>とうきょう</rt></ruby>都庁</span></div>
+    <figcaption>Over 都庁, the dots sit just above the characters; over 東京, above とうきょう. <span
+    class=pr-flag>Safari</span> Draws no dots over 東京.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-vertical v" lang=ja><span class=e><ruby>東京<rt>とうきょう</rt></ruby>都庁</span></div>
+    <figcaption>Vertical: the same on the right, outside the ruby. <span class=pr-flag>Safari</span> None beside
+    東京.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Empty ruby and ruby on the other side</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage j" lang=ja><span class=e><ruby>東京<rt></rt></ruby>都庁</span></div>
+    <figcaption>An empty annotation: over 東京 the dots are still placed outside it, above where its text would be, as Firefox draws them.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> All four dots level, as if there were no
+    annotation.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" lang=ja style="padding-bottom: 10px"><span class=e><ruby style="ruby-position: under">東京<rt>とうきょう</rt></ruby>都庁</span></div>
+    <figcaption>The ruby under the text: not in the marks' way, so all four dots sit just over the characters.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

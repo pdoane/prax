@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns: width and visibility</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { height: 20px; padding: 0; background: #f4f5f7; border: 1px solid #2c5a8f; }
+  .w { box-sizing: border-box; width: 40px; }
+  .block { width: 100px; height: 18px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.3 Columns</div>
+  <h1>Columns: width and visibility</h1>
+  <p class=pr-lede>The remaining properties that apply to column and column-group elements. Cells have a 1px border and
+  no padding.</p>
+</header>
+
+<section>
+  <h2>'width'</h2>
+  <p><q>The 'width' property gives the minimum width for the column.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2 §17.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col style="width: 80px"><col><tr><td><td class=w><tr><td><td class=w></table></div>
+    <figcaption>An empty first column with <code>width: 80px</code> is 80px wide, beside a 40px column.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col style="width: 40px"><col><tr><td><div class=block></div><td class=w><tr><td><td class=w></table></div>
+    <figcaption><code>width: 40px</code> is only a minimum: the first column holds a 100px blue block and is 102px
+    wide with its borders.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>'visibility'</h2>
+  <p><q>If the 'visibility' of a column is set to 'collapse', none of the cells in the column are rendered, and cells
+  that span into other columns are clipped. In addition, the width of the table is diminished by the width the column
+  would have taken up.</q> <q>Other values for 'visibility' have no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2 §17.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col><col style="visibility: collapse"><col><tr><td class=w>1<td class=w>2<td class=w>3<tr><td class=w>4<td class=w>5<td class=w>6</table></div>
+    <figcaption><code>visibility: collapse</code> on the middle column: 2 and 5 are gone and 3 and 6 are next to 1
+    and 4; the table is 80px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col><col style="visibility: hidden"><col><tr><td class=w>1<td class=w>2<td class=w>3<tr><td class=w>4<td class=w>5<td class=w>6</table></div>
+    <figcaption><code>visibility: hidden</code> on the middle column has no effect: all six cells show, the table
+    120px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

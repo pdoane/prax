@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Paged Media 3 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · Support</div>
+  <h1>CSS Paged Media 3 declaration support</h1>
+  <p class=pr-lede>A declaration for each feature the directory's pages use, in a style rule, a page context or a
+  margin context; whether they parse, not what they do. <code>size</code> and <code>page-orientation</code> are
+  descriptors of <code>@page</code>, not properties, and show grey where an engine's <code>CSS.supports</code> knows
+  only properties.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>size: 240px 160px</code>
+  <code class=pr-decl>page-orientation: rotate-left</code>
+  <code class=pr-decl>page-orientation: rotate-right</code>
+  <code class=pr-decl>page: wide</code>
+  <code class=pr-decl>break-before: page</code>
+  <code class=pr-decl>break-before: left</code>
+  <code class=pr-decl>break-before: right</code>
+  <code class=pr-decl>content: counter(page) ' / ' counter(pages)</code>
+  <code class=pr-decl>content: normal</code>
+  <code class=pr-decl>content: none</code>
+  <code class=pr-decl>counter-increment: page 2</code>
+  <code class=pr-decl>counter-increment: pages 5</code>
+  <code class=pr-decl>counter-reset: chapter 1</code>
+  <code class=pr-decl>vertical-align: bottom</code>
+  <code class=pr-decl>text-align: right</code>
+  <code class=pr-decl>z-index: 1</code>
+  <code class=pr-decl>width: 160px</code>
+  <code class=pr-decl>min-width: 200px</code>
+  <code class=pr-decl>max-width: 60px</code>
+  <code class=pr-decl>margin: auto</code>
+  <code class=pr-decl>margin: 10% 25%</code>
+  <code class=pr-decl>background-clip: content-box</code>
+  <code class=pr-decl>background-attachment: fixed</code>
+  <code class=pr-decl>direction: rtl</code>
+  <code class=pr-decl>writing-mode: vertical-rl</code>
+  <code class=pr-decl>position: absolute</code>
+  <code class=pr-decl>right: 0</code>
+  <code class=pr-decl>bottom: 0</code>
+  <code class=pr-decl>top: -20px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

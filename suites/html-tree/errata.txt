@@ -1,0 +1,12 @@
+# Cases in which the engine is right and the corpus is wrong. An entry lists its cases, a key per line, as
+# <file>:<index>, or a file for every case of the file, followed by the indented reason: what the sources say and why
+# the corpus loses.
+
+template:43
+    html/#parsing-main-inhead sets the frameset-ok flag to "not ok" when a template start tag is handled, so the
+    frameset that follows one is ignored. The corpus predates that step and expects the frameset to replace the body;
+    template:46 and template:47 expect the flag to have been cleared, so the corpus disagrees with itself here.
+
+template:44
+template:45
+    The frameset-ok flag after a template, as template:43.

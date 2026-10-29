@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tables across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 2; column-gap: 20px; column-fill: auto; height: 80px; }
+  table { border-spacing: 0; width: 100%; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; box-shadow: inset 0 0 0 1px #2c5a8f; }
+  tr:nth-child(even) td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 6.1 Breaking across fragmentainers</div>
+  <h1>Tables across columns</h1>
+  <p class=pr-lede><q>When fragmenting a table, user agents must attempt to preserve the table rows unfragmented if the
+  cells spanning the row do not span any subsequent row, and their height is at least twice smaller than both the
+  fragmentainer height and width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#breaking-rules">CSS Table 3 §6.1</a></span>
+  Stages: two 90px columns, 80px tall.</p>
+</header>
+
+<section>
+  <h2>A short row moves whole; a forced break</h2>
+  <p><q>the user agent has to insert some vertical gap between the rows located before and at the overflow point such
+  that the two rows end up separated in sibling fragmentainers.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><table><tr><td>1</td></tr><tr><td>2</td></tr><tr><td>3</td></tr><tr><td>4a<br>4b</td></tr><tr><td>5</td></tr></table></div>
+    <figcaption>Rows of 20px and a fourth of 40px, half the column's height: it would break 20px in, so it moves
+    to the second column whole, with "5" after it. <span class=pr-flag>Safari</span> starts the fourth row, empty, at the foot of the
+    first column. <span class=pr-flag>Firefox</span> does not fragment the table.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><table><tr><td>1</td></tr><tr style="break-before: column"><td>2</td></tr><tr><td>3</td></tr></table></div>
+    <figcaption><code>break-before: column</code> on the second row: "1" alone in the first column, "2" and "3" in
+    the second. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> keep all three in the
+    first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

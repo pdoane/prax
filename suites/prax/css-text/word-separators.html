@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Word separators</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { padding: 0 6px; font: 20px/36px "PR Noto Sans", "PR Noto Sans Ethiopic", "PR Noto Sans Phoenician"; word-spacing: 20px; }
+  .ja { padding: 0 6px; font: 20px/36px "PR Noto Sans JP"; word-spacing: 20px; }
+  .t { background: #f9cc9d; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.1 Word Spacing: the word-spacing property</div>
+  <h1>Word separators</h1>
+  <p class=pr-lede><q>Word-separator characters are typographic character units whose primary purpose and general
+  usage is to separate words. In Unicode this includes (but is not exhaustively defined as) the space (U+0020), the
+  no-break space (U+00A0), the Ethiopic word space (U+1361), the Aegean word separators (U+10100,U+10101), the
+  Ugaritic word divider (U+1039F), and the Phoenician word separator (U+1091F).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-spacing-property">CSS Text 4 §8.1</a></span>
+  Each stage has <code>word-spacing: 20px</code>; the words are highlighted, so the added space shows as a gap.</p>
+</header>
+
+<section>
+  <h2>Separators</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow s"><span class=t>ab</span>&nbsp;<span class=t>cd</span></div>
+    <figcaption>U+00A0: 20px more.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow s" lang=am><span class=t>ሰላም</span>፡<span class=t>ልጅ</span></div>
+    <figcaption>Ethiopic ፡ U+1361: 20px more, 10px each side of it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing added.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow s"><span class=t>&#x10900;&#x10901;</span>&#x1091F;<span class=t>&#x10902;&#x10903;</span></div>
+    <figcaption>Phoenician 𐤟 U+1091F, between two words: 20px more. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing added.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not separators</h2>
+  <p><q>Neither punctuation in general, nor fixed-width spaces (such as U+3000 and U+2000 through U+200A), are
+  considered word-separator characters</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow s"><span class=t>ab</span>&#x2003;<span class=t>cd</span></div>
+    <figcaption>U+2003 EM SPACE: no more than its own width.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja"><span class=t>日本</span>&#x3000;<span class=t>語</span></div>
+    <figcaption>U+3000: its 20px only.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow s"><span class=t>ab</span>,<span class=t>cd</span></div>
+    <figcaption>A comma: nothing added.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

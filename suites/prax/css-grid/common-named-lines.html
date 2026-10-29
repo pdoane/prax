@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Common patterns: named lines and spans</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: [first] 40px 40px [middle] 40px 40px 40px [last]; grid-auto-rows: 20px; }
+  .t { display: grid; grid-template-columns: repeat(9, [text] 20px) [text]; grid-auto-rows: 20px; }
+  .a { display: grid; grid-template-columns: 40px [main] 40px 40px 40px 40px; grid-template-areas: ". . . main main"; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.1.3 Named Lines and Spans</div>
+  <h1>Common patterns: named lines and spans</h1>
+  <p class=pr-lede><q>Instead of counting lines by number, lines can be referenced by their line name</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#common-uses-named-lines">CSS Grid Layout 2 §8.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>From one name to another; areas first</h2>
+  <p><code>grid-column: first / middle</code> <q>Span from line "first" to line "middle".</q> The columns are
+  <code>[first] 40px 40px [middle] 40px 40px 40px [last]</code>. <q>if a named grid area has the same name as a line name, the placement algorithm will prefer to use named grid
+  area’s lines instead.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: first / middle">A</div><div class=pr-b style="grid-column: middle / last">B</div></div></div>
+    <figcaption>A from "first" to "middle", 0 to 80px; B from "middle" to "last", 80 to 200px, in the next
+    row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=a><div class=pr-a style="grid-column: main">A</div></div></div>
+    <figcaption>Line 2 is named "main", and an area "main" covers columns 4 and 5. <code>grid-column: main</code>: the area's lines, <code>main-start</code> and <code>main-end</code>,
+    from 120 to 200px, not the line named "main" at 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A set of lines with one name</h2>
+  <p>Lines of one name <q>effectively establish a named set of grid lines</q>. Nine 20px columns, every line named "text";
+  <code>text 5 / text 7</code> <q>Span between the 5th and 7th lines named "text".</q> <code>text 5 / span text
+  2</code> is <q>Same as above</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=t><div class=pr-a style="grid-column: text 5 / text 7; padding: 0">A</div><div class=pr-b style="grid-column: text 5 / span text 2; padding: 0">B</div></div></div>
+    <figcaption>A and B, one above the other, each from 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t style="grid-template-columns: 20px [text] 20px 20px [text] 20px 20px [text] 20px 20px [text] 20px 20px [text]"><div class=pr-a style="grid-column: text 2 / text 4; padding: 0">A</div><div class=pr-b style="grid-column: text 2 / span text 2; padding: 0">B</div></div></div>
+    <figcaption>Only lines 2, 4, 6, 8 and 10 named "text": the 2nd and 4th are lines 4 and 8, so A and B from 60 to
+    140px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

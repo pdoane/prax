@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Justification opportunities</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5.1 Expanding and Compressing Text</div>
+  <h1>Justification opportunities</h1>
+  <p class=pr-lede><q>A justification opportunity is a point where the justification algorithm may alter spacing within
+  the text.</q> <q>If a justification opportunity exists within a line, and text alignment specifies full
+  justification ('justify') for that line, it must be justified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#expanding-text">CSS Text 4 §7.5.1</a></span>
+  Each stage is 200px wide and justified.</p>
+</header>
+
+<section>
+  <h2>One level for all the units it covers</h2>
+  <p><q>All justification opportunities within a given level are expanded or compressed at the same priority,
+  regardless of which typographic character units created that opportunity. For example, if justification
+  opportunities between two Han characters and between two Latin letters are defined to be at the same level (as they
+  are in the 'inter-character' justification style), they are not treated differently</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja j" style="text-justify: inter-character; text-align-last: justify"><span class=t>漢字abc</span></div>
+    <figcaption><code>inter-character</code>, its one line justified: "漢字abc", five units with four equal gaps,
+    the one between the ideographs as wide as those between the letters. <span class=pr-flag>Safari</span>
+    stretches only around the ideographs, "abc" kept together.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In addition to the spacing properties, and under their rules</h2>
+  <p><q>Space distributed by justification is in addition to the spacing defined by the 'letter-spacing' or
+  'word-spacing' properties. When such additional space is distributed to a word separator justification
+  opportunity, it is applied under the same rules as for 'word-spacing'.</q> Letters are 10px wide.</p>
+  <figure>
+    <div class="pr-stage pr-measure j" style="word-spacing: 20px"><span class=t>one two six</span> seventeens</div>
+    <figcaption><code>word-spacing: 20px</code>: the line already 150px, the two spaces share the other 50px: "two"
+    at 75px, "six" at 170.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure j" style="word-spacing: -5px"><span class=t>one two six</span> seventeens</div>
+    <figcaption><code>word-spacing: -5px</code>: the line 100px, the spaces share 100px: "six" still ends at
+    200.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

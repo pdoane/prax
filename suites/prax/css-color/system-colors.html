@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0 0; font: 15px/20px "PR Arimo"; }
+  .chip { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; box-sizing: border-box; }
+  .pr-stage button, .pr-stage input { font: 15px "PR Arimo"; margin: 0 0 10px 10px; vertical-align: top; height: 40px; box-sizing: border-box; }
+  .pr-stage input { width: 80px; }
+  .pr-stage mark { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.2 System Colors</div>
+  <h1>System colors</h1>
+  <p class=pr-lede><q>the &lt;system-color&gt; keywords reflect <em>default</em> color choices made by the user, the
+  browser, or the OS.</q> <q>The following system color pairings are expected to form legible background-foreground
+  colors</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#css-system-colors">CSS Color 4
+  §6.2</a></span> Their values are the browser's; these stages are in a light color scheme.</p>
+</header>
+
+<section>
+  <h2>Pairs that are legible</h2>
+  <figure>
+    <div class="pr-stage pr-wide" style="background: Canvas"><span class=chip style="color: CanvasText">Text</span><span class=chip style="color: LinkText">Link</span><span class=chip style="color: VisitedText">Visited</span><span class=chip style="color: ActiveText">Active</span><span class=chip style="color: GrayText">Gray</span></div>
+    <figcaption>On <code>Canvas</code>: <code>CanvasText</code>, <code>LinkText</code>, <code>VisitedText</code>,
+    <code>ActiveText</code>, and <code>GrayText</code>, each readable.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="background: Canvas"><span class=chip style="background: ButtonFace; color: ButtonText; border: 2px solid ButtonBorder">Button</span><span class=chip style="background: Field; color: FieldText; border: 2px solid ButtonBorder">Field</span></div>
+    <figcaption><code>ButtonFace</code> with <code>ButtonText</code>, and <code>Field</code> with
+    <code>FieldText</code>, each bordered in <code>ButtonBorder</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide" style="background: Canvas"><span class=chip style="background: Mark; color: MarkText">Mark</span><span class=chip style="background: Highlight; color: HighlightText">Highlight</span><span class=chip style="background: SelectedItem; color: SelectedItemText">Selected</span></div>
+    <figcaption><code>Mark</code>/<code>MarkText</code>, <code>Highlight</code>/<code>HighlightText</code> and
+    <code>SelectedItem</code>/<code>SelectedItemText</code>, each readable.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="background: Canvas"><span class=chip style="background: AccentColor; color: AccentColorText">Accent</span><span class=chip style="background: Field; color: GrayText">Gray</span></div>
+    <figcaption><code>AccentColor</code> with <code>AccentColorText</code>; <code>GrayText</code> on
+    <code>Field</code>.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

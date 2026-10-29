@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.8 The ‘letter-spacing’ property</div>
+  <h1>letter-spacing in SVG text</h1>
+  <p class=pr-lede>The property is CSS Text's; <q>SVG 1.1 allowed percentage values in the letter-spacing property.
+  Percentage values based on the SVG viewport are not seen as useful, so this was removed in SVG 2. This brings the
+  definition of 'letter-spacing' in line with CSS.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#LetterSpacingProperty">SVG 2 §11.10.2.8</a></span>
+  Each stage is an SVG 160 by 60 holding "abcd" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter,
+  from x 20, with red ticks where the letters are to start.</p>
+</header>
+
+<section>
+  <h2>Added between letters</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M35 38V46 M50 38V46 M65 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" style="letter-spacing: 5px">abcd</text></svg></div>
+    <figcaption><code>letter-spacing: 5px</code>: each letter 15 after the last, at 20, 35, 50 and 65.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M35 38V46 M50 38V46 M65 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" style="letter-spacing: 0.3em">abcd</text></svg></div>
+    <figcaption><code>letter-spacing: 0.3em</code>, 5 at this size: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 38V46 M27 38V46 M34 38V46 M41 38V46" class=pr-baseline /><text class=pr-measure x="20" y="35" style="letter-spacing: -3px">abcd</text></svg></div>
+    <figcaption><code>letter-spacing: -3px</code>: 7 apart, at 20, 27, 34 and 41, crowding.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On a path</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path id="ls-track" d="M20 35H140" class=pr-baseline /><path d="M20 38V46 M40 38V46 M60 38V46 M80 38V46" class=pr-baseline /><text class=pr-measure style="letter-spacing: 10px"><textPath href="#ls-track">abcd</textPath></text></svg></div>
+    <figcaption>On a path along y 35 from 20, <code>letter-spacing: 10px</code>: the letters 20 apart along it, at
+    20, 40, 60 and 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

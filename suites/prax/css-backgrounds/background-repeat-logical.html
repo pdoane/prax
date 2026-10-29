@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-repeat: repeat-block and repeat-inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='%234f81bd'/></svg>"); background-position: center; }
+  .v { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.4 Tiling Images Shorthand: the background-repeat property</div>
+  <h1>background-repeat: repeat-block and repeat-inline</h1>
+  <p class=pr-lede><q>repeat-block: Computes to repeat in the block axis and no-repeat in the inline axis.</q>
+  <q>repeat-inline: Computes to repeat in the inline axis and no-repeat in the block axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-repeat">CSS Backgrounds 4 §2.4</a></span>
+  Each dashed box is 140 by 60, with a 20px blue dot centered.</p>
+</header>
+
+<section>
+  <h2>Horizontal, and vertical-rl</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-repeat: repeat-inline"></div></div>
+    <figcaption>Horizontal text, <code>repeat-inline</code>: one row across. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-repeat: repeat-block"></div></div>
+    <figcaption>Horizontal text, <code>repeat-block</code>: one column down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-repeat: repeat-inline"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>repeat-inline</code>: one column down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-repeat: repeat-block"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>repeat-block</code>: one row across. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

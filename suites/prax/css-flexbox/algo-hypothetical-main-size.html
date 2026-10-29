@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 3: the hypothetical main size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; }
+  .wrap { flex-wrap: wrap; }
+  .p { padding: 0 9px; box-sizing: border-box; min-width: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.2 Line Length Determination, step 3, the hypothetical main size</div>
+  <h1>Step 3: the hypothetical main size</h1>
+  <p class=pr-lede><q>The hypothetical main size is the item's flex base size clamped according to its used min and max
+  main sizes (and flooring the content box size at zero).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#line-sizing">CSS Flexible Box Layout 2 §9.2</a></span>
+  Every stage here is 100px wide.</p>
+</header>
+
+<section>
+  <h2>Clamped, and floored at zero</h2>
+  <p>Lines are collected by the hypothetical main size: each stage wraps items of <code>flex: none</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex wrap"><div class="pr-a pr-fit" style="flex: 0 0 75px; max-width: 45px">A</div><div class="pr-b pr-fit" style="flex: 0 0 75px; max-width: 45px">B</div></div>
+    <figcaption><code>flex-basis: 75px; max-width: 45px</code>: 45px each, so one line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex wrap"><div class="pr-a pr-fit" style="flex: 0 0 25px; min-width: 60px">A</div><div class="pr-b pr-fit" style="flex: 0 0 25px; min-width: 60px">B</div></div>
+    <figcaption><code>flex-basis: 25px; min-width: 60px</code>: 60px each, so B wraps.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex wrap"><div class="pr-a pr-fit p" style="flex: 0 0 0">A</div><div class="pr-b pr-fit p" style="flex: 0 0 0">B</div><div class="pr-c pr-fit p" style="flex: 0 0 0">C</div><div class="pr-d pr-fit p" style="flex: 0 0 0">D</div><div class="pr-a pr-fit p" style="flex: 0 0 0">E</div><div class="pr-b pr-fit p" style="flex: 0 0 0">F</div></div>
+    <figcaption><code>flex-basis: 0; min-width: 0</code>, border-box, 20px of padding and border: floored at 20px, so five fill the line; F wraps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The flex base size is neither clamped nor floored</h2>
+  <p><q>When determining the flex base size, the item’s min and max main sizes are ignored (no clamping occurs).</q>
+  And <q>an item with a specified size of zero, positive padding, and box-sizing: border-box will have an outer flex
+  base size of zero—and hence a negative inner flex base size.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex"><div class="pr-a pr-fit" style="flex: 0 1 150px; max-width: 75px">A</div><div class="pr-b pr-fit" style="flex: 0 1 50px">B</div></div>
+    <figcaption>A <code>flex-basis: 150px; max-width: 75px</code>, B <code>50px</code>: 100px to lose, ¾ from A and ¼ from B, so A 75px, B 25px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex"><div class="pr-a pr-fit p" style="flex: 1 1 0">A</div><div class="pr-b pr-fit" style="flex: 1 1 0">B</div></div>
+    <figcaption>A and B <code>flex: 1 1 0</code>, A border-box with 20px of padding and border: −20px inside, 0 outside, so 100px shared: 50px each.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow flex"><div class="pr-a pr-fit p" style="flex: 1 1 0; box-sizing: content-box">A</div><div class="pr-b pr-fit" style="flex: 1 1 0">B</div></div>
+    <figcaption>The same, A <code>content-box</code>: 0 inside, 20px outside, so 80px shared: A 60px, B
+    40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

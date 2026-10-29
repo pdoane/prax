@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>textPath: method</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 30px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="hump" d="M 30 85 A 50 50 0 0 1 130 85" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>textPath: method</h1>
+  <p class=pr-lede><q>Indicates the method by which text should be rendered along the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  Each stage is an SVG 160 by 90 holding "HHH" in 30px bold PR Arimo, 45 along an arc, half a circle of radius 50 from
+  30, 85 over to 130, 85, dashed in red.</p>
+</header>
+
+<section>
+  <h2>align and stretch</h2>
+  <p><q>A value of align indicates that the typographic character should be rendered using simple 2×3 matrix
+  transformations such that there is no stretching/warping of the typographic characters.</q> <q>A value of stretch
+  indicates that the typographic character outlines will be converted into paths, and then all end points and control
+  points will be adjusted to be along the perpendicular vectors from the path, thereby stretching and possibly warping
+  the glyphs.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#hump" class=pr-baseline /><text class=big><textPath href="#hump" startOffset="45" method="align">HHH</textPath></text></svg></div>
+    <figcaption><code>method="align"</code>, the initial value: each H turned whole, its sides straight, the H's
+    spreading apart at their tops.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#hump" class=pr-baseline /><text class=big><textPath href="#hump" startOffset="45" method="stretch">HHH</textPath></text></svg></div>
+    <figcaption><code>method="stretch"</code>: each H's sides along the arc's normals, its crossbar bent to the arc,
+    wider at the top than the bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Drawn as <code>align</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The focus update steps</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.4 Processing model</div>
+  <h1>The focus update steps</h1>
+  <p class=pr-lede>Past the entries the chains share, blur <q>For each entry entry in old chain, in order</q>, then focus <q>For
+  each entry entry in new chain, in reverse order</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">HTML §6.6.4</a></span></p>
+</header>
+<section>
+  <h2>change, then blur and focus</h2>
+  <p>For a text field <q>the user has changed</q>, <q>Fire an event named change at the element</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=pr-target id=field value="type here">
+        <input class=pr-target id=other value=other>
+      </div>
+      <ol class=pr-log data-log="change blur focus" data-fields="target relatedTarget" data-lines=3></ol>
+    </div>
+    <figcaption>Click the field, type a letter, and press Tab: change at the field, blur at it with
+    <code>relatedTarget=other</code>, focus at <code>other</code> with <code>relatedTarget=field</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Into a frame</h2>
+  <p><q>If entry is a Document object, let focus event target be that Document object's relevant global object.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=outside tabindex=0>outside, tabindex=0</div>
+        <iframe id=frame style="display: block; width: 100%; height: 20px; margin: 0 0 10px; border: 0"
+                srcdoc="<body style='margin: 0'><input id=inner value='inner, in the frame' style='box-sizing: border-box; width: 100%; height: 20px'>"></iframe>
+      </div>
+      <ol class=pr-log id=log data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>outside</code>, then <code>inner</code>: blur at <code>outside</code> with
+    <code>relatedTarget=iframe</code>, focus at the iframe with <code>relatedTarget=outside</code>, focus at the
+    frame's window, then focus at <code>inner</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs focus and blur at the outside box, the iframe, and the frame's window and field.
+  const log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 4);
+  function note(type, name, event) {
+      const item = document.createElement("li");
+      item.textContent = type + " " + name + (event.relatedTarget ? " relatedTarget=" + (event.relatedTarget.id || event.relatedTarget.localName) : "");
+      log.append(item);
+      while (log.children.length > 4)
+          log.firstElementChild.remove();
+  }
+  function watch(target, name) {
+      for (const type of ["blur", "focus"])
+          target.addEventListener(type, event => { if (event.target === target) note(type, name, event); }, true);
+  }
+  const frame = document.getElementById("frame");
+  watch(document.getElementById("outside"), "outside");
+  watch(frame, "iframe");
+  function inside() {
+      watch(frame.contentWindow, "the frame's window");
+      watch(frame.contentDocument.getElementById("inner"), "inner");
+  }
+  if (frame.contentDocument && frame.contentDocument.getElementById("inner"))
+      inside();
+  else
+      frame.addEventListener("load", inside);
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

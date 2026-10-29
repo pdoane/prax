@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: halfway between two shapes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; border-radius: 30px; }
+  @keyframes shape { from { corner-shape: bevel; } to { corner-shape: square; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.6 Interpolating corner shapes</div>
+  <h1>corner-shape: halfway between two shapes</h1>
+  <p class=pr-lede><q>Since a &lt;corner-shape-value&gt; can always be expressed by a superellipse() with an superellipse parameter variable, interpolating between two &lt;corner-shape-value&gt;s is done by interpolating the superellipse parameter itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shape-interpolation">CSS Borders and Box Decorations 4 §3.9.6</a></span></p>
+</header>
+
+<section>
+  <h2>bevel to square, at 50%</h2>
+  <p>The half corner of <code>bevel</code> is 0.5 and of <code>square</code> 1; halfway is 0.75, so n = ln 0.5 / ln 0.75 = 2.41 and K = log₂ 2.41 = 1.27. The first box is held halfway through an animation from bevel to square; the second is drawn with <code>superellipse(1.27)</code>. Each has <code>border-radius: 30px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="animation: shape 2s -1s linear paused"></div></div>
+    <figcaption>Halfway: a curve a little squarer than round. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: superellipse(1.27)"></div></div>
+    <figcaption><code>superellipse(1.27)</code>: the same shape. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: superellipse(0.5)"></div></div>
+    <figcaption><code>superellipse(0.5)</code>, the midpoint of the parameters 0 and ∞ taken naively, for contrast: flatter. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

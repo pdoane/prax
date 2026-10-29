@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Leading and half-leading</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .chip { background: rgba(214, 138, 60, 0.6); }
+  .lines { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>Leading and half-leading</h1>
+  <p class=pr-lede>A font has a height <i>A</i> above the baseline and a depth <i>D</i> below it. The leading <i>L</i> is
+  what 'line-height' adds to <i>A</i> + <i>D</i>, half above and half below. Orange is each span's content area, from
+  its 13px font.</p>
+</header>
+
+<section>
+  <h2>Half the leading above, half below</h2>
+  <p><q>Still for each glyph, determine the leading L to add, where L = 'line-height' - AD. Half the leading is added
+  above A and the other half below D</q> <q>The height of the inline box encloses all glyphs and their half-leading on
+  each side and is thus exactly 'line-height'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class=lines style="line-height: 40px"><div class=pr-stage><span class=chip>first line</span><br><span class=chip>second line</span></div></div>
+    <figcaption><code>line-height: 40px</code>: each content area is centered in its 40px line, with equal leading
+    above and below.</figcaption>
+  </figure>
+  <figure>
+    <div class=lines style="line-height: 20px"><div class=pr-stage><span class=chip>first line</span><br><span class=chip>second line</span></div></div>
+    <figcaption><code>line-height: 20px</code>: less leading, and the lines are 20px apart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative leading</h2>
+  <p><q>Note. L may be negative.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class=lines style="line-height: 8px"><div class=pr-stage style="padding: 6px 0"><span class=chip>first line</span><br><span class=chip>second line</span><br><span class=chip>third line</span></div></div>
+    <figcaption><code>line-height: 8px</code>, less than the font: the lines are 8px apart, and their content areas
+    overlap.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

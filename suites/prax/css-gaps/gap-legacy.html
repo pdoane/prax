@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>grid-row-gap, grid-column-gap and grid-gap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); }
+  .f { display: flex; flex-wrap: wrap; width: 150px; }
+  .f > div { width: 40px; padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2.4 Legacy Gap Properties</div>
+  <h1>grid-row-gap, grid-column-gap and grid-gap</h1>
+  <p class=pr-lede><q>For compatibility with legacy content, these grid-prefixed names must be supported as
+  follows</q>: <code>grid-row-gap</code>, <code>grid-column-gap</code> and <code>grid-gap</code> each as <q>a legacy
+  name alias</q> of <code>row-gap</code>, <code>column-gap</code> and <code>gap</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gap-legacy">CSS Gaps 1 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>The old names set the new properties</h2>
+  <p>An alias is the same property under a second name, so it reaches every container the property applies to, and
+  whichever of the two names comes later wins.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-gap: 4px 30px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>grid-gap: 4px 30px</code>: rows 4px apart, columns 30px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-row-gap: 20px; grid-column-gap: 10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>grid-row-gap: 20px; grid-column-gap: 10px</code>: rows 20px apart, columns 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="grid-gap: 10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A flex container 150px wide, <code>grid-gap: 10px</code>: three items to a line, 10px apart, the
+    lines 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="column-gap: 30px; grid-column-gap: 0"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>column-gap: 30px</code>, then <code>grid-column-gap: 0</code>: the alias comes later, so the
+    columns touch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

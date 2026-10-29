@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>List items: display: list-item</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage .li { display: list-item; margin-left: 30px; list-style-type: decimal; }
+  .pr-stage .blk { margin-left: 30px; }
+  .blk::marker { content: "M "; color: #c0392b; }
+  .inl { display: inline list-item; list-style-type: decimal; background: rgba(79, 129, 189, 0.16); }
+  .pr-stage .gap { padding-left: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 2 Declaring a List Item</div>
+  <h1>List items: display: list-item</h1>
+  <p class=pr-lede><q>A list item is any element with its 'display' property set to 'list-item'. List items generate
+  '::marker' pseudo-elements; no other elements do. Additionally, list items automatically increment an implied
+  'list-item' counter</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#declaring-a-list-item">CSS Lists and Counters 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Any element, and only list items</h2>
+  <p>The stages hold <code>div</code> elements, not <code>li</code>; <code>list-style-type: decimal</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=li>one</div><div class=li>two</div><div class=li>three</div></div>
+    <figcaption>Three <code>div</code>s with <code>display: list-item</code>: markers "1.", "2.", "3." in the 30px to
+    their left, counted by <code>list-item</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=blk>block</div><div class=li>item</div></div>
+    <figcaption>A block with <code>::marker { content: "M " }</code> has no marker; the list item after it is "1.",
+    as the block does not count.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline list items</h2>
+  <p>Any element with <code>list-item</code> in its <code>display</code> is a list item, inline ones too, whose
+  <code>outside</code> marker <q>is equivalent to 'inside'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">§3.5</a></span>. Each
+  item is tinted blue.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text gap"><span class=inl>one</span> <span class=inl>two</span> <span class=inl>three</span></div>
+    <figcaption><code>display: inline list-item</code>: three items on one line, each with its marker inside its tint:
+    "1. one", "2. two", "3. three". <span class=pr-flag>Safari</span> No markers: "one two three".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

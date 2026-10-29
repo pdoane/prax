@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-alternates</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-feature-values "PR Bungee Spice" {
+    @stylistic { alt: 1; }
+    @styleset { rounded: 1; narrow-e: 3; both: 1 3; }
+    @ornaments { bullet: 1; }
+  }
+  .pr-sample { font-family: 'PR Bungee Spice'; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.8 Alternates and swashes: the 'font-variant-alternates' property</div>
+  <h1>font-variant-alternates</h1>
+  <p class=pr-lede>Most alternates are <q>font specific</q>: <q>the @font-feature-values rule is used to define values
+  for a specific font family or set of families that associate a font-specific numeric &lt;font-feature-index&gt; with
+  a custom &lt;font-feature-value-name&gt;</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-alternates-prop">CSS Fonts 4 §6.8</a></span></p>
+</header>
+
+<section>
+  <h2>Named alternates of PR Bungee Spice</h2>
+  <p>The page names <code>salt 1</code> "alt", <code>ss01</code> "rounded", <code>ss03</code> "narrow-e", both sets
+  "both", and <code>ornm 1</code> "bullet".</p>
+  <figure>
+    <div class="pr-stage pr-sample">AMEN • aye</div>
+    <figcaption><code>normal</code>: the default glyphs.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: stylistic(alt)">AMEN • aye</div>
+    <figcaption><code>stylistic(alt)</code>: alternate A, M, E, N, a, y and e.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: styleset(narrow-e)">AMEN • aye</div>
+    <figcaption><code>styleset(narrow-e)</code>: <code>ss03</code>, alternate E and e only.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: ornaments(bullet)">AMEN • aye</div>
+    <figcaption><code>ornaments(bullet)</code>: the bullet as an ornament.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Undefined names are ignored</h2>
+  <p><q>property values that contain these undefined &lt;font-feature-value-name&gt; identifiers must be ignored when
+  choosing glyphs.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-alternates: swash(unknown)">AMEN • aye</div>
+    <figcaption><code>swash(unknown)</code>: as <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-variant-alternates: stylistic(alt)">AMEN • aye</div>
+    <figcaption>"alt" in PR Literata, which the rule does not name: ignored, the default glyphs.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

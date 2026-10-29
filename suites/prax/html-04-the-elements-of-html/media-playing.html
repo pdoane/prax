@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Playing to the end, and looping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 10px 0; font-size: 0; line-height: 0; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.11.8 Playing the media resource</div>
+  <h1>Playing to the end, and looping</h1>
+  <p class=pr-lede><q>The loop attribute is a boolean attribute that, if specified, indicates that the media element
+  is to seek back to the start of the media resource upon reaching the end.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#playing-the-media-resource">HTML §4.8.11.8</a></span>
+  The video, <code>clip.mp4</code>, muted, is two seconds: blue, orange, green, purple, half a second each.</p>
+</header>
+
+<section>
+  <h2>The end: the last frame, or the start again</h2>
+  <p>Without loop, playback stops at the end, paused, and a paused video represents <q>the frame of video
+  corresponding to the current playback position</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#the-video-element">§4.8.8</a></span>
+  <q>If the media element has a loop attribute specified, then seek to the earliest possible position of the
+  media resource and return.</q></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><video id=once muted src="support/clip.mp4" width="180" height="90"></video></div>
+      <div class=act><button class=pr-target id=play-once>Play</button></div>
+      <ol class=pr-log data-on="#once" data-log="play pause ended seeked" data-lines=4></ol>
+    </div>
+    <figcaption>No loop. Press Play: the four colors, then purple, still. The log: play, then pause and ended.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><video id=looping loop muted src="support/clip.mp4" width="180" height="90"></video></div>
+      <div class=act><button class=pr-target id=play-loop>Play, then Pause</button></div>
+      <ol class=pr-log data-on="#looping" data-log="play pause ended seeked" data-lines=4></ol>
+    </div>
+    <figcaption><code>loop</code>. Press: the colors round and round, a seeked at each return to blue, and never
+    ended. Press again to pause.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("play-once").addEventListener("click", () => {
+      document.getElementById("once").play();
+  });
+  document.getElementById("play-loop").addEventListener("click", () => {
+      const video = document.getElementById("looping");
+      if (video.paused)
+          video.play();
+      else
+          video.pause();
+  });
+</script>
+</body>
+</html>

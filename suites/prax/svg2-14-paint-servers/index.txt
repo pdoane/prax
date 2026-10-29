@@ -1,0 +1,43 @@
+00-supports-1.html
+SVG2/pservers.html#Introduction 14.1 Introduction
+    paint-servers.html
+SVG2/pservers.html#PaintServerTemplates 14.1.1 Using paint servers as templates
+    templates.html
+    templates-shadow-tree.html
+SVG2/pservers.html#Gradients 14.2 Gradients
+    gradients.html
+# SVG2/pservers.html#Definitions 14.2.1 Definitions: no page; it names the gradient elements, which the pages that follow show
+SVG2/pservers.html#LinearGradients 14.2.2 Linear gradients
+    linear-gradient-units.html
+SVG2/pservers.html#LinearGradientAttributes 14.2.2.1 Attributes
+    linear-gradient-attributes.html
+    gradient-transform.html
+SVG2/pservers.html#LinearGradientNotes 14.2.2.2 Notes on linear gradients
+    linear-gradient-notes.html
+SVG2/pservers.html#RadialGradients 14.2.3 Radial gradients
+    radial-gradient-units.html
+SVG2/pservers.html#RadialGradientAttributes 14.2.3.1 Attributes
+    radial-gradient-attributes.html
+SVG2/pservers.html#RadialGradientNotes 14.2.3.2 Notes on radial gradients
+    radial-gradient-notes.html
+# SVG2/pservers.html#GradientStops 14.2.4 Gradient stops: no page; it says that the stops define the gradient's colors, which every gradient's page shows
+SVG2/pservers.html#GradientStopAttributes 14.2.4.1 Attributes
+    stop-offset.html
+SVG2/pservers.html#StopColorProperties 14.2.4.2 Properties
+    stop-color.html
+SVG2/pservers.html#StopNotes 14.2.4.3 Notes on gradient stops
+    stop-offsets.html
+    stop-count.html
+SVG2/pservers.html#Patterns 14.3 Patterns
+    patterns.html
+SVG2/pservers.html#PatternElementAttributes 14.3.1 Attributes
+    pattern-units.html
+    pattern-transform.html
+SVG2/pservers.html#PatternNotes 14.3.2 Notes on patterns
+    pattern-notes.html
+# SVG2/pservers.html#DOMInterfaces 14.4 DOM interfaces: no page; it is object model
+# SVG2/pservers.html#InterfaceSVGGradientElement 14.4.1 Interface SVGGradientElement: no page; it is object model
+# SVG2/pservers.html#InterfaceSVGLinearGradientElement 14.4.2 Interface SVGLinearGradientElement: no page; it is object model
+# SVG2/pservers.html#InterfaceSVGRadialGradientElement 14.4.3 Interface SVGRadialGradientElement: no page; it is object model
+# SVG2/pservers.html#InterfaceSVGStopElement 14.4.4 Interface SVGStopElement: no page; it is object model
+# SVG2/pservers.html#InterfaceSVGPatternElement 14.4.5 Interface SVGPatternElement: no page; it is object model

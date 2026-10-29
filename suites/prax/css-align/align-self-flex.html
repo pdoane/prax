@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-self on flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; height: 60px; }
+  .w { display: flex; flex-wrap: wrap; height: 80px; align-content: stretch; }
+  .w > div { width: 60px; padding: 0; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.2.4 Flex Items</div>
+  <h1>align-self on flex items</h1>
+  <p class=pr-lede>The alignment container is <q>The flex line the flex item is in, assuming the writing mode of the
+  flex container.</q> <q>normal</q> <q>Behaves as stretch.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-flex">CSS Box Alignment 3 §6.2.4</a></span>
+  Flex layout's rules: <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">CSS Flexible Box Layout 2 §8.3</a></span>.</p>
+</header>
+
+<section>
+  <h2>In a single line</h2>
+  <p>A row flexbox 60px tall.</p>
+  <figure>
+    <div class=pr-stage><div class=f><div class=pr-a>A</div><div class=pr-b style="align-self: end">B</div><div class=pr-c style="align-self: center">C</div><div class=pr-d style="align-self: flex-end">D</div></div></div>
+    <figcaption>A <code>normal</code>: 60px tall; B <code>end</code> at the bottom; C centered; D
+    <code>flex-end</code>, cross-end: at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="flex-wrap: wrap-reverse"><div class=pr-a style="align-self: flex-start">A</div><div class=pr-b style="align-self: start">B</div></div></div>
+    <figcaption><code>wrap-reverse</code>: A <code>flex-start</code>, cross-start: at the bottom; B
+    <code>start</code>: at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In each of several lines</h2>
+  <p>A wrapping row flexbox 80px tall; items 60px wide, three to a line; the lines stretch to 40px each.</p>
+  <figure>
+    <div class=pr-stage><div class=w><div class=pr-a>A</div><div class=pr-b style="align-self: end">B</div><div class=pr-c style="align-self: start">C</div><div class=pr-d style="align-self: center">D</div></div></div>
+    <figcaption>A stretched 40px, the line's height; B at the line's bottom, at 20px; C 20px at the top; D in the
+    second line, centered in it, at 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

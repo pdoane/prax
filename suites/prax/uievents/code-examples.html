@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>code when key changes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.2.3 code Examples</div>
+  <h1>code when key changes</h1>
+  <p class=pr-lede><q>Regardless of the current locale or the modifier key state, pressing the key labelled 2 on a US
+  keyboard always results in "Digit2" in the code attribute.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-examples">UI Events §4.2.3</a></span></p>
+</header>
+<section>
+  <h2>Shift released first</h2>
+  <p><q>Note that the values contained in the key attribute does not match between the keydown and keyup events for
+  the 2 key. The code attribute provides a consistent value that is not affected by the current modifier state.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-examples">§4.2.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box. On a US layout, press Shift, press 2, release Shift, then release 2: keydown
+    <code>"Shift"</code>, keydown <code>"@"</code>, keyup <code>"Shift"</code>, keyup <code>"2"</code>; both events
+    of the 2 key have <code>code="Digit2"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The right Alt</h2>
+  <p><q>Checking the code attribute permits matching the right Alt key (AltRight) without worrying about which layout
+  is currently in effect.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#code-examples">§4.2.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=alt tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#alt" data-lines=2></ol>
+    </div>
+    <figcaption>Click the box and press the right Alt (Option on a Mac): <code>code="AltRight"</code> and
+    <code>location=2</code>, with <code>key="Alt"</code> on a US layout, and <code>key="AltGraph"</code> on a French
+    one on Windows or Linux.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

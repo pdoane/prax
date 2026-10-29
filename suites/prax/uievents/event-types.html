@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What each event type is</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.1 List of Event Types</div>
+  <h1>What each event type is</h1>
+  <p class=pr-lede><q>Each event MUST be associated with a type, called event type and available as the type attribute
+  on the event object.</q> Each type's definition says whether it bubbles and whether it is cancelable, and the user
+  agent's own events are trusted. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-types-list">UI Events §3.1</a></span></p>
+</header>
+<section>
+  <h2>Typing</h2>
+  <p>keydown: <q>Bubbles Yes</q>, <q>Cancelable Yes</q>; beforeinput: <q>Bubbles Yes</q>, <q>Cancelable Yes</q>;
+  input: <q>Bubbles Yes</q>, <q>Cancelable No</q>; keyup: <q>Bubbles Yes</q>, <q>Cancelable Yes</q>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-types-list">§3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown beforeinput input keyup" data-fields="bubbles cancelable isTrusted" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field and type <code>a</code>. Every line has <code>bubbles</code> and
+    <code>isTrusted</code>; keydown, beforeinput and keyup have <code>cancelable</code>, and input does not.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Moving the focus</h2>
+  <p>focus and blur: <q>Bubbles No</q>; focusin and focusout: <q>Bubbles Yes</q>; all four: <q>Cancelable No</q>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-types-list">§3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus focusin blur focusout" data-fields="target bubbles cancelable isTrusted" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>. Every line has <code>isTrusted</code> and none has
+    <code>cancelable</code>; focusin and focusout have <code>bubbles</code>, and focus and blur do not.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

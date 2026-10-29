@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mouseover</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; height: 40px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.10 mouseover</div>
+  <h1>mouseover</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device is moved onto the boundaries of an
+  element or when the element is moved to be underneath the primary pointing device.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseover">Pointer Events §11.4.10</a></span></p>
+</header>
+<section>
+  <h2>From where it came</h2>
+  <p><q>The relatedTarget should be initialized to the element whose bounds the mouse pointer just left (in the case of
+  a mouseover or mouseenter event)</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseevent-interface">§11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" id=stage>
+      <div class=row><div class=pr-target id=left>left</div><div class=pr-target id=right>right</div></div>
+      <ol class=pr-log data-log="mouseover mouseenter" data-fields="target relatedTarget" data-lines=3></ol>
+    </div>
+    <figcaption>Move from the stage onto <code>left</code>, then across to <code>right</code>, which touches it:
+    <code>mouseover</code> and <code>mouseenter</code> at <code>left</code> from <code>stage</code>, then at
+    <code>right</code> from <code>left</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

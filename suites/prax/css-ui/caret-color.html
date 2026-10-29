@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>caret-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 20px; }
+  .edit { padding: 0 10px; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f; font-size: 30px; line-height: 40px; }
+  .mono { font-family: "PR Cousine"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 5.2.1 Coloring the Insertion Caret: the caret-color property</div>
+  <h1>caret-color</h1>
+  <p class=pr-lede><q>This property controls the color of the insertion caret.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#caret-color">CSS Basic User Interface 4 §5.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A color of its own</h2>
+  <p><q>The caret is colored with the specified color.</q> The box's text is dark blue, and it has <code>caret-color: #c0392b</code>.</p>
+  <p class=pr-note>A script gives the focus to the editable box and puts the insertion point in it. Safari and Firefox draw no caret in these stills.</p>
+  <figure>
+    <div class="pr-stage pr-wide stage"><div id=edit class="edit" contenteditable style="color: #2c5a8f; caret-color: #c0392b">Lorem ipsum</div></div>
+    <figcaption>The insertion point is between “u” and “m”: a red caret there, not the text’s blue.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // The focus goes to the editable box, and the insertion point after its 10 character.
+  const box = document.getElementById("edit");
+  box.focus();
+  const range = document.createRange();
+  range.setStart(box.firstChild, 10);
+  range.collapse(true);
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+</script>
+</body>
+</html>

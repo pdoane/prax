@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanning items: growth limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 200px; }
+  .g { display: grid; justify-content: start; }
+  .s { grid-column: span 2; background: #b9cde6; }
+  .c { background: #f6d7b4; }
+  .m1 { height: 10px; background: #d68a3c; }
+  .m2 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 3, maximums</div>
+  <h1>Spanning items: growth limits</h1>
+  <p class=pr-lede><q>For intrinsic maximums: Next distribute extra space to the growth limits of tracks with intrinsic
+  max track sizing function, to accommodate these items' min-content contributions.</q> <q>For max-content maximums:
+  Lastly continue to distribute extra space to the growth limits of tracks with a max track sizing function of
+  max-content, to accommodate these items' max-content contributions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Blue spans two columns and holds "abc def gh": min-content 30px, max-content 100px. Each grid is <code>width:
+  max-content</code>, so its columns grow to their growth limits <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grow-tracks">§12.6</a></span>.</p>
+</header>
+
+<section>
+  <h2>Min-content maximums, then max-content maximums</h2>
+  <p>Columns of <code>minmax(0px, min-content)</code> and <code>minmax(0px, max-content)</code>: their base sizes stay
+  0, and the bars under blue show the columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(0px, min-content) minmax(0px, max-content); width: max-content"><div class=s>abc def gh</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption>The 30px min-content contribution goes to both growth limits, 15px each; the rest of the 100px, 70px,
+    only to the <code>max-content</code> one: 15 and 85px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Infinitely growable</h2>
+  <p><q>Mark any tracks whose growth limit changed from infinite to finite in this step as infinitely growable for the
+  next step.</q> For growth limits, the limit is <q>the growth limit if the growth limit is finite and the track is not
+  infinitely growable</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#extra-space">§12.5.1</a></span>.
+  In <code>auto auto</code>, orange "a" alone in the first column makes its base size and growth limit 10px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto; width: max-content"><div class=c>a</div><div class=s style="grid-row: 2">abc def gh</div></div></div>
+    <figcaption>Blue's 30px gives the second column a base size and growth limit of 20px, and marks it; then all 70px
+    more go to it: 10 and 90px, the first column still exactly "a". Shared equally, they would be 45 and 55px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

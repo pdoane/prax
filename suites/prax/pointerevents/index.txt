@@ -1,0 +1,190 @@
+00-supports-1.html
+00-supports-2.html
+# pointerevents4/#intro 1 Introduction: no page; it is not normative, and introduces the pointer that the later sections define
+# pointerevents4/#conformance 2 Conformance: no page; it defines the conformance terms
+# pointerevents4/#pointer-events-and-interfaces 3 Pointer Events and interfaces: no page; it introduces 3.1 to 3.3
+pointerevents4/#pointerevent-interface 3.1 PointerEvent interface
+    pointer-type.html
+    pointer-pressure.html
+    pointer-geometry.html
+    pointer-orientation.html
+# pointerevents4/#button-states 3.1.1 Button states: no page; it introduces 3.1.1.1 to 3.1.1.3
+pointerevents4/#chorded-button-interactions 3.1.1.1 Chorded button interactions
+    chorded-buttons.html
+pointerevents4/#the-button-property 3.1.1.2 The button property
+    button.html
+pointerevents4/#the-buttons-property 3.1.1.3 The buttons property
+    buttons.html
+pointerevents4/#the-primary-pointer 3.1.2 The primary pointer
+    primary-pointer.html
+pointerevents4/#firing-events-using-the-pointerevent-interface 3.1.3 Firing events using the PointerEvent interface
+    firing-pointer-events.html
+pointerevents4/#attributes-and-default-actions 3.1.3.1 Attributes and default actions
+    pointer-default-actions.html
+pointerevents4/#process-pending-pointer-capture 3.1.3.2 Process pending pointer capture
+    pending-capture.html
+pointerevents4/#suppressing-a-pointer-event-stream 3.1.3.3 Suppressing a pointer event stream
+    suppressing-stream.html
+pointerevents4/#boundary-events-caused-by-layout-changes 3.1.4 Boundary events caused by layout changes
+    layout-boundary-events.html
+pointerevents4/#converting-between-tiltx-tilty-and-altitudeangle-azimuthangle 3.1.5 Converting between tiltX / tiltY and altitudeAngle / azimuthAngle
+    tilt-conversion.html
+# pointerevents4/#pointerevent-algorithms 3.2 PointerEvent Algorithms: no page; it introduces 3.2.1 to 3.2.11
+# pointerevents4/#initialize-a-pointerevent 3.2.1 initialize a PointerEvent: no page; it sets an event's attributes, which 3.1's pages show
+# pointerevents4/#create-a-pointerevent 3.2.2 create a PointerEvent: no page; it creates an event object, which shows nothing
+# pointerevents4/#create-pointerevent-from-mouseevent 3.2.3 create PointerEvent from MouseEvent: no page; it copies a mouse event's attributes, which 3.3's pages show on the pointer events
+# pointerevents4/#maybe-send-pointerout-event 3.2.4 maybe send pointerout event: no page; it has no steps yet; 3.3.8 shows pointerout
+# pointerevents4/#maybe-send-pointerleave-event 3.2.5 maybe send pointerleave event: no page; it has no steps yet; 3.3.9 shows pointerleave
+# pointerevents4/#maybe-send-pointerover-event 3.2.6 maybe send pointerover event: no page; it has no steps yet; 3.3.1 shows pointerover
+# pointerevents4/#maybe-send-pointerenter-event 3.2.7 maybe send pointerenter event: no page; it has no steps yet; 3.3.2 shows pointerenter
+# pointerevents4/#maybe-send-pointermove-event 3.2.8 maybe send pointermove event: no page; it has no steps yet; 3.3.4 shows pointermove
+# pointerevents4/#maybe-send-pointerdown-event 3.2.9 maybe send pointerdown event: no page; it has no steps yet; 3.3.3 shows pointerdown
+# pointerevents4/#maybe-send-pointerrawupdate-event 3.2.10 maybe send pointerrawupdate event: no page; it has no steps yet; 3.3.5 shows pointerrawupdate
+# pointerevents4/#maybe-send-pointerup-event 3.2.11 maybe send pointerup event: no page; it has no steps yet; 3.3.6 shows pointerup
+pointerevents4/#pointer-event-types 3.3 Pointer Event types
+    pointer-event-order.html
+pointerevents4/#pointerover 3.3.1 pointerover
+    pointerover.html
+pointerevents4/#pointerenter 3.3.2 pointerenter
+    pointerenter.html
+pointerevents4/#pointerdown 3.3.3 pointerdown
+    pointerdown.html
+pointerevents4/#pointermove 3.3.4 pointermove
+    pointermove.html
+pointerevents4/#pointerrawupdate 3.3.5 pointerrawupdate
+    pointerrawupdate.html
+pointerevents4/#pointerup 3.3.6 pointerup
+    pointerup.html
+pointerevents4/#pointercancel 3.3.7 pointercancel
+    pointercancel.html
+pointerevents4/#pointerout 3.3.8 pointerout
+    pointerout.html
+pointerevents4/#pointerleave 3.3.9 pointerleave
+    pointerleave.html
+pointerevents4/#gotpointercapture 3.3.10 gotpointercapture
+    gotpointercapture.html
+pointerevents4/#lostpointercapture 3.3.11 lostpointercapture
+    lostpointercapture.html
+pointerevents4/#click-auxclick-and-contextmenu 3.3.12 click, auxclick, and contextmenu
+    click-pointer-event.html
+pointerevents4/#event-attributes 3.3.12.1 Event attributes
+    click-attributes.html
+pointerevents4/#event-coordinates 3.3.12.2 Event coordinates
+    click-coordinates.html
+pointerevents4/#event-dispatch 3.3.12.3 Event dispatch
+    click-target.html
+# pointerevents4/#extensions-to-the-element-interface 4 Extensions to the Element interface: no page; it declares setPointerCapture, releasePointerCapture and hasPointerCapture, whose effects 8.2 to 8.4 show
+# pointerevents4/#extensions-to-the-globaleventhandlers-mixin 5 Extensions to the GlobalEventHandlers mixin: no page; it declares event handler attributes, which are object model
+# pointerevents4/#extensions-to-the-navigator-interface 6 Extensions to the Navigator interface: no page; maxTouchPoints is a value read back, which no input changes
+# pointerevents4/#declaring-direct-manipulation-behavior 7 Declaring direct manipulation behavior: no page; it introduces touch-action, which 7.1 to 7.3 show
+pointerevents4/#the-touch-action-css-property 7.1 The touch-action CSS property
+    touch-action.html
+    touch-action-applies.html
+pointerevents4/#determining-supported-direct-manipulation-behavior 7.2 Determining supported direct manipulation behavior
+    touch-action-ancestors.html
+    touch-action-during.html
+pointerevents4/#details-of-touch-action-values 7.3 Details of touch-action values
+    touch-action-pan.html
+    touch-action-manipulation.html
+# pointerevents4/#pointer-capture 8 Pointer capture: no page; it introduces 8.1 to 8.5
+pointerevents4/#introduction 8.1 Introduction
+    capture-slider.html
+pointerevents4/#setting-pointer-capture 8.2 Setting pointer capture
+    set-pointer-capture.html
+pointerevents4/#releasing-pointer-capture 8.3 Releasing pointer capture
+    release-pointer-capture.html
+pointerevents4/#implicit-pointer-capture 8.4 Implicit pointer capture
+    implicit-capture.html
+pointerevents4/#implicit-release-of-pointer-capture 8.5 Implicit release of pointer capture
+    implicit-release.html
+# pointerevents4/#coalesced-and-predicted-events 9 Coalesced and predicted events: no page; it introduces 9.1 to 9.3
+pointerevents4/#coalesced-events 9.1 Coalesced events
+    coalesced-events.html
+pointerevents4/#predicted-events 9.2 Predicted events
+    predicted-events.html
+# pointerevents4/#populating-and-maintaining-the-coalesced-and-predicted-events-lists 9.3 Populating and maintaining the coalesced and predicted events lists: no page; it sets the listed events' identity and target, values read back that 9.1 and 9.2 draw from
+pointerevents4/#compatibility-mapping-with-mouse-events 10 Compatibility mapping with mouse events
+    compat-mouse-events.html
+pointerevents4/#tracking-the-effective-position-of-the-legacy-mouse-pointer 10.1 Tracking the effective position of the legacy mouse pointer
+    legacy-mouse-position.html
+pointerevents4/#mapping-for-devices-that-support-hover 10.2 Mapping for devices that support hover
+    compat-hover.html
+pointerevents4/#mapping-for-devices-that-do-not-support-hover 10.3 Mapping for devices that do not support hover
+    compat-touch.html
+# pointerevents4/#mouse-events-and-interfaces 11 Mouse Events and Interfaces: no page; it introduces 11.1 to 11.4
+pointerevents4/#mouseevent-interface 11.1 MouseEvent interface
+    mouse-event.html
+    mouse-buttons.html
+# pointerevents4/#mouseevent-algorithms 11.2 MouseEvent Algorithms: no page; it introduces 11.2.1 to 11.2.18
+# pointerevents4/#native-os-requirements 11.2.1 Native OS Requirements: no page; it lists what the platform provides
+# pointerevents4/#constructing-mouse-events 11.2.2 Constructing Mouse Events: no page; it is about constructing an event from script
+# pointerevents4/#global-state-for-mouseevent 11.2.3 Global State for MouseEvent: no page; it introduces 11.2.3.1 and 11.2.3.2
+# pointerevents4/#user-agent-level-state 11.2.3.1 User Agent-Level State: no page; the button bitmask it keeps is buttons, which 11.1 shows
+# pointerevents4/#window-level-state 11.2.3.2 Window-Level State: no page; the last element it keeps decides the boundary events that 11.3 shows
+# pointerevents4/#internal-state-for-mouseevent 11.2.4 Internal State for MouseEvent: no page; its modifier flags are the modifier attributes that 11.1 shows
+pointerevents4/#hit-test 11.2.5 hit test
+    hit-test.html
+# pointerevents4/#initialize-a-mouseevent 11.2.6 initialize a MouseEvent: no page; the attributes it sets are shown by 11.1's pages
+# pointerevents4/#set-mouse-event-modifiers 11.2.7 set mouse event modifiers: no page; 11.1 shows the modifier attributes
+# pointerevents4/#create-a-cancelable-mouseevent 11.2.8 create a cancelable MouseEvent: no page; it creates an event object, which shows nothing
+# pointerevents4/#create-a-non-cancelable-mouseevent 11.2.9 create a non-cancelable MouseEvent: no page; it creates an event object, which shows nothing
+# pointerevents4/#calculate-mouseevent-button-attribute 11.2.10 calculate MouseEvent button attribute: no page; 11.1 shows button
+# pointerevents4/#set-mouseevent-attributes-from-native 11.2.11 set MouseEvent attributes from native: no page; 11.1 shows the attributes it sets
+pointerevents4/#handle-native-mouse-down 11.2.12 handle native mouse down
+    mousedown-focus.html
+# pointerevents4/#handle-native-mouse-up 11.2.13 handle native mouse up: no page; 11.4.11 shows the mouseup it sends
+# pointerevents4/#handle-native-mouse-click 11.2.14 handle native mouse click: no page; 11.4.2 shows the click it sends
+# pointerevents4/#send-click-event 11.2.15 send click event: no page; 11.4.1 and 11.4.2 show auxclick and click by button
+# pointerevents4/#handle-native-mouse-double-click 11.2.16 handle native mouse double click: no page; 11.4.4 shows dblclick
+# pointerevents4/#handle-native-mouse-move 11.2.17 handle native mouse move: no page; 11.3 shows the events it sends, in order
+pointerevents4/#maybe-show-context-menu 11.2.18 maybe show context menu
+    context-menu.html
+pointerevents4/#mouse-event-order 11.3 Mouse Event Order
+    mouse-event-order.html
+    mouse-event-stack.html
+    click-sequence.html
+    mouse-target-removed.html
+# pointerevents4/#mouse-event-types 11.4 Mouse Event Types: no page; it introduces 11.4.1 to 11.4.11
+pointerevents4/#auxclick 11.4.1 auxclick
+    auxclick.html
+pointerevents4/#click 11.4.2 click
+    click.html
+pointerevents4/#contextmenu 11.4.3 contextmenu
+    contextmenu.html
+pointerevents4/#dblclick 11.4.4 dblclick
+    dblclick.html
+pointerevents4/#mousedown 11.4.5 mousedown
+    mousedown.html
+pointerevents4/#mouseenter 11.4.6 mouseenter
+    mouseenter.html
+pointerevents4/#mouseleave 11.4.7 mouseleave
+    mouseleave.html
+pointerevents4/#mousemove 11.4.8 mousemove
+    mousemove.html
+pointerevents4/#mouseout 11.4.9 mouseout
+    mouseout.html
+pointerevents4/#mouseover 11.4.10 mouseover
+    mouseover.html
+pointerevents4/#mouseup 11.4.11 mouseup
+    mouseup.html
+pointerevents4/#wheel-events-and-interfaces 12 Wheel Events and interfaces
+    wheel-transaction.html
+pointerevents4/#wheelevent-interface 12.1 WheelEvent interface
+    wheel-event.html
+# pointerevents4/#wheel-event-types 12.2 Wheel Event Types: no page; it introduces 12.3
+pointerevents4/#wheel 12.3 wheel
+    wheel-cancel.html
+pointerevents4/#cancelability-of-wheel-events-0 12.3.1 cancelability of wheel events
+    wheel-cancelability.html
+    wheel-not-waiting.html
+# pointerevents4/#examples 13 Examples: no page; it is not normative
+# pointerevents4/#security-and-privacy-considerations 14 Security and privacy considerations: no page; it draws nothing
+# pointerevents4/#glossary 15 Glossary: no page; its topmost event target is shown by 11.2.5, its active buttons state by 3.3.3
+# pointerevents4/#legacy-event-initializers-0 16 Legacy Event Initializers: no page; it introduces 16.1
+# pointerevents4/#initializers-for-interface-mouseevent 16.1 Initializers for interface MouseEvent: no page; initMouseEvent is object model
+# pointerevents4/#acknowledgments A Acknowledgments: no page; it thanks contributors
+# pointerevents4/#revision-history B Revision history: no page; it lists changes
+# pointerevents4/#idl-index C IDL Index: no page; it repeats the IDL
+# pointerevents4/#references D References: no page; it lists references
+# pointerevents4/#normative-references D.1 Normative references: no page; it lists references
+# pointerevents4/#informative-references D.2 Informative references: no page; it lists references

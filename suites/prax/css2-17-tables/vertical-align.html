@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table height algorithms: vertical-align in cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { padding: 0 4px; border: 1px solid #b5bcc7; vertical-align: baseline; }
+  .blk { width: 30px; height: 20px; background: #4f81bd; }
+  .tall { width: 30px; height: 60px; background: #8a93a1; }
+  .s { font-size: 12px; line-height: 16px; }
+  .l { font-size: 26px; line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.3 Table height algorithms</div>
+  <h1>Table height algorithms: vertical-align in cells</h1>
+  <p class=pr-lede><q>The 'vertical-align' property of each table cell determines its alignment within the row. Each
+  cell's content has a baseline, a top, a middle, and a bottom, as does the row itself.</q></p>
+</header>
+
+<section>
+  <h2>top, middle and bottom</h2>
+  <p><code>top</code>: <q>The top of the cell box is aligned with the top of the first row it spans.</q>
+  <code>bottom</code>: <q>The bottom of the cell box is aligned with the bottom of the last row it spans.</q>
+  <code>middle</code>: <q>The center of the cell is aligned with the center of the rows it spans.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><div class=tall></div><td style="vertical-align: top"><div class=blk></div><td style="vertical-align: middle"><div class=blk></div><td style="vertical-align: bottom"><div class=blk></div></table></div>
+    <figcaption>A grey 60px block makes the row 62px. The blue 20px blocks, <code>top</code>,
+    <code>middle</code> and <code>bottom</code>, are 0, 20 and 40px below the content top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td rowspan=2 style="vertical-align: bottom"><div class=blk></div><td><div class=tall style="height: 40px"></div><tr><td><div class=tall style="height: 40px"></div></table></div>
+    <figcaption>A cell spanning two 42px rows with <code>bottom</code>: its block is at the bottom of the second
+    row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>baseline, and values that do not apply</h2>
+  <p><code>baseline</code>: <q>The baseline of the cell is put at the same height as the baseline of the first of the
+  rows it spans</q>. <code>sub</code>, <code>super</code>, <code>text-top</code>, <code>text-bottom</code>,
+  <code>&lt;length&gt;</code>, <code>&lt;percentage&gt;</code>: <q>These values do not apply to cells; the cell is
+  aligned at the baseline instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td class=l>Big<td class=s>small<td class=s>text</table></div>
+    <figcaption>26px "Big" and 12px "small" and "text", all <code>baseline</code>: their letters stand on one
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td class=l>Big<td class=s style="vertical-align: super">super<td class=s style="vertical-align: 10px">10px</table></div>
+    <figcaption><code>super</code> and <code>10px</code> are treated as <code>baseline</code>: "super" and "10px"
+    stand on the baseline of "Big", as on the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

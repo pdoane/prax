@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Each fragment has its share of the box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .boxed { margin: 10px 0; border: 4px solid #2c5a8f; padding: 6px 0; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2 Fragmentation Model and Terminology</div>
+  <h1>Each fragment has its share of the box</h1>
+  <p class=pr-lede>A fragmentainer is <q>A box—such as a page box, column box, or region—that contains a portion (or
+  all) of a fragmented flow.</q> <q>When breakable content would overflow a fragmentainer in the block dimension, it
+  breaks into the next container in its fragmentation context instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#fragmentation-model">CSS Fragmentation 4 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Each fragment has its share of the box</h2>
+  <p><q>Each fragment has its own share of the box’s border, padding, and margin, and therefore has its own padding
+  area, border area, and margin area.</q> The box has a 10px margin, a 4px border and 6px of padding, top and
+  bottom.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=boxed>one two three four</div></div>
+    <figcaption>The top margin, border and padding in the first column, under which "one" and "two" fit, the bottom ones in
+    the second, under "three" and "four"; the sides of the box in both.
+    Safari breaks after "one", as a UA may: "two" and "three" in the second column, "four" in a third.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } div { margin: 10px 0; border: 4px solid #2c5a8f; padding: 6px 0; background: #b9cde6 }</style><body class=pr-measure><div>one<br>two<br>three<br>four<br>five<br>six<br>seven</div>"></iframe>
+    <figcaption>Printed: the top margin, border and padding on the first page, with "one" to "six" under them;
+    "seven" and the bottom border on the second. Safari prints larger: five lines on the first page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

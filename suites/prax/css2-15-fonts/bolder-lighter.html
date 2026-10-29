@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font weight: bolder and lighter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ladder { padding: 0 6px; font-family: 'Helvetica Neue'; font-size: 13px; line-height: 20px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.6 Font boldness: the 'font-weight' property</div>
+  <h1>Font weight: bolder and lighter</h1>
+  <p class=pr-lede><q>Values of 'bolder' and 'lighter' indicate values relative to the weight of the parent element.
+  Based on the inherited weight value, the weight used is calculated using the chart below.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2
+  §15.6</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/relative-weights.html">bolder and lighter</a>.</p>
+</header>
+
+<section>
+  <h2>The chart</h2>
+  <p>Each line is a parent of the weight at its start, holding a <code>span</code> with <code>bolder</code> and one with
+  <code>lighter</code>, each followed by the chart's weight, set as a number in that
+  weight. The chart: 100, 200, 300 → 400 and 100; 400, 500 → 700 and 100; 600, 700 → 900 and 400; 800, 900 → 900 and 700. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2 §15.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide ladder">
+      <div style="font-weight: 100">100: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 400">400</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 100">100</span></div>
+      <div style="font-weight: 200">200: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 400">400</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 100">100</span></div>
+      <div style="font-weight: 300">300: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 400">400</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 100">100</span></div>
+      <div style="font-weight: 400">400: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 700">700</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 100">100</span></div>
+      <div style="font-weight: 500">500: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 700">700</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 100">100</span></div>
+      <div style="font-weight: 600">600: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 900">900</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 400">400</span></div>
+      <div style="font-weight: 700">700: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 900">900</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 400">400</span></div>
+      <div style="font-weight: 800">800: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 900">900</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 700">700</span></div>
+      <div style="font-weight: 900">900: <span style="font-weight: bolder">bolder</span> <span style="font-weight: 900">900</span>, <span style="font-weight: lighter">lighter</span> <span style="font-weight: 700">700</span></div>
+    </div>
+    <figcaption>Each <code>bolder</code> and <code>lighter</code> is drawn in the weight of the number after it, which
+    is set to the chart's weight.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Children inherit the weight, not the keyword</h2>
+  <p><q>Child elements inherit the calculated weight, not a value of 'bolder' or 'lighter'.</q> The specification's
+  <code>strong { font-weight: bolder }</code>, nested. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2 §15.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide ladder" style="font-weight: 100">100 <strong style="font-weight: bolder">strong <span>child</span> <strong style="font-weight: bolder">strong</strong></strong></div>
+    <figcaption>In a parent of 100, the outer <code>strong</code> is drawn at 400, regular; the <code>span</code> in it
+    inherits 400 and is drawn regular too, not bolder again; the inner <code>strong</code>, bolder than 400, is drawn
+    bold, 700.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

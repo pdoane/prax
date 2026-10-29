@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 2: cells in rows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+  .cap { display: table-caption; background: #f6d7b4; font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, stage 2, cells</div>
+  <h1>Fixup, stage 2: cells in rows</h1>
+  <p class=pr-lede><q>Generate missing child wrappers</q>, in rows. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span> Tinted, dashed boxes are tables with <code>border-spacing: 10px</code>; blue boxes are cell elements, orange ones captions; plain text is in anonymous cells.</p>
+</header>
+
+<section>
+  <h2>Cells in a row</h2>
+  <p><q>An anonymous table-cell box must be generated around each sequence of consecutive children of a table-row box
+  which are not table-cell boxes.</q></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row>one <b>two</b><div class="pr-table-cell blue">A</div></div></div></div>
+    <figcaption>Text and a <code>b</code> before cell A: one anonymous cell, "one two", then A.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row><div class=cap>caption</div><div class="pr-table-cell blue">A</div></div></div></div>
+    <figcaption>A caption in a row is not a cell: an anonymous cell wraps it, and in that cell it is misparented
+    (stage 3), so it gets a table of its own, in the cell beside A. That cell has no line box, so its baseline is
+    the bottom of its content, and A's text drops to it. <span class=pr-flag>Firefox</span> A's text stays at the top
+    of the row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

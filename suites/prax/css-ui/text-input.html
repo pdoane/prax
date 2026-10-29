@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Single-line text fields</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 10px; }
+  input { display: block; box-sizing: content-box; width: 100px; margin: 0; padding: 0 20px;
+          font: calc(50px / 3)/20px "PR Noto Sans Mono"; }
+  .tall { height: 60px; padding: 10px 20px; }
+  .short { height: 10px; padding: 5px 20px; font-size: 30px; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.3.1 Single-Line Text Input Controls</div>
+  <h1>Single-line text fields</h1>
+  <p class=pr-lede><q>When appearance is auto, single-line text input controls such as HTML &lt;input type=text&gt;
+  must be rendered so that</q> the content is clipped in the inline direction to the content edge and in the block
+  direction to the padding edge, is vertically centered, does not wrap, and <q>The text-overflow property applies
+  regardless of the value of the overflow property</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#input-rules">CSS Basic User Interface 4 §7.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Clipped, on one line</h2>
+  <p>Each field is native, 100px wide in <code>.pr-measure</code> text, 10px a letter, with 20px of padding left
+  and right; its value is "a value too long".</p>
+  <figure>
+    <div class="pr-stage stage"><input value="a value too long"></div>
+    <figcaption>One line, "a value to", 100px, between 20px of empty padding on each side: the text is cut at the
+    content edge, not in the padding.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><input value="a value too long" style="text-overflow: ellipsis"></div>
+    <figcaption><code>text-overflow: ellipsis</code>, though <code>overflow</code> is not set: "a value t…".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Centered, and clipped at the padding edge</h2>
+  <p>Content boxes 60px and 10px tall, with 10px and 5px of padding above and below.</p>
+  <figure>
+    <div class="pr-stage stage"><input class=tall value="a value"></div>
+    <figcaption>60px tall: the line is centered, 20px above it and below it inside the content box, 30px from
+    each border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><input class=short value="a value"></div>
+    <figcaption>10px tall, with 30px letters: centered, drawn on into the 5px of padding above and below and cut
+    at the padding edge, not at the content box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

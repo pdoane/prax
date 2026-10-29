@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: an example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex blockquote { margin: 0; text-decoration: underline; color: blue; }
+  .ex p { margin: 0; }
+  .ex em { display: block; }
+  .ex cite { color: fuchsia; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: an example</h1>
+  <p class=pr-lede>A decoration set on a block, carried through an inline that a block splits, to text of another
+  color.</p>
+</header>
+
+<section>
+  <h2>Help, help!</h2>
+  <p><q>The underlining for the blockquote element is propagated to an anonymous inline element that surrounds the
+  span element, causing the text "Help, help!" to be blue, with the blue underlining from the anonymous inline
+  underneath it, the color being taken from the blockquote element. The text in the em block is also underlined, as it
+  is in an in-flow block to which the underline is propagated. The final line of text is fuchsia, but the underline
+  underneath it is still the blue underline from the anonymous inline element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2
+  §16.3.1</a></span></p>
+  <pre class=pr-source>blockquote { text-decoration: underline;
+             color: blue; }
+em { display: block; }
+cite { color: fuchsia; }
+
+&lt;blockquote>
+ &lt;p>
+  &lt;span>
+   Help, help!
+   &lt;em> I am under a hat! &lt;/em>
+   &lt;cite> —GwieF &lt;/cite>
+  &lt;/span>
+ &lt;/p>
+&lt;/blockquote></pre>
+  <figure>
+    <div class="pr-stage pr-text ex"><blockquote>
+ <p>
+  <span>
+   Help, help!
+   <em> I am under a hat! </em>
+   <cite> —GwieF </cite>
+  </span>
+ </p>
+</blockquote></div>
+    <figcaption>"Help, help!" is blue, underlined in blue. "I am under a hat!" is blue, italic and underlined in
+    blue. "—GwieF" is fuchsia, underlined in blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

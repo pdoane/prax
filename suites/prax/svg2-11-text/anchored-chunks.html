@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anchored chunks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lines { white-space: pre-line; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.5 Text layout – Algorithm</div>
+  <h1>Anchored chunks</h1>
+  <p class=pr-lede>The algorithm's "anchored chunk" flag, <q>which represents whether it starts a contiguous sequence
+  of glyphs that can be affected by text anchoring</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutAlgorithm">SVG 2 §11.5</a></span>
+  Each stage is an SVG 160 by 80, the anchor point solid red and the baselines dashed. The text is PR Noto Sans Mono
+  at <code>calc(50px / 3)</code> on 20px lines, each letter 10 wide.</p>
+</header>
+
+<section>
+  <h2>Where a chunk starts</h2>
+  <p>A chunk starts at a character given an absolute position, as <q>If i &lt; new_check_count, then set the "anchored
+  chunk" flag of result[index + j] to true.</q> It also starts a line: <q>If the character at index i corresponds to a
+  typographic character at the beginning of a line, then set the "anchored chunk" flag of result[i] to true.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M80 0V80" stroke="#c0392b" /><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="80" y="30" text-anchor="middle">one<tspan x="80" y="50">three</tspan></text></svg></div>
+    <figcaption><code>text-anchor="middle"</code>, "one" and a <code>tspan</code> of "three" at x 80, y 50: two chunks,
+    "one" from 65 to 95, "three" from 55 to 105.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M80 0V80" stroke="#c0392b" /><path d="M0 30H160 M0 50H160" class=pr-baseline /><text class="pr-measure lines" x="80" y="30" text-anchor="middle">one
+three</text></svg></div>
+    <figcaption><code>white-space: pre-line</code>, "one", a line feed, "three": a chunk a line, each centered on
+    80. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line, "one three" centered on
+    80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A chunk's extent</h2>
+  <p>The chunk's extent runs from its leftmost to its rightmost glyph edge, and the shift depends on <q>the value of
+  text-anchor and direction of the element the character at index i is in</q>: <q>(start, rtl) or (end, ltr): Set
+  shift = shift − b.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M140 0V80" stroke="#c0392b" /><path d="M0 40H160" class=pr-baseline /><text class=pr-measure x="140" y="40" direction="rtl">abcd</text></svg></div>
+    <figcaption><code>direction="rtl"</code> and the initial <code>start</code>: "abcd" ends at 140, from 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M140 0V80" stroke="#c0392b" /><path d="M0 40H160" class=pr-baseline /><text class=pr-measure x="140" y="40" text-anchor="end">abcd</text></svg></div>
+    <figcaption><code>text-anchor="end"</code>, left to right: the same, 100 to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

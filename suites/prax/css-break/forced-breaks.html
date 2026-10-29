@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Forced breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.3 Forced Breaks</div>
+  <h1>Forced breaks</h1>
+  <p class=pr-lede><q>A forced break occurs at a class A break point if, among the break-after properties specified on or propagated to the earlier sibling box and the break-before properties specified on or propagated to the later sibling box there is at least one with a forced break value. (Thus a forced break value effectively overrides any avoid break value that also applies at that break point.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#forced-breaks">CSS Fragmentation 4 §4.3</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Forced over avoided</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a style="break-after: avoid">A</div><div class=pr-b style="break-before: column">B</div><div class=pr-c>C</div></div>
+    <figcaption>A, <code>break-after: avoid</code>; B, <code>break-before: column</code>: the break is forced. A in the first column, B and C in the second. <span class=pr-flag>Firefox</span> No break: A, B and C in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=k style="break-inside: avoid"><div class=pr-a>A</div><div class=pr-b style="break-before: column">B</div></div><div class=pr-c>C</div></div>
+    <figcaption>Inside a box with <code>break-inside: avoid</code>: still forced. A in the first column; B, then C, in the second. <span class=pr-flag>Firefox</span> No break: the box, then C, in the first column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One break for several values</h2>
+  <p><q>When multiple forced break values apply to a single break point, they combine such that all types of break are honored.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a style="break-after: column">A</div><div class=pr-b style="break-before: column">B</div><div class=pr-c>C</div></div>
+    <figcaption>A, <code>break-after: column</code>; B, <code>break-before: column</code>: one column break, not two. A in the first column, B and C in the second; the third empty. <span class=pr-flag>Firefox</span> No break: A, B and C in the first column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

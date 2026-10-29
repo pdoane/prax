@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout containment and fragmentation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 70px; }
+  .mc { columns: 2; column-gap: 20px; column-fill: auto; height: 60px; outline: 1px dashed #6b7381; }
+  .k { contain: layout; }
+  .b { background: #b9cde6; border-top: 10px solid #2c5a8f; }
+  .fb { break-before: column; background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.3 Layout Containment, fragmentation</div>
+  <h1>Layout containment and fragmentation</h1>
+  <p class=pr-lede><q>Forced breaks are allowed within layout containment boxes but do not propagate to the parent as
+  otherwise described in CSS Fragmentation 3 §4.1.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-layout">CSS Containment 2 §3.3</a></span>
+  Its trapping of a fragmented flow has no figure: <q>no stable specification is affected by this point.</q></p>
+</header>
+
+<section>
+  <h2>Breaks inside are allowed</h2>
+  <p>Each multicol, dashed, has two columns 60px tall, filled in turn. The blue box has <code>contain: layout</code>
+  and a dark 10px top border.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=mc><div class="b k">line 1 line 2 line 3 line 4</div></div></div>
+    <figcaption>Four lines: the box is not monolithic, and breaks after its second line; lines 3 and 4 in the second
+    column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=mc><div class="b k"><div>first</div><div class=fb>second</div></div></div></div>
+    <figcaption>A second child, orange, with <code>break-before: column</code>: it is forced to the second
+    column. <span class=pr-flag>Firefox</span> does not break.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A first child's break does not propagate</h2>
+  <p>A forced break before a first child would propagate, to break before its parent. A line "before" comes first,
+  then the blue box, whose first child, orange, has <code>break-before: column</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=mc><div>before</div><div class=b><div class=fb>child</div></div></div></div>
+    <figcaption>No containment: the break goes before the blue box, which starts, border and all, at the top of the
+    second column. <span class=pr-flag>Safari</span> leaves the border under "before". <span class=pr-flag>Firefox</span>
+    does not break.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=mc><div>before</div><div class="b k"><div class=fb>child</div></div></div></div>
+    <figcaption><code>contain: layout</code>: the break does not leave the box, which starts under "before". Its
+    Note says <q>forced breaks may occur between a box and its container</q>, moving the child on, and
+    allows staying put: the text is ambiguous, so no flag.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

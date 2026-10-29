@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Composing by hand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.3 Handwriting Recognition Systems</div>
+  <h1>Composing by hand</h1>
+  <p class=pr-lede><q>The following example describes a possible sequence of events when composing a text passage
+  text with a handwriting recognition system, such as on a pen tablet, as modeled using Composition Events.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-handwriting">UI Events §3.6.3</a></span></p>
+</header>
+<section>
+  <h2>A word, then a better match</h2>
+  <p>compositionstart with <code>""</code>; compositionupdate with <code>"test"</code> as the user writes; another
+  with <code>"text"</code> when the user <q>rejects first word-match suggestion, selects different match</q>; then
+  compositionend with <code>"text"</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-handwriting">§3.6.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="compositionstart compositionupdate compositionend" data-fields="data" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>With a handwriting input, such as Scribble on an iPad with a pencil or the handwriting panel of
+    Windows's touch keyboard, write a word in the field, and pick another of its suggestions before committing it.
+    The log shows each match the recogniser offers as a compositionupdate, and the word chosen as compositionend's
+    <code>data</code>. The section is an example: a recogniser that inserts the word without a composition is not
+    flagged.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

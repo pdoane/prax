@@ -1,0 +1,101 @@
+diff --git a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -292,6 +292,7 @@
+     JSModuleNormalizeFunc *module_normalize_func;
+     JSModuleLoaderFunc *module_loader_func;
+     void *module_loader_opaque;
++    JSModuleImportFunc *module_import_func;
+     /* timestamp for internal use in module evaluation */
+     int64_t module_async_evaluation_next_timestamp;
+ 
+@@ -26356,6 +26357,11 @@
+     rt->module_loader_opaque = opaque;
+ }
+ 
++void JS_SetModuleImportFunc(JSRuntime *rt, JSModuleImportFunc *module_import)
++{
++    rt->module_import_func = module_import;
++}
++
+ /* default module filename normalizer */
+ static char *js_default_module_normalize_name(JSContext *ctx,
+                                               const char *base_name,
+@@ -26922,6 +26928,16 @@
+     return js_dup(m->module_ns);
+ }
+ 
++int JS_GetModuleRequestCount(JSModuleDef *m)
++{
++    return m->req_module_entries_count;
++}
++
++JSAtom JS_GetModuleRequest(JSContext *ctx, JSModuleDef *m, int index)
++{
++    return JS_DupAtom(ctx, m->req_module_entries[index].module_name);
++}
++
+ #ifdef ENABLE_DUMPS // JS_DUMP_MODULE_RESOLVE
+ #define module_trace(ctx, ...) \
+    do { \
+@@ -27500,8 +27516,12 @@
+     if (!filename)
+         goto exception;
+ 
+-    JS_LoadModuleInternal(ctx, basename, filename,
+-                          resolving_funcs);
++    if (ctx->rt->module_import_func)
++        ctx->rt->module_import_func(ctx, basename, filename, resolving_funcs,
++                                    ctx->rt->module_loader_opaque);
++    else
++        JS_LoadModuleInternal(ctx, basename, filename,
++                              resolving_funcs);
+     JS_FreeCString(ctx, filename);
+     JS_FreeCString(ctx, basename);
+     return JS_UNDEFINED;
+@@ -33374,10 +33394,9 @@
+     fun_obj = js_create_function(ctx, fd);
+     if (JS_IsException(fun_obj))
+         goto fail1;
+-    /* Could add a flag to avoid resolution if necessary */
+     if (m) {
+         m->func_obj = fun_obj;
+-        if (js_resolve_module(ctx, m) < 0)
++        if (!(flags & JS_EVAL_FLAG_NO_RESOLVE) && js_resolve_module(ctx, m) < 0)
+             goto fail1;
+         fun_obj = JS_NewModuleValue(ctx, m);
+     }
+diff --git a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -364,6 +364,9 @@
+ /* allow top-level await in normal script. JS_Eval() returns a
+    promise. Only allowed with JS_EVAL_TYPE_GLOBAL */
+ #define JS_EVAL_FLAG_ASYNC (1 << 7)
++/* with JS_EVAL_FLAG_COMPILE_ONLY, compile a module without loading
++   the modules it imports. JS_ResolveModule() loads them. */
++#define JS_EVAL_FLAG_NO_RESOLVE (1 << 8)
+ 
+ typedef JSValue JSCFunction(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+ typedef JSValue JSCFunctionMagic(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic);
+@@ -1020,6 +1023,20 @@
+ JS_EXTERN JSValue JS_GetImportMeta(JSContext *ctx, JSModuleDef *m);
+ JS_EXTERN JSAtom JS_GetModuleName(JSContext *ctx, JSModuleDef *m);
+ JS_EXTERN JSValue JS_GetModuleNamespace(JSContext *ctx, JSModuleDef *m);
++/* return the number of modules that 'm' imports, and the specifier of
++   each as its source writes it, which the caller frees */
++JS_EXTERN int JS_GetModuleRequestCount(JSModuleDef *m);
++JS_EXTERN JSAtom JS_GetModuleRequest(JSContext *ctx, JSModuleDef *m, int index);
++
++/* called by import() in place of loading the module. The host loads
++   it, and settles the promise of import() with 'resolving_funcs', for
++   example with the promise that JS_LoadModule() returns once the
++   module and its imports are available. */
++typedef void JSModuleImportFunc(JSContext *ctx, const char *base_name,
++                                const char *specifier,
++                                JSValueConst *resolving_funcs, void *opaque);
++JS_EXTERN void JS_SetModuleImportFunc(JSRuntime *rt,
++                                      JSModuleImportFunc *module_import);
+ 
+ /* JS Job support */
+ 

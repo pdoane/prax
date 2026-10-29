@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties of initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .fs::first-letter { font-size: 8px; }
+  .lh::first-letter { line-height: 80px; }
+  .va::first-letter { vertical-align: 20px; }
+  .bg::first-letter { background: #f9cc9d; }
+  .w::first-letter { width: 40px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.5.1 Properties Applying to Initial Letters</div>
+  <h1>Properties of initial letters</h1>
+  <p class=pr-lede><q>All properties that apply to an inline box also apply to an inline initial letter except for
+  vertical-align and its sub-properties, font-size, line-height, line-fit-edge, and inline-sizing. Additionally, all
+  of the sizing properties and box-sizing also apply to initial letters</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-properties">CSS Inline Layout 3 §7.5.1</a></span>
+  Each paragraph is 13px PR Literata on 20px lines, its <code>::first-letter</code> blue with <code>initial-letter:
+  2</code> and the caption's declaration. <span class=pr-flag>Safari</span> supports only
+  <code>-webkit-initial-letter</code> and <span class=pr-flag>Firefox</span> none: neither draws an initial
+  letter.</p>
+</header>
+
+<section>
+  <h2>Ignored</h2>
+  <p>Each of these leaves the initial letter as it is without it: two lines tall, its foot on the second
+  baseline.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p fs">Font size 8px: the letter is two lines tall all the same.</p></div>
+    <figcaption><code>font-size: 8px</code>: ignored.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p lh">Line height 80px: the lines stay 20px apart.</p></div>
+    <figcaption><code>line-height: 80px</code>: ignored; the lines stay 20px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p va">Raised 20px: the letter stays where it is.</p></div>
+    <figcaption><code>vertical-align: 20px</code>: ignored.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Applied</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p bg">A background, as on any inline box.</p></div>
+    <figcaption><code>background</code>: behind the letter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p w">Width 40px: the letter's box is 40px wide.</p></div>
+    <figcaption><code>width: 40px</code>: the orange box 40px wide, the text after it. <span
+    class=pr-flag>Chrome</span> Ignores it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

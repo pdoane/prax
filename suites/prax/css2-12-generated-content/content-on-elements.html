@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property on elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .replaced { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%234f81bd'/></svg>"); }
+  .replaced::before { content: "before "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property on elements</h1>
+  <p class=pr-lede>CSS 2 applies <code>content</code> to <code>:before</code> and <code>:after</code> only, and computes
+  it to <code>normal</code> on elements. A later specification applies it to elements as well.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-content-3/#content-property">CSS Generated Content 3 §1</a></div>
+  <h2>An image replaces the element</h2>
+  <p><code>content</code> now <q>Applies to: all elements, tree-abiding pseudo-elements, and page margin boxes</q>.
+  <q>For elements, it has only one purpose: specifying that the element renders as normal, or replacing the element
+  with an image (and possibly some associated "alt text").</q> An image <q>Makes the element or pseudo-element a
+  replaced element, filled with the specified &lt;image&gt;. Its normal contents are suppressed and do not generate
+  boxes, as if they were display: none.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-property">CSS Generated Content 3 §1</a></span> So an element is no longer always
+  <code>normal</code>: given an image, it becomes that image.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=replaced>replaced text</div></div>
+    <figcaption>A <code>div</code> with the text "replaced text" and <code>content: url(...)</code> of a 40 by 20 blue
+    image: the blue image alone, at the stage's top left; the text is not shown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=replaced>replaced text</div><div>next</div></div>
+    <figcaption>The same <code>div</code> with a <code>:before</code> of "before ": <q>Replaced elements do not have
+    ::before or ::after pseudo-elements</q>, so only the image, and "next" on the line below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The direction at zero length</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.4 Path directionality</div>
+  <h1>The direction at zero length</h1>
+  <p class=pr-lede><q>Some features, such as the orientation of markers and the shapes of line caps, are defined in
+  terms of the direction of the path</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDirectionality">SVG 2 §9.4</a></span>
+  Each stage is an SVG 160 by 60. The orange arrows are markers 16 wide with <code>orient="auto"</code>, at an end
+  pointing <q>in the path direction</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">§13.7.4</a></span>.</p>
+</header>
+
+<section>
+  <h2>A path of zero length, and a subpath</h2>
+  <p><q>If length of the entire path the segment belongs to is zero, then the direction at the start of the segment
+  points in the same direction as the positive x-axis.</q> A square cap is <q>oriented such that two of its sides
+  are parallel to the effective tangent</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#LineCaps">§13.5.4</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 80 30 L 80 30" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#arrow)" /></svg></div>
+    <figcaption><code>M 80 30 L 80 30</code>, a marker at the start: the arrow at 80, 30 points right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="rotate(30 80 30)"><path d="M 80 30 L 80 30" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="square" /></g></svg></div>
+    <figcaption>The same path, stroked blue 20 wide with square caps, in a <code>g</code> rotated 30°: a square
+    20 by 20 on 80, 30, turned 30°.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 50 20 M 110 30 L 110 30" fill="none" stroke="#4f81bd" stroke-width="20" stroke-linecap="square" /></svg></div>
+    <figcaption><code>M 20 50 L 50 20 M 110 30 L 110 30</code>: the path has a length, so the zero-length
+    segment takes the line's direction, up at 45°. The square cap is turned to its <q>effective tangent</q>, which no
+    section defines, so the text gives no result for the square at 110, 30. Chrome, Safari and Firefox draw it
+    upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

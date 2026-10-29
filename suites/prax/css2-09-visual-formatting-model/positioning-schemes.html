@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positioning schemes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3 Positioning schemes</div>
+  <h1>Positioning schemes</h1>
+  <p class=pr-lede>A box is laid out by one of three positioning schemes: normal flow, floats, or absolute positioning.
+  <q>An element is called out of flow if it is floated, absolutely positioned, or is the root element.</q></p>
+</header>
+
+<section>
+  <h2>One box three ways</h2>
+  <p><q>Floats. In the float model, a box is first laid out according to the normal flow, then taken out of the flow
+  and shifted to the left or right as far as possible. Content may flow along the side of a float.</q> <q>Absolute
+  positioning. In the absolute positioning model, a box is removed from the normal flow entirely (it has no impact on
+  later siblings) and assigned a position with respect to a containing block.</q> In each figure, the orange box is
+  60px wide and comes between A and the text. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#positioning-scheme">CSS 2 §9.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class=pr-a>A</div><div class=pr-b style="width: 60px">box</div>Text after the box, which wraps.</div>
+    <figcaption>Normal flow: the box is between A and the text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class=pr-a>A</div><div class=pr-b style="width: 60px; float: right">box</div>Text after the box, which wraps.</div>
+    <figcaption><code>float: right</code>: the box moves right, and the text flows along its left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text"><div class=pr-a>A</div><div class=pr-b style="width: 60px; position: absolute; right: 0; bottom: 0">box</div>Text after the box, which wraps.</div>
+    <figcaption><code>position: absolute; right: 0; bottom: 0</code>: the box is at the stage's corner, and the text
+    follows A as if there were no box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

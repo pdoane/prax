@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The line-height property: normal</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .chip { background: rgba(214, 138, 60, 0.5); }
+  .ex { font-size: 10pt; }
+  .fb { font-family: "PR Arimo", "PR Noto Sans JP"; font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The line-height property: normal</h1>
+  <p class=pr-lede><code>line-height</code> takes <code>normal | &lt;number&gt; | &lt;length&gt; | &lt;percentage&gt;</code>.
+  Initial <code>normal</code>, inherited, and it applies to all elements. Each stage's text is 10pt, with each line's span in orange.</p>
+</header>
+
+<section>
+  <h2>normal</h2>
+  <p><q>Tells user agents to set the used value to a "reasonable" value based on the font of the element.</q> <q>We
+  recommend a used value for 'normal' between 1.0 to 1.2.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage ex"><div id=nm style="line-height: normal"><span class=chip>line-height: normal</span><br><span class=chip>font-size: 10pt</span></div></div>
+    <figcaption>Two lines of <code>normal</code>, <code class=pr-computed data-of=nm data-dom=offsetHeight></code>px
+    in all: the recommended line height for this 10pt font is 13 to 16px. <span class="pr-flag pr-since">Since CSS 2</span> From
+    the font's metrics.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-inline-3/#line-height-property">CSS Inline Layout 3 §5.1</a>, <a href="https://drafts.csswg.org/css-inline-3/#inline-height">§5.3</a></div>
+  <h2>normal from the fonts' metrics</h2>
+  <p><q>Determine the preferred line height automatically based on the metrics of the used font.</q> <q>When its
+  computed line-height is normal, the layout bounds of an inline box encloses all its glyphs, going from the highest A
+  to the deepest D.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#line-height-property">CSS Inline Layout 3 §5.1</a>, <a href="https://drafts.csswg.org/css-inline-3/#inline-height">§5.3</a></span> Fallback fonts count too. Each block is 20px
+  PR Arimo, which has no Japanese, then PR Noto Sans JP.</p>
+  <figure>
+    <div class=pr-stage><div id=ln1 class="pr-hl fb" style="line-height: normal">Xx</div></div>
+    <figcaption>One line of the first available font: <code class=pr-computed data-of=ln1 data-dom=offsetHeight></code>px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=ln2 class="pr-hl fb" style="line-height: normal">Xx 漢字</div></div>
+    <figcaption>Two of its glyphs come from a fallback font with a taller ascent and descent: the line is taller,
+    <code class=pr-computed data-of=ln2 data-dom=offsetHeight></code>px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=ln3 class="pr-hl fb" style="line-height: 24px">Xx 漢字</div></div>
+    <figcaption><code>line-height: 24px</code>: a length, whatever the fonts:
+    <code class=pr-computed data-of=ln3 data-dom=offsetHeight></code>px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

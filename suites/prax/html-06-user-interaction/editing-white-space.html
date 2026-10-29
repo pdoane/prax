@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Editing hosts and white-space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ed { width: 110px; margin: 0 0 10px; padding: 0; background: var(--pr-plain) }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.3 Best practices for in-page editors</div>
+  <h1>Editing hosts and white-space</h1>
+  <p class=pr-lede><q>Authors are encouraged to set the 'white-space' property on editing hosts and on markup that was originally
+  created through these editing mechanisms to the value 'pre-wrap'.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#best-practices-for-in-page-editors">HTML §6.8.3</a></span></p>
+</header>
+<section>
+  <h2>Two spaces typed between two words</h2>
+  <p>With <code>normal</code>, <q>the resulting markup will either consist of "yellow&amp;nbsp; ball" or "yellow
+  &amp;nbsp;ball"</q>. <q>In the former case, "yellow⍽" might wrap to the next line</q>; <q>in the latter case, "⍽ball",
+  if wrapped to the start of the line, would have visible indentation from the non-breaking space.</q> <q>When
+  'white-space' is set to 'pre-wrap', however, the editing rules will instead simply put two regular spaces between the
+  words, and should the two words be split at the end of a line, the spaces would be neatly removed from the
+  rendering.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#best-practices-for-in-page-editors">§6.8.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <div class="ed pr-measure" contenteditable>yellow ball</div>
+    </div>
+    <figcaption><code>white-space: normal</code>, 110px wide: <code>yellow ball</code> fills one line. Click after the space
+    and type another: <code>ball</code> wraps to a second line, either flush with the left edge or indented 10px by a
+    non-breaking space.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <div class="ed pr-measure" contenteditable style="white-space: pre-wrap">yellow ball</div>
+    </div>
+    <figcaption><code>white-space: pre-wrap</code>, the same. Type the second space: <code>ball</code> wraps flush with the
+    left edge, and the spaces hang at the end of the first line.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

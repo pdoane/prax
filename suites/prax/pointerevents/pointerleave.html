@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerleave</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .host { height: 40px; margin: 10px 20px; width: 120px; box-sizing: border-box; position: relative;
+          background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; padding: 0 6px; line-height: 38px; }
+  .away { position: absolute; left: 118px; top: 10px; width: 100px; height: 40px; box-sizing: border-box;
+          background: #f6d7b4; border: 1px solid #9c5f22; text-align: center; }
+  .host + .spacer { height: 20px; }
+  .pad { height: 30px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.9 pointerleave</div>
+  <h1>pointerleave</h1>
+  <p class=pr-lede><q>This event type is similar to pointerout but with two differences: pointerleave does not bubble,
+  and its dispatch considers the hit test boundaries of even descendant elements.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerleave">Pointer Events §3.3.9</a></span></p>
+</header>
+<section>
+  <h2>Out of an element and all its descendants</h2>
+  <p><q>The step to determine the target of a pointer detects that the pointer has moved out of an element and all of
+  its descendants.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerleave">§3.3.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=host id=host>host<div class=away id=away>its child</div></div>
+      <div class=spacer></div>
+      <ol class=pr-log data-log="pointerout pointerleave" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>The orange box is the blue box's child, drawn beside it. Move from the blue box across to the
+    orange one: <code>pointerout</code> at <code>host</code>, and no <code>pointerleave</code>. Move off the orange
+    box onto the stage: <code>pointerleave</code> at <code>away</code>, then at <code>host</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>After a finger lifts</h2>
+  <p><q>After the user agent fires the pointerup event for a device that does not support hover (see pointerup).</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerleave">§3.3.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Tap here.</div>
+      <ol class=pr-log data-log="pointerup pointerout pointerleave" data-fields="pointerType" data-on="#pad" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen. Tap the box: <code>pointerup</code>, <code>pointerout</code>, then
+    <code>pointerleave</code>, as the finger lifts.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

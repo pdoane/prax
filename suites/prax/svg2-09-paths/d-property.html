@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The d property: path data from markup or CSS</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .vee { d: path("M 20 10 L 80 50 L 140 10"); }
+  .caret { d: path("M 0 20 L 30 0 L 60 20"); }
+  .none { d: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.2 Specifying path data: the ‘d’ property</div>
+  <h1>The d property: path data from markup or CSS</h1>
+  <p class=pr-lede><q>The 'd' property is used to specify the shape of a ‘path’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#TheDProperty">SVG 2 §9.3.2</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide, and not filled.</p>
+</header>
+
+<section>
+  <h2>The attribute, or a style sheet's path()</h2>
+  <p>The section gives the value as <code>none | &lt;string&gt;</code>; the working group resolved that <q>The d
+  property will support the shape function path() only for now</q>, that <q>The d attribute will only support SVG
+  path string an no functional notation</q> and that <q>d will be a presentation attribute</q>
+  (<a href="https://github.com/w3c/svgwg/issues/320">svgwg#320</a>, which the text does not yet follow).</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>d="M 20 50 L 80 10 L 140 50"</code>: a caret, its apex at 80, 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=vee d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>A style sheet's <code>d: path("M 20 10 L 80 50 L 140 10")</code> over that attribute: a V, its
+    point at 80, 50. <span class=pr-flag>Safari</span> The caret.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=vee fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>The same <code>d</code>, and no attribute: the V. <span class=pr-flag>Safari</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none, and user units</h2>
+  <p><q>The value none indicates that there is no path data for the element. For ‘path’ elements, this means that
+  the element does not render</q>. <q>All coordinates and lengths specified within path data must be treated as
+  being in user units in the current user coordinate system.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path class=none d="M 20 50 L 80 10 L 140 50" fill="#4f81bd" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>d: none</code> over the caret's attribute, filled and stroked: nothing.
+    <span class=pr-flag>Safari</span> The caret.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(20 10) scale(2)"><path d="M 0 20 L 30 0 L 60 20" fill="none" stroke="#2c5a8f" stroke-width="2" /></g></svg></div>
+    <figcaption><code>d="M 0 20 L 30 0 L 60 20"</code> in a <code>g</code> that scales by 2 and moves by 20, 10:
+    the caret from 20, 50, its stroke 4 wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(20 10) scale(2)"><path class=caret fill="none" stroke="#2c5a8f" stroke-width="2" /></g></svg></div>
+    <figcaption>The same path data from <code>d: path()</code>: its numbers are user units too, so the same
+    caret. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

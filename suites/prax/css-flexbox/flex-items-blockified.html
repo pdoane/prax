@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex items are blockified</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; align-items: flex-start; }
+  .box { width: 40px; }
+  figure.n figcaption { max-width: 116px; }
+  figure.n .pr-stage { width: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4 Flex Items, blockification</div>
+  <h1>Flex items are blockified</h1>
+  <p class=pr-lede><q>If the computed display value of an element's nearest ancestor element (skipping
+  display:contents ancestors) is flex or inline-flex, the element's own display value is blockified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-items">CSS Flexible Box Layout 2 §4</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#transformations">CSS Display 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>An inline element becomes a block</h2>
+  <p>Each stage is a flex container; the child is a <code>span</code> with <code>width: 40px</code>, which a
+  non-replaced inline box ignores and a block takes.</p>
+  <figure class=n>
+    <div class=pr-stage><span class="pr-a pr-fit box">A</span></div>
+    <figcaption>A <code>span</code>: 40px wide, as a block is.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class=pr-stage><span style="display: contents"><span class="pr-a pr-fit box">A</span></span></div>
+    <figcaption>A <code>span</code> in a <code>display: contents</code> one, the container its nearest box: 40px
+    wide too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No anonymous table; a table's wrapper box is the item</h2>
+  <p><q>For example, two contiguous flex items with display: table-cell will become two separate display: block flex
+  items, instead of being wrapped into a single anonymous table.</q>
+  <q>In the case of flex items with display: table, the table wrapper box becomes the flex item, so the align-self
+  property applies to it. The contents of any caption boxes contribute to the calculation of the table wrapper box's
+  min-content and max-content sizes.</q></p>
+  <figure>
+    <div class=pr-stage style="justify-content: space-between"><div class="pr-a pr-fit box" style="display: table-cell">A</div><div class="pr-b pr-fit box" style="display: table-cell">B</div></div>
+    <figcaption>With <code>space-between</code>, two items: A at the left, B at the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="height: 80px; align-items: center"><div class=pr-parent style="display: table"><div class=pr-table-caption style="background: #f9cc9d">caption</div><div class=pr-table-row><div class=pr-table-cell style="width: 40px">x</div></div></div></div>
+    <figcaption>A one-cell table under a caption 70px wide, <code>align-items: center</code>: the wrapper, as wide as
+    the caption and 40px tall, caption and table together, centered from 20px to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks of fixed boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2.1 Containing Blocks of Positioned Boxes</div>
+  <h1>Containing blocks of fixed boxes</h1>
+  <p class=pr-lede>For a box with <code>position: fixed</code>, <q>The containing block is established by the nearest
+  ancestor box that establishes an fixed positioning containing block</q>. <q>If no ancestor establishes one, the
+  box's fixed positioning containing block is the initial fixed containing block</q>: <q>in continuous media, the
+  layout viewport</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The layout viewport, not the initial containing block</h2>
+  <p>Each frame's document is 300px tall, scrolled 30px down. A tinted box has
+  <code>inset: 0</code> and a dashed border.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: absolute; inset: 0; background: rgba(79, 129, 189, 0.3); border: 2px dashed #2c5a8f }</style><div></div><script>scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>absolute</code>: the initial containing block, the frame's size at the document's origin,
+    scrolled with it: its bottom edge shows at 70.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: fixed; inset: 0; background: rgba(214, 138, 60, 0.3); border: 2px dashed #9c5f22 }</style><div></div><script>scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>fixed</code>: the layout viewport, which does not scroll: the box fills the frame.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The nearest ancestor that establishes one</h2>
+  <p>A relative box establishes a containing block for absolute boxes only. Each frame holds a transformed dashed
+  box, at 10, 10, and in it a relative tinted box at 40, 30; in that, an orange box with <code>top: 0; right:
+  0</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 10px } p { margin: 0; height: 78px; transform: translate(0); border: 1px dashed #6b7381 } q { display: block; position: relative; margin: 30px 0 0 40px; width: 80px; height: 40px; background: rgba(79, 129, 189, 0.3) } q::before, q::after { content: none } i { position: absolute; top: 0; right: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><q><i></i></q></p>"></iframe></div>
+    <figcaption><code>absolute</code>: at the tinted box's top right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 10px } p { margin: 0; height: 78px; transform: translate(0); border: 1px dashed #6b7381 } q { display: block; position: relative; margin: 30px 0 0 40px; width: 80px; height: 40px; background: rgba(79, 129, 189, 0.3) } q::before, q::after { content: none } i { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c }</style><p><q><i></i></q></p>"></iframe></div>
+    <figcaption><code>fixed</code>: past the tinted box, at the transformed box's top right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

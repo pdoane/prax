@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: computing the contoured path</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.4.2 Computing a contoured path</div>
+  <h1>corner-shape: computing the contoured path</h1>
+  <p class=pr-lede><q>This algorithm describes how to compute a path with shaped corners. To avoid the complexities of defining how superellipses intersect, the algorithm simplifies the process by specifying that each corner is "clipped out" of the path.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#contour-path">CSS Borders and Box Decorations 4 §3.9.4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Insets that differ</h2>
+  <p>The insets of the inner contour are the border widths; where they differ, the inner curve leans so the border thickens steadily. Each box is <code>border-radius: 40px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 40px; border-width: 4px 20px"></div></div>
+    <figcaption><code>bevel</code>, 4px top, 20px sides: the inner diagonal is not parallel; the border widens from 4 to 20 along it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop; border-radius: 40px; border-width: 4px 20px"></div></div>
+    <figcaption><code>scoop</code>, the same widths: the inner scoop widens likewise. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A border as thick as the radius</h2>
+  <p><q>If K is smaller than or equal to zero, and insetDiff is equal to -startRadius or endRadius, then return an empty path.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: notch; border-radius: 20px; border-width: 20px"></div></div>
+    <figcaption><code>notch</code>, radius 20, a 20px border: the notch is cut from the border; the inner contour is a plain rectangle. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: scoop; border-radius: 20px; border-width: 20px"></div></div>
+    <figcaption><code>scoop</code>, the same: the scoop takes a bite out of each corner of the border. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

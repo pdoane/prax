@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing: between inlines, and after bidi</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { padding: 0; font: calc(50px / 3)/20px "PR Noto Sans Mono", "PR Noto Sans Hebrew"; }
+  .u { background: #b9cde6; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.2 Tracking: the letter-spacing property</div>
+  <h1>letter-spacing: between inlines, and after bidi</h1>
+  <p class=pr-lede><q>Letter-spacing is applied to each typographic character unit by inserting half of the additional
+  spacing on each side; except it is not applied at the beginning or end of a line.</q> <q>Letter-spacing is applied
+  after bidi reordering</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#letter-spacing-property">CSS Text 4 §8.2</a></span>
+  The specification's examples, at 10px letters with <code>letter-spacing: 10px</code> on the stage and 20px on the
+  blue span.</p>
+</header>
+
+<section>
+  <h2>The average between two inlines</h2>
+  <p><q>When the value varies between adjacent inlines, the effective spacing between adjacent letters of different
+  inlines amounts to the average between the two.</q> The stages are <code>aa&lt;span&gt;bb&lt;/span&gt;cc</code>.</p>
+  <figure>
+    <div class="pr-stage s" style="letter-spacing: 10px"><span class=t>aa<span class=u>bb</span>cc</span></div>
+    <figcaption>All 10px: the letters every 20px, the line 110px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" style="letter-spacing: 10px"><span class=t>aa<span class=u style="letter-spacing: 20px">bb</span>cc</span></div>
+    <figcaption>The span at 20px: 10px between the a's and c's, 15px either side of the span, 20px between the
+    b's: 130px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The line's ends after reordering</h2>
+  <p>The specification's "ab", a span of "c" and alef, then bet and gimel: the Hebrew is reordered, so alef, in
+  the span, is drawn last, at the line's end.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage s" style="letter-spacing: 10px" dir=ltr><span class=t>ab<span class=u style="letter-spacing: 20px">c&#x5d0;</span>&#x5d1;&#x5d2;</span></div>
+    <figcaption>Drawn a, b, c, gimel, bet, alef: alef, blue, ends the line, so nothing follows it, though it is not
+    last in the source. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 10px of blue after
+    alef.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

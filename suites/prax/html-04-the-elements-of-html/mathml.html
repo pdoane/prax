@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>MathML in HTML</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { padding: 10px; font-size: 20px; line-height: 30px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.15 MathML</div>
+  <h1>MathML in HTML</h1>
+  <p class=pr-lede><q>The MathML math element falls into the embedded content, phrasing content, flow content, and
+  palpable content categories for the purposes of the content models in this specification.</q> <q>The semantics of
+  MathML elements are defined by MathML and other applicable specifications.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content-other.html#mathml">HTML §4.8.15</a></span>
+  Each stage sets its text at 20px.</p>
+</header>
+
+<section>
+  <h2>Math in a line of text</h2>
+  <figure>
+    <div class="pr-stage line">so <math><mfrac><mi>a</mi><mi>b</mi></mfrac></math> is</div>
+    <figcaption>"so", then <i>a</i> over <i>b</i> with a bar between them, centered on the line, then "is".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line"><math><mtext><b>bold</b></mtext></math></div>
+    <figcaption>Token elements <q>may contain phrasing content elements from the HTML namespace</q>: an mtext
+    holding an HTML b, "bold", in bold.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

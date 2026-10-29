@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-*-*-radius: the slash</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.5 Corner Sizing: the border-*-*-radius properties</div>
+  <h1>border-*-*-radius: the slash</h1>
+  <p class=pr-lede><q>&lt;slash-separated-border-radius-syntax&gt; = &lt;length-percentage [0,∞]&gt; [ / &lt;length-percentage [0,∞]&gt; ]?</q> <q>The first value is the horizontal radius, the second the vertical radius.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-radius">CSS Borders and Box Decorations 4 §3.5</a></span> Each blue box is 120 by 60.</p>
+</header>
+
+<section>
+  <h2>A slash, or a space, between the radii</h2>
+  <p>A note: <q>Authors should use the slash syntax, which is preferred for new content, but the legacy syntax (two values separated by whitespace) is supported for backwards compatibility.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-top-left-radius: 60px / 30px"></div></div>
+    <figcaption><code>60px / 30px</code>: 60 along the top, 30 down the side. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="border-top-left-radius: 60px 30px"></div></div>
+    <figcaption><code>60px 30px</code>: the same corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative corners</h2>
+  <p><q>with the first start/end giving the block axis side, and the second the inline-axis side</q> The box is <code>vertical-rl</code>; CSS Logical Properties 1's page shows these properties too.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; border-start-end-radius: 40px"></div></div>
+    <figcaption><code>border-start-end-radius: 40px</code>: block start is the right, inline end the bottom: the bottom right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; direction: rtl; border-start-end-radius: 40px"></div></div>
+    <figcaption>With <code>rtl</code>, inline end is the top: the top right corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

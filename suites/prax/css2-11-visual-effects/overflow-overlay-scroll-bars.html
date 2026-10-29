@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: overlay scroll bars</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; height: 60px; margin: 10px 40px; overflow: scroll; }
+  .tall { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: overlay scroll bars</h1>
+  <p class=pr-lede>CSS 2 places every scroll bar between the border and the padding, and shows it whenever a box is
+  <code>scroll</code>. Each dashed box here is 120 by 60, with <code>overflow: scroll</code>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></div>
+  <h2>Classic or overlay, as the user agent chooses</h2>
+  <p><q>Scrollbars which by default are placed over the content box and do not cause scrollbar gutters to be created
+  are called overlay scrollbars.</q> <q>Their appearance and size may vary based on whether and how the user is
+  interacting with them.</q> <q>Whether classic scrollbars or overlay scrollbars are used, the appearance and size of
+  the scrollbar, and whether scrollbars appear on the start or end edge of the box, is UA defined.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></span> A scroll bar may now take no room, and may be hidden until the user
+  scrolls.</p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1"><div class="pr-b pr-fit" style="width: 60px">B</div></div></div>
+    <figcaption>Nothing overflows. Classic scroll bars are drawn on the right and at the bottom; overlay ones, as in
+    Chrome on macOS, may not be drawn until the box is scrolled.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1"><div id=w class="pr-parent tall"></div></div></div>
+    <figcaption>The tinted child is 120px less the bar's width with classic scroll bars, and the whole 120px with
+    overlay ones. This browser: <code class=pr-computed data-of=w data-property=width></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

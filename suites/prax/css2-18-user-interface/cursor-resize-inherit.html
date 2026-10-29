@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cursor: resizing and inheritance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cur { height: 20px; padding: 0 6px; font-size: 12px; line-height: 20px; }
+  .cur:nth-child(odd) { background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.1 Cursors: the 'cursor' property</div>
+  <h1>Cursor: resizing and inheritance</h1>
+  <p class=pr-lede><code>cursor</code> takes <code>[ [&lt;uri&gt; ,]* [ auto | crosshair | default | pointer | ... ] ] |
+  inherit</code>. Initial <code>auto</code>, inherited, applies to all elements. Hover a row to see its cursor.</p>
+</header>
+
+<section>
+  <h2>Resize cursors</h2>
+  <p><q>Indicate that some edge is to be moved. For example, the 'se-resize' cursor is used when the movement starts
+  from the south-east corner of the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#cursor-props">CSS 2 §18.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=cur style="cursor: n-resize">n-resize</div>
+      <div class=cur style="cursor: e-resize">e-resize</div>
+      <div class=cur style="cursor: s-resize">s-resize</div>
+      <div class=cur style="cursor: w-resize">w-resize</div>
+    </div>
+    <figcaption>The edges: on hover, a cursor that moves the top, right, bottom and left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=cur style="cursor: ne-resize">ne-resize</div>
+      <div class=cur style="cursor: se-resize">se-resize</div>
+      <div class=cur style="cursor: sw-resize">sw-resize</div>
+      <div class=cur style="cursor: nw-resize">nw-resize</div>
+    </div>
+    <figcaption>The corners: on hover, a diagonal cursor for each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Initial value and inheritance</h2>
+  <p>Initial: <code>auto</code>. Inherited: yes. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#cursor-props">CSS 2 §18.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=cur>no declaration</div>
+    </div>
+    <figcaption>A row with no <code>cursor</code> declaration: the initial <code>auto</code>, on hover the UA's
+    choice, an I-beam over its text.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="cursor: help">
+      <div class=cur>inherited</div>
+      <div class=cur style="cursor: crosshair">its own</div>
+    </div>
+    <figcaption>The stage has <code>cursor: help</code>. The first row inherits <code>help</code>, a question mark on
+    hover; the second sets <code>crosshair</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

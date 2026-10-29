@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The unicode-bidi property: across paragraphs and split boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .he { font-family: "PR Arimo", "PR Noto Sans Hebrew"; }
+  .e { background: #f9cc9d; border: solid #c0392b; border-width: 0 6px 0 2px; border-right-color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The unicode-bidi property: across paragraphs and split boxes</h1>
+  <p class=pr-lede>An element's <code>unicode-bidi</code> adds bidi control codes at its start and end. Hebrew is
+  right-to-left; עברית reads "Hebrew", טקסט "text".</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-embedding-breaks">CSS Writing Modes 4 §2.4.4</a></div>
+  <h2>Closed and reopened at a paragraph break</h2>
+  <p><q>If an inline box is broken around a bidi paragraph boundary (e.g. if split by a block or forced paragraph
+  break), then the HL3 bidi control codes assigned to the end of the box are also added before the interruption and
+  the codes assigned to the start of the box are also added after it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-embedding-breaks">CSS Writing Modes 4 §2.4.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text he"><bdo dir=rtl>abc<br>def</bdo></div>
+    <figcaption><code>&lt;bdo dir=rtl&gt;</code> around a <code>&lt;br&gt;</code>: the override is reopened after it, and
+    both lines read backwards, "cba" and "fed", at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" style="white-space: pre"><span style="direction: rtl; unicode-bidi: bidi-override">abc
+def</span></div>
+    <figcaption>A span overriding right to left around a preserved newline: "cba" and "fed".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A box split by reordering</h2>
+  <p><q>in order to be able to flow inline boxes in a uniform direction (either entirely left-to-right or entirely
+  right-to-left), more inline boxes (including anonymous inline boxes) may have to be created, and some inline boxes
+  may have to be split up and reordered before flowing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span>
+  The orange <code>em</code> has a red left border and a blue right one.</p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text he">here is <em class=e>some עברית</em> טקסט.</div>
+    <figcaption><code>here is &lt;em&gt;some עברית&lt;/em&gt; טקסט.</code>: the Hebrew outside the em reorders
+    between its two parts, "some" with the red border and עברית with the blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

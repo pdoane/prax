@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas gradients</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.10 Fill and stroke styles</div>
+  <h1>Canvas gradients</h1>
+  <p class=pr-lede><q>Before the first stop, the color must be the color of the first stop. After the last stop, the
+  color must be the color of the last stop. When there are no stops, the gradient is transparent black.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#fill-and-stroke-styles">HTML §4.12.5.1.10</a></span>
+  Each gradient runs from blue to orange and fills the whole canvas; red marks its points.</p>
+</header>
+<section>
+  <h2>Linear</h2>
+  <p><q>If multiple stops are added at the same offset on a gradient, then they must be placed in the order
+  added</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=linear></canvas></div>
+    <figcaption>From (40, 20) to (160, 20): blue to x 40, then the blend, orange from 160.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=hard></canvas></div>
+    <figcaption>Stops: blue at 0 and 0.5, orange at 0.5 and 1: a sharp edge at x 100.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=40 data-draw=none></canvas></div>
+    <figcaption>No stops, then a start and end at one point: nothing painted.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Radial and conic</h2>
+  <p>Radial: <q>a cone, touched by the two circles</q>, <q>areas outside the cone untouched</q>. Conic: <q>conic-gradient(from
+  adjustedStartAnglerad at xpx ypx, angularColorStopList)</q>, <q>adjustedStartAngle is given by startAngle +
+  π/2</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=radial></canvas></div>
+    <figcaption>Circles of radius 10 at (40, 50) and 30 at (150, 50): a cone, blue in the small circle, orange
+    beyond the large one; nothing outside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=conic></canvas></div>
+    <figcaption>Conic from angle 0 round (100, 50): clockwise from blue at the 3 o'clock line, a sharp edge where it
+    meets orange.</figcaption>
+  </figure>
+</section>
+<script>
+  function mark(context, points) {
+    context.fillStyle = "#c0392b";
+    for (const [x, y] of points)
+      context.fillRect(x - 2, y - 2, 4, 4);
+  }
+  function blueToOrange(gradient) {
+    gradient.addColorStop(0, "#4f81bd");
+    gradient.addColorStop(1, "#d68a3c");
+    return gradient;
+  }
+  const draw = {
+    linear(context, canvas) {
+      context.fillStyle = blueToOrange(context.createLinearGradient(40, 20, 160, 20));
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      mark(context, [[40, 20], [160, 20]]);
+    },
+    hard(context, canvas) {
+      const gradient = context.createLinearGradient(0, 0, 200, 0);
+      gradient.addColorStop(0, "#4f81bd");
+      gradient.addColorStop(0.5, "#4f81bd");
+      gradient.addColorStop(0.5, "#d68a3c");
+      gradient.addColorStop(1, "#d68a3c");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    },
+    none(context, canvas) {
+      context.fillStyle = context.createLinearGradient(0, 0, 200, 0);
+      context.fillRect(0, 0, 100, canvas.height);
+      context.fillStyle = blueToOrange(context.createLinearGradient(150, 30, 150, 30));
+      context.fillRect(100, 0, 100, canvas.height);
+    },
+    radial(context, canvas) {
+      context.fillStyle = blueToOrange(context.createRadialGradient(40, 50, 10, 150, 50, 30));
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      mark(context, [[40, 50], [150, 50]]);
+    },
+    conic(context, canvas) {
+      context.fillStyle = blueToOrange(context.createConicGradient(0, 100, 50));
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      mark(context, [[100, 50]]);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

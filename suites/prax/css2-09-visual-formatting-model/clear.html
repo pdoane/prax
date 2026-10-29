@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .l { float: left; width: 60px; height: 60px; }
+  .r { float: right; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property</h1>
+  <p class=pr-lede><code>clear</code> takes <code>none | left | right | both</code>. Initial <code>none</code>, not
+  inherited, and it applies to block-level elements. In each figure, a left float 60px tall and a right float 40px
+  tall come before the orange block.</p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><q>left: Requires that the top border edge of the box be below the bottom outer edge of any left-floating boxes
+  that resulted from elements earlier in the source document.</q> <code>right</code> does the same for right floats,
+  and <code>both</code> for both. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2 §9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b>none</div></div>
+    <figcaption><code>none</code>: at the top, under both floats.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: left">left</div></div>
+    <figcaption><code>left</code>: below the left float, at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: right">right</div></div>
+    <figcaption><code>right</code>: below the right float, at 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit l">left</div><div class="pr-c pr-fit r">right</div><div class=pr-b style="clear: both">both</div></div>
+    <figcaption><code>both</code>: below both, at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Floats it does not consider</h2>
+  <p><q>The 'clear' property does not consider floats inside the element itself or in other block formatting
+  contexts.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2 §9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class=pr-b style="clear: both; height: 30px"><div class="pr-a pr-fit l">inside</div></div></div>
+    <figcaption>A float inside the cleared box: the box stays at the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

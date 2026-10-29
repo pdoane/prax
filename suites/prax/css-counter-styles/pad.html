@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pad descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style pad3 { system: extends decimal; pad: 3 "0"; }
+  @counter-style pad-paren { system: extends decimal; pad: 4 "0"; negative: "(" ")"; }
+  @counter-style pad-alpha { system: extends lower-alpha; pad: 3 "·"; }
+  .pr-stage { font-family: "PR Noto Sans Mono"; font-size: calc(50px / 3); line-height: 20px; }
+  .pr-stage ol { padding-left: 70px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.6 Zero-Padding and Constant-Width Representations: the pad descriptor</div>
+  <h1>The pad descriptor</h1>
+  <p class=pr-lede><q>The 'pad' descriptor allows an author to specify a "fixed-width" counter style, where
+  representations shorter than the pad value are padded with a particular &lt;symbol&gt;. Representations larger than
+  the specified pad value are constructed as normal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-pad">CSS Counter Styles 3 §3.6</a></span>
+  The stages are in <code>.pr-measure</code>'s monospace, every character 10px.</p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>The example</h2>
+  <p><q>This will cause, for example, 1 to be represented as "001", 20 to be represented as "020", 300 to be represented
+  as "300", 4000 to be represented as "4000", and -5 to be represented as "-05".</q></p>
+  <figure>
+    <div class="pr-stage"><ol style="list-style-type: pad3"><li value=1>1<li value=20>20<li value=300>300<li value=4000>4000<li value=-5>-5</ol></div>
+    <figcaption><code>pad: 3 "0"</code>: 001., 020., 300., 4000., -05.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The negative sign counts; any symbol pads</h2>
+  <p>If negative, <q>further reduce difference by the number of grapheme clusters in the counter style’s 'negative'
+  descriptor’s &lt;symbol&gt;(s).</q></p>
+  <figure>
+    <div class="pr-stage"><ol style="list-style-type: pad-paren"><li value=7>7<li value=-7>-7</ol></div>
+    <figcaption><code>pad: 4 "0"</code>, <code>negative: "(" ")"</code>: 0007., then (07). with the two parentheses
+    counted.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage"><ol style="list-style-type: pad-alpha"><li>1<li value=28>28</ol></div>
+    <figcaption><code>lower-alpha</code> padded to 3 with "·": ··a., ·ab.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

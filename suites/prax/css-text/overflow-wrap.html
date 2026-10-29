@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow-wrap: anywhere and break-word</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 60px; }
+  figure { margin-right: 20px; }
+  .ib { display: inline-block; width: min-content; }
+  .ar { width: 70px; font: 28px/48px "PR Noto Sans Arabic"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.4 Overflow Wrapping: the overflow-wrap (word-wrap) property</div>
+  <h1>overflow-wrap: anywhere and break-word</h1>
+  <p class=pr-lede><q>This property specifies whether the UA may break at otherwise disallowed points within a line to
+  prevent overflow, when an otherwise-unbreakable string is too long to fit within the line box. It only has an
+  effect when 'white-space' allows wrapping.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#overflow-wrap-property">CSS Text 4 §6.4</a></span>
+  Each stage is 60px wide, six 10px letters to a line.</p>
+</header>
+
+<section>
+  <h2>Breaking a word that does not fit</h2>
+  <p><code>anywhere</code>: <q>An otherwise unbreakable sequence of characters may be broken at an arbitrary point if
+  there are no otherwise-acceptable break points in the line.</q> <q>No hyphenation character is inserted at the
+  break point.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>an extraordinary</span></div>
+    <figcaption><code>normal</code>: "an", then "extraordinary" past the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="overflow-wrap: anywhere"><span class=t>an extraordinary</span></div>
+    <figcaption><code>anywhere</code>: "an" alone, as it has a break point after it; then "extrao", "rdinar",
+    "y".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="overflow-wrap: anywhere; white-space: nowrap"><span class=t>an extraordinary</span></div>
+    <figcaption><code>anywhere</code> under <code>nowrap</code>: no effect, one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Min-content sizes, and clusters</h2>
+  <p>Opportunities from <code>anywhere</code> <q>are considered when calculating min-content intrinsic sizes</q>; from
+  <code>break-word</code>, they <q>are not</q>. <q>grapheme clusters must stay together as one unit</q>; shaping is on <a href="line-break-shaping.html">its own page</a>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" style="overflow-wrap: anywhere"><span class=t>abcd</span></span></div>
+    <figcaption>A <code>min-content</code> box, <code>anywhere</code>: one letter wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" style="overflow-wrap: break-word"><span class=t>abcd</span></span></div>
+    <figcaption><code>break-word</code>: the whole word, 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 30px; overflow-wrap: anywhere"><span class=t>e&#x301;&#x323;e&#x301;&#x323;e&#x301;&#x323;e&#x301;&#x323;</span></div>
+    <figcaption>30px, letters with two marks: three to a line, the marks on their letters.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

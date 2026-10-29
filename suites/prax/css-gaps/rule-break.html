@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rule-break in a grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .see > div { opacity: 0.6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.2 Break behaviors at intersections</div>
+  <h1>rule-break in a grid</h1>
+  <p class=pr-lede><q>These properties set the behavior for breaking decorations within a given gap into segments at
+  visible "T" or "cross" intersections formed by items in the container.</q> <code>rule-break</code> <q>sets
+  'column-rule-break' and 'row-rule-break' to the same value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#break">CSS Gaps 1 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>none, normal and intersection</h2>
+  <p>Each grid has three rows of three, A spanning the first two columns; the items are translucent. Column rules are
+  red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules see" style="rule-break: none"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div><div class=pr-d>H</div></div></div>
+    <figcaption><code>none</code>: <q>a single continuous decoration is painted from one end of the gap to the
+    other</q>; the first red rule runs behind A. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules see"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div><div class=pr-d>H</div></div></div>
+    <figcaption><code>normal</code>: in a grid, <q>Gap decorations start and end at visible "T" intersections but
+    continue through visible "cross" intersections.</q> The first red rule starts under A, at the T; every other rule
+    runs end to end through the crosses. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules see" style="rule-break: intersection"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div><div class=pr-d>H</div></div></div>
+    <figcaption><code>intersection</code>: <q>Gap decorations start and end at visible "T" and "cross"
+    intersections.</q> Every rule stops at every junction, the one under A's T as well. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

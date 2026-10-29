@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The z-index property: stacking contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; }
+  .parent-box { left: 20px; top: 10px; width: 110px; height: 80px; }
+  .child { left: 30px; top: 30px; width: 90px; height: 30px; }
+  .sibling { left: 90px; top: 30px; width: 90px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.9.1 Specifying the stack level: the 'z-index' property</div>
+  <h1>The z-index property: stacking contexts</h1>
+  <p class=pr-lede><q>A stacking context is atomic from the point of view of its parent stacking context; boxes in other
+  stacking contexts may not come between any of its boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#z-index">CSS 2 §9.9.1</a></span></p>
+</header>
+
+<section>
+  <h2>A child's level counts only inside its context</h2>
+  <p><q>&lt;integer&gt;: This integer is the stack level of the generated box in the current stacking context. The box
+  also establishes a new stacking context.</q> In each figure, the dashed parent holds the blue child with
+  <code>z-index: 100</code>, and the orange sibling has <code>z-index: 2</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#z-index">CSS 2
+  §9.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-parent p parent-box" style="z-index: 1"><div class="pr-a pr-fit p child" style="z-index: 100">child: 100</div></div><div class="pr-b pr-fit p sibling" style="z-index: 2">sibling: 2</div></div>
+    <figcaption>The parent has <code>z-index: 1</code> and forms a stacking context: its child, however high, stays
+    below the sibling.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-parent p parent-box"><div class="pr-a pr-fit p child" style="z-index: 100">child: 100</div></div><div class="pr-b pr-fit p sibling" style="z-index: 2">sibling: 2</div></div>
+    <figcaption>The parent has <code>z-index: auto</code> and forms none: the child's 100 is in the stage's context,
+    and it is in front of the sibling.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

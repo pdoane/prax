@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The Web-compatible intrinsic sizing algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.1.2 Web-compatible Intrinsic Sizing Algorithm: Max-content Size and Min-content Single-line Size</div>
+  <h1>The Web-compatible intrinsic sizing algorithm</h1>
+  <p class=pr-lede><q>The following algorithm has been demonstrated to be Web-compatible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes-compat">CSS Flexible Box Layout 2 §9.10.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>max-content: the sum of max-content contributions</h2>
+  <p><q>For the max-content size of a flex container, take the sum of the max-content contributions of all the
+  non-collapsed flex items in the flex container.</q> Each dashed row has <code>width: max-content</code>, and items
+  "aaa" (30px) and "cccc" (40px).</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa</div><div class=i2>cccc</div></div></div>
+    <figcaption>70px: 30px and 40px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa</div><div class=i2>cccc</div><div class=i3 style="visibility: collapse">dddd</div></div></div>
+    <figcaption>A third item "dddd", <code>visibility: collapse</code>: not counted, so still 70px.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Count it, as if hidden: 110px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa</div><div class=i2>cccc</div><div class=i3 style="visibility: hidden">dddd</div></div></div>
+    <figcaption>The third item <code>visibility: hidden</code> instead: counted, 110px, with an empty 40px at the
+    end.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>min-content: the sum of min-content contributions</h2>
+  <p><q>For the min-content size of a single-line container, take the sum of the min-content contributions of all the
+  non-collapsed flex items in the flex container.</q> Rows of "aaa bb" and "cccc" with <code>width: min-content</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bb</div><div class=i2>cccc</div></div></div>
+    <figcaption>70px: "aaa" over "bb", 30px, and "cccc", 40px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bb</div><div class=i2>cccc</div><div class=i3 style="visibility: collapse">dddddd</div></div></div>
+    <figcaption>A collapsed third item of 60px: still 70px. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> 130px, an empty 60px at the end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

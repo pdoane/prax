@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>content-visibility: auto and relevance to the user</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  iframe.pr-view { width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4 Suppressing An Element’s Contents Entirely, auto</div>
+  <h1>content-visibility: auto and relevance to the user</h1>
+  <p class=pr-lede><q>If the element is not relevant to the user, it also skips its contents.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#content-visibility">CSS Containment 2 §4</a></span>
+  Each frame, 150 by 60, holds an orange box with 5px padding around a blue one, <code>content-visibility:
+  auto</code>, whose content is 40px tall.</p>
+</header>
+
+<section>
+  <h2>Close to the viewport, or far away</h2>
+  <p><q>The element is close to the viewport</q> when <q>its paint containment box's overflow clip edge intersects with
+  the viewport, or a user-agent defined margin around the viewport.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6;  } .cv div { height: 40px }</style><div class=p><div class=cv><div>contents</div></div></div>"></iframe></div>
+    <figcaption>In view: the blue box is 40 tall, so the orange one around it is 50.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6; position: relative; left: 5000px } .cv div { height: 40px }</style><div class=p><div class=cv><div>contents</div></div></div>"></iframe></div>
+    <figcaption>Shifted 5000px right, far away: it skips its contents, sized as if empty, and the orange box is 10 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6; position: relative; left: 180px } .cv div { height: 40px }</style><div class=p><div class=cv><div>contents</div></div></div>"></iframe></div>
+    <figcaption>Shifted 180px: past the edge, within the 50% margin the Note suggests, so 50 tall. The margin is the user agent's; Safari and Firefox skip it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Focus, selection, the top layer</h2>
+  <p>It is also relevant if <q>Either the element or its contents are focused</q>, <q>are selected</q>, or <q>are
+  placed in the top layer</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6; position: relative; left: 5000px } .cv div { height: 40px }</style><div class=p><div class=cv><div><input id=f size=4></div></div></div><script>f.focus({ preventScroll: true })</script>"></iframe></div>
+    <figcaption>Far away, holding the focused input: relevant, 50 tall. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> skip it: 10 tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6; position: relative; left: 5000px } .cv div { height: 40px }</style><div class=p><div class=cv><div id=s>selected</div></div></div><script>getSelection().selectAllChildren(s)</script>"></iframe></div>
+    <figcaption>Far away, its text selected: relevant, 50 tall. <span class=pr-flag>Safari</span> skips it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { overflow: hidden; background: #e7eaef } body { margin: 0; font: 13px/20px &quot;PR Arimo&quot; } .p { padding: 5px; background: #f6d7b4 } .cv { content-visibility: auto; height: auto; background: #b9cde6; position: relative; left: 5000px } .cv div { height: 40px }</style><div class=p><div class=cv><div><span popover id=pop>top layer</span></div></div></div><script>pop.showPopover()</script>"></iframe></div>
+    <figcaption>Far away, with a popover in it shown in the top layer, mid-frame: relevant, 50 tall. <span class=pr-flag>Safari</span> skips it and draws no popover. <span class=pr-flag>Firefox</span> draws the popover but skips the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

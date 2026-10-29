@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table structure: rows first, columns derived</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 4px; background: #e0e3e8; }
+  td { padding: 0; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.1 Table Structure</div>
+  <h1>Table structure: rows first, columns derived</h1>
+  <p class=pr-lede><q>The table model is said to be "row primary" since authors specify rows, not columns, explicitly
+  in the document language. Columns are derived once all the rows have been specified</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-structure">CSS Table 3 §2.1</a></span>
+  Tables are grey with <code>border-spacing: 4px</code>; text is <code>.pr-measure</code>, 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Each cell takes the next available column</h2>
+  <p><q>the cells of the following rows each belong to the next available column for that row (taking rowspan into
+  account)</q>, creating columns as needed.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>a</td></tr><tr><td>b</td><td>c</td><td>d</td></tr></table></div>
+    <figcaption>One cell in the first row, three in the second: three columns; the first row has a gap where its
+    missing cells would be.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td rowspan=2>A</td><td>B</td></tr><tr><td>C</td><td>D</td></tr></table></div>
+    <figcaption>A spans two rows, so in the second row C takes the second column, under B, and D makes a third.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td colspan=3>aaaaa</td></tr><tr><td>b</td><td>c</td></tr></table></div>
+    <figcaption>A first cell spanning three columns makes them; the second row fills two, and the third is a gap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Captions</h2>
+  <p><q>Table captions are positioned between the table margins and its borders.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="margin: 10px; border: 6px solid #4f81bd"><caption>cap</caption><tr><td>aaaa</td><td>b</td></tr></table></div>
+    <figcaption><code>margin: 10px</code> and a 6px blue border: the green caption is 10px in from the stage, inside
+    the margin, and above the border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

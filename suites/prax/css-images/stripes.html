@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stripes(): how thick each stripe is</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 10px; margin: 10px; border-style: solid; border-width: 40px 0 0; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 4 1D Image Values: the &lt;image-1D&gt; type and stripes() notation</div>
+  <h1>stripes(): how thick each stripe is</h1>
+  <p class=pr-lede>Stripes are <q>placed end-to-end on the paint line in the order given.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#stripes">CSS Images 4 §4</a></span>
+  Each box has a top border 40px wide whose <code>border-color</code> is the stripes, the first at the bottom, by the
+  light orange padding box.</p>
+</header>
+
+<section>
+  <h2>Lengths, percentages and fr</h2>
+  <p><q>A &lt;flex&gt; is evaluated as a fraction of the total width relative to the total sum of &lt;flex&gt; entries
+  in the function, after subtracting the thickness of any non-&lt;flex&gt; entries</q>; <q>If the sum of &lt;flex&gt;
+  values is less than 1fr, the result of the subtraction is multiplied by the sum's value</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-color: stripes(#d68a3c 1fr, #6aa36a 2fr, #4f81bd 10px)"></div></div>
+    <figcaption><code>1fr, 2fr, 10px</code>: from the bottom orange 10, green 20, blue 10.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All in the text color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-color: stripes(#d68a3c 25%, #4f81bd)"></div></div>
+    <figcaption><code>25%</code>, then 1fr: orange 10, blue 30. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All in the text color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-color: stripes(#d68a3c .25fr, #4f81bd .25fr)"></div></div>
+    <figcaption><code>.25fr, .25fr</code>: 40 × .5, so 20px shared: orange 10, blue 10, then 20 transparent. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All in the text color.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Too little, and too much</h2>
+  <p><q>If the sum of the stripes is smaller than the total width, the paint line is transparent black for its
+  remaining length</q>. <q>If the sum is larger, any stripes or portions beyond the total width are truncated.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-color: stripes(#d68a3c 10px, #4f81bd 10px)"></div></div>
+    <figcaption><code>10px, 10px</code>: orange 10, blue 10, then the guides through the outer 20. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All in the text color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="border-color: stripes(#d68a3c 30px, #4f81bd 30px, #6aa36a)"></div></div>
+    <figcaption><code>30px, 30px, 1fr</code>: orange 30, blue only 10, and no green. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All in the text color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fragmentainers of different widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.1 Breaking into Varying-size Fragmentainers</div>
+  <h1>Fragmentainers of different widths</h1>
+  <p class=pr-lede><q>Layout is performed per-fragmentainer, with each fragmentainer continuing progress from the breakpoint on the previous, but recalculating sizes and positions using its own size as if the entire element were fragmented across fragmentainers of this size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#varying-size-boxes">CSS Fragmentation 4 §5.1</a></span> Each frame’s first page has 60px side margins (<code>@page :first</code>): its content area is 120px wide, the others’ 220px.</p>
+</header>
+
+<section>
+  <h2>Widths per page</h2>
+  <p><q>Boxes (including tables) fulfilling layout constraints at their stretch-fit or percentage-based size may change inline size across pages.</q></p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } @page :first { margin: 10px 60px } .k { background: #b9cde6 }</style><body class=pr-measure><div class=k>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www xxx yyy zzz aaa bbb ccc ddd eee</div>"></iframe>
+    <figcaption><code>width: auto</code>: 120px wide on the first page, three words to a line; 220px, five words, on the second. <span class=pr-flag>Safari</span> Every page has the first page’s margins: 120px wide throughout.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } @page :first { margin: 10px 60px } .k { background: #b9cde6 }</style><body class=pr-measure><div class=k style='width: 50%'>aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu vvv www xxx yyy zzz aaa bbb ccc ddd eee</div>"></iframe>
+    <figcaption><code>width: 50%</code>: 60px on the first page, one word to a line; 110px, three words, on the second. <span class=pr-flag>Safari</span> 60px throughout, as above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Arcs: omitted, or straight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.5.1 Out-of-range elliptical arc parameters</div>
+  <h1>Arcs: omitted, or straight</h1>
+  <p class=pr-lede><q>Arbitrary numerical values are permitted for all elliptical arc parameters (other than the
+  boolean flags)</q>, with adjustments <q>for invalid values</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#ArcOutOfRangeParameters">SVG 2 §9.5.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide, and not filled.</p>
+</header>
+
+<section>
+  <h2>No arc, or a straight line</h2>
+  <p><q>If the endpoint (<b>x</b>, <b>y</b>) of the segment is identical to the current point (e.g., the endpoint of
+  the previous segment), then this is equivalent to omitting the elliptical arc segment entirely.</q> <q>If either
+  <b>rx</b> or <b>ry</b> is 0, then this arc is treated as a straight line segment (a "lineto") joining the
+  endpoints.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 80 30 A 20 20 0 0 1 80 30" fill="none" stroke="#2c5a8f" stroke-width="20" stroke-linecap="round" /></svg></div>
+    <figcaption><code>M 80 30 A 20 20 0 0 1 80 30</code>, 20 wide, round caps: the arc omitted leaves a moveto
+    alone, which a Note says is not stroked <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeProperties">§13.5</a></span>:
+    nothing. Chrome, Safari and Firefox draw a dot 20 across, as for a zero-length lineto, which
+    <a href="https://lists.w3.org/Archives/Public/www-svg/2011Nov/0128.html">www-svg in 2011</a> found this
+    sentence inconsistent with. Not flagged: nothing rests on the Note.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 A 0 30 0 0 1 140 10" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 A 0 30 0 0 1 140 10</code>: a straight line from 20, 50 to 140, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 A 60 0 0 1 1 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 30 A 60 0 0 1 1 140 30</code>, the large arc: straight along y 30 all the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

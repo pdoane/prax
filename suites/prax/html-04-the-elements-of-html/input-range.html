@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Range controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 110px; font-size: 11px; vertical-align: middle; }
+  .pad input[type=range] { width: 160px; margin: 0; vertical-align: middle; }
+  .vertical { display: inline-block; margin: 10px 30px 10px 20px; text-align: center; font-size: 11px; }
+  .vertical input { writing-mode: vertical-lr; width: 20px; height: 100px; margin: 0 0 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.13 Range state (type=range)</div>
+  <h1>Range controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing a
+  number, but with the caveat that the exact value is not important</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#range-state-(type=range)">HTML §4.10.5.1.13</a></span></p>
+</header>
+
+<section>
+  <h2>Always a value in range, on a step</h2>
+  <p><q>The default value is the minimum plus half the difference between the minimum and the maximum</q>; on underflow
+  the value is the minimum, on overflow the maximum, and on a step mismatch it is rounded to the nearest step, <q>the one
+  nearest to positive infinity</q> of two. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#range-state-(type=range)">§4.10.5.1.13</a></span>
+  Each slider runs 0 to 100 unless it says otherwise.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><code>no value</code><input type=range></div>
+        <div><code>min=40, no value</code><input type=range min=40></div>
+        <div><code>value=70</code><input type=range value=70></div>
+        <div><code>value=-20</code><input type=range value=-20></div>
+        <div><code>value=150</code><input type=range value=150></div>
+        <div><code>value=50 step=20</code><input type=range value=50 step=20></div>
+      </div>
+    </div>
+    <figcaption>Thumbs in the middle: 50, then 70, the middle of 40 to 100. At 70 of 0 to 100; at the left end; at the
+    right end. The last, 50 between steps of 20, is rounded up to 60, the standard's own example: a little left of the
+    70 above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

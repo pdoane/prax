@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Purely physical values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; width: 100px; height: 100px; }
+  .v { writing-mode: vertical-rl; direction: rtl; }
+  .bg { background: #e7eaef url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") no-repeat left top; }
+  .rx { background: #e7eaef url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='16' height='16' fill='%23d68a3c'/></svg>") repeat-x left top; }
+  .sh { width: 40px; height: 40px; margin: 20px; background: #b9cde6; box-shadow: 8px 4px 0 #8e44ad; }
+  .clip { position: absolute; width: 60px; height: 60px; background: #6aa36a; clip: rect(0, 30px, 30px, 0); }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.6 Purely Physical Mappings</div>
+  <h1>Purely physical values</h1>
+  <p class=pr-lede><q>The following values are purely physical in their definitions and do not respond to changes in
+  writing mode</q>: <code>rect()</code> in <code>clip</code>, the background properties, the border-image properties,
+  and <q>the offsets of the box-shadow and text-shadow properties</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#physical-only">CSS Writing Modes 4 §7.6</a></span></p>
+</header>
+
+<section>
+  <h2>In a vertical-rl, rtl box</h2>
+  <p>Each stage is <code>writing-mode: vertical-rl; direction: rtl</code>, whose start corner is the bottom right;
+  each value lands where it would in <code>horizontal-tb</code>.</p>
+  <figure class=s>
+    <div class="pr-stage v bg"></div>
+    <figcaption><code>background-position: left top</code>: the blue square at the top left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v rx"></div>
+    <figcaption><code>repeat-x</code>: a row of orange squares along the top.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v"><div class=sh></div></div>
+    <figcaption><code>box-shadow: 8px 4px</code>: the purple shadow 8px right and 4px down.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="position: relative"><div class=clip style="right: 10px; bottom: 10px"></div></div>
+    <figcaption><code>clip: rect(0, 30px, 30px, 0)</code>: only the green box's top left quarter shows.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="text-shadow: 4px 4px 0 #d68a3c">abc</div>
+    <figcaption><code>text-shadow: 4px 4px</code> on turned text: the shadow right of and below each glyph.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="border: 10px solid; border-image: linear-gradient(to right, #4f81bd, #c0392b) 10"></div>
+    <figcaption><code>border-image</code> of a gradient to the right: blue at the left, red at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

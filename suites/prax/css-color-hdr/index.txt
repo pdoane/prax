@@ -1,0 +1,39 @@
+00-supports-1.html
+# css-color-hdr-1/#intro 1 Introduction: no page; it says what the module covers
+# css-color-hdr-1/#values 1.1 Value Definitions: no page; it defines terms
+# css-color-hdr-1/#terminology 2 HDR Terminology: no page; it introduces the subsections
+# css-color-hdr-1/#defining-dynamic-range 2.1 Defining Dynamic Range: no page; it defines peak luminance and dynamic range, which 3 and 8 show
+# css-color-hdr-1/#introducing-headroom 2.2 Introducing Headroom: no page; it defines headroom, which 3 and 5 show
+# css-color-hdr-1/#controlling-dynamic-range 3 Controlling Dynamic Range: no page; it introduces the subsections
+css-color-hdr-1/#the-dynamic-range-limit-property 3.1 The dynamic-range-limit property
+    dynamic-range-limit.html
+    dynamic-range-limit-inherited.html
+css-color-hdr-1/#dynamic-range-limit-mix 3.2 Mixing Dynamic Range Limits: the dynamic-range-limit-mix() function
+    dynamic-range-limit-mix.html
+# css-color-hdr-1/#computing-dynamic-range-limit 3.3 Computed Value for dynamic-range-limit: no page; it gives computed values, whose effect 3.2 shows
+# css-color-hdr-1/#color-syntax 4 The <color> syntax: no page; it is the grammar of the functions that 5 and 6 show
+css-color-hdr-1/#hdr-color-function 5 HDR colors parameterized by headroom: the hdr-color() function
+    color-hdr.html
+css-color-hdr-1/#headroom-interpolation 5.1 Interpolating colors based on headroom
+    color-hdr-interpolation.html
+# css-color-hdr-1/#DI-HDR 6 Device-Independent HDR Colors: no page; it introduces the subsections
+# css-color-hdr-1/#ictcp-intro 6.1 Introducing ICtCp: no page; it is informative background to 6.3
+# css-color-hdr-1/#jaz-intro 6.2 Introducing Jzazbz and JzCzhz: no page; it is informative background to 6.4 and 6.5
+css-color-hdr-1/#ICtCp 6.3 ICtCp
+    ictcp.html
+css-color-hdr-1/#Jzazbz 6.4 Jzazbz
+    jzazbz.html
+css-color-hdr-1/#JzCzhz 6.5 JzCzhz
+    jzczhz.html
+# css-color-hdr-1/#Jzazbz-to-JzCzHz 6.5.1 Converting Jzazbz colors to JzCzhz colors: no page; the conversion is how jzczhz() draws, which 6.5 shows
+# css-color-hdr-1/#JzCzHz-to-Jzazbz 6.5.2 Converting JzCzhz colors to Jzazbz colors: no page; the conversion is how jzczhz() draws, which 6.5 shows
+# css-color-hdr-1/#color-function 7 Specifying Predefined and Custom Color Spaces: the color() Function: no page; it is the grammar of the spaces that 8 shows
+# css-color-hdr-1/#predefined-HDR 8 Predefined color spaces for HDR:: no page; it introduces the subsections
+css-color-hdr-1/#valdef-color-rec2100-pq 8.1 rec2100-pq
+    rec2100-pq.html
+css-color-hdr-1/#valdef-color-rec2100-hlg 8.2 rec2100-hlg
+    rec2100-hlg.html
+css-color-hdr-1/#valdef-color-rec2100-linear 8.3 rec2100-linear
+    rec2100-linear.html
+css-color-hdr-1/#Compositing-SDR-HDR 9 Compositing SDR and HDR content
+    compositing.html

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative border shorthands</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .b { height: 40px; width: 80px; border: 2px solid #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.5.4 Flow-Relative Border Shorthands</div>
+  <h1>Flow-relative border shorthands</h1>
+  <p class=pr-lede><q>These properties correspond to the 'border-top', 'border-bottom', 'border-left', and 'border-right' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#border-shorthands">CSS Logical Properties and Values 1 §4.5.4</a></span> Each box is 80 by 40px with a 2px blue border, in the stage's writing mode.</p>
+</header>
+
+<section>
+  <h2>border-block-start, border-inline-end</h2>
+  <p>Each box has <code>border-block-start: 10px dotted</code> orange and <code>border-inline-end: 20px double</code> purple.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-start: 10px dotted #d68a3c; border-inline-end: 20px double #8e44ad"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: dotted on top, double at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-start: 10px dotted #d68a3c; border-inline-end: 20px double #8e44ad"></div></div>
+    <figcaption><code>rtl</code>: dotted on top, double at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-start: 10px dotted #d68a3c; border-inline-end: 20px double #8e44ad"></div></div>
+    <figcaption><code>vertical-rl</code>: dotted at the right, double below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-block and border-inline</h2>
+  <p>They set <q>both to the same style.</q> Each box has <code>border-block: 8px dashed</code> orange.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block: 8px dashed #d68a3c"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: dashed on top and below.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block: 8px dashed #d68a3c"></div></div>
+    <figcaption><code>rtl</code>: the same.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block: 8px dashed #d68a3c"></div></div>
+    <figcaption><code>vertical-rl</code>: dashed at the right and left.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

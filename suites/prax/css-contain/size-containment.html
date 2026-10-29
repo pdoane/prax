@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment: sized as if empty</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 60px; }
+  figure figcaption { max-width: 152px; }
+  .k { contain: size; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .bf::before { content: "before"; }
+  .li { display: list-item; list-style: decimal inside; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment</div>
+  <h1>Size containment: sized as if empty</h1>
+  <p class=pr-lede><q>The used 'width' and 'height' of the containment box are determined as if performing a normal
+  layout of the box, except that it is treated as having no content</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  Each blue box has <code>contain: size</code>; text is 10px a letter. What it sizes to in place of its content,
+  <code>contain-intrinsic-size</code>, is on <a href="../css-sizing/contain-intrinsic-size.html">CSS Box Sizing 4's
+  page</a>.</p>
+</header>
+
+<section>
+  <h2>No content</h2>
+  <p><q>The intrinsic sizes of the size containment box are determined as if the element had no content</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=k>some text</div></div>
+    <figcaption>A block: 150 wide, as without containment, but 0 tall; its text is drawn below its top
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl">some text</div></div>
+    <figcaption>A float: 0 by 0, a dot at the corner; its text wraps at that width, a word to a line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl" style="padding: 10px; border: 2px solid #2c5a8f">text</div></div>
+    <figcaption>A float with 10px padding and a 2px border, which still count: 24 by 24.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not even pseudo-elements</h2>
+  <p><q>not even through pseudo-elements such as ::before, ::after, or ::marker.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl bf"></div></div>
+    <figcaption>A float whose only content is a <code>::before</code> of "before": 0 by 0, the word
+    drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl li">item</div></div>
+    <figcaption>A floated list item, its marker inside, <code>nowrap</code>: 0 by 0, "1. item" drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

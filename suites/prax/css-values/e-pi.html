@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>e and pi</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { height: 80px; }
+  .r div { width: 60px; height: 20px; margin: 30px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.7.1 Numeric Constants: e, pi</div>
+  <h1>e and pi</h1>
+  <p class=pr-lede>e is <q>the base of the natural logarithm, approximately equal to 2.7182818284590452354</q> and pi
+  <q>the ratio of a circle's circumference to its diameter, approximately equal to 3.1415926535897932.</q> <q>Both of
+  these keywords are &lt;number&gt;s</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-constants">CSS Values and Units 4 §10.7.1</a></span></p>
+</header>
+
+<section>
+  <h2>As numbers</h2>
+  <p>Each bar's <code>width</code> is under it.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(pi * 50px)">A</div></div>
+    <figcaption><code>pi * 50px</code>: about 157px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(e * 50px)">A</div></div>
+    <figcaption><code>e * 50px</code>: about 136px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(min(pi, 5, e) * 30px)">A</div></div>
+    <figcaption><code>min(pi, 5, e) * 30px</code>: e, about 82px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc((pow(e, pi) - pi) * 10px)">A</div></div>
+    <figcaption><code>(pow(e, pi) - pi) * 10px</code>: about 200px, the stage's width.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In an angle</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: calc(pi * 1rad / 4)">A</div></div>
+    <figcaption><code>rotate: calc(pi * 1rad / 4)</code>: 45deg.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

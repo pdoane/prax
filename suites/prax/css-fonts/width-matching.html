@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Matching width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: Widths; src: url(../../../third_party/fonts/Tinos.ttf); font-stretch: 75%; }
+  @font-face { font-family: Widths; src: url(../../../third_party/fonts/Cousine.ttf); font-stretch: 125%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 4.1</div>
+  <h1>Matching width</h1>
+  <p class=pr-lede><q>If the desired width value is less than or equal to 100%, width values below the desired width
+  value are checked in descending order followed by width values above the desired width value in ascending
+  order</q>; otherwise above first, then below. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>A narrower face and a wider one</h2>
+  <p>Family "Widths" has Tinos (serif) declared 75% and Cousine (monospace) declared 125%.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: 87.5%">Handgloves</div>
+    <figcaption>87.5%: narrower first: Tinos.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: 100%">Handgloves</div>
+    <figcaption>100%: still narrower first, though 125% is as near: Tinos.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: 112.5%">Handgloves</div>
+    <figcaption>112.5%: wider first: Cousine.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Widths; font-width: 150%">Handgloves</div>
+    <figcaption>150%: nothing wider, so the widest below: Cousine.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

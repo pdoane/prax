@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text and search fields</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.2 Text (type=text) state and Search state (type=search)</div>
+  <h1>Text and search fields</h1>
+  <p class=pr-lede><q>The input element represents a one line plain text edit control for the element's value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#text-(type=text)-state-and-search-state-(type=search)">HTML §4.10.5.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>One line</h2>
+  <p><q>User agents must not allow users to insert U+000A LINE FEED (LF) or U+000D CARRIAGE RETURN (CR) characters into
+  the element's value.</q> <q>The value sanitization algorithm is as follows: Strip newlines from the value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#text-(type=text)-state-and-search-state-(type=search)">§4.10.5.1.2</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input value="one&#10;two&#13;&#10;three" size=16></div>
+        <div>alpha<br>beta</div>
+        <div><input type=search placeholder="paste here" size=16></div>
+      </div>
+    </div>
+    <figcaption>The value attribute's three lines show as "onetwothree". Copy "alpha" and "beta" and paste them into
+    the search field: one line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=text value="text" size=16></div>
+        <div><input type=search value="search" size=16></div>
+      </div>
+    </div>
+    <figcaption>A search field <q>might result in an appearance consistent with the platform's search controls</q>: in
+    Safari, rounded, with a magnifier and a button that clears it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The user's writing direction</h2>
+  <p><q>If the element is mutable, the user agent should allow the user to change the writing direction of the
+  element</q>, then set <code>dir</code> and fire <code>input</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#text-(type=text)-state-and-search-state-(type=search)">§4.10.5.1.2</a></span>
+  <code>dirname</code> submits the direction. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#submitting-element-directionality:-the-dirname-attribute">§4.10.19.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=dir-result>
+        <div><input name=t dirname=t.dir value="some text" size=16> <input type=submit value=Submit></div>
+      </form>
+      <ol class=pr-log data-log="input" data-fields="target" data-lines=1></ol>
+      <iframe class=pr-result name=dir-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Submit: <code>t.dir=ltr</code>. Right-click the field, choose Writing Direction, Right to Left (in
+    Firefox, Ctrl+Shift+X): the text moves right, and <code>input</code>. Submit: <code>t.dir=rtl</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

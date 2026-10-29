@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The view element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 160px; height: 60px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.3.3 Predefined views: the ‘view’ element</div>
+  <h1>The view element</h1>
+  <p class=pr-lede><q>If the SVG fragment identifier addresses a ‘view’ element within an SVG document (e.g.,
+  MyDrawing.svg#MyView) then the root ‘svg’ element is displayed in the SVG viewport. Any view specification attributes
+  included on the given ‘view’ element override the corresponding view specification attributes on the root ‘svg’
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#SVGFragmentIdentifiers">SVG 2 §16.3.1</a></span>
+  Each stage is 160 by 60. <code>support/quadrants.svg</code> is blue, orange, green and purple quadrants from the
+  top left, 80 by 30 each; its <code>view</code> elements are <code>#right</code>, <code>viewBox="80 0 80 60"</code>,
+  and <code>#corner</code>, <code>viewBox="0 0 80 30" preserveAspectRatio="none"</code>.</p>
+</header>
+
+<section>
+  <h2>Its attributes override the root's, and it draws nothing</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#right" alt=""></div>
+    <figcaption><code>#right</code>: orange over purple, centered, from x 40 to 120, the left half's edge before
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#corner" alt=""></div>
+    <figcaption><code>#corner</code>: the blue quadrant stretched to fill the stage, its dot an ellipse.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><view viewBox="0 0 10 10" /><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>A <code>view</code> inline, not addressed: no effect, and nothing of its own; the rect as it is.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

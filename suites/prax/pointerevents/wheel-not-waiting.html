@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Not waiting for a wheel event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 12.3.1 cancelability of wheel events</div>
+  <h1>Not waiting for a wheel event</h1>
+  <p class=pr-lede><q>Calling preventDefault on a wheel event can prevent or otherwise interrupt scrolling.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#cancelability-of-wheel-events-0">Pointer Events §12.3.1</a></span></p>
+</header>
+<section>
+  <h2>Not waiting for each event</h2>
+  <p><q>For maximum scroll performance, a user agent may not wait for each wheel event associated with the scroll to
+  be processed to see if it will be canceled. In such cases the user agent should generate wheel events whose
+  cancelable property is false</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#cancelability-of-wheel-events-0">§12.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=blocking><p>A listener that could cancel, and does not.</p></div>
+      <ol class=pr-log data-log="wheel" data-fields="cancelable" data-on="#blocking" data-lines=3></ol>
+    </div>
+    <figcaption>The box's listener is not passive, and cancels nothing. Turn the wheel over it in one stroke: the
+    first event is <code>cancelable</code>; the rest of the stroke may not be, as the scroll goes on without waiting
+    for them.</figcaption>
+  </figure>
+</section>
+<script>
+  // A listener that is not passive and cancels nothing.
+  document.getElementById("blocking").addEventListener("wheel", () => {}, {passive: false});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

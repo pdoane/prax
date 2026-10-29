@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background of ::first-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .lines { width: 140px; margin: 10px; }
+  .lines::first-line { background: #f9cc9d; }
+  .grad::first-line { background: linear-gradient(to right, #b9cde6, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 4.3 The ::first-line Pseudo-element‘s Background</div>
+  <h1>The background of ::first-line</h1>
+  <p class=pr-lede><q>The ::first-line pseudo-element is like an inline-level element for the purposes of the background
+  (see section 5.12.1 of [CSS2]). That means, e.g., that in a left-justified first line, the background does not
+  necessarily extend all the way to the right edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#first-line-background">CSS Backgrounds 4 §4.3</a></span>
+  Each block is 140px wide and dashed, and holds "aaa bbb ccc ddd", whose first line is "aaa bbb ccc".</p>
+</header>
+
+<section>
+  <h2>Only as wide as the line's text</h2>
+  <figure>
+    <div class=pr-stage><p class="lines pr-ghost pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption>Left-aligned: orange under "aaa bbb ccc", 110px, and not the last 30px of the line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="lines pr-ghost pr-measure" style="text-align: right">aaa bbb ccc ddd</p></div>
+    <figcaption>Right-aligned: the orange starts 30px in and ends at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class="lines grad pr-ghost pr-measure">aaa bbb ccc ddd</p></div>
+    <figcaption>A gradient, blue to orange, spans the 110px of text, as on an inline box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

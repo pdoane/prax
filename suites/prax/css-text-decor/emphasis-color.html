@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-emphasis-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/48px "PR Noto Sans JP"; text-emphasis-style: circle; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.2 Emphasis Mark Color: the text-emphasis-color property</div>
+  <h1>text-emphasis-color</h1>
+  <p class=pr-lede><q>This property specifies the foreground color of the emphasis marks.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-color-property">CSS Text Decoration 4 §3.2</a></span>
+  Every stage marks its text with circles.</p>
+</header>
+
+<section>
+  <h2>A color, or the text's</h2>
+  <p><q>This means 'text-emphasis-color' by default matches the text 'color' even as 'color' changes across
+  elements.</q> Unlike a line decoration's color, it is inherited.</p>
+  <figure>
+    <div class="pr-stage j" lang=ja style="text-emphasis-color: #c0392b">強調<span style="color: #2c5a8f">強調</span></div>
+    <figcaption><code>#c0392b</code>: red circles over all four characters, the blue ones too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" lang=ja>強調<span style="color: #2c5a8f">強調</span><span style="color: #3f7a3f">強調</span></div>
+    <figcaption><code>currentcolor</code>: black circles over the black text, blue over the blue, green over the
+    green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

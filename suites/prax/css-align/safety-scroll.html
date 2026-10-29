@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default safety: scroll containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .sc { display: grid; grid-template-columns: 300px; height: 40px; overflow-x: auto; overflow-y: hidden; }
+  .sc > div { display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.4.1.1 Content Distribution for Scroll Containers</div>
+  <h1>Default safety: scroll containers</h1>
+  <p class=pr-lede><q>In a scrollable axis of a scroll container, the default overflow alignment behavior for content
+  distribution is unsafe. Non-normal values of the content-distribution properties instead alter the scrollable
+  overflow area in order to allow access to the overflowing content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#auto-safety-scroll">CSS Box Alignment 3 §4.4.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Centered, and scrollable to its start</h2>
+  <p>Each stage is a grid that scrolls across, 200px wide, with one column 300px wide; the column holds a row from
+  A at its start to B at its end.</p>
+  <figure>
+    <div class="pr-stage sc"><div><span class=pr-a>A</span><span class=pr-b>B</span></div></div>
+    <figcaption><code>normal</code>: the column from 0; A in view, B scrolled out past the right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" id=c style="justify-content: center"><div><span class=pr-a>A</span><span class=pr-b>B</span></div></div>
+    <figcaption><code>center</code>, so <code>unsafe center</code>: the column from -50px; A and B both cut off.
+    It still scrolls back to A: its scroll width is 300, here <code class=pr-computed data-of=c data-dom=scrollWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> 250: A out of reach.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" id=s style="justify-content: safe center"><div><span class=pr-a>A</span><span class=pr-b>B</span></div></div>
+    <figcaption><code>safe center</code>: as <code>start</code>: A in view, B past the right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" id=e style="justify-content: end"><div><span class=pr-a>A</span><span class=pr-b>B</span></div></div>
+    <figcaption><code>end</code>: B in view at the right and A 100px past the left; scroll width 300, here <code class=pr-computed data-of=e data-dom=scrollWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> 200: A out of reach.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

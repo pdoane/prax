@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100">
+  <!-- The image of an image map: a rectangle, a circle and a triangle on grey, where the areas lie. -->
+  <rect width="200" height="100" fill="#f4f5f7"/>
+  <rect x="10" y="10" width="50" height="80" fill="#4f81bd"/>
+  <circle cx="100" cy="50" r="30" fill="#d68a3c"/>
+  <polygon points="150,90 190,90 170,10" fill="#6aa36a"/>
+</svg>

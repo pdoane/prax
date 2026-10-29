@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: padding, spacing and radii ignored</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #e0e3e8; border: 4px solid #2c5a8f; }
+  td { padding: 0; width: 40px; height: 20px; background: #b9cde6; border: 2px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.6.2 Overrides applying in collapsed-borders mode</div>
+  <h1>Collapsed borders: padding, spacing and radii ignored</h1>
+  <p class=pr-lede><q>When a table is laid out in collapsed-borders mode, the following rules apply</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#collapsed-style-overrides">CSS Table 3 §3.6.2</a></span>
+  Each table is <code>border-collapse: collapse</code> with a 4px blue border; two cells, 40 by 20 inside 2px orange
+  borders.</p>
+</header>
+
+<section>
+  <h2>The table's padding and spacing</h2>
+  <p><q>The 'padding' of the table-root is ignored (as if it was set to 0px).</q> <q>The 'border-spacing' of the
+  table-root is ignored (as if it was set to 0px).</q></p>
+  <figure>
+    <div class=pr-stage><table style="padding: 20px"><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>padding: 20px</code>: the cells' borders meet the table's; no grey between.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 20px"><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>border-spacing: 20px</code>: no space between or around the cells.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rounded corners</h2>
+  <p><q>The 'border-radius' of both table-root and table-non-root boxes is ignored (as if it was set to 0px).</q></p>
+  <figure>
+    <div class=pr-stage><table style="border-radius: 12px"><tr><td style="border-radius: 12px"></td><td style="border-radius: 12px"></td></tr></table></div>
+    <figcaption><code>border-radius: 12px</code> on the table and the cells: every corner square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

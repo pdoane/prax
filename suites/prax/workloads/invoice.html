@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- Invoice with line items and totals. Invoice layout: flex header, address columns, item table, aligned totals and a rotated stamp. -->
+<title>Invoice</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.sheet { background:#fff; border:1px solid #d3d8de; border-radius:4px; padding:20px 22px; color:#22282f; font-size:11.5px; line-height:1.5 }
+.top { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #22303f; padding-bottom:10px; margin-bottom:12px }
+.logo { display:flex; align-items:center; gap:8px }
+.mark { width:34px; height:34px; background:#22303f; color:#fff; font-weight:bold; font-size:16px; display:flex; align-items:center; justify-content:center; letter-spacing:-.03em }
+.logo .nm { font-size:15px; font-weight:bold; letter-spacing:-.01em }
+.logo .tl { font-size:9.5px; color:#8a93a0; text-transform:uppercase; letter-spacing:.1em }
+.meta { text-align:right }
+.meta .big { font-size:20px; font-weight:bold; letter-spacing:.04em; color:#22303f }
+.meta dl { display:grid; grid-template-columns:auto auto; gap:1px 10px; justify-content:end; font-size:10.5px; margin-top:4px }
+.meta dt { color:#8a93a0 }
+.meta dd { font-variant-numeric:tabular-nums }
+.parties { display:flex; gap:24px; margin-bottom:14px }
+.parties section { flex:1 }
+.parties h3 { font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:#8a93a0; margin-bottom:3px }
+.parties b { display:block; font-size:12px }
+.parties p { color:#4a5561 }
+table { border-collapse:collapse; width:100%; font-size:11px; margin-bottom:12px }
+th { text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:#fff; background:#22303f; padding:5px 7px; font-weight:bold }
+th.n, td.n { text-align:right; font-variant-numeric:tabular-nums }
+td { padding:6px 7px; border-bottom:1px solid #e6e9ed; vertical-align:top }
+td .d { display:block; font-size:10px; color:#8a93a0 }
+.sums { display:flex; justify-content:flex-end; margin-bottom:14px }
+.sums div { width:240px }
+.sums .r { display:flex; justify-content:space-between; padding:3px 0; font-size:11px }
+.sums .r.due { border-top:2px solid #22303f; margin-top:4px; padding-top:6px; font-size:14px; font-weight:bold }
+.sums .r .lab { color:#5d6673 }
+.notes { display:flex; gap:20px; border-top:1px solid #e6e9ed; padding-top:9px; font-size:10.5px; color:#4a5561 }
+.notes section { flex:1 }
+.notes h3 { font-size:9px; text-transform:uppercase; letter-spacing:.1em; color:#8a93a0; margin-bottom:2px }
+.stamp { border:2px solid #c0392b; color:#c0392b; font-weight:bold; font-size:11px; letter-spacing:.1em; padding:3px 9px; align-self:center; transform:rotate(-6deg) }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="top">
+    <div class="logo">
+      <div class="mark">MV</div>
+      <div>
+        <div class="nm">Moulin de Vierset</div>
+        <div class="tl">Stone milling since 1740</div>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="big">INVOICE</div>
+      <dl>
+        <dt>Number</dt><dd>2026-0418</dd>
+        <dt>Issued</dt><dd>14 March 2026</dd>
+        <dt>Due</dt><dd>13 April 2026</dd>
+        <dt>Terms</dt><dd>Net 30</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="parties">
+    <section>
+      <h3>From</h3>
+      <b>Moulin de Vierset SPRL</b>
+      <p>Rue du Moulin 3<br />4577 Modave, Belgium<br />
+      VAT BE 0644.812.104<br />compta@moulin-vierset.example</p>
+    </section>
+    <section>
+      <h3>Billed to</h3>
+      <b>Boulangerie Halvorsen</b>
+      <p>Attn. Ines Halvorsen<br />Quai de la Boverie 88<br />
+      4020 Li&#232;ge, Belgium<br />VAT BE 0712.554.913</p>
+    </section>
+    <section>
+      <h3>Delivered to</h3>
+      <b>Halvorsen, Outremeuse</b>
+      <p>Rue Puits-en-Sock 24<br />4020 Li&#232;ge, Belgium<br />
+      Deliveries before 07:00<br />Order 1189-B</p>
+    </section>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Description</th><th class="n">Qty</th><th class="n">Unit</th><th class="n">VAT</th><th class="n">Amount</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Stone-ground wheat, T65<span class="d">25 kg linen sacks, batch 26-041</span></td><td class="n">40</td><td class="n">&#8364;24.80</td><td class="n">6%</td><td class="n">&#8364;992.00</td></tr>
+      <tr><td>Rye flour, dark<span class="d">25 kg linen sacks, batch 26-039</span></td><td class="n">12</td><td class="n">&#8364;27.60</td><td class="n">6%</td><td class="n">&#8364;331.20</td></tr>
+      <tr><td>Spelt, whole grain<span class="d">25 kg paper sacks</span></td><td class="n">6</td><td class="n">&#8364;41.00</td><td class="n">6%</td><td class="n">&#8364;246.00</td></tr>
+      <tr><td>Sack deposit<span class="d">52 linen sacks, refunded on return</span></td><td class="n">52</td><td class="n">&#8364;3.00</td><td class="n">0%</td><td class="n">&#8364;156.00</td></tr>
+      <tr><td>Delivery, Li&#232;ge round<span class="d">two drops, 11 and 13 March</span></td><td class="n">2</td><td class="n">&#8364;18.00</td><td class="n">21%</td><td class="n">&#8364;36.00</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sums">
+    <div>
+      <div class="r"><span class="lab">Subtotal</span><span>&#8364;1,761.20</span></div>
+      <div class="r"><span class="lab">VAT 6% on &#8364;1,569.20</span><span>&#8364;94.15</span></div>
+      <div class="r"><span class="lab">VAT 21% on &#8364;36.00</span><span>&#8364;7.56</span></div>
+      <div class="r"><span class="lab">Paid 2 March, on account</span><span>&#8722;&#8364;500.00</span></div>
+      <div class="r due"><span>Amount due</span><span>&#8364;1,362.91</span></div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h3>Payment</h3>
+      Transfer to BE68 5390 0754 7034, BIC GKCCBEBB, quoting the invoice number.
+    </section>
+    <section>
+      <h3>Notes</h3>
+      Sack deposits are credited on the next invoice once the empties are collected.
+    </section>
+    <div class="stamp">UNPAID</div>
+  </div>
+</div>
+</body>
+</html>

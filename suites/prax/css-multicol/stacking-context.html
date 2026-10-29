@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns and stacking</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { column-count: 3; column-gap: 10px; column-fill: auto; height: 40px; }
+  .solid { background: #f4f5f7; outline: 1px dashed #6b7381; }
+  .rel { position: relative; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 3.5 Stacking Context</div>
+  <h1>Columns and stacking</h1>
+  <p class=pr-lede><q>All column boxes in a multi-column container are in the same stacking context and the drawing
+  order of their contents is as specified in CSS 2.1. Column boxes do not establish new stacking contexts.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#stacking-context">CSS Multi-column Layout 1 §3.5</a></span>
+  Each stage is a stacking context; each multicol container has three columns of 60px, 40px tall.</p>
+</header>
+
+<section>
+  <h2>z-index across columns</h2>
+  <p>A, 40px tall, <code>position: relative; left: 40px; z-index: 2</code>, fills the first column; B, <code>z-index: 1</code>,
+  comes later, in the second column, under A's right part.</p>
+  <figure>
+    <div class="pr-stage pr-stacking pr-measure"><div class=mc><div class="pr-a pr-fit rel" style="left: 40px; z-index: 2; height: 40px">A</div><div class="pr-b pr-fit rel" style="z-index: 1">B</div></div></div>
+    <figcaption>A, from 40 to 100px, covers B's left part from 70px: the order is the z-index's, not the
+    columns'.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking pr-measure"><div class=mc><div class="pr-a pr-fit rel" style="left: 40px; z-index: 1; height: 40px">A</div><div class="pr-b pr-fit rel" style="z-index: 2">B</div></div></div>
+    <figcaption>The z-indexes swapped: B covers A's right part.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A negative z-index goes under the container</h2>
+  <p>The multicol container is not a stacking context, and has a light background. B, <code>position: relative;
+  top: 30px; z-index: -1</code>, 30px tall, is in its second column.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking pr-measure" style="height: 60px"><div class="mc solid"><div class="pr-a pr-fit" style="height: 40px">A</div><div class="pr-b pr-fit rel" style="top: 30px; height: 30px; z-index: -1">B</div></div></div>
+    <figcaption>B, from 30 to 60px down, is under the container's background: only its lower 20px, below the
+    container, show. <span class=pr-flag>Safari</span> No part of B is seen.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

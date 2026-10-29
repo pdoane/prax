@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>appearance: the compatibility keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > * { display: block; margin: 0 0 6px; }
+  .plain { width: 100px; height: 20px; background: #f4f5f7; }
+  .reset > * { appearance: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2 Switching appearance, compatibility keywords</div>
+  <h1>appearance: the compatibility keywords</h1>
+  <p class=pr-lede>&lt;compat-auto&gt; is <code>searchfield</code>, <code>textarea</code>, <code>checkbox</code>,
+  <code>radio</code>, <code>menulist</code>, <code>listbox</code>, <code>meter</code>, <code>progress-bar</code> and
+  <code>button</code>: <q>They all have the same effect as auto.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-switching">CSS Basic User Interface 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>The same as auto, whatever the element</h2>
+  <p>A keyword brings back a widget's own native appearance, and a <code>div</code> stays a <code>div</code>.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium reset"><input type=checkbox checked style="appearance: checkbox"><input type=checkbox checked style="appearance: radio"><button style="appearance: menulist">Button</button></div>
+    <figcaption>After <code>none</code>, checkboxes with <code>checkbox</code> and <code>radio</code>, a button
+    with <code>menulist</code>: each native, as itself.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium"><div class=plain style="appearance: button"></div><div class=plain style="appearance: checkbox"></div></div>
+    <figcaption><code>div</code>s with <code>button</code> and <code>checkbox</code>: plain grey boxes, not
+    controls.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>textfield and menulist-button</h2>
+  <p>&lt;compat-special&gt; is <code>textfield</code> and <code>menulist-button</code>: <q>the host language may also
+  take these values into account when defining the native appearance of the element.</q> HTML does.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><input type=search value=Search size=10><input type=search value=Search size=10 style="appearance: textfield"></div>
+    <figcaption>A search field, then one with <code>textfield</code>: in HTML the second looks like a text
+    field.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium"><select><option>Select</select><select style="appearance: menulist-button"><option>Select</select></div>
+    <figcaption>A <code>select</code>, then one with <code>menulist-button</code>: in HTML the second looks as it
+    does devolved, a plain box with an arrow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

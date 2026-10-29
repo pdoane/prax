@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>foreignObject: SVG only under an svg element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.4 The ‘foreignObject’ element</div>
+  <h1>foreignObject: SVG only under an svg element</h1>
+  <p class=pr-lede><q>SVG-namespaced elements within a ‘foreignObject’ will not be rendered, except in the situation
+  where a properly defined SVG fragment, including a root ‘svg’ element is defined as a descendent of the
+  ‘foreignObject’.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ForeignObjectElement">SVG 2 §12.4</a></span></p>
+</header>
+
+<section>
+  <h2>Under an svg element, at any depth</h2>
+  <p>Each stage is an SVG 160 by 60 with a <code>foreignObject</code> at 40, 10, 80 by 40, holding the HTML box A, a
+  line 20 tall, and then an <code>svg</code> holding a green <code>rect</code> 40 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="40" y="10" width="80" height="40"><div class=pr-a>A</div><svg width="80" height="20"><rect width="40" height="20" fill="#6aa36a" /></svg></foreignObject></svg></div>
+    <figcaption>The <code>svg</code> a child of the <code>foreignObject</code>: the rect drawn below A, from 40 to
+    80 across, 30 to 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="40" y="10" width="80" height="40"><div class=pr-a>A</div><div style="padding-left: 40px"><svg width="40" height="20"><rect width="40" height="20" fill="#6aa36a" /></svg></div></foreignObject></svg></div>
+    <figcaption>The <code>svg</code> in an HTML block with <code>padding-left: 40px</code>: the rect from 80 to 120
+    across, 30 to 50 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not without one</h2>
+  <p>The HTML parser puts every element in a <code>foreignObject</code> other than <code>svg</code> and
+  <code>math</code> in HTML's namespace, so an SVG element directly in one needs an XML document: here an SVG
+  document in a frame 200 by 100.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view title="An SVG document" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='100'><foreignObject x='40' y='10' width='120' height='80'><div xmlns='http://www.w3.org/1999/xhtml' style='height: 20px; background: %234f81bd'/><rect xmlns='http://www.w3.org/2000/svg' width='120' height='40' fill='%23d68a3c'/></foreignObject></svg>"></iframe></div>
+    <figcaption>An SVG document whose <code>foreignObject</code>, 120 by 80 at 40, 10, holds an HTML block 20 tall,
+    blue, and then an orange <code>rect</code> with no <code>svg</code> around it: the blue block alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

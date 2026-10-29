@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>contextmenu</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.3 contextmenu</div>
+  <h1>contextmenu</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event before invoking a context menu.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#contextmenu">Pointer Events §11.4.3</a></span></p>
+</header>
+<section>
+  <h2>After mousedown</h2>
+  <p><q>When the contextmenu event is triggered by right mouse button, the contextmenu event MUST be dispatched after the
+  mousedown event.</q> <q>Depending on the platform, the contextmenu event may be dispatched before or after the mouseup
+  event.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#contextmenu">§11.4.3</a></span>
+  The page cancels the context menu over the box, so that the mouseup reaches it.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Right-click here.</div>
+      <ol class=pr-log data-log="pointerdown mousedown pointerup mouseup contextmenu auxclick" data-fields="detail" data-on="#pad" data-lines=6></ol>
+    </div>
+    <figcaption>Right-click the box: <code>pointerdown</code>, <code>mousedown</code>, then <code>contextmenu</code>
+    with <code>detail</code> 0, before the <code>pointerup</code> and <code>mouseup</code> on macOS and Linux and after
+    them on Windows, then <code>auxclick</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>At the pointer's target</h2>
+  <p><q>If event is a contextmenu event, or userEvent was dispatched while the corresponding pointer was captured, then
+  let target be the target of userEvent.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-dispatch">§3.3.12.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=menu>Right-click here.</div>
+      <ol class=pr-log data-log="contextmenu" data-fields="target pointerType" data-on="#menu" data-lines=2></ol>
+    </div>
+    <figcaption>Right-click the box: <code>contextmenu</code> at <code>menu</code>, the target of the pointer event
+    that caused it, and the menu opens. Long-press it on a touch screen: the same, with
+    <code>pointerType="touch"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu from opening over the first box.
+  document.getElementById("pad").addEventListener("contextmenu", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

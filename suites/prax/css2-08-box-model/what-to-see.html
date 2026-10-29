@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The example: what to see</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .example ul {
+    background: yellow;
+    margin: 12px 12px 12px 12px;
+    padding: 3px 3px 3px 3px;
+  }
+  .example li {
+    color: white;
+    background: blue;
+    margin: 12px 12px 12px 12px;
+    padding: 12px 0px 12px 12px;
+    list-style: none;
+  }
+  .example li.withborder {
+    border-style: dashed;
+    border-width: medium;
+    border-color: lime;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.2 Example of margins, padding, and borders</div>
+  <h1>The example: what to see</h1>
+</header>
+
+<section>
+  <h2>A narrower containing block</h2>
+  <figure>
+    <div class="pr-stage example">
+      <ul>
+        <li>First element of list
+        <li class=withborder>Second element of list is a bit longer to illustrate wrapping.
+      </ul>
+    </div>
+    <figcaption>In a 200px wide one: the content width follows the containing block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What to see</h2>
+  <ul class=pr-points>
+    <li><q>The content width for each LI box is calculated top-down; the containing block for each LI box is
+    established by the UL element.</q> Each item is the list's content width less its 12px margins.</li>
+    <li><q>The margin box height of each LI box depends on its content height, plus top and bottom padding, borders,
+    and margins. Note that vertical margins between the LI boxes collapse.</q> The items are 12px apart, not 24px.</li>
+    <li>The list's 3px padding keeps the first item's top margin and the last item's bottom margin inside the list:
+    yellow shows 3 + 12 = 15px above the first item and below the last.</li>
+    <li><q>The right padding of the LI boxes has been set to zero width.</q> The text of the second item runs to its
+    right border.</li>
+    <li><q>The margins of the LI boxes are transparent — margins are always transparent — so the background color
+    (yellow) of the UL padding and content areas shines through them.</q></li>
+    <li><q>The second LI element specifies a dashed border.</q> It is lime, of the medium width, on all four
+    sides.</li>
+  </ul>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>No glyph: the next family</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: Partial; src: url(../../../third_party/fonts/AD.woff); }
+  @font-face { font-family: Partial; src: url(../../../third_party/fonts/Tinos-Bold.ttf); font-weight: bold; }
+  @font-face { font-family: Upright Greek; src: url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: Upright Greek; src: url(../../../third_party/fonts/AD.woff); font-style: italic; }
+  .pr-sample { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, steps 5 and 6</div>
+  <h1>No glyph: the next family</h1>
+  <p class=pr-lede><q>If no matching face exists or the matched face does not contain a glyph for the character to be
+  rendered, the next family name is selected</q>. <q>Glyphs from other faces in the family are not considered. The
+  only exception is that user agents may optionally substitute a synthetically obliqued version of the default
+  face</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Not from another face of the family</h2>
+  <p>"Partial" is a handwriting face with no Greek, and Tinos Bold as its bold face, which has Greek. The stage
+  names <code>Partial, 'PR Arimo'</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Partial, 'PR Arimo'">Hand αβγ</div>
+    <figcaption>"Hand" handwritten; "αβγ" from PR Arimo, a sans-serif, not from Partial's bold serif face.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Except an obliqued default face</h2>
+  <p>"Upright Greek" has Tinos, with Greek, as its regular face, and a handwriting face without Greek as its
+  italic.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Upright Greek', 'PR Arimo'; font-style: italic">Hand αβγ</div>
+    <figcaption>Italic: "Hand" handwritten; "αβγ" either PR Arimo, or Tinos's regular face synthetically
+    obliqued.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: overflow, the image's and the SVG's</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: overflow, the image's and the SVG's</h1>
+  <p class=pr-lede><q>The user agent stylesheet sets the value of the overflow property on ‘image’ element to hidden.
+  Unless over-ridden by the author, images will therefore be clipped to the positioning rectangle defined by the
+  geometry properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> at 20, 10, 120 by 40, outlined dashed grey.</p>
+</header>
+
+<section>
+  <h2>Clipped to the positioning rectangle</h2>
+  <p>The PNG flag in quarters, <code>xMidYMid slice</code>: 120 by 60, from y 0 to 60.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMidYMid slice" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>No <code>overflow</code> declared: <code>hidden</code>, so cut at y 10 and 50.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="xMidYMid slice" style="overflow: visible" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>overflow: visible</code>: all of it, from the top of the stage to the bottom.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Cut at y 10 and 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two overflow values for an SVG</h2>
+  <p><q>The value specified on the ‘image’ element determines whether the image-rendering rectangle is clipped to the
+  positioning rectangle. The value on the root element of the referenced SVG determines whether the graphics are
+  clipped to the image-rendering rectangle.</q> The SVG is 40 by 20 with a <code>viewBox</code> of the same, filled
+  blue, with an orange bar from x −20 to 60, outside it at both sides, and a green one from y −10 to 30, below and
+  above. <code>meet</code> draws its <code>viewBox</code> 80 by 40, from 40 to 120.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20' style='overflow: visible'><rect width='40' height='20' fill='%234f81bd'/><rect x='-20' y='5' width='80' height='10' fill='%23d68a3c'/><rect x='15' y='-10' width='10' height='40' fill='%236aa36a'/></svg>" x="20" y="10" width="120" height="40" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The root <code>visible</code>, the <code>image</code> <code>hidden</code>: the orange bar out to the
+    rectangle's sides, 20 and 140. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Cut to the <code>viewBox</code>, 40 to 120.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20' style='overflow: visible'><rect width='40' height='20' fill='%234f81bd'/><rect x='-20' y='5' width='80' height='10' fill='%23d68a3c'/><rect x='15' y='-10' width='10' height='40' fill='%236aa36a'/></svg>" x="20" y="10" width="120" height="40" style="overflow: visible" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>Both <code>visible</code>: the orange bar across the stage, 0 to 160, the green one from its top to
+    its bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Cut to the <code>viewBox</code>, 40 to 120 and 10 to 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20' style='overflow: hidden'><rect width='40' height='20' fill='%234f81bd'/><rect x='-20' y='5' width='80' height='10' fill='%23d68a3c'/><rect x='15' y='-10' width='10' height='40' fill='%236aa36a'/></svg>" x="20" y="10" width="120" height="40" style="overflow: visible" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The root <code>hidden</code>, the <code>image</code> <code>visible</code>: only the
+    <code>viewBox</code>, 40 to 120 across, 10 to 50 down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

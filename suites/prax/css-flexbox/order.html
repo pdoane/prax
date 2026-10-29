@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>order: ordinal groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { display: flex; }
+  .f > div { width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.4 Reordering and Accessibility: the order property</div>
+  <h1>order: ordinal groups</h1>
+  <p class=pr-lede><q>The order property can be used to change flex items' ordering, laying them out in
+  order-modified document order instead</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#order-property">CSS Flexible Box Layout 2 §5.4</a></span>
+  <q>Flex and grid containers lay out their contents in order-modified document order, starting from the lowest
+  numbered ordinal group and going up. Items with the same ordinal group are laid out in the order they appear in the
+  source document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#order-property">CSS Display 4 §3</a></span></p>
+</header>
+
+<section>
+  <h2>Lowest group first, ties in document order</h2>
+  <p>Each stage holds A, B and C in that order in the document; <code>order</code> is 0 unless given.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f"><div class="pr-a pr-fit" style="order: 1">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>A <code>1</code>: B, C, A.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="order: -1">C</div></div>
+    <figcaption>C <code>-1</code>: C, A, B.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f"><div class="pr-a pr-fit" style="order: 5">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="order: 5">C</div></div>
+    <figcaption>A and C <code>5</code>: B, then A before C, as in the document.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f"><div class="pr-a pr-fit" style="order: 1.5">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>A <code>1.5</code>, not an integer: the declaration is dropped and A stays in group 0: A, B,
+    C.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painting, and only flex and grid items</h2>
+  <p><q>This also affects the painting order, exactly as if the flex items were reordered in the source document.</q>
+  <q>Unless otherwise specified by a future specification, this property has no effect on boxes that are not flex
+  items or grid items.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f" style="padding-left: 10px"><div class="pr-a pr-fit" style="order: 1; margin-left: -10px">A</div><div class="pr-b pr-fit" style="margin-left: -10px">B</div><div class="pr-c pr-fit" style="margin-left: -10px">C</div></div>
+    <figcaption>A <code>1</code>, all but the first <code>margin-left: -10px</code>: B, C, A, A painted last, over
+    C.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-a pr-fit" style="width: 30px">A</div><div class="pr-b pr-fit" style="width: 30px; order: -1">B</div><div class="pr-c pr-fit" style="width: 30px">C</div></div>
+    <figcaption>Blocks in a block container, B <code>-1</code>: still A, B, C.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow f pr-cb" style="height: 40px; align-items: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-d pr-fit" style="position: absolute; order: -1; top: 20px">P</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>P, absolutely positioned, <code>-1</code>: not an item; A, C, and P at the left edge below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

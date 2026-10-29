@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>object-view-box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; margin: 10px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 3.1 Setting The Viewbox: the object-view-box property</div>
+  <h1>object-view-box</h1>
+  <p class=pr-lede><q>The object-view-box property specifies a "view box" over an element, which allows zooming or
+  panning over the element's contents.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#the-object-view-box">CSS Images 5 §3.1</a></span>
+  Each image is the flag PNG, 40 by 20 in four colors, on a light orange background.</p>
+</header>
+
+<section>
+  <h2>The view box is the natural size</h2>
+  <p><q>For all purposes, the element is now treated as having natural sizes equal to the view box's width and
+  height.</q> <q>If the element does not have both a natural width and a natural height, this value has no
+  effect</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png alt=""></div>
+    <figcaption><code>none</code>: the whole flag, 40 by 20.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-view-box: inset(0 50% 50% 0)" alt=""></div>
+    <figcaption><code>inset(0 50% 50% 0)</code>: the blue quarter alone, 20 by 10. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    The whole flag, 40 by 20.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="object-view-box: xywh(10px 5px 20px 10px)" alt=""></div>
+    <figcaption><code>xywh(10px 5px 20px 10px)</code>: the middle of the flag, 20 by 10, a corner of each color.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole flag.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-ratio.svg style="width: 80px; object-view-box: inset(0 50% 50% 0)" alt=""></div>
+    <figcaption>An SVG with only a ratio, <code>width: 80px</code>: no effect, the whole flag, 80 by
+    40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zooming in and out</h2>
+  <p><q>its contents are scaled and translated such that the element's contents retain the same position and size,
+  relative to the view box's final size and position</q>. Each image is <code>width: 80px</code>, its height from the
+  view box's ratio.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="width: 80px; object-view-box: rect(0 20px 10px 0)" alt=""></div>
+    <figcaption><code>rect(0 20px 10px 0)</code>: the blue quarter scaled up 4 times, 80 by 40. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The flag, 80 by 40.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=../shared/resources/flag-40x20.png style="width: 80px; object-view-box: inset(-50%)" alt=""></div>
+    <figcaption><code>inset(-50%)</code>: a view box 80 by 40, so the flag at its own size, 40 by 20, in the middle
+    of orange 80 by 40. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The flag, 80 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

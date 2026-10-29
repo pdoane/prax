@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outer display types: block, inline, run-in</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.1 Outer Display Roles for Flow Layout</div>
+  <h1>Outer display types: block, inline, run-in</h1>
+  <p class=pr-lede><q>The &lt;display-outside&gt; keywords specify the element's outer display type, which is
+  essentially its principal box’s role in flow layout.</q> The third, <code>run-in</code>, is shown with <a href="https://drafts.csswg.org/css-display-4/#run-in-layout">§6</a>. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#outer-role">CSS Display 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>block and inline</h2>
+  <p><q>The element generates a box that is block-level when placed in flow layout.</q> <q>The element generates a box
+  that is inline-level when placed in flow layout.</q> <q>If a &lt;display-outside&gt; value is specified but
+  &lt;display-inside&gt; is omitted, the element's inner display type defaults to flow.</q></p>
+  <figure>
+    <div class=pr-stage>before <span id=o1 class=pr-chip style="display: block">a span, block</span> after</div>
+    <figcaption>A span with <code>display: block</code>: a line of its own, as wide as the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>before <div id=o2 class=pr-chip style="display: inline">a div, inline, and so a flow of text</div> after</div>
+    <figcaption>A div with <code>display: inline</code>: an inline box, its text on the line with "before" and broken
+    onto the next.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced elements too</h2>
+  <p><q>Outer display types do affect replaced elements.</q> The image is 60 by 20.</p>
+  <figure>
+    <div class=pr-stage>before <img alt="" width=60 height=20 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 1'><rect width='3' height='1' fill='%238e44ad'/></svg>"> after</div>
+    <figcaption>An inline image: on the line between the words.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>before <img alt="" width=60 height=20 style="display: block" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 1'><rect width='3' height='1' fill='%238e44ad'/></svg>"> after</div>
+    <figcaption><code>display: block</code>: the image on a line of its own, "before" above it and "after"
+    below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

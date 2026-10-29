@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>alignment-baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .diag { font: 30px "PR Baseline Diagnostic Zero"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.6 The ‘alignment-baseline’ property</div>
+  <h1>alignment-baseline</h1>
+  <p class=pr-lede><q>SVG 2 introduces some changes to the definition of this property. In particular: the values
+  'auto', 'before-edge', and 'after-edge' have been removed. For backwards compatibility, 'text-before-edge' should be
+  mapped to 'text-top' and 'text-after-edge' should be mapped to 'text-bottom'.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#AlignmentBaselineProperty">SVG 2 §11.10.2.6</a></span>
+  In SVG text, <q>these values instead specify the baseline that is aligned to the SVG current text position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a></span>
+  Each stage is an SVG 160 by 80 holding "HH" in 30px PR Baseline Diagnostic Zero at <code>x="20" y="40"</code>, the
+  y dashed in red; the second H, orange, is a <code>tspan</code> with the caption's value. Its hanging baseline is 0.65 em
+  above the alphabetic one, its ascent 0.8 em, its descent 0.2 em; its H is 19.5 tall.</p>
+</header>
+
+<section>
+  <h2>A baseline of the tspan at the current text position</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=diag x="20" y="40">H<tspan fill="#d68a3c" alignment-baseline="hanging">H</tspan></text></svg></div>
+    <figcaption><code>hanging</code>: the orange H hangs from y 40, to 59.5. <span class=pr-flag>Firefox</span> Level with the blue one.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=diag x="20" y="40">H<tspan fill="#d68a3c" alignment-baseline="text-bottom">H</tspan></text></svg></div>
+    <figcaption><code>text-bottom</code>, the descent, 6 below the alphabetic baseline: the orange H from 14.5 to 34. <span class=pr-flag>Firefox</span> Level with the blue one.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The legacy value</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=diag x="20" y="40">H<tspan fill="#d68a3c" alignment-baseline="text-top">H</tspan></text></svg></div>
+    <figcaption><code>text-top</code>, the ascent, 24 up: the orange H from 44.5 to 64. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Level with the blue one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 40H160" class=pr-baseline /><text class=diag x="20" y="40">H<tspan fill="#d68a3c" alignment-baseline="text-before-edge">H</tspan></text></svg></div>
+    <figcaption><code>text-before-edge</code>, which should be read as <code>text-top</code>: the same, as Chrome and
+    Safari draw it; Firefox draws it level.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

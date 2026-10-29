@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fewer lines than orphans or widows</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.3 Breaks Between Lines: orphans, widows</div>
+  <h1>Fewer lines than orphans or widows</h1>
+  <p class=pr-lede><q>The orphans property specifies the minimum number of line boxes in a block container that must be left in a fragment before a fragmentation break. The widows property specifies the minimum number of line boxes of a block container that must be left in a fragment after a break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#widows-orphans">CSS Fragmentation 4 §3.3</a></span> In columns: <a href="../css-multicol/orphans-widows.html">orphans and widows in columns</a>.</p>
+</header>
+
+<section>
+  <h2>Fewer lines than the value</h2>
+  <p><q>If a block contains fewer lines than the value of widows or orphans, the rule simply becomes that all lines in the block must be kept together.</q> Three columns 60px tall; two Bs, then a paragraph of two lines.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k>one two</div></div>
+    <figcaption><code>orphans: 1; widows: 1</code>: "one" under the Bs, "two" atop the second column. Safari moves both lines to the second column, which a UA may.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k style="orphans: 3; widows: 3">one two</div></div>
+    <figcaption><code>orphans: 3; widows: 3</code>: both lines together, atop the second column. <span class=pr-flag>Firefox</span> "one" under the Bs, "two" atop the second column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

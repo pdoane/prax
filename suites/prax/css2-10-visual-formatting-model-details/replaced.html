@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Heights: replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.2 Inline replaced elements, block-level replaced elements in normal flow, 'inline-block' replaced elements in normal flow and floating replaced elements</div>
+  <h1>Heights: replaced elements</h1>
+  <p class=pr-lede>The same rules give the height of a replaced element inline, as a block in flow, as an inline-block or floated. Each purple box is an <code>img</code> of an SVG image; most are 60 by 40, ratio 3:2.</p>
+</header>
+
+<section>
+  <h2>Auto margins, and the intrinsic height</h2>
+  <p><q>If 'margin-top', or 'margin-bottom' are 'auto', their used value is 0.</q> <q>If 'height' and 'width' both have
+  computed values of 'auto' and the element also has an intrinsic height, then that intrinsic height is the used value
+  of 'height'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-replaced-height">CSS 2 §10.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>Inline, width and height <code>auto</code>: the intrinsic 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><img alt="" style="display: block; margin: auto 0" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>As a block, with <code>margin: auto 0</code>: the margins are 0, and the image is at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From the width and the intrinsic ratio</h2>
+  <p><q>Otherwise, if 'height' has a computed value of 'auto', and the element has an intrinsic ratio then the used
+  value of 'height' is: (used width) / (intrinsic ratio)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-replaced-height">CSS 2 §10.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" style="width: 90px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: 90px</code>: 90 / (3/2) = 60px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="float: left; width: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>Floated, with <code>width: 30px</code>: 20px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: a separate document</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .reach rect { fill: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: a separate document</h1>
+  <p class=pr-lede><q>The resource referenced by the ‘image’ element represents a separate document which generates
+  its own parse tree and document object model (if the resource is XML). Thus, there is no inheritance of properties
+  into the image.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> at 40, 10, 80 by 40, of an SVG 40 by 20.</p>
+</header>
+
+<section>
+  <h2>No inheritance, no styles</h2>
+  <p>The SVG has two squares 20 by 20: the left one with no <code>fill</code>, the right one with
+  <code>fill="currentColor"</code>. Its own initial values make both black.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'><rect width='20' height='20'/><rect x='20' width='20' height='20' fill='currentColor'/></svg>" x="40" y="10" width="80" height="40" style="fill: #d68a3c; color: #d68a3c" /></svg></div>
+    <figcaption>The <code>image</code> with <code>fill</code> and <code>color</code> orange: both squares black,
+    from 40 to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class=reach width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'><rect width='20' height='20'/><rect x='20' width='20' height='20' fill='currentColor'/></svg>" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>This page's rule <code>.reach rect { fill: orange }</code> on the outer SVG: it matches no element in
+    the image, so both squares black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A secure mode</h2>
+  <p><q>SVG files must be processed in secure animated mode if the current document supports animation, or in secure
+  static mode if the current document is static.</q> Neither loads external resources nor runs scripts <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#secure-animated-mode">§2.2.4</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/external.svg" x="40" y="10" width="80" height="40" /></svg></div>
+    <figcaption>An SVG 40 by 20: a green box, an external <code>image</code> over its right half, and a script
+    that turns the box red. All green, 80 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

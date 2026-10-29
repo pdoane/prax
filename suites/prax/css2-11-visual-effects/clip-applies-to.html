@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clip property: which boxes clip</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.2 Clipping: the 'clip' property</div>
+  <h1>The clip property: which boxes clip</h1>
+  <p class=pr-lede>Each blue box is 120px wide, at 40 across, and keeps its left 60px: with <code>clip: rect(auto, 60px,
+  auto, auto)</code> in the first card, and with <code>clip-path: inset(0 60px 0 0)</code> in the second.</p>
+</header>
+
+<section>
+  <h2>Absolutely positioned elements only</h2>
+  <p><q>The 'clip' property applies only to absolutely positioned elements.</q> A fixed box is absolutely positioned.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><div class="pr-a pr-fit box1" style="position: relative; top: 15px; left: 40px; clip: rect(auto, 60px, auto, auto)">relative</div></div>
+    <figcaption><code>position: relative</code>: not clipped, the whole 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><div class="pr-a pr-fit box1" style="position: absolute; top: 15px; left: 40px; clip: rect(auto, 60px, auto, auto)">absolute</div></div>
+    <figcaption><code>position: absolute</code>: 60px of it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px; padding-top: 15px; box-sizing: border-box"><div class="pr-a pr-fit box1" style="position: fixed; margin-left: 40px; clip: rect(auto, 60px, auto, auto)">fixed</div></div>
+    <figcaption><code>position: fixed</code>, at its static position: 60px of it.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · CSS Masking 1 Appendix A, <a href="https://drafts.csswg.org/css-masking-1/#the-clip-path">§5.1</a></div>
+  <h2>clip is deprecated for clip-path</h2>
+  <p><q>With this specification the clip property is deprecated. Authors are encouraged to use the clip-path property
+  instead. UAs must support the clip property.</q> <span class=pr-cite>CSS Masking 1 Appendix A</span>
+  <code>clip-path</code> applies to <q>All elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-clip-path">CSS Masking 1 §5.1</a></span>
+  <code>clip</code> still clips as CSS 2 says; <code>inset()</code> in <code>clip-path</code> does the same with
+  offsets in from each edge, on any box.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><div class="pr-a pr-fit box1" style="position: absolute; top: 15px; left: 40px; clip-path: inset(0 60px 0 0)">absolute</div></div>
+    <figcaption><code>position: absolute</code> and <code>clip-path</code>: 60px of it, as with
+    <code>clip</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 50px"><div class="pr-a pr-fit box1" style="position: relative; top: 15px; left: 40px; clip-path: inset(0 60px 0 0)">relative</div></div>
+    <figcaption><code>position: relative</code>, which <code>clip</code> leaves whole: <code>clip-path</code> keeps
+    60px of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

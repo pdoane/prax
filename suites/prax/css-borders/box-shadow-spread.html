@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow-spread</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.4 Spreading shadows: the box-shadow-spread property</div>
+  <h1>box-shadow-spread</h1>
+  <p class=pr-lede><q>Positive values cause the shadow to expand in all directions by the specified radius. Negative values cause the shadow to contract.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-spread">CSS Borders and Box Decorations 4 §6.4</a></span> Each box is 104 by 44, its shadow orange, offset 10px down.</p>
+</header>
+
+<section>
+  <h2>Outward and inward</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 0 10px; box-shadow-color: #d68a3c; box-shadow-spread: 8px"></div></div>
+    <figcaption><code>8px</code>: 8px of orange round the sides and top, 18px below. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 0 10px; box-shadow-color: #d68a3c; box-shadow-spread: -8px"></div></div>
+    <figcaption><code>-8px</code>: only a 2px sliver of orange below the box. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

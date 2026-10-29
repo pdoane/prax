@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ellipse: its path, and where the stroke starts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.4 The ‘ellipse’ element</div>
+  <h1>ellipse: its path, and where the stroke starts</h1>
+  <p class=pr-lede><q>Mathematically, an ‘ellipse’ element is mapped to an equivalent ‘path’ element that consists of
+  four elliptical arc segments, each covering a quarter of the ellipse.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#EllipseElement">SVG 2 §10.4</a></span>
+  Each stage is an SVG 160 by 80.</p>
+</header>
+
+<section>
+  <h2>Four arcs</h2>
+  <p><q>A move-to command to the point cx+rx,cy;</q> <q>arc to cx,cy+ry;</q> <q>arc to cx-rx,cy;</q> <q>arc to
+  cx,cy-ry;</q> <q>arc to cx+rx,cy;</q> <q>a closepath command.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="60" ry="30" fill="#4f81bd" /><path d="M 140 40 A 60 30 0 0 1 80 70 A 60 30 0 0 1 20 40 A 60 30 0 0 1 80 10 A 60 30 0 0 1 140 40 Z" fill="none" stroke="#d68a3c" /></svg></div>
+    <figcaption>A blue ellipse 60 by 30 about 80, 40, and on it those commands as a path, outlined orange: along
+    its edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From 3 o'clock, clockwise</h2>
+  <p><q>The path begins at the "3 o'clock" point on the radius and proceeds in a clock-wise direction (before any
+  transformation).</q> A light blue ellipse, 60 by 30 about 80, 40, is stroked with one orange dash, 6 wide, of 40,
+  followed by a gap longer than its outline.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="60" ry="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>From 3 o'clock, 140, 40, down towards 6 o'clock.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="60" ry="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" style="ry: 30px; rx: auto" /></svg></div>
+    <figcaption><code>rx: auto</code> and <code>ry: 30px</code>: a circle of radius 30, and the dash again from 3
+    o'clock, 110, 40, downwards.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="60" ry="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" transform="rotate(180 80 40)" /></svg></div>
+    <figcaption>Rotated 180° about its center: the path turns with it, so the dash starts at 9 o'clock, 20, 40, and
+    runs up.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

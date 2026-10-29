@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky positioning in tables, flex and grid layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  table { border-spacing: 0; font-size: 12px; width: 100%; }
+  td, th { height: 20px; padding: 0 6px; box-sizing: border-box; background: #f4f5f7; border: 1px solid #2c5a8f; text-align: left; }
+  th { background: #f9cc9d; }
+  .st { position: sticky; top: 0; }
+  .lay { height: 300px; gap: 10px; }
+  .side { width: 60px; height: 40px; }
+  .main { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4 Sticky positioning</div>
+  <h1>Sticky positioning in tables, flex and grid layout</h1>
+  <p class=pr-lede><q>Sticky positioning is similar to relative positioning except the offsets are automatically
+  calculated in reference to the nearest scrollport.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-insets">CSS Positioned Layout 3 §3.4</a></span>
+  It applies to every box that <code>position</code> does, kept within the containing block its formatting context
+  gives it. Each stage scrolls, and is scrolled 60px; the sticky boxes have <code>top: 0</code>.</p>
+</header>
+
+<section>
+  <h2>Table cells and rows</h2>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><table><thead><tr><th class=st>name<th class=st>size</thead><tbody><tr><td>a<td>1<tr><td>b<td>2<tr><td>c<td>3<tr><td>d<td>4<tr><td>e<td>5<tr><td>f<td>6<tr><td>g<td>7<tr><td>h<td>8<tr><td>i<td>9</tbody></table></div>
+    <figcaption>Sticky header cells: the orange header row held at the top, over row "c".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=60><table><tbody><tr><td>a<td>1<tr class=st><th>name<th>size<tr><td>b<td>2<tr><td>c<td>3<tr><td>d<td>4<tr><td>e<td>5<tr><td>f<td>6<tr><td>g<td>7<tr><td>h<td>8</tbody></table></div>
+    <figcaption>A sticky row, the second: its two cells held at the top together, over row "c".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flex and grid items</h2>
+  <p>A layout 300px tall, a blue main item beside an orange sidebar 40px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc" data-scroll=60><div class=lay style="display: flex"><div class="pr-b side st" style="align-self: start">side</div><div class=main style="flex: 1"></div></div></div>
+    <figcaption>A flex item with <code>align-self: start</code>: held at the top.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc" data-scroll=60><div class=lay style="display: flex"><div class="pr-b side st" style="height: auto">side</div><div class=main style="flex: 1"></div></div></div>
+    <figcaption>Height <code>auto</code>, stretched as tall as the layout, it cannot move inside it: scrolled with
+    it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc" data-scroll=60><div class=lay style="display: grid; grid-template-columns: 40px 1fr; align-items: start"><div class="pr-b side st" style="width: auto">side</div><div class=main style="height: 300px"></div></div></div>
+    <figcaption>A grid item, aligned at the start of its row: held at the top.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

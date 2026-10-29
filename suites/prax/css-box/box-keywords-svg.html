@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box-edge keywords on SVG elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  .r { fill: #8e44ad; stroke: #8e44ad; stroke-opacity: 0.4; stroke-width: 20px; transform: translateX(50%); }
+  .home { fill: none; stroke: #6b7381; stroke-dasharray: 3 3; stroke-width: 1px; }
+  .c { fill: #8e44ad; stroke: #8e44ad; stroke-opacity: 0.4; stroke-width: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 2.3 Box-edge Keywords, in SVG</div>
+  <h1>Box-edge keywords on SVG elements</h1>
+  <p class=pr-lede><code>fill-box</code> <q>Refers to the object bounding box or its edges.</q> <code>stroke-box</code>
+  <q>Refers to the stroke bounding box or its edges.</q> <code>view-box</code> <q>Refers to the nearest SVG viewport’s
+  origin box, which is a rectangle with the width and height of the SVG viewport, positioned such that its top left
+  corner is anchored at the coordinate system origin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#keywords">CSS Box Model 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>transform-box</h2>
+  <p>Each purple rectangle is 60px wide at x=20, with a 20px stroke, so its stroke box is 80px wide, from x=10. Each
+  has <code>transform: translateX(50%)</code>; the dashed outline is where its fill would be unmoved. The SVG is 200px
+  wide.</p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=140>
+      <rect class=home x=20 y=10 width=60 height=20 />
+      <rect class=r x=20 y=10 width=60 height=20 style="transform-box: fill-box" />
+      <rect class=home x=20 y=60 width=60 height=20 />
+      <rect class=r x=20 y=60 width=60 height=20 style="transform-box: content-box" />
+      <rect class=home x=20 y=110 width=60 height=20 />
+      <rect class=r x=20 y=110 width=60 height=20 style="transform-box: view-box" />
+    </svg></div>
+    <figcaption><code>fill-box</code>, then <code>content-box</code>, <q>treated as fill-box</q>: each moved 30px, to
+    x=50. Last, <code>view-box</code>: half the 200px viewport, 100px, to x=120.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=140>
+      <rect class=home x=20 y=10 width=60 height=20 />
+      <rect class=r x=20 y=10 width=60 height=20 style="transform-box: stroke-box" />
+      <rect class=home x=20 y=60 width=60 height=20 />
+      <rect class=r x=20 y=60 width=60 height=20 style="transform-box: border-box" />
+    </svg></div>
+    <figcaption><code>stroke-box</code>, then <code>border-box</code>, <q>treated as stroke-box</q>: each moved 40px,
+    to x=60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clip-path</h2>
+  <p>The same rectangle, unmoved, clipped by <code>clip-path</code>: the stroke, lighter, reaches 10px outside its fill box.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=40><rect class=c x=20 y=10 width=60 height=20 style="clip-path: fill-box" /></svg></div>
+    <figcaption><code>fill-box</code>: the stroke's outer half is cut off.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=40><rect class=c x=20 y=10 width=60 height=20 style="clip-path: padding-box" /></svg></div>
+    <figcaption><code>padding-box</code>, as <code>fill-box</code>: cut off.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=40><rect class=c x=20 y=10 width=60 height=20 style="clip-path: stroke-box" /></svg></div>
+    <figcaption><code>stroke-box</code>: the whole stroke shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width=100 height=40><rect class=c x=20 y=10 width=60 height=20 style="clip-path: margin-box" /></svg></div>
+    <figcaption><code>margin-box</code>, as <code>stroke-box</code>: the whole stroke.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

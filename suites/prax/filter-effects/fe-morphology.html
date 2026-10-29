@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feMorphology: fattening and thinning</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=dilate x=-1 y=-1 width=3 height=3><feMorphology operator="dilate" radius="5"/></filter>
+  <filter id=erode x=-1 y=-1 width=3 height=3><feMorphology operator="erode" radius="5"/></filter>
+  <filter id=initial x=-1 y=-1 width=3 height=3><feMorphology radius="5"/></filter>
+  <filter id=x-only x=-1 y=-1 width=3 height=3><feMorphology operator="dilate" radius="10 0"/></filter>
+  <filter id=zero x=-1 y=-1 width=3 height=3><feMorphology operator="dilate" radius="0"/></filter>
+  <filter id=max x=-1 y=-1 width=3 height=3><feMorphology operator="dilate" radius="5"/></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.17 Filter primitive feMorphology</div>
+  <h1>feMorphology: fattening and thinning</h1>
+  <p class=pr-lede><q>The dilation (or erosion) kernel is a rectangle with a width of 2*x-radius and a height of
+  2*y-radius. In dilation, the output pixel is the individual component-wise maximum of the corresponding R,G,B,A
+  values in the input image's kernel rectangle. In erosion, the output pixel is the individual component-wise minimum
+  of the corresponding R,G,B,A values in the input image's kernel rectangle.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feMorphologyElement">Filter Effects 1 §9.17</a></span>
+  Each stage is an SVG 160 by 80 with a blue rectangle 40 by 20 at (60, 30), outlined dashed.</p>
+</header>
+
+<section>
+  <h2>A kernel of twice the radius</h2>
+  <p>A kernel 2r wide reaches r past each pixel, so the shape grows or shrinks by the radius on each side.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=30 width=40 height=20 fill="#4f81bd" filter="url(#dilate)"/><rect x=60 y=30 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>dilate</code>, radius 5: 50 by 30, from x 55 to 105 and y 25 to 55.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=30 width=40 height=20 fill="#4f81bd" filter="url(#erode)"/><rect x=60 y=30 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>erode</code>, radius 5: 30 by 10, from x 65 to 95 and y 35 to 45.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=30 width=40 height=20 fill="#4f81bd" filter="url(#x-only)"/><rect x=60 y=30 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption><code>dilate</code>, radius <code>10 0</code>: 60 by 20, from x 50 to 110, as tall as it
+    was.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=30 width=40 height=20 fill="#4f81bd" filter="url(#initial)"/><rect x=60 y=30 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>No operator: <q>The initial value for operator is erode.</q> 30 by 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect x=60 y=30 width=40 height=20 fill="#4f81bd" filter="url(#zero)"/><rect x=60 y=30 width=40 height=20 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>Radius 0: <q>disables the effect</q>, so 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><g filter="url(#max)"><rect x=40 y=30 width=40 height=20 fill="#4f81bd"/><rect x=80 y=30 width=40 height=20 fill="#d68a3c"/></g><rect x=70 y=60 width=20 height=16 fill="#d68abd"/></svg></div>
+    <figcaption>Blue beside orange, dilated by 5: from x 75 to 85, where the kernel holds both, each channel's
+    maximum, <code>#d68abd</code>, as the swatch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

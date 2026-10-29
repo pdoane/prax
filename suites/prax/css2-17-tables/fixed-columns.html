@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed table layout: column widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { table-layout: fixed; width: 200px; border-spacing: 0; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { height: 20px; padding: 0 4px; box-sizing: border-box; border: 1px solid #2c5a8f; overflow: hidden; white-space: nowrap; }
+  .set { background: #d68a3c; color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.1 Fixed table layout</div>
+  <h1>Fixed table layout: column widths</h1>
+  <p class=pr-lede><q>With this (fast) algorithm, the horizontal layout of the table does not depend on the contents of
+  the cells; it only depends on the table's width, the width of the columns, and borders or cell spacing.</q> Every
+  table is <code>table-layout: fixed; width: 200px</code>; orange marks a width that is set.</p>
+</header>
+
+<section>
+  <h2>Columns, then the first row</h2>
+  <p><q>A column element with a value other than 'auto' for the 'width' property sets the width for that column.</q>
+  <q>Otherwise, a cell in the first row with a value other than 'auto' for the 'width' property determines the width
+  for that column. If the cell spans more than one column, the width is divided over the columns.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-table-layout">CSS 2 §17.5.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><col style="width: 120px"><col><tr><td class=set>120<td>80<tr><td>120<td>80</table></div>
+    <figcaption>A <code>col</code> with <code>width: 120px</code>: the first column is 120px, and the second takes the
+    remaining 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td class=set style="width: 50px">50<td>150<tr><td style="width: 150px">50<td>150</table></div>
+    <figcaption>The first row's cell has <code>width: 50px</code>: the column is 50px. The second row's 150px is
+    ignored.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td class=set colspan=2 style="width: 120px">120 over two<td>80<tr><td>60<td>60<td>80</table></div>
+    <figcaption>A first-row cell spanning two columns with <code>width: 120px</code>: 60px each, and the third column
+    80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The rest share what is left</h2>
+  <p><q>Any remaining columns equally divide the remaining horizontal table space (minus borders or cell
+  spacing).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-table-layout">CSS 2 §17.5.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td class=set style="width: 80px">80<td>60<td>60</table></div>
+    <figcaption>One 80px column; the other two share 120px, 60px each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="border-spacing: 10px 0"><tr><td>50<td>50<td>50</table></div>
+    <figcaption><code>border-spacing: 10px 0</code>: four 10px spaces leave 160px, and the three columns are 53⅓px
+    each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

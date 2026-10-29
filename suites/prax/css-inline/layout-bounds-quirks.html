@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout bounds in quirks mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .d { font: 20px "PR Baseline Diagnostic Zero"; }
+  .ar { font: 13px/normal "PR Arimo"; }
+  .tall { font: 40px/normal "PR Noto Sans Arabic"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 5.3 Calculating the Logical Height Contributions (“Layout Bounds”) of Inline Boxes, quirks</div>
+  <h1>Layout bounds in quirks mode</h1>
+  <p class=pr-lede><q>The contribution of an inline box to the logical height of its line box, here referred to as its
+  layout bounds, is always calculated with respect to its own text metrics</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#inline-height">CSS Inline Layout 3 §5.3</a></span></p>
+</header>
+
+
+<section>
+  <h2>Quirks mode</h2>
+  <p><q>In Quirks Mode, any inline box fragment that has zero borders and padding and that does not directly contain
+  text or preserved white space is ignored when sizing the line box.</q> Each frame holds a line of 13px text on 20px
+  lines and an empty span on 60px lines.</p>
+  <figure>
+    <iframe class=pr-view src=no-quirks-frame.htm></iframe>
+    <figcaption>No quirks: the empty span makes the line 60px tall.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-view src=quirks-frame.htm></iframe>
+    <figcaption>Quirks mode, no doctype: the span is ignored, and the line is 20px.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

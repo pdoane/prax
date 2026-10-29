@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linearGradient: the vector and spreadMethod</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="initial"><stop stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="down" x2="0" y2="1"><stop stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="pad" x1="0.4" x2="0.6"><stop stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="reflect" x1="0.4" x2="0.6" spreadMethod="reflect"><stop stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="repeat" x1="0.4" x2="0.6" spreadMethod="repeat"><stop stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.2.1 Attributes</div>
+  <h1>linearGradient: the vector and spreadMethod</h1>
+  <p class=pr-lede><q>‘x1’, ‘y1’, ‘x2’ and ‘y2’ define a gradient vector for the linear gradient. This gradient vector
+  provides starting and ending points onto which the gradient stops are mapped.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#LinearGradientAttributes">SVG 2 §14.2.2.1</a></span>
+  Each stage is an SVG 160 by 60 with a rect 100 by 40 at 30, 10. Each gradient runs from blue at 0 to orange at
+  1.</p>
+</header>
+
+<section>
+  <h2>The vector</h2>
+  <p>The initial values are <code>x1</code> <q>0%</q>, <code>y1</code> <q>0%</q>, <code>x2</code> <q>100%</q> and
+  <code>y2</code> <q>0%</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="10" width="100" height="40" fill="url(#initial)" /></svg></div>
+    <figcaption>The initial vector: blue at the left edge, orange at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="10" width="100" height="40" fill="url(#down)" /></svg></div>
+    <figcaption><code>x2="0" y2="1"</code>: blue at the top, orange at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>spreadMethod</h2>
+  <p>It <q>Indicates what happens if the gradient starts or ends inside the bounds of the target rectangle.</q> Each
+  vector is <code>x1="0.4" x2="0.6"</code>, from x 70 to 90.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="10" width="100" height="40" fill="url(#pad)" /></svg></div>
+    <figcaption><code>pad</code>, the initial value: <q>Use the terminal colors of the gradient to fill the
+    remainder</q>; blue to x 70, orange from 90.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="10" width="100" height="40" fill="url(#reflect)" /></svg></div>
+    <figcaption><code>reflect</code>: <q>start-to-end, end-to-start</q>; blue at 30, 70 and 110, orange at 50, 90
+    and 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="10" width="100" height="40" fill="url(#repeat)" /></svg></div>
+    <figcaption><code>repeat</code>: <q>start-to-end, start-to-end</q>; blue at 30, 50, 70, 90 and 110, turning
+    orange just before each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

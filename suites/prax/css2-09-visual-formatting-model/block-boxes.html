@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block-level boxes and block containers</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.1 Block-level elements and block boxes</div>
+  <h1>Block-level boxes and block containers</h1>
+  <p class=pr-lede><q>Block-level boxes are boxes that participate in a block formatting context.</q> A block container
+  holds either only block-level boxes or only inline-level ones. The two are different things: some boxes are one and
+  not the other.</p>
+</header>
+
+<section>
+  <h2>Block-level</h2>
+  <p><q>Values of the 'display' property that make an element block-level include: 'block', 'list-item', and
+  'table'.</q> A block-level box is on lines of its own, between the text before and after it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-boxes">CSS 2
+  §9.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-a style="display: block">block</span> after</div>
+    <figcaption><code>display: block</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-a style="display: list-item; list-style-position: inside">list-item</span> after</div>
+    <figcaption><code>display: list-item</code>, with its marker inside, before its text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-a style="display: table">table</span> after</div>
+    <figcaption><code>display: table</code>: as wide as its content, and still on a line of its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block containers that are not block-level</h2>
+  <p><q>Non-replaced inline blocks and non-replaced table cells are block containers but are not block-level.</q> Each
+  orange box holds two block boxes, stacked, and sits on the line. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-boxes">CSS 2 §9.2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">before <span class=pr-b style="display: inline-block"><span class=pr-a style="display: block">one</span><span class=pr-a style="display: block">two</span></span> after</div>
+    <figcaption><code>display: inline-block</code>: the blocks stack inside it, and it sits between the words.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-table><span style="display: table-cell">before</span><span class=pr-b style="display: table-cell"><span class=pr-a style="display: block">one</span><span class=pr-a style="display: block">two</span></span><span style="display: table-cell">after</span></span></div>
+    <figcaption><code>display: table-cell</code>: the blocks stack inside the cell, beside its neighbors.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

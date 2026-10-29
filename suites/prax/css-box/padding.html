@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-box { border-color: #e6b54a; }
+  .dot { background: #c3d08b linear-gradient(#8e44ad, #8e44ad) no-repeat 0 0 / 20px 20px; border: 10px dashed #e6b54a; padding: 20px; }
+  .dot div { height: 20px; outline: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 4 Padding</div>
+  <h1>Padding</h1>
+  <p class=pr-lede><q>Padding is inserted between the content edge and the padding edge of a box, providing spacing
+  between the content and the border.</q> <q>Both sets of properties control the same set of padding: they are just
+  different ways of indexing each side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#paddings">CSS
+  Box Model 4 §4</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-border"></span>border<span class="pr-swatch pr-padding"></span>padding<span
+class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>Between content and border</h2>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="border-width: 10px; padding: 20px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 20px</code> inside a 10px border: the content starts 30px in, 140px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="border-width: 10px; padding-left: 40px; padding-inline-start: 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding-left: 40px; padding-inline-start: 10px</code>: one padding, so the later wins: 10px at
+    the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Backgrounds start at the padding edge</h2>
+  <p>The section's note: <q>Backgrounds specified on the box are by default laid out and painted within the padding
+  edges. (They are additionally painted underneath the border, in the border area.) This behavior can be adjusted using
+  the 'background-origin' and 'background-clip' properties.</q> Each box's background is green with a purple 20px
+  square at <code>0 0</code>, not repeated; the dashed outline is its content box.</p>
+  <figure>
+    <div class=pr-stage><div class=dot><div></div></div></div>
+    <figcaption>The initial values: the square in the padding box's corner, inside the dashed border; the green
+    between the dashes too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=dot style="background-origin: content-box; background-clip: padding-box"><div></div></div></div>
+    <figcaption><code>background-origin: content-box; background-clip: padding-box</code>: the square at the content
+    box's corner; no green between the dashes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

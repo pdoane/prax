@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid baselines: grid order, spans, last baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 160px; font: 13px/20px "PR Arimo"; }
+  figcaption { max-width: 160px; }
+  figure { margin-right: 12px; }
+  .pr-baseline { width: 160px; margin-right: -160px; }
+  .g { display: inline-grid; grid-template-columns: 50px 50px; vertical-align: baseline; }
+  .t { background: #b9cde6; padding: 0 4px; }
+  .u { background: #f6d7b4; padding: 0 4px; }
+  .low { padding-top: 20px; }
+  .lower { padding-top: 30px; }
+  .cell { display: table-cell; vertical-align: baseline; padding: 0 4px; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.6 Grid Container Baselines, grid order</div>
+  <h1>Grid baselines: grid order, spans, last baselines</h1>
+  <p class=pr-lede><q>Grid-modified document order (grid order) is the order in which grid items are encountered when
+  traversing the grid's grid cells. If two items are encountered at the same time, they are taken in order-modified
+  document order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-baselines">CSS Grid Layout 2 §11.6</a></span>
+  Each stage: "x", then an <code>inline-grid</code> of two 50px columns; the red line is the line's baseline. A
+  "low" item has 20px of padding above its text.</p>
+</header>
+
+<section>
+  <h2>Two items in one cell</h2>
+  <p>A, low, and B are both in the first cell; B comes second in the document.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class="t low" style="grid-area: 1 / 1">A</div><div class=u style="grid-area: 1 / 1; justify-self: end">B</div></div></div>
+    <figcaption>A is first: A's text is on the red line, B's 20px above it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class="t low" style="grid-area: 1 / 1">A</div><div class=u style="grid-area: 1 / 1; justify-self: end; order: -1; z-index: 1">B</div></div></div>
+    <figcaption>B has <code>order: -1</code> (and <code>z-index: 1</code>, to show it): B's text is on the red
+    line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Spanning items, last baselines, table cells</h2>
+  <p><q>any grid item that spans multiple tracks is ignored if it’s span does not start in the indicated track; except
+  that for step 2, it's ignored if its span does not end in the track.</q> <q>Last baselines are analogous</q>; and
+  <q>When determining the baseline of a table cell, a grid container provides a baseline just as a line box or
+  table-row does.</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g><div class=t style="grid-row: span 2; align-self: last baseline">one<br>two</div><div class="u lower">B</div><div class=t style="grid-column: 2; height: 40px">C</div></div></div>
+    <figcaption>A spans two rows, <code>align-self: last baseline</code>; B has 30px of padding. Step 2 passes A
+    by; at step 3 A is first: "one" is on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x <div class=g style="baseline-source: last"><div class=t>A</div><div class=u>B</div><div class="t low">C</div></div></div>
+    <figcaption><code>baseline-source: last</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-source">CSS Inline Layout 3 §4.2.1</a></span>:
+    C, low, in the last row, is on the red line, 40px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=cell><span class=pr-baseline></span>x</div><div class=cell><div style="display: grid"><div class="t low">A</div></div></div></div></div></div>
+    <figcaption>Baseline-aligned table cells: "x", and a grid whose item is low. A's text is on the red
+    line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

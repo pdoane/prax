@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Custom properties in highlights</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 16px/30px "PR Arimo"; color: #1f2430; }
+  .element .t, .declared .t { --shade: #6aa36a; }
+  .element ::highlight(h) { background-color: var(--shade, #c0392b); color: white; }
+  .declared ::highlight(h) { --shade: #4f81bd; background-color: var(--shade, #c0392b); color: white; }
+  .own .t { --shade: #6aa36a; }
+  .own .t span { --shade: #d68a3c; }
+  .own ::highlight(h) { background-color: var(--shade); color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.5 Cascading and Per-Element Highlight Styles</div>
+  <h1>Custom properties in highlights</h1>
+  <p class=pr-lede><q>All custom properties inherit from the originating element, regardless of whether that property
+  is a custom property that is registered to inherit or not.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-cascade">CSS Pseudo-Elements 4 §3.5</a></span>
+  Each stage's text is all in one custom highlight.</p>
+</header>
+
+<section>
+  <h2>Declared on the element, or on the highlight</h2>
+  <p>The text box sets <code>--shade: green</code>; its highlight uses <code>background-color: var(--shade,
+  red)</code>.</p>
+  <figure>
+    <div class="pr-stage element"><div class=t data-highlight=h>Highlighted</div></div>
+    <figcaption>White on green: the highlight takes the element's variable.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage declared"><div class=t data-highlight=h>Highlighted</div></div>
+    <figcaption>The highlight also declares <code>--shade: blue</code>: white on blue, its own value.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From the element, not the parent's highlight</h2>
+  <p>The text box sets <code>--shade: green</code> and its <code>span</code> <code>--shade: orange</code>, and every
+  highlight uses <code>background-color: var(--shade)</code>.</p>
+  <figure>
+    <div class="pr-stage own"><div class=t data-highlight=h>Green <span>orange</span> green</div></div>
+    <figcaption>White on green, and white on orange over the <code>span</code>'s word: each highlight takes the
+    variable of its own element.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

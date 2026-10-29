@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">
+  <!-- A luminance mask: a white disc filling the masked element's bounding box. -->
+  <mask id="disc" maskContentUnits="objectBoundingBox">
+    <circle cx="0.5" cy="0.5" r="0.5" fill="white"/>
+  </mask>
+  <!-- A clipping path: the triangle on the left half of the clipped element's bounding box. -->
+  <clipPath id="triangle" clipPathUnits="objectBoundingBox">
+    <polygon points="0,0 0.5,1 0,1"/>
+  </clipPath>
+</svg>

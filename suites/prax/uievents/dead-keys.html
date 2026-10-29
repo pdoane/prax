@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dead keys</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.2 Dead keys</div>
+  <h1>Dead keys</h1>
+  <p class=pr-lede><q>The dead keys (across all keyboard layouts and mappings) are represented by the key value Dead.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-dead">UI Events §4.3.2</a></span></p>
+</header>
+<section>
+  <h2>A dead key and its letter</h2>
+  <p><q>In response to any dead key press, composition events must be dispatched by the user agent and the
+  compositionupdate event's data value must be the character value of the current state of the dead key combining
+  sequence.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-dead">§4.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown compositionstart compositionupdate compositionend" data-fields="key data" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Click the field and type a dead key, then a letter: Option+I then E on a Mac's US layout, or ^ then e
+    on a French one. keydown <code>key="Dead"</code>, compositionstart, compositionupdate with the accent alone; then
+    for the letter compositionupdate and compositionend with <code>data="ê"</code>, and <code>ê</code> is in the
+    field.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

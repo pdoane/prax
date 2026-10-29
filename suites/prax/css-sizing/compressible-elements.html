@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Compressible form controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 120px; height: 50px; }
+  figure.f { margin-right: 10px; }
+  figure.f figcaption { max-width: 122px; }
+  input, select, textarea, button, progress, meter { font: 13px/18px "PR Arimo"; margin: 0; vertical-align: top; box-sizing: border-box; }
+  input, select, textarea, button { padding: 0 4px; border: 1px solid #2c5a8f; }
+  textarea { height: 40px; resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2.2 Compressible Replaced Elements</div>
+  <h1>Compressible form controls</h1>
+  <p class=pr-lede><q>the following HTML elements are also considered to be replaced elements for the purpose of the
+  percentage-sized replaced element rule above, and can have their min-content contribution compressed when their
+  width/height or max-width/max-height is expressed with a cyclic percentage size</q>: <q>input with any type that is
+  not "button-like"</q>, and <q>select, textarea, progress, meter, marquee.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#min-content-zero">CSS Box Sizing 3 §5.2.2</a></span>
+  Each control is <code>border-box</code>, in a dashed <code>width: min-content</code> parent whose width reads back
+  below.</p>
+</header>
+
+<section>
+  <h2>Compressed to their edges</h2>
+  <p>Each has <code>width: 50%</code>, compressed to zero: the parent is only as wide as the control's padding and
+  border, 10px where the control takes the page's, nearly 0 where it has none.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c1 class=pr-parent style="width: min-content"><input style="width: 50%" value="text"></div></div>
+    <figcaption>A text <code>input</code>: <code class=pr-computed data-of=c1 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c2 class=pr-parent style="width: min-content"><select style="width: 50%"><option>option</option></select></div></div>
+    <figcaption>A <code>select</code>: <code class=pr-computed data-of=c2 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c3 class=pr-parent style="width: min-content"><textarea style="width: 50%">text</textarea></div></div>
+    <figcaption>A <code>textarea</code>: <code class=pr-computed data-of=c3 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c4 class=pr-parent style="width: min-content"><progress style="width: 50%" value=0.5></progress></div></div>
+    <figcaption>A <code>progress</code>, no edges: <code class=pr-computed data-of=c4 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c5 class=pr-parent style="width: min-content"><meter style="width: 50%" value=0.5></meter></div></div>
+    <figcaption>A <code>meter</code>: <code class=pr-computed data-of=c5 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A button is not compressed, and a length is kept</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div id=c6 class=pr-parent style="width: min-content"><button style="width: 50%">button</button></div></div>
+    <figcaption>A <code>button</code> of <code>width: 50%</code>: as auto, as wide as "button" and its edges, <code class=pr-computed data-of=c6 data-dom=offsetWidth></code>px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=c7 class=pr-parent style="width: min-content"><input style="width: calc(50% + 50px)" value="text"></div></div>
+    <figcaption>The spec's <code>input</code> of <code>width: calc(50% + 50px)</code>: 50px, the border box, reads
+    <code class=pr-computed data-of=c7 data-dom=offsetWidth></code>. <span class=pr-flag>Safari</span> 60px.
+    <span class=pr-flag>Firefox</span> 10px, the length compressed too.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=c8 class=pr-parent style="width: min-content"><input style="max-width: 50%" value="text"></div></div>
+    <figcaption>An <code>input</code> of <code>max-width: 50%</code>: compressed as well, 10px, reads <code class=pr-computed data-of=c8 data-dom=offsetWidth></code>. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> the input's
+    full default width.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Read back as computed.js would, and again once the fonts have loaded, since the widths read are of text.
+  const read = () => {
+    for (const out of document.querySelectorAll(".pr-computed"))
+      out.textContent = String(document.getElementById(out.dataset.of)[out.dataset.dom]);
+  };
+  read();
+  document.fonts.ready.then(read);
+</script>
+</body>
+</html>

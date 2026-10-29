@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-box-trim on inline boxes and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .t { font: 40px/50px "PR Baseline Diagnostic"; }
+  .s { background: rgba(214, 138, 60, 0.6); }
+  .mc { font: 20px/40px "PR Baseline Diagnostic"; columns: 2; column-gap: 20px; background: rgba(214, 138, 60, 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6.2 Trimming Over/Under Text, inline boxes and columns</div>
+  <h1>text-box-trim on inline boxes and columns</h1>
+  <p class=pr-lede><q>On inline boxes, specifies whether to trim the content box to match the specified text-box-edge
+  metric.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-box-trim">CSS Inline Layout 3 §6.2</a></span>
+  The stages use PR Baseline Diagnostic.</p>
+</header>
+
+<section>
+  <h2>An inline box's content box</h2>
+  <p><code>none</code>: <q>specifies that the over/under content edges coincide with the text-over/text-under
+  baselines regardless of text-box-edge.</q> <code>trim-start</code> <q>trims the block-start side of the box to match
+  its content edge to the metric specified by text-box-edge.</q> Each orange span is 40px text: x fills from its x-height to its alphabetic baseline, 0.25em above the descent; the cap height is 0.3em above the x.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><span class=s style="text-box-edge: cap alphabetic">xx</span></div>
+    <figcaption><code>none</code>, edge <code>cap alphabetic</code>: orange from the ascent to the descent,
+    40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><span class=s style="text-box: trim-both cap alphabetic">xx</span></div>
+    <figcaption><code>trim-both cap alphabetic</code>: orange from the cap height to the foot of the x,
+    20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><span class=s style="text-box: trim-start cap alphabetic">xx</span></div>
+    <figcaption><code>trim-start cap alphabetic</code>: from the cap height to the descent, 30px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each column</h2>
+  <p>It <q>applies to the first (or last) formatted lines of every column in the multi-column container.</q> Two columns of 20px █ on 40px lines.</p>
+  <figure>
+    <div class=pr-stage><div class=mc>██<br>██<br>██<br>██</div></div>
+    <figcaption>Untrimmed: two columns of two 40px lines, 80px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=mc style="text-box-trim: trim-both">██<br>██<br>██<br>██</div></div>
+    <figcaption><code>trim-both</code>: 60px tall, the █ at the top and bottom of both columns. <span class=pr-flag>Chrome</span> Trims only the tops. <span
+    class=pr-flag>Safari</span> Only the first column's top. <span class=pr-flag>Firefox</span> Neither.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

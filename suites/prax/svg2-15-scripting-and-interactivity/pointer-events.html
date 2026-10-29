@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointer-events: fill and stroke</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg circle:hover { stroke: #2c5a8f; }
+  svg circle { stroke: #d68a3c; stroke-width: 10; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.6 The ‘pointer-events’ property</div>
+  <h1>pointer-events: fill and stroke</h1>
+  <p class=pr-lede><q>The ‘pointer-events’ property specifies under what circumstances a given element can be the target
+  element for a pointer event.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#PointerEventsProp">SVG 2 §15.6</a></span>
+  Each circle has radius 20 and a stroke 10 wide, orange, and dark blue while it is under the pointer: hover its
+  interior, then its stroke. Over a part that does not take the pointer, the stroke stays orange.</p>
+</header>
+
+<section>
+  <h2>Painted, fill, stroke, none</h2>
+  <p><code>visiblePainted</code>, which <code>auto</code> is: the pointer is over a painted area <q>if it is over the
+  interior (i.e., fill) of the element and the ‘fill’ property has an actual value other than none or it is over the
+  perimeter (i.e., stroke) of the element and the ‘stroke’ property is set to a value other than none.</q> The first two circles have <code>fill="none"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><circle id=painted cx="35" cy="30" r="20" fill="none" /><circle id=fill cx="95" cy="30" r="20" fill="none" pointer-events="fill" /><circle id=stroke cx="155" cy="30" r="20" fill="#b9cde6" pointer-events="stroke" /><circle id=all cx="215" cy="30" r="20" fill="none" style="stroke-opacity: 0.4" pointer-events="all" /><circle id=none cx="270" cy="30" r="20" fill="#b9cde6" pointer-events="none" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>From left: <code>auto</code>, no fill: the stroke only. <code>fill</code>, no fill: the interior only.
+    <code>stroke</code>: the stroke only. <code>all</code>: both. <code>none</code>: neither.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>visibility, and the visible values</h2>
+  <p><code>visibleFill</code>, <code>visibleStroke</code> and <code>visible</code> need <q>the visibility property is set
+  to visible</q>; <code>painted</code>, <code>fill</code>, <code>stroke</code> and <code>all</code> do not. Each circle
+  here is <code>visibility="hidden"</code>, outlined dashed; the log shows what takes a click.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><g visibility="hidden"><circle id=h-visible cx="45" cy="30" r="20" fill="#b9cde6" pointer-events="visible" /><circle id=h-painted cx="115" cy="30" r="20" fill="#b9cde6" pointer-events="painted" /><circle id=h-all cx="185" cy="30" r="20" fill="none" pointer-events="all" /><circle id=h-auto cx="255" cy="30" r="20" fill="#b9cde6" /></g><circle class=pr-ghost cx="45" cy="30" r="25" /><circle class=pr-ghost cx="115" cy="30" r="25" /><circle class=pr-ghost cx="185" cy="30" r="25" /><circle class=pr-ghost cx="255" cy="30" r="25" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click each: <code>visible</code>, nothing; <code>painted</code>, <code>target=h-painted</code>;
+    <code>all</code>, <code>target=h-all</code>, inside or on the edge; <code>auto</code>, nothing.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

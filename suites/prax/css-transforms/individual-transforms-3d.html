@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>translate, rotate and scale: 3D values, and none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 100px; }
+  .p, .g { position: absolute; left: 60px; top: 40px; width: 40px; height: 20px; }
+  .w, .wg { position: absolute; left: 40px; top: 30px; width: 80px; height: 40px; }
+  .x { width: 80px; height: 60px; margin: 10px 0 0 10px; }
+  .k { position: relative; z-index: -1; width: 40px; height: 40px; margin: 10px 0 0 30px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 5 Individual Transform Properties: the translate, scale, and rotate properties</div>
+  <h1>translate, rotate and scale: 3D values, and none</h1>
+  <p class=pr-lede><q>If the third value is omitted or zero, this specifies a 2d translation, equivalent to the
+  translate() function. Otherwise, this specifies a 3d translation, equivalent to the translate3d() function.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#individual-transforms">CSS Transforms 2 §5</a></span>
+  The first stages have <code>perspective: 100px</code>, centered; the dashed outline is where each box was laid
+  out.</p>
+</header>
+
+<section>
+  <h2>In 3D</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="translate: 0 0 50px">A</div></div>
+    <figcaption>A 40 by 20 box, <code>translate: 0 0 50px</code>: halfway to the viewer, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost wg"></div><div class="pr-a pr-fit w" style="rotate: 1 1 0 180deg">AB</div></div>
+    <figcaption>An 80 by 40 box, <code>rotate: 1 1 0 180deg</code>: a half turn about the diagonal from top left to
+    bottom right, so it stands on its side, 40 by 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 1 1 2; transform: translateZ(25px)">A</div></div>
+    <figcaption><code>scale: 1 1 2</code> with <code>transform: translateZ(25px)</code>, which the scale doubles to 50px:
+    80 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none is no transform; an identity is one</h2>
+  <p><q>this value does not trigger the creation of a stacking context or containing block for all descendants, while
+  all other values (including “identity” transforms like translate: 0px) create a stacking context and containing block
+  for all descendants</q>. Each stage is a stacking context; a blue box holds a purple child with <code>z-index:
+  -1</code>, which goes behind the box's background unless the box is a stacking context.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="scale: none"><div class=k></div></div></div>
+    <figcaption><code>scale: none</code>: behind, hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="scale: 1"><div class=k></div></div></div>
+    <figcaption><code>scale: 1</code>: over the box's background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="rotate: 0deg"><div class=k></div></div></div>
+    <figcaption><code>rotate: 0deg</code>: over it too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

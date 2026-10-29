@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The li element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .t li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.8 The li element</div>
+  <h1>The li element</h1>
+  <p class=pr-lede><q>The li element represents a list item. If its parent element is an ol, ul, or menu element, then the element is an item of the parent element's list, as defined for those elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-li-element">HTML §4.4.8</a></span></p>
+</header>
+<section>
+  <h2>value</h2>
+  <p>The value attribute <q>is used to determine the ordinal value of the list item, when the li's list owner is an
+  ol element.</q> Each item's number is the previous one's plus one, unless it has a value. As a presentational hint,
+  the value sets the <code>list-item</code> counter. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol><li>a<li value=10>b<li>c</ol></div>
+    <figcaption><code>value=10</code> on the second: 1., 10., 11.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol start=5><li>a<li value=-2>b<li>c</ol></div>
+    <figcaption><code>start=5</code>, <code>value=-2</code>: 5., -2., -1.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>type</h2>
+  <p>As presentational hints, <q>ol[type=a s], li[type=a s] { list-style-type: lower-alpha; }</q> and so on, so an
+  item can have a style of its own. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol><li>a<li type=I>b<li>c</ol></div>
+    <figcaption><code>type=I</code> on the second: 1., II., 3.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ul><li>a<li type=square>b<li>c</ul></div>
+    <figcaption><code>type=square</code> on the second: a disc, a square, a disc.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-shrink: shares of the overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.2.2 The flex-shrink property</div>
+  <h1>flex-shrink: shares of the overflow</h1>
+  <p class=pr-lede><q>The flex-shrink property sets the flex shrink factor to the provided &lt;number&gt;. Negative
+  values are not allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-shrink-property">CSS Flexible Box Layout 2 §7.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Weighted by the flex base size</h2>
+  <p><q>The flex shrink factor is multiplied by the flex base size when distributing negative space. This distributes
+  negative space in proportion to how much the item is able to shrink, so that e.g. a small item won't shrink to zero
+  before a larger item has been noticeably reduced.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-property">§7.1</a></span>
+  Each stage is 200px wide.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 240px; border: 0">A</div><div class="pr-b pr-fit" style="width: 60px; border: 0">B</div></div>
+    <figcaption>240px and 60px, shrinking 1 each, are 100px over. It is shared 240:60, 4:1: A loses 80px and B
+    20px, so 160px and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 120px; flex-shrink: 1">A</div><div class="pr-b pr-fit" style="width: 120px; flex-shrink: 3">B</div></div>
+    <figcaption>120px each, shrinking 1 and 3, are 40px over: A loses 10px and B 30px, so 110px and 90px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>flex-shrink: 0</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 240px">A</div><div class="pr-b pr-fit" style="width: 60px; flex-shrink: 0">B</div></div>
+    <figcaption>The first figure with B at 0: B keeps 60px and A loses all 100px, 140px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 240px; flex-shrink: 0">A</div><div class="pr-b pr-fit" style="width: 60px; flex-shrink: 0">B</div></div>
+    <figcaption>Both at 0: 240px and 60px, and B lies 40 to 100px past the stage's right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

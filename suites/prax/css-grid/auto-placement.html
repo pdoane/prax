@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement algorithm: definite items first</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(4, 40px); grid-auto-columns: 40px; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.5 Grid Item Placement Algorithm, steps 0 to 2</div>
+  <h1>Placement algorithm: definite items first</h1>
+  <p class=pr-lede>The algorithm <q>resolves automatic positions of grid items into definite positions</q>, taking
+  them <q>in order-modified document order, not their original document order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-placement-algo">CSS Grid Layout 2 §8.5</a></span>
+  Each grid has four 40px columns; added columns are 40px, and rows 20px.</p>
+</header>
+
+<section>
+  <h2>Steps 0 and 1, and order</h2>
+  <p><q>Generate anonymous grid items</q>: they <q>are always auto-placed</q>. Then <q>Position anything that's not
+  auto-positioned.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 60px 40px">abc<div class=pr-a style="grid-area: 1 / 1">A</div><div class=pr-b>B</div></div></div>
+    <figcaption>"abc", then A at row 1, column 1, then B. A is placed first; the text's anonymous item goes to the
+    next free cell, 40 to 100px, and B after it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c style="order: -1">3</div><div class=pr-d style="order: 1">4</div><div class=pr-a>5</div></div></div>
+    <figcaption>Five items; 3 has <code>order: -1</code> and 4 <code>order: 1</code>: placed in the order 3, 1, 2,
+    5, 4: 3 at the left of row 1, 4 alone in row 2.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Step 2: items locked to a row</h2>
+  <p><q>For each grid item with a definite row position</q>, sparse packing sets its column-start <q>to the earliest
+  (smallest positive index) line index that ensures this item’s grid area will not overlap any occupied grid cells and
+  that is past any grid items previously placed in this row by this step.</q> Dense packing drops the last
+  condition. X is at row 1, column 2; then come C, with no position, A, <code>grid-row: 1; grid-column: span 2</code>,
+  and B, <code>grid-row: 1</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-d style="grid-area: 1 / 2">X</div><div class=pr-c>C</div><div class=pr-a style="grid-row: 1; grid-column: span 2">A</div><div class=pr-b style="grid-row: 1">B</div></div></div>
+    <figcaption>Sparse: A in columns 3 and 4, 80 to 160px; B past A, in a fifth column the grid adds, 160 to 200px.
+    C, placed after them, takes the cell left free, column 1.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-auto-flow: dense"><div class=pr-d style="grid-area: 1 / 2">X</div><div class=pr-c>C</div><div class=pr-a style="grid-row: 1; grid-column: span 2">A</div><div class=pr-b style="grid-row: 1">B</div></div></div>
+    <figcaption>Dense: A the same; B goes back to column 1. Row 1 is full, so C starts row 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

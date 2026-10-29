@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mousedown</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .text { margin: 10px 20px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.5 mousedown</div>
+  <h1>mousedown</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device button is pressed over an
+  element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousedown">Pointer Events §11.4.5</a></span></p>
+</header>
+<section>
+  <h2>The click count, plus one</h2>
+  <p>detail: <q>indicates the current click count incremented by one. For example, if no click happened before the
+  mousedown, detail will contain the value 1</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousedown">§11.4.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <p class=text id=count>Click this line once, twice, three times quickly.</p>
+      <ol class=pr-log data-log="mousedown" data-fields="detail" data-on="#count" data-lines=3></ol>
+    </div>
+    <figcaption>Triple-click the line: <code>mousedown</code>s with <code>detail</code> 1, 2 and 3; the second
+    selects a word and the third the line. Wait, and click again: 1.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Canceled: no selection, no drag</h2>
+  <p><q>Many implementations use the mousedown event to begin a variety of contextually dependent default actions.
+  These default actions can be prevented if this event is canceled. Some of these default actions could include:
+  beginning a drag/drop interaction with an image or link, starting text selection, etc.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousedown">§11.4.5</a></span>
+  A listener cancels <code>mousedown</code> on the second line.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <p class=text>Drag across this line, or <a href="#mousedown">this link</a>.</p>
+      <p class=text id=held>Drag across this line, or <a href="#mousedown">this link</a>.</p>
+    </div>
+    <figcaption>On the first line, a drag selects text, and a drag of the link carries it away. On the second, whose
+    <code>mousedown</code> is canceled, neither starts.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels mousedown on the second line.
+  document.getElementById("held").addEventListener("mousedown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

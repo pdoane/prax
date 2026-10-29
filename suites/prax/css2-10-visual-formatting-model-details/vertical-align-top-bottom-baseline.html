@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: top, bottom and the baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .tall { display: inline-block; width: 20px; height: 60px; background: #8a93a1; }
+  .chip { background: rgba(214, 138, 60, 0.6); }
+  .kid { background: rgba(79, 129, 189, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: top, bottom and the baseline</h1>
+  <p class=pr-lede>Boxes aligned <code>top</code> or <code>bottom</code> are placed against the line box, and the rest of the line is placed between them. The stage's text is 13px on 20px lines, with the line's baseline dashed in red.</p>
+</header>
+
+<section>
+  <h2>Where the baseline goes</h2>
+  <p><q>In case they are aligned 'top' or 'bottom', they must be aligned so as to minimize the line box height. If
+  such boxes are tall enough, there are multiple solutions and CSS&nbsp;2 does not define the position of the line
+  box's baseline</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span></p>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=tall style="vertical-align: top; height: 100px"></span> <span class=tall style="vertical-align: bottom; height: 80px; background: #d68a3c"></span></div>
+    <figcaption>A grey 100px box at <code>top</code>, then an orange 80px one at <code>bottom</code>: the line is
+    100px, and the text may sit anywhere in the 20px the orange box leaves. Chrome and Safari put it at the top,
+    Firefox at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

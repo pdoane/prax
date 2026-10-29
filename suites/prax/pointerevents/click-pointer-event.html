@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>click is a pointer event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.12 click, auxclick, and contextmenu</div>
+  <h1>click is a pointer event</h1>
+  <p class=pr-lede><q>This section is an addition to the MouseEvent definitions of the click, auxclick and contextmenu
+  events.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#click-auxclick-and-contextmenu">Pointer Events §3.3.12</a></span></p>
+</header>
+<section>
+  <h2>With a pointerType</h2>
+  <p><q>These events MUST be of type PointerEvent, and are subject to the additional requirements mentioned in the rest
+  of this section.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#click-auxclick-and-contextmenu">§3.3.12</a></span>
+  The page cancels the context menu and the middle button's scrolling over the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Click with each button.</div>
+      <ol class=pr-log data-log="click auxclick contextmenu" data-fields="pointerType pointerId" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box with the left, the middle and the right button: <code>click</code>,
+    <code>auxclick</code> and <code>contextmenu</code>, each with <code>pointerType="mouse"</code> and the mouse's
+    <code>pointerId</code>, which only a <code>PointerEvent</code> has. Tap it: <code>pointerType="touch"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not compatibility mouse events</h2>
+  <p><q>Regardless of their support for compatibility mouse events, the user agents MUST always support the click,
+  auxclick and contextmenu events because these events are of type PointerEvent and are therefore not compatibility mouse
+  events. Calling preventDefault during a pointer event MUST NOT have an effect on whether click, auxclick, or
+  contextmenu are fired or not.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#compatibility-mapping-with-mouse-events">§10</a></span>
+  Listeners cancel <code>pointerdown</code> and <code>pointerup</code> on the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=canceled>Click, tap, or right-click.</div>
+      <ol class=pr-log data-log="pointerdown pointerup click contextmenu" data-fields="pointerType" data-on="#canceled" data-lines=4></ol>
+    </div>
+    <figcaption>Click or tap the box: <code>pointerdown</code> and <code>pointerup</code>, both canceled, then
+    <code>click</code> all the same. Right-click: <code>contextmenu</code>, and
+    the menu opens.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the context menu and middle-button scrolling from taking over the first box, and cancels pointerdown and
+  // pointerup on the second.
+  const pad = document.getElementById("pad"), canceled = document.getElementById("canceled");
+  pad.addEventListener("contextmenu", event => event.preventDefault());
+  pad.addEventListener("mousedown", event => { if (event.button === 1) event.preventDefault(); });
+  for (const type of ["pointerdown", "pointerup"])
+    canceled.addEventListener(type, event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

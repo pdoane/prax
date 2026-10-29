@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Updating a style block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px; }
+  .box { height: 20px; margin: 0 0 10px; padding: 0 6px; box-sizing: border-box; background: var(--pr-plain);
+         border: 1px solid #2c5a8f; font-size: 12px; line-height: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.6 The style element</div>
+  <h1>Updating a style block</h1>
+  <p class=pr-lede><q>The user agent must run the update a style block algorithm whenever any of the following
+  conditions occur</q>, which removes the element's style sheet and creates one from its text again.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-style-element">HTML §4.2.6</a></span></p>
+</header>
+<section>
+  <h2>A change of text, a new sheet</h2>
+  <p>The user agent runs <q>update a style block</q> when <q>The element is not on the stack of open elements of an
+  HTML parser or XML parser, and its children changed steps run.</q> The button appends <code>#grown { background:
+  #6aa36a }</code> to an empty style element, as a text node.</p>
+  <figure>
+    <div class=pr-stage><div class=act><style id=growing></style><div class=box id=grown></div><button id=grow>Append the rule</button></div></div>
+    <figcaption>Plain. Press the button: the box is green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Disconnected, no sheet</h2>
+  <p>It also runs when <q>The element is not on the stack of open elements of an HTML parser or XML parser, and it
+  becomes connected or disconnected</q>, and then <q>If element is not connected, then return.</q> The button removes
+  a style element holding <code>#kept { background: #6aa36a }</code>, or puts it back.</p>
+  <figure>
+    <div class=pr-stage><div class=act><style id=removing>#kept { background: #6aa36a }</style><div class=box id=kept></div><button id=remove>Remove the style element</button></div></div>
+    <figcaption>Green. Press the button: plain; press again: green.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("grow").addEventListener("click", () => {
+    document.getElementById("growing").append("#grown { background: #6aa36a }");
+  });
+  const removing = document.getElementById("removing");
+  const kept = document.getElementById("kept");
+  document.getElementById("remove").addEventListener("click", () => {
+    if (removing.isConnected)
+      removing.remove();
+    else
+      kept.before(removing);
+  });
+</script>
+</body>
+</html>

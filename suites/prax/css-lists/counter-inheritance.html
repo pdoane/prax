@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inheriting counters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage ul { list-style: none; }
+  .pr-stage li, .pr-stage .bar { counter-increment: none; }
+  .ex { counter-reset: example 0; }
+  .ex .inc { counter-increment: example; }
+  .ex .show::before { content: "[" counter(example) "] "; color: #2c5a8f; }
+  .inner .bar { counter-reset: example 10; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.4.1 Inheriting Counters</div>
+  <h1>Inheriting counters</h1>
+  <p class=pr-lede><q>An element inherits its initial set of counters from its parent and preceding sibling. It then
+  takes the values for those counters from the values of the matching counters on its preceding element in tree order
+  (which might be its parent, its preceding sibling, or a descendant of its previous sibling).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#inheriting-counters">CSS Lists and Counters 3 §4.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>The value from the element before in tree order</h2>
+  <p>The specification's example: a <code>ul</code> resets <code>example</code> to 0; <code>#foo</code> increments it,
+  and so does <code>#bar</code> inside it; <code>#baz</code> follows <code>#foo</code>. Each shows its value in blue.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=ex><li class="inc show">foo<div class="bar inc show">bar</div></li><li class=show>baz</li></ul></div>
+    <figcaption>"[1] foo", "[2] bar", and "[2] baz": <code>#baz</code> has the counter from <code>#foo</code> but the
+    value from <code>#bar</code>, just before it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A counter only its descendants have</h2>
+  <p>The value source's counters are taken only where the counter source <q>also contains a counter with the same name
+  and originating element</q>. Here <code>#bar</code> resets its own <code>example</code> to 10 and increments it.</p>
+  <figure>
+    <div class="pr-stage pr-text inner"><ul class=ex><li class="inc show">foo<div class="bar inc show">bar</div></li><li class=show>baz</li></ul></div>
+    <figcaption>"[1] foo", "[11] bar", then "[1] baz": the counter from <code>#bar</code> is not <code>#foo</code>'s, so
+    <code>#baz</code> takes the outer one's value, 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

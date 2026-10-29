@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The grid-template shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.4 Explicit Grid Shorthand: the grid-template property</div>
+  <h1>The grid-template shorthand</h1>
+  <p class=pr-lede><q>The grid-template property is a shorthand for setting grid-template-columns,
+  grid-template-rows, and grid-template-areas in a single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#explicit-grid-shorthand">CSS Grid Layout 2 §7.4</a></span></p>
+</header>
+
+<section>
+  <h2>Rows / columns, and strings with sizes</h2>
+  <p><code>&lt;'grid-template-rows'&gt; / &lt;'grid-template-columns'&gt;</code> <q>Sets grid-template-rows and
+  grid-template-columns to the specified values, respectively, and sets grid-template-areas to none.</q> With strings, it
+  <q>Sets grid-template-rows to the &lt;track-size&gt;s following each string</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template: 20px 40px / 60px 1fr"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>20px 40px / 60px 1fr</code>: A 60px wide and B 140px in a 20px row; C and D below, 40px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template: 'a a b' 20px 'c d d' 40px / 40px 1fr 60px"><div class=pr-a style="grid-area: a">A</div><div class=pr-b style="grid-area: b">B</div><div class=pr-c style="grid-area: c">C</div><div class=pr-d style="grid-area: d">D</div></div></div>
+    <figcaption><code>"a a b" 20px "c d d" 40px / 40px 1fr 60px</code>: A from 0 to 140px and B to 200px, 20px
+    tall; C 40px wide, D from 40px, 40px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Line names, and the implicit grid properties</h2>
+  <p>The string form splices <q>in the named lines defined before/after each size.</q> And <q>the grid-template
+  property leaves</q> the implicit grid properties <q>unchanged.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#explicit-grids">§7.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=g style="height: 80px; grid-template: [header-top] 'a a' [header-bottom] [main-top] 'b b' 1fr [main-bottom] / 40px 1fr"><div class=pr-a style="grid-area: a">A</div><div class=pr-b style="grid-row: main-top; grid-column: 2">B</div></div></div>
+    <figcaption>In 80px: A on a 20px <code>auto</code> row, B from 20px on the 1fr row after
+    <code>main-top</code>, 60px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-auto-flow: column; grid-auto-columns: 60px; grid-template: 20px 20px / 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>grid-auto-flow: column; grid-auto-columns: 60px</code>, then <code>grid-template: 20px 20px /
+    40px</code>: A and B down the 40px column, C in a new 60px column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

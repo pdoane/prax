@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: replaced content</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { width: 100px; height: 40px; padding: 10px; background: #d68a3c; vertical-align: top; }
+  .f { float: left; box-sizing: border-box; width: 60px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: replaced content</h1>
+  <p class=pr-lede>Each figure's image is 100 by 40, a green rectangle, with 10px of padding whose orange is the image
+  element's background. A blue float with negative margins lies across it.</p>
+</header>
+
+<section>
+  <h2>Block-level: background in step 4, content in step 7</h2>
+  <p><q>Otherwise: first for the element, then for all its in-flow, non-positioned, block-level descendants in tree
+  order: If the element is a block-level replaced element, then: the replaced content, atomically.</q> Its background
+  is painted with the other blocks', in step 4. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><img style="display: block; margin-left: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%236aa36a'/></svg>" alt=""><div class="pr-a f" style="margin: -70px -60px 0 10px"></div></div>
+    <figcaption>A <code>display: block</code> image: the float, painted in step 5, covers the orange padding, and
+    the green content, painted in step 7, covers the float.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline-level: background and content in step 7</h2>
+  <p><q>For inline-level replaced elements: the replaced content, atomically.</q> It is a box in its line, and its
+  background and border come first, as for any box in the line. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 10px"><div class="pr-a f" style="margin: 0 -60px 0 10px"></div><img style="margin: 10px 0 0 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%236aa36a'/></svg>" alt=""></div>
+    <figcaption>An inline image: both its orange padding and its green content cover the float.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row" style="padding: 10px"><img style="margin-top: 10px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%236aa36a'/></svg>" alt=""><span class="pr-b" style="display: inline-block; margin: 30px 0 0 -60px; width: 100px; height: 40px; box-sizing: border-box">after</span></div>
+    <figcaption>An inline block after the image in the line, pulled 60px back over it, covers it: the image is painted
+    whole, then the next box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

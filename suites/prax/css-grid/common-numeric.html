@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Common patterns: numeric indexes and spans</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(5, 40px); grid-template-rows: repeat(7, 20px); }
+  .s { display: grid; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 20px); }
+  .v { writing-mode: vertical-rl; display: grid; height: 90px; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 20px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.1.2 Numeric Indexes and Spans</div>
+  <h1>Common patterns: numeric indexes and spans</h1>
+  <p class=pr-lede><q>Grid items can be positioned and sized by number, which is particularly helpful for script-driven
+  layouts</q>. <q>By default, a grid item has a span of 1. Different spans can be given explicitly</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#common-uses-numeric">CSS Grid Layout 2 §8.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>By number, in the writing mode</h2>
+  <p><code>grid-row: 2 / span 5</code> <q>Starts in the 2nd row, spans 5 rows down (ending in the 7th
+  row).</q> <code>grid-row: span 5 / 7</code> <q><em>Ends</em> in the 7th row, spans 5 rows up (starting in the 2nd
+  row).</q> Columns 40px, rows 20px. <q>Note that grid indexes are writing mode relative. For example, in a
+  right-to-left language like Arabic, the first column is the rightmost column.</q> In the narrow stages, three 30px
+  columns and three 20px rows, A is <code>grid-row: 2; grid-column: 1 / span 2</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-row: 2; grid-column: 3">A</div><div class=pr-b style="grid-row: 2 / span 5; grid-column: 1">B</div><div class=pr-c style="grid-row: span 5 / 7; grid-column: 2">C</div><div class=pr-d style="grid-area: 2 / 4">D</div></div></div>
+    <figcaption>B and C both from 20 to 120px down, in columns 1 and 2. A, <code>grid-row: 2; grid-column: 3</code>,
+    and D, <code>grid-area: 2 / 4</code>, in row 2 of columns 3 and 4.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=s style="direction: rtl"><div class=pr-a style="grid-row: 2; grid-column: 1 / span 2">A</div></div></div>
+    <figcaption><code>direction: rtl</code>: column 1 at the right, A from 40 to 100px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=v><div class=pr-a style="grid-row: 2; grid-column: 1 / span 2">A</div></div></div>
+    <figcaption><code>vertical-rl</code>: rows side by side from the right, columns from the top; A in the
+    middle row, 20 to 40px across, 0 to 60px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

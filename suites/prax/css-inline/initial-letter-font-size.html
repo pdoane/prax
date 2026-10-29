@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size of initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .d2::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .d3::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .em::first-letter { initial-letter: 3; color: #2c5a8f; border-right: 1em solid #f9cc9d; }
+  .ar { font-family: "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.5.3 Font Sizing of Initial Letters</div>
+  <h1>Font size of initial letters</h1>
+  <p class=pr-lede><q>For an inline initial letter, the font size used for sizing the initial letter contents is
+  calculated to fulfill its specified size (see initial-letter) as anchored by its specified alignment points</q>.
+  <q>For an N-line drop initial in a Western script, the cap-height of the letter needs to be (N – 1) times the
+  line-height, plus the cap-height of the surrounding text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#sizing-initial-letter">CSS Inline Layout 3 §7.5.3</a></span>
+  Each paragraph is 13px on 20px lines. <span class=pr-flag>Safari</span> supports only
+  <code>-webkit-initial-letter</code> and <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>(N – 1) × line-height + cap height</h2>
+  <p>PR Literata's cap height is 0.7em, so the surrounding text's is 9.1px: two lines make the letter's cap height
+  29.1px, a 41.6px font; three lines 49.1px, a 70.1px font.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d2">Two lines: the letter's cap height is 29.1px, its font 41.6px.</p></div>
+    <figcaption><code>2</code>: the T 29px tall, top to foot.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d3">Three lines: the letter's cap height is 49.1px, its font 70.1px.</p></div>
+    <figcaption><code>3</code>: the T 49px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar"><p class="p d3 ar">Three lines of Arimo, whose cap height is 0.688em: the same 49px.</p></div>
+    <figcaption>PR Arimo: a different cap height, so a different font size, but the T the same 49px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The computed font size is not changed</h2>
+  <p><q>These used font size calculations do not affect the computed font-size, and therefore have no effect on the
+  computation of em length values</q>. The letter's right border is <code>1em</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p em">The orange border is 1em of the 13px font: 13px wide.</p></div>
+    <figcaption>The orange border 13px wide, not 70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

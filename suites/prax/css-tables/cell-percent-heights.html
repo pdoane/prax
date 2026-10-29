@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentage heights inside cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .a { height: 100%; background: #e6b54a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.6 Table-cell content layout (second pass)</div>
+  <h1>Percentage heights inside cells</h1>
+  <p class=pr-lede>After the rows are sized, a cell's content is laid out again, <q>where, if appropriate,
+  percentage-based heights are this time resolved against their parent cell used height.</q> <q>a cell is considered to
+  have its height specified explicitly if the computed height of the cell is a length, or if the computed height of
+  its table-root ancestor is a length or percentage, regardless of whether that percentage does behave as auto or
+  not.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-cell-content-relayout">CSS Table 3 §3.10.6</a></span>
+  The section's example: in a blue cell a yellow block "A" of <code>height: 100%</code>; beside it an orange cell
+  "B", "C" on two lines, 40px. Text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Resolved</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td style="height: 30px"><div class=a>A</div></td><td>B<br>C</td></tr></table></div>
+    <figcaption>Blue <code>height: 30px</code>: the row is 40px, and "A" fills it, 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table style="height: 30px"><tr><td><div class=a>A</div></td><td>B<br>C</td></tr></table></div>
+    <figcaption>The table <code>height: 30px</code>: "A" 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table style="height: 10%"><tr><td><div class=a>A</div></td><td>B<br>C</td></tr></table></div>
+    <figcaption>The table <code>height: 10%</code> of an auto-height stage, so behaving as auto: still, "A"
+    40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not resolved</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td><div class=a>A</div></td><td>B<br>C</td></tr></table></div>
+    <figcaption>Cell and table <code>auto</code>: "A" is auto, 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td style="height: 50%"><div class=a>A</div></td><td>B<br>C</td></tr></table></div>
+    <figcaption>Blue <code>height: 50%</code>, table <code>auto</code>: "A" 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Percentages: of what each property says</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 100px; }
+  .img { background: linear-gradient(#4f81bd, #4f81bd) no-repeat; background-size: 40px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.5 Percentages</div>
+  <h1>Percentages: of what each property says</h1>
+  <p class=pr-lede><q>Each property that allows percentages also defines the quantity to which the percentage refers.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#percentages">CSS Values and Units 4 §5.5</a></span>
+  Each stage is 200 by 100, and holds a box sized or placed by a percentage of something.</p>
+</header>
+
+<section>
+  <h2>The containing block</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="width: 50%">A</div></div>
+    <figcaption><code>width: 50%</code>: 100px, half the containing block's width.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="width: 40px; height: 50%">A</div></div>
+    <figcaption><code>height: 50%</code>: 50px, half its height.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="width: 40px; height: 0; padding-top: 25%"></div></div>
+    <figcaption><code>padding-top: 25%</code>: 50px, a quarter of its <em>width</em>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit" style="width: 40px; translate: 50% 100%">A</div></div>
+    <figcaption><code>translate: 50% 100%</code>: the box's own size, 20px across and 20px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A font size, and an area less an image</h2>
+  <figure>
+    <div class=pr-stage style="font: 20px 'PR Arimo'"><div style="line-height: 250%; background: #f9cc9d">A line</div></div>
+    <figcaption><code>line-height: 250%</code> of a 20px font: a line 50px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: 50% 100%"></div>
+    <figcaption><code>background-position: 50% 100%</code> of a 40px image: its middle at the area's middle, its
+    bottom at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

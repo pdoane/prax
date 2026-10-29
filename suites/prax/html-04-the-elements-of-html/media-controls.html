@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The media controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .frame { outline: 1px dashed #c0392b; }
+  .pic iframe { width: 180px; height: 90px; border: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.11.13 User interface</div>
+  <h1>The media controls</h1>
+  <p class=pr-lede>The controls attribute <q>indicates that the author has not provided a scripted controller and
+  would like the user agent to provide its own set of controls.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#user-interface">HTML §4.8.11.13</a></span>
+  The video, <code>clip.mp4</code>, is 160 by 80, two seconds of blue, orange, green and purple.</p>
+</header>
+
+<section>
+  <h2>Controls that work through the DOM, and with scripting disabled</h2>
+  <p>Playing, pausing, seeking and the volume <q>must be implemented in terms of the DOM API described above, so that,
+  e.g., all the same events fire.</q> And the user agent <q>should suppress any user interaction events while the user
+  agent is interacting with this interface.</q> <q>If the attribute is present, or if scripting is disabled for the
+  media element, then the user agent should expose a user interface to the user.</q> Scripting is disabled in a frame
+  sandboxed without <code>allow-scripts</code>.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><video id=controlled controls src="support/clip.mp4" width="160" height="80"></video></div>
+      <ol class=pr-log data-on="#controlled" data-log="play pause seeked volumechange mousedown click" data-lines=4></ol>
+    </div>
+    <figcaption>Play, pause, drag the position and mute with the controls: the log shows play, pause, seeked and
+    volumechange, and no mousedown or click, which the user agent should suppress.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pic"><iframe sandbox srcdoc="<body style='margin: 0'><video width=160 height=80 style='background: #4f81bd'></video>"></iframe></div>
+    <figcaption>A video without <code>controls</code>, blue, in such a frame: controls over it all the same.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

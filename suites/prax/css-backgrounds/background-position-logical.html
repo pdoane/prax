@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-position: logical keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") no-repeat; }
+  .rtl { direction: rtl; }
+  .v { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.7 Background Positioning Shorthand: the background-position shorthand property</div>
+  <h1>background-position: logical keywords</h1>
+  <p class=pr-lede>Its values <q>are interpreted as &lt;position&gt; values with the resized background image as the
+  alignment subject and the background positioning area as the alignment container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-position">CSS Backgrounds 4 §2.7</a></span>
+  &lt;position&gt; has keywords for the start and end of each axis <span class=pr-cite><a href="https://drafts.csswg.org/css-values-5/#position">CSS Values and Units 5 §4.2</a></span>.
+  Each dashed box is 140 by 60, with a blue 20px square.</p>
+</header>
+
+<section>
+  <h2>x-start and y-end, inline and block</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost rtl" style="background-position: x-start y-end"></div></div>
+    <figcaption><code>rtl</code>, <code>x-start y-end</code>: at the right, at the bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-position: block-start inline-end"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>block-start inline-end</code>: at the right, at the bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-position: end 10px start 20px"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>end 10px start 20px</code>: block first: 10px from the left, 20px down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Three values</h2>
+  <p><q>The omitted &lt;length-percentage&gt; in the 'background-position'-specific &lt;position-three&gt; syntax
+  variant defaults to 0%.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position: right top 20px"></div></div>
+    <figcaption><code>right top 20px</code>: at the right, 20px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Not on ::first-line or ::first-letter</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p1::first-letter { display: block; color: #c0392b; }
+  .p2::first-letter { visibility: hidden; color: #c0392b; }
+  .p3::first-line { visibility: hidden; color: #c0392b; }
+  .p4::first-letter { display: none; color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 1.1 Module interactions</div>
+  <h1>Not on ::first-line or ::first-letter</h1>
+  <p class=pr-lede><q>None of the properties in this module apply to the ::first-line or ::first-letter
+  pseudo-elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#placement">CSS Display 4 §1.1</a></span></p>
+</header>
+
+<section>
+  <h2>display on ::first-letter</h2>
+  <p>Each paragraph's first letter is red, and is given a <code>display</code> that does not apply to it.</p>
+  <figure>
+    <div class=pr-stage><p class=p1 style="margin: 0">Paragraph text that runs on.</p></div>
+    <figcaption><code>display: block</code>: the red P stays on the line, before "aragraph".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class=p4 style="margin: 0">Paragraph text that runs on.</p></div>
+    <figcaption><code>display: none</code>: the red P is still drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>visibility on ::first-letter and ::first-line</h2>
+  <p>Hiding the pseudo-element hides nothing: its text is drawn, in red.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p2 style="margin: 0">Paragraph text that runs on.</p></div>
+    <figcaption><code>::first-letter { visibility: hidden }</code>: the red P is drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> hide it, leaving its space.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p3 style="margin: 0">Paragraph text that runs on to a second line in the stage.</p></div>
+    <figcaption><code>::first-line { visibility: hidden }</code>: the first line is drawn, red, and the second
+    black. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> hide the first line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

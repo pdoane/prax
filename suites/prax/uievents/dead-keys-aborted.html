@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A dead key aborted</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.2 Dead keys</div>
+  <h1>A dead key aborted</h1>
+  <p class=pr-lede><q>This process might be aborted when a user types an unsupported base character (that is, a base character for
+  which the active diacritical mark is not available) after pressing a dead key</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-dead">UI Events §4.3.2</a></span></p>
+</header>
+<section>
+  <h2>A letter the accent does not take</h2>
+  <p>The specification's example: keydown of the letter with isComposing, compositionupdate and compositionend with no data, then the letter's keyup. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-dead">§4.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=aborted></div>
+      <ol class=pr-log data-log="keydown keyup compositionstart compositionupdate compositionend" data-fields="key data isComposing" data-on="#aborted" data-lines=6></ol>
+    </div>
+    <figcaption>Click the field and type the circumflex dead key (Option+I on a Mac's US layout, ^ on a French one),
+    then <code>q</code>, which takes no circumflex. The keydown of
+    <code>q</code> has <code>isComposing</code>, and compositionend ends the session; its keyup does not. The
+    specification's example gives compositionupdate and compositionend no data; what the field then holds is the input
+    method's.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

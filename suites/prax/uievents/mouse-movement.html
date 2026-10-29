@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>How far the mouse moved</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A stage as wide as a card, for log lines with long values. */
+  .pr-stage.pr-full { width: 500px; }
+  .pr-full + figcaption { max-width: 500px; }
+  #pad { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 5.2.3 set PointerLock attributes for mousemove</div>
+  <h1>How far the mouse moved</h1>
+  <p class=pr-lede>Each mousemove's movementX and movementY are how far the pointer moved since the last mousemove, and
+  0 for the first. <span class=pr-cite><a href="https://w3c.github.io/uievents/#set-pointerlock-attributes-for-mousemove-id">UI Events §5.2.3</a></span></p>
+</header>
+<section>
+  <h2>Since the last mousemove</h2>
+  <p><q>Set event.movementX = event.screenX - last mouse move's x-coordinate</q>; <q>Set event.movementY =
+  event.screenX - last mouse move's y-coordinate</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#set-pointerlock-attributes-for-mousemove-id">§5.2.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-full">
+      <div id=pad></div>
+      <ol class=pr-log data-log="mousemove" data-fields="screenX screenY movementX movementY" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Move the mouse slowly to the right across the area above the log: each line's
+    <code>movementX</code> is its <code>screenX</code> less the line before's. Move it straight down: by the step's
+    letter, <code>movementY</code> is <code>screenX</code> less the previous <code>screenY</code>, a large number
+    that does not follow the motion; Pointer Lock's own definition (<a href="https://w3c.github.io/pointerlock/#extensions-to-the-mouseevent-interface">Pointer Lock 2.0 §6</a>)
+    takes <code>screenY</code> less the previous <code>screenY</code>, the distance moved down. Chrome, Safari and
+    Firefox give Pointer Lock's.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

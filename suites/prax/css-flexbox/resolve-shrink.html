@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: shrinking</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .p { padding: 0 30px; border: 0; background-clip: content-box; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, shrinking</div>
+  <h1>Resolving flexible lengths: shrinking</h1>
+  <p class=pr-lede><q>For every unfrozen item on the line, multiply its flex shrink factor by its inner flex base size,
+  and note this as its scaled flex shrink factor. Find the ratio of the item's scaled flex shrink factor to the sum of
+  the scaled flex shrink factors of all unfrozen items on the line. Set the item's target main size to its flex base
+  size minus a fraction of the absolute value of the remaining free space proportional to the ratio.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>The inner flex base size</h2>
+  <p>Each stage is 200px. Blue's content box, bright, inside its outlined border box, has a basis of 100px, and 30px of padding each side, outer
+  160px; orange's basis is 100px. Together 260px: 60px over.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a p" style="flex: 0 1 100px; min-width: 0">A</div><div class="pr-b pr-fit" style="flex: 0 1 100px; border: 0">B</div></div>
+    <figcaption>Scaled factors 100 and 100: each loses 30px. Blue's content box is 70px, its border box 130px, and
+    orange is 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 1 100px">A</div><div class="pr-b pr-fit" style="flex: 0 1 100px">B</div><div class="pr-d pr-fit" style="flex: 0 0 100px">D</div></div>
+    <figcaption>A and B of 100px shrinking, D of 100px frozen: 100px over, shared by A and B, 50px each; D keeps
+    100px and fills the stage's right half.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Below zero, then corrected</h2>
+  <p>A shrink may leave <q>a negative inner main size; it will be corrected in the next step.</q> Blue has
+  <code>flex: 0 9 20px</code> and <code>min-width: 0</code>, scaled 180; orange <code>0 1 180px</code>, scaled 180;
+  green <code>0 0 100px</code>. 300px: 100px over.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 9 20px; min-width: 0; border: 0"></div><div class="pr-b pr-fit" style="flex: 0 1 180px; border: 0">B</div><div class="pr-c pr-fit" style="flex: 0 0 100px">C</div></div>
+    <figcaption>Each loses 50px: blue −30px, floored to 0 and frozen; orange 130px. Again with blue at 0: 80px over,
+    all orange's, so orange is 100px from the left edge and green 100px beside it. Blue is not seen.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

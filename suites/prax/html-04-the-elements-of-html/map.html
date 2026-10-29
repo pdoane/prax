@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The map element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pic { box-sizing: border-box; padding: 10px 0 0; font-size: 0; line-height: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.12 The map element</div>
+  <h1>The map element</h1>
+  <p class=pr-lede><q>The map element, in conjunction with an img element and any area element descendants, defines
+  an image map. The element represents its children.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#the-map-element">HTML §4.8.12</a></span></p>
+</header>
+
+<section>
+  <h2>Its children are drawn; its areas are not</h2>
+  <p>The map's content is transparent: text and links in it are drawn where the map is. An area is a shape on an
+  image, not a box; areas are among the elements with <code>display: none</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide line">[<map name=links>Text in a map, <a href="#top-of-map">a link</a><area shape=rect coords="0,0,40,20" href="#area" alt="An area" style="display: inline; background: #d68a3c"></map>]</div>
+    <figcaption>"[Text in a map, a link]" on one line, and no orange: the area's own style draws nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A map is found by its name</h2>
+  <p>An img's <code>usemap</code> is <q>a valid hash-name reference to a map element</q>; the map may be anywhere in
+  the document. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#authoring">§4.8.14.1</a></span>
+  The log lists the target of each click on the page.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=image src="support/map-shapes.svg" usemap="#far" alt="Shapes"></div>
+      <ol class=pr-log data-on=document data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click the blue rectangle: <code>target=far-rect</code>, an area of a map at the end of the page.
+    Click the grey: <code>target=image</code>.</figcaption>
+  </figure>
+</section>
+
+<map name=far><area id=far-rect shape=rect coords="10,10,60,90" href="#far-rect-link" alt="Rectangle"></map>
+<script src=../shared/events.js></script>
+</body>
+</html>

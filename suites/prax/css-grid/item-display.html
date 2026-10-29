@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid items are blockified</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 60px 60px 60px; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .tc { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.1 Grid Item Display</div>
+  <h1>Grid items are blockified</h1>
+  <p class=pr-lede><q>If the computed display value of an element's nearest ancestor element (skipping display:contents
+  ancestors) is grid or inline-grid, the element's own display value is blockified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-item-display">CSS Grid Layout 2 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Inline children become blocks</h2>
+  <p>Each grid has 60px columns; an item that is a block stretches to fill its column, as an inline box would not.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><span class=ta>ab</span><span class=tb style="display: inline-block">cd</span><span class=tc style="display: inline-flex">ef</span></div></div>
+    <figcaption>A span, an inline-block and an inline-flex: each fills its 60px column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div style="display: contents"><span class=ta>ab</span><span class=tb>cd</span></div></div></div>
+    <figcaption>Spans in a <code>display: contents</code> child: their nearest ancestor is the grid, so they are items,
+    "ab" at 0 and "cd" at 60px, each filling its column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No anonymous boxes, and a context of its own</h2>
+  <p><q>two contiguous grid items with display: table-cell will become two separate display: block grid items, instead
+  of being wrapped into a single anonymous table.</q> And <q>a grid item establishes an independent formatting
+  context for its contents.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta style="display: table-cell">ab</div><div class=tb style="display: table-cell">cd</div></div></div>
+    <figcaption>Two table cells: two items, "ab" filling the first column and "cd" the second, at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta><div class=tc style="margin: 20px 0">ab</div></div></div></div>
+    <figcaption>An item holding a block with <code>margin: 20px 0</code>: the margins stay in the item, which is
+    60px tall, "ab" from 20 to 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic table layout: column groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; font-size: 0; line-height: 0; vertical-align: top; }
+  .blk { display: inline-block; width: 30px; height: 18px; background: #4f81bd; outline: 1px solid white; outline-offset: -1px; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.2 Automatic table layout</div>
+  <h1>Automatic table layout: column groups</h1>
+  <p class=pr-lede>Cells hold 30px blocks with line breaks allowed between them, have a 1px border and no padding.</p>
+</header>
+
+<section>
+  <h2>Column groups</h2>
+  <p><q>For each column group element with a 'width' other than 'auto', increase the minimum widths of the columns it
+  spans, so that together they are at least as wide as the column group's 'width'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2
+  §17.5.2.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><colgroup style="width: 150px"><col><col></colgroup><col><tr><td><span class=blk></span><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>A column group of the two blue columns, <code>width: 150px</code>: the two are at least 150px
+    together; the orange column stays 32px. <span class="pr-flag pr-since">Since CSS 2</span> CSS Tables 3 makes each
+    of the two at least 150px, and the table 332px, wider than the stage. <span class=pr-flag>Chrome</span> makes them
+    84px each, filling the 200px stage.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a></div>
+  <h2>A group's width is each column's</h2>
+  <p>A column's minimum width is at least <q>the outer min-content width of its corresponding table-column-group, if
+  any</q>, which is <q>max(min-width, width)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a>, <a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">§3.8.2</a></span> A group's
+  width applies to every column in it, not to them together.</p>
+  <figure>
+    <div class=pr-stage><table><colgroup style="width: 60px"><col><col></colgroup><col><tr><td><span class=blk></span><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>A group of the two blue columns with <code>width: 60px</code>: each blue column is 60px, the orange
+    one 32px. Under CSS 2 the two 32px columns already made 60px together.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

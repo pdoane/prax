@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-language-override</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 32px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.13 Font language override: the 'font-language-override' property</div>
+  <h1>font-language-override</h1>
+  <p class=pr-lede><code>normal</code> uses the OpenType language system that the content language implies; a string
+  names the system to use instead. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-language-override-prop">CSS Fonts 4 §6.13</a></span></p>
+</header>
+
+<section>
+  <h2>The content language, or another</h2>
+  <p>PR Literata's Turkish (<code>TRK</code>) system keeps f and i apart.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=tr>fil</div>
+    <figcaption><code>lang=tr</code>, <code>normal</code>: Turkish, f and i apart.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" lang=tr style="font-language-override: 'ENG'">fil</div>
+    <figcaption><code>lang=tr</code>, <code>"ENG"</code>: English forms, fi joined. <span class=pr-flag>Safari</span>
+    ignores 'font-language-override': f and i apart.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" lang=en style="font-language-override: 'TRK'">fil</div>
+    <figcaption><code>lang=en</code>, <code>"TRK"</code>: Turkish forms, f and i apart. <span
+    class=pr-flag>Safari</span> ignores 'font-language-override', and draws the English forms, fi joined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" id=o4 lang=en style="font-language-override: 'TR'">fil</div>
+    <figcaption><code>"TR"</code>, two letters, padded with spaces: no such system in the font, so the default
+    forms.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

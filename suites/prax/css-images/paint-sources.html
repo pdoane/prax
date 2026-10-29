@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>element(): paint sources</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .dst { width: 80px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.7.1 Paint Sources</div>
+  <h1>element(): paint sources</h1>
+  <p class=pr-lede>Paint sources <q>may be used as images even when they're not rendered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#paint-sources">CSS Images 4 §2.7.1</a></span>
+  Each dashed box is 80 by 40, its background <code>element()</code> of an element that is not rendered.</p>
+</header>
+
+<svg width=0 height=0 style="position: absolute">
+  <defs>
+    <linearGradient id=ramp><stop offset=0 stop-color="#4f81bd"/><stop offset=1 stop-color="#d68a3c"/></linearGradient>
+    <pattern id=bars width=10 height=10 patternUnits=userSpaceOnUse><rect width=5 height=10 fill="#4f81bd"/></pattern>
+  </defs>
+</svg>
+<img id=flag src=../shared/resources/flag-40x20.png style="display: none" alt="">
+<canvas id=drawn width=40 height=20 style="display: none"></canvas>
+<script>
+  const context = document.getElementById("drawn").getContext("2d");
+  context.fillStyle = "#d68a3c";
+  context.fillRect(0, 0, 40, 20);
+  context.fillStyle = "#4f81bd";
+  context.fillRect(10, 0, 10, 20);
+</script>
+
+<section>
+  <h2>HTML's img and canvas</h2>
+  <p><q>In HTML, the &lt;img&gt;, &lt;video&gt;, and &lt;canvas&gt; elements provide paint sources.</q> <q>The function
+  represents an image with the natural dimensions and appearance of the paint source.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="dst pr-ghost" style="background-image: element(#flag)"></div></div>
+    <figcaption>A hidden img: its flag, 40 by 20, at the top left. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="dst pr-ghost" style="background-image: element(#drawn)"></div></div>
+    <figcaption>A hidden canvas: orange 40 by 20, blue from 10px to 20px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's paint servers</h2>
+  <p><q>In SVG, any element that provides a paint server provides a paint source.</q> objectBoundingBox: <q>A single
+  user coordinate is the width and height of the concrete object size.</q> userSpaceOnUse: <q>User coordinates are
+  sized equivalently to the CSS px unit.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="dst pr-ghost" style="background-image: element(#ramp)"></div></div>
+    <figcaption>A linearGradient, in the bounding box: blue to orange across all 80px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="dst pr-ghost" style="background-image: element(#bars)"></div></div>
+    <figcaption>A pattern in user space: blue bars 5px wide every 10px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font family names and keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3 Font family: the 'font-family' property</div>
+  <h1>Font family names and keywords</h1>
+  <p class=pr-lede><q>Style sheet designers are encouraged to offer a generic font family as a last alternative. Generic
+  font family names are keywords and must NOT be quoted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/generic-families.html">Generic families</a>.</p>
+</header>
+
+<section>
+  <h2>A quoted keyword is a family name</h2>
+  <p><q>Unquoted font family names that happen to be the same as the keyword values 'inherit', 'default' and 'initial'
+  or the generic font keywords ('serif', 'sans-serif', 'monospace', 'fantasy', and 'cursive') do not match the
+  '&lt;family-name&gt;' type.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-family-prop">CSS 2 §15.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace, serif">Mono iiii</div>
+    <figcaption><code>monospace, serif</code>: the generic family: every letter as wide as the next.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'monospace', serif">Mono iiii</div>
+    <figcaption><code>"monospace", serif</code>: a family named "monospace", which does not exist, so serif: the i's
+    are narrow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

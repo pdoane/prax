@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating cross-fade()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes colors {
+    from { background-image: cross-fade(#4f81bd 20%, #d68a3c); }
+    to { background-image: cross-fade(#4f81bd 60%, #d68a3c); }
+  }
+  @keyframes images {
+    from { background-image: cross-fade(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%234f81bd'/></svg>") 20%, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%23d68a3c'/></svg>")); }
+    to { background-image: cross-fade(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%234f81bd'/></svg>") 60%, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='40'><rect width='100' height='40' fill='%23d68a3c'/></svg>")); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.3 Interpolating cross-fade()</div>
+  <h1>Interpolating cross-fade()</h1>
+  <p class=pr-lede><q>The three components of cross-fade() are interpolated independently. Note this may result in
+  nested cross-fade() notations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-image-combinations">CSS Images 4 §7.3</a></span>
+  The text dates from a cross-fade() of two images and a percentage; with the same images on both sides, the
+  percentages interpolate.</p>
+</header>
+
+<section>
+  <h2>The percentages, halfway</h2>
+  <p>Each dashed box is 100 by 40, its <code>background-image</code> animated to and fro from a cross-fade of blue
+  <code>20%</code> and orange to one of blue <code>60%</code> and orange; a still shows it at 50%. There blue is
+  <code>40%</code> and orange takes the rest, <code>60%</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: colors"></div></div>
+    <figcaption>Colors: the box filled with 40% blue and 60% orange, <code>#a08670</code>. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="box pr-ghost half" style="animation-name: images"></div></div>
+    <figcaption>Images 100 by 40 of the same colors: the same <code>#a08670</code>. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

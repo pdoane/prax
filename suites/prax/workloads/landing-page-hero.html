@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A hero section on a gradient, with a headline, buttons, and a feature trio drawn in SVG. Leans on: a radial gradient background, a nav row with an auto margin, a centred headline with a highlighted phrase, two button styles, inline SVG icons in rounded tiles, and a muted logo strip. -->
+<title>Landing page hero</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.site { border-radius:12px; overflow:hidden; border:1px solid #d3d8de }
+.hero { background:radial-gradient(120% 90% at 15% 0%, #4d7fd6 0%, #2a3f7a 55%, #1b2547 100%); color:#fff; padding:14px 22px 26px; position:relative }
+.nav { display:flex; align-items:center; gap:16px; font-size:11px; color:#c3d2ee; margin-bottom:26px }
+.nav .mark { display:flex; align-items:center; gap:6px; font-size:14px; font-weight:bold; color:#fff; margin-right:auto }
+.nav .mark svg { display:block }
+.nav .btn { border:1px solid #7d97cc; border-radius:99px; padding:3px 12px; color:#fff }
+.hero h2 { font-size:31px; line-height:1.12; letter-spacing:-.02em; margin:0 auto 8px; max-width:440px; text-align:center; font-weight:bold }
+.hero h2 em { font-style:normal; color:#ffd18a }
+.hero .dek { font-size:13px; color:#c3d2ee; max-width:400px; margin:0 auto 14px; text-align:center; line-height:1.55 }
+.acts { display:flex; gap:9px; justify-content:center }
+.acts .a { font-size:12px; font-weight:bold; border-radius:7px; padding:8px 18px }
+.acts .a.p { background:#fff; color:#22337a }
+.acts .a.s { border:1px solid #8aa2d4; color:#fff }
+.hero .under { text-align:center; font-size:10px; color:#9fb2da; margin-top:9px }
+.trio { display:flex; background:#fff; padding:16px 18px; gap:16px }
+.trio .f { flex:1; text-align:center }
+.trio .ic { width:38px; height:38px; margin:0 auto 7px; border-radius:10px; background:#eef3fb; display:flex; align-items:center; justify-content:center }
+.trio h3 { font-size:12.5px; margin-bottom:2px; color:#22282f }
+.trio p { font-size:11px; color:#5d6673; line-height:1.5 }
+.logos { display:flex; align-items:center; justify-content:center; gap:20px; background:#f5f7fa; border-top:1px solid #e6e9ed; padding:9px 0; font-size:11px; font-weight:bold; color:#9aa5b2; letter-spacing:.04em }
+</style>
+</head>
+<body>
+<div class="site">
+  <div class="hero">
+    <div class="nav">
+      <span class="mark">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8" fill="#ffd18a" /><path d="M5 11l3-5 2 3 1.5-2L14 11z" fill="#2a3f7a" /></svg>
+        Kilnwork
+      </span>
+      <span>Product</span><span>Pricing</span><span>Docs</span><span>Blog</span>
+      <span class="btn">Sign in</span>
+    </div>
+
+    <h2>Ship the build once. <em>Run it everywhere.</em></h2>
+    <div class="dek">Kilnwork takes the container you already build and runs it on
+    your machines, in your regions, with one command and no cluster to keep
+    alive.</div>
+    <div class="acts">
+      <span class="a p">Start free</span>
+      <span class="a s">Read the docs</span>
+    </div>
+    <div class="under">No card. 2,000 build minutes a month on the free plan.</div>
+  </div>
+
+  <div class="trio">
+    <div class="f">
+      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a3f7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" /></svg></div>
+      <h3>One artefact</h3>
+      <p>The image you tested is the image that runs. No rebuild between
+      environments.</p>
+    </div>
+    <div class="f">
+      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a3f7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" /></svg></div>
+      <h3>Regions you choose</h3>
+      <p>Pin a service to Frankfurt or Oregon, or spread it across both and let
+      traffic decide.</p>
+    </div>
+    <div class="f">
+      <div class="ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a3f7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-6 4 4 7-8" /><path d="M4 21h17" /></svg></div>
+      <h3>Costs in the open</h3>
+      <p>Every deploy shows the hourly cost before it starts, per region and per
+      replica.</p>
+    </div>
+  </div>
+
+  <div class="logos"><span>HALVORSEN</span><span>Fjord&#183;Outfitters</span><span>CEDAR &amp; PINE</span><span>Delacroix</span></div>
+</div>
+</body>
+</html>

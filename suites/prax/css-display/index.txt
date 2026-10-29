@@ -1,0 +1,56 @@
+00-supports-1.html
+00-supports-2.html
+css-display-4/#intro 1 Introduction
+    box-tree.html
+css-display-4/#placement 1.1 Module interactions
+    first-line-letter.html
+# css-display-4/#values 1.2 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+# css-display-4/#the-display-properties 2 Box Layout Modes: the display property: no page; its full and short forms differ only in how they serialize, and 2.1 to 2.5 show what each keyword draws
+css-display-4/#outer-role 2.1 Outer Display Roles for Flow Layout: the block, inline, and run-in keywords
+    outer-display.html
+css-display-4/#inner-model 2.2 Inner Display Layout Models: the flow, flow-root, table, flex, grid, and ruby keywords
+    inner-display.html
+    inner-display-formatting.html
+css-display-4/#list-items 2.3 Generating Marker Boxes: the list-item keyword
+    list-item.html
+css-display-4/#layout-specific-display 2.4 Layout-Internal Display Types: the table-* and ruby-* keywords
+    layout-internal.html
+    layout-internal-replaced.html
+css-display-4/#box-generation 2.5 Box Generation: the none and contents keywords
+    display-contents.html
+    display-none.html
+css-display-4/#legacy-display 2.6 Precomposed Inline-level Display Values
+    precomposed.html
+css-display-4/#transformations 2.7 Automatic Box Type Transformations
+    blockification.html
+    blockification-types.html
+    inlinification.html
+css-display-4/#root 2.8 The Root Element’s Principal Box
+    root-box.html
+css-display-4/#display-animation 2.9 Animating and Interpolating display
+    display-animation.html
+css-display-4/#order-property 3 Display Order: the order property
+    order.html
+    order-painting.html
+# css-display-4/#order-accessibility 3.1 Reordering and Accessibility: no page; it says order leaves speech and sequential navigation in source order, which nothing on the canvas shows
+# css-display-4/#reading-flow 4 Reading Order: the reading-flow property: no page; it orders speech and sequential navigation, and affects neither layout nor painting order
+# css-display-4/#reading-order 4.1 Overriding Reading Flow: the reading-order property: no page; it moves an item in the reading flow, which nothing on the canvas shows
+css-display-4/#visibility 5 Invisibility: the visibility property
+    visibility.html
+    visibility-collapse.html
+css-display-4/#run-in-layout 6 Run-In Layout
+    run-in.html
+    run-in-sequence.html
+css-display-4/#glossary A Glossary
+    glossary-boxes.html
+    independent-formatting-context.html
+# css-display-4/#unbox B Effects of display: contents on Unusual Elements: no page; its three subsections show it
+css-display-4/#unbox-html B.1 HTML Elements
+    contents-html.html
+    contents-html-boxes.html
+css-display-4/#unbox-svg B.2 SVG Elements
+    contents-svg.html
+    contents-svg-none.html
+css-display-4/#unbox-mathml B.3 MathML Elements
+    contents-mathml.html
+# css-display-4/#box-guidelines C Box Construction Guidelines for Spec Authors: no page; it is guidance for writers of specifications, which 2.7 and A show in effect

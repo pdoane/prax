@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins at page breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.2 Adjoining Margins at Breaks: the margin-break property</div>
+  <h1>Margins at page breaks</h1>
+  <p class=pr-lede><code>margin-break: auto</code>, the initial value: <q>When an unforced break occurs before or after the box, any margins adjoining the break truncate to the remaining fragmentainer extent before the break, and are truncated to zero after the break. When a forced break occurs there, adjoining margins before the break are truncated, but margins after the break are preserved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>On pages</h2>
+  <p>B has a 30px top margin.</p>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='margin-top: 30px; break-before: page'>B</div>"></iframe>
+    <figcaption>After a forced page break: B 30px down the second page. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Truncate the margin: B at the top of the second page.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<br>six<div class=pr-b style='margin-top: 30px'>B</div>"></iframe>
+    <figcaption>After an unforced page break: B, with its margin, does not fit under "six"; at the very top of the second page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

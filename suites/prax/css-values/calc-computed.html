@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A calc() with a percentage computes to a calc()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .parent { background: rgba(79, 129, 189, 0.16); outline: 1px dashed #6b7381; }
+  .bar { height: 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.11 Computed Value</div>
+  <h1>A calc() with a percentage computes to a calc()</h1>
+  <p class=pr-lede><q>Where percentages are not resolved at computed-value time, they are not resolved in math
+  functions</q>. <q>If there are special rules for computing percentages in a value (e.g. the height property), they
+  apply whenever a math function contains percentages.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-computed-value">CSS Values and Units 4 §10.11</a></span></p>
+</header>
+
+<section>
+  <h2>Inherited, and resolved again</h2>
+  <figure>
+    <div class=pr-stage><div class=parent style="width: calc(50% + 20px)"><div class=bar style="width: inherit"></div></div></div>
+    <figcaption>The dashed parent is <code>calc(50% + 20px)</code>, 120px. The child inherits the expression: 60px
+    and 20px, an 80px bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Special rules for percentages</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 80px; height: calc(50% + 40px)">A</div></div>
+    <figcaption>In a stage whose height is <code>auto</code>, <code>height: calc(50% + 40px)</code> is treated as
+    auto, as 50% would be: the box is its line, 20px, not 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row><div class=pr-table-cell style="width: calc(50% + 50px)">A</div><div class=pr-table-cell>B</div></div></div></div>
+    <figcaption><q>math expressions mixing both percentages and non-zero lengths for widths</q> <q>on</q> <q>table
+    cells</q> <q>MUST be treated as if auto had been specified</q>: two cells as wide as A and B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

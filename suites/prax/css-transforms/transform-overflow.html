@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transforms and the scrollable overflow area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .sc { overflow: hidden; }
+  .pr-stage.pr-cb { height: 80px; }
+  .p { position: absolute; top: 20px; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 2 The Transform Rendering Model</div>
+  <h1>Transforms and the scrollable overflow area</h1>
+  <p class=pr-lede><q>the extent of the overflow area takes into account transformed elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  Each stage scrolls, as far right as it goes; the dashed outline is where the box was laid out.</p>
+</header>
+
+<section>
+  <h2>Moved out, it can be scrolled to</h2>
+  <p><q>if the value of the overflow property is scroll or auto, scrollbars will appear as needed to see content that is
+  transformed outside the visible area.</q></p>
+  <figure>
+    <div id=a class="pr-stage pr-medium pr-cb sc"><div class="pr-a pr-fit p" style="left: 40px; transform: translateX(110px)">A</div></div>
+    <figcaption>Laid out at 40 to 100, moved to 150 to 210: scroll width <code class=pr-computed data-of=a data-dom=scrollWidth></code>,
+    scrolled 50px, the box at 100 to 160.</figcaption>
+  </figure>
+  <figure>
+    <div id=b class="pr-stage pr-medium pr-cb sc"><div class="pr-ghost p" style="left: 40px"></div><div class="pr-a pr-fit p" style="left: 40px; transform: translateX(-70px)">A</div></div>
+    <figcaption>Moved 70px left, past the start: out of reach, only 0 to 30 shows. Scroll width <code class=pr-computed data-of=b data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The union of before and after</h2>
+  <p><q>transforms can extend (but do not shrink) the size of the overflow area, which is computed as the union of the
+  bounds of the elements before and after the application of transforms.</q> CSS Overflow counts only the transformed
+  box (<a href="https://drafts.csswg.org/css-overflow-3/#scrollable">CSS Overflow 3 §2.2</a>). A box laid out at 130
+  to 190, overflowing by 30, is moved inside to 30 to 90. By CSS Transforms, the union is 190 wide, so the stage
+  scrolls 30px and the box shows at 0 to 60. By CSS Overflow, nothing overflows, and the box shows at 30 to 90.</p>
+  <figure>
+    <div id=c class="pr-stage pr-medium pr-cb sc"><div class="pr-ghost p" style="left: 130px"></div><div class="pr-a pr-fit p" style="left: 130px; transform: translateX(-100px)">A</div></div>
+    <figcaption>Scroll width <code class=pr-computed data-of=c data-dom=scrollWidth></code>. Chrome, Safari and
+    Firefox take the union.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+<script>for (const s of document.querySelectorAll(".sc")) s.scrollLeft = 1000;</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<script>
+"use strict";
+function check(value, message) {
+    if (!value) throw new Error(message);
+}
+let calls = [];
+function listener(event) {
+    calls.push([this === window, event.type, event.currentTarget === window]);
+}
+window.addEventListener("test", listener);
+window.addEventListener("test", listener);
+window.dispatchEvent(new Event("test"));
+check(JSON.stringify(calls) === '[[true,"test",true]]', "identity and function receiver");
+window.removeEventListener("test", listener);
+window.dispatchEvent(new Event("test"));
+check(calls.length === 1, "remove by callback identity");
+
+const object = {handleEvent() { calls.push("old"); }};
+window.addEventListener("object", object);
+object.handleEvent = function(event) { calls.push(this === object && event.type === "object"); };
+window.dispatchEvent(new Event("object"));
+check(calls.at(-1) === true, "dynamic handleEvent lookup and object receiver");
+window.removeEventListener("object", object);
+
+let onceCalls = 0;
+window.addEventListener("once", () => {
+    ++onceCalls;
+    window.dispatchEvent(new Event("once"));
+}, {once: true});
+window.dispatchEvent(new Event("once"));
+check(onceCalls === 1, "once removed before reentrant dispatch");
+
+calls = [];
+function removed() { calls.push("removed"); }
+function added() { calls.push("added"); }
+function mutator() {
+    calls.push("mutator");
+    window.removeEventListener("mutation", removed);
+    window.addEventListener("mutation", added);
+}
+window.addEventListener("mutation", mutator);
+window.addEventListener("mutation", removed);
+window.dispatchEvent(new Event("mutation"));
+check(calls.join() === "mutator", "removal during dispatch and deferred addition");
+window.dispatchEvent(new Event("mutation"));
+check(calls.join() === "mutator,mutator,added", "addition reached next dispatch");
+
+calls = [];
+window.addEventListener("capture", listener);
+window.addEventListener("capture", listener, true);
+window.removeEventListener("capture", listener);
+window.dispatchEvent(new Event("capture"));
+check(calls.length === 1, "capture participates in identity");
+window.removeEventListener("capture", listener, true);
+
+let retained = 0;
+(function() {
+    const payload = {value: 7};
+    window.addEventListener("retained", () => { retained += payload.value; });
+})();
+window.dispatchEvent(new Event("retained"));
+check(retained === 7, "registration retains callback and closure");
+
+let completed = false;
+window.addEventListener("exception", () => { throw new Error("expected callback exception"); });
+window.addEventListener("exception", () => { completed = true; });
+window.dispatchEvent(new Event("exception"));
+check(completed, "listener exceptions do not stop dispatch");
+window.addEventListener("badMethod", {get handleEvent() { throw new Error("expected getter exception"); }});
+window.dispatchEvent(new Event("badMethod"));
+
+let rejected = false;
+try { window.addEventListener("bad", 42); } catch (error) { rejected = error instanceof TypeError; }
+check(rejected, "callback conversion rejects primitives");
+window.addEventListener("null", null);
+window.removeEventListener("null", undefined);
+let optionsFailed = false;
+try {
+    window.addEventListener("badOptions", () => {}, {get capture() { throw new Error("options"); }});
+} catch (error) { optionsFailed = error.message === "options"; }
+check(optionsFailed, "later conversion failure releases temporary callback");
+
+const standalone = new EventTarget();
+let standaloneCalls = 0;
+const standaloneListener = {handleEvent(event) {
+    if (this === standaloneListener && event.type === "standalone") ++standaloneCalls;
+}};
+standalone.addEventListener("standalone", standaloneListener);
+standalone.dispatchEvent(new Event("standalone"));
+check(standaloneCalls === 1, "standalone EventTarget dispatch");
+standalone.removeEventListener("standalone", standaloneListener);
+standalone.dispatchEvent(new Event("standalone"));
+check(standaloneCalls === 1, "standalone EventTarget removal");
+print("callback tests passed");
+</script>

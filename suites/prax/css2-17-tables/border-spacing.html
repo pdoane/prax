@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The separated borders model: border-spacing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { background: #f2e394; border: 2px solid #2c5a8f; }
+  .t .pr-table-cell { width: 30px; padding: 0; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1 The separated borders model</div>
+  <h1>The separated borders model: border-spacing</h1>
+  <p class=pr-lede><code>border-spacing</code> takes <code>&lt;length&gt; &lt;length&gt;?</code>. Initial <code>0</code>,
+  inherited, and it applies to <code>table</code> and <code>inline-table</code> elements; it computes to two absolute
+  lengths. Each table is a <code>div</code> with a yellow background and a 2px border, and its cells are 30 by
+  20.</p>
+</header>
+
+<section>
+  <h2>One length or two</h2>
+  <p><q>The lengths specify the distance that separates adjoining cell borders. If one length is specified, it gives
+  both the horizontal and vertical spacing. If two are specified, the first gives the horizontal spacing and the second
+  the vertical spacing. Lengths may not be negative.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#separated-borders">CSS 2 §17.6.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div></div>
+    <figcaption>No declaration, the initial <code>0</code>: the cells touch.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="border-spacing: 10px"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div></div>
+    <figcaption><code>10px</code>: 10px between the cells, across and down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="border-spacing: 20px 4px"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div></div>
+    <figcaption><code>20px 4px</code>: 20px across, 4px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At the table's edges</h2>
+  <p><q>The distance between the table border and the borders of the cells on the edge of the table is the table's
+  padding for that side, plus the relevant border spacing distance.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#separated-borders">CSS 2 §17.6.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="border-spacing: 10px; padding: 0 0 0 20px"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div></div>
+    <figcaption><code>border-spacing: 10px; padding-left: 20px</code>: the first cell is 30px from the table's left
+    border, 10px from the others.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="border-spacing: 1em 0; font-size: 10px"><div class="pr-table t"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div></div>
+    <figcaption><code>1em 0</code> set on the stage, of 10px text, inherited by the table: 10px between the cells
+    across, and their tops and bottoms touch the table's border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

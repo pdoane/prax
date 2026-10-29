@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Vertical scripts in Unicode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 120px; padding: 0 6px; }
+  figure.s figcaption { max-width: 92px; }
+  figure.s { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · A Vertical Scripts in Unicode</div>
+  <h1>Vertical scripts in Unicode</h1>
+  <p class=pr-lede><q>This appendix lists the vertical-only and bi-orientational scripts in Unicode 6.0 [UNICODE] and
+  their transformation from horizontal to vertical orientation. Any script not listed explicitly is assumed to be
+  horizontal-only.</q> The appendix is informative. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#script-orientations">CSS Writing Modes 4 §A</a></span></p>
+</header>
+
+<section>
+  <h2>The listed transforms, and exceptions by width</h2>
+  <p>Bopomofo, Hiragana, Katakana, Han and Hangul are listed with <q>0°</q> and <q>ttb</q>: upright, top to bottom.
+  Mongolian with <q>90°</q>, Ogham with <q>-90°</q> and <q>btt</q>. Each stage is <code>mixed</code>.</p>
+  <figure class=s>
+    <div class=pr-stage>ㄅㄆㄇひらカタ漢字</div>
+    <figcaption>Bopomofo, Hiragana, Katakana, Han: upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Noto Sans KR'">한국어</div>
+    <figcaption>Hangul: upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Noto Sans Mongolian'; writing-mode: vertical-lr">ᠮᠣᠩᠭᠣᠯ</div>
+    <figcaption>Mongolian, <code>vertical-lr</code>: turned 90°.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Noto Sans Ogham'; writing-mode: sideways-lr">᚛ᚑᚌᚐᚋ᚜</div>
+    <figcaption>Ogham, <code>sideways-lr</code>: turned -90°, read upward.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>Latin</div>
+    <figcaption>Latin, not listed: turned.</figcaption>
+  </figure>
+  <p><q>For the purposes of this specification, all fullwidth (F) and wide (W) characters are treated as belonging to
+  a vertical script, and halfwidth characters (H) are treated as belonging to a horizontal script.</q></p>
+  <figure class=s>
+    <div class=pr-stage>ＡＢＣ１２</div>
+    <figcaption>Fullwidth Latin and digits: upright.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage>ｶﾀｶﾅ</div>
+    <figcaption>Halfwidth Katakana: turned, as Latin is. <span class=pr-flag>Safari</span> sets them upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A native widget's box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 6px 20px; }
+  .big { display: block; width: 40px; height: 40px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2 Switching appearance, disregarded properties</div>
+  <h1>A native widget's box</h1>
+  <p class=pr-lede>For <code>auto</code>, <q>The element's box is laid out like a regular replaced element.</q>
+  <q>User agents may disregard some CSS properties used to size and paint the contents of widgets rendered with their
+  native appearance</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-switching">CSS Basic User Interface 4 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>Size, position and what is drawn outside the box apply</h2>
+  <p><q>CSS properties that impact the box sizing or position of the widget's box (such as the sizing properties), or
+  their visual appearance outside of the box (such as transform, filter or box-shadow), must be applied to widgets
+  rendered with their native appearance.</q> Each checkbox is native and has <code>width: 40px; height: 40px</code>,
+  with a dashed outline round its box.</p>
+  <figure>
+    <div class="pr-stage stage"><input type=checkbox checked class="big pr-ghost"><div class=pr-a>after</div></div>
+    <figcaption>The box is 40 by 40, and "after" starts 40px down. The control is drawn in the box at whatever size
+    the platform draws it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><input type=checkbox checked class="big pr-ghost" style="transform: rotate(45deg); box-shadow: 10px 10px #d68a3c"><div class=pr-a>after</div></div>
+    <figcaption>With <code>transform: rotate(45deg)</code> and an orange <code>box-shadow</code>: the box and the
+    control turned 45 degrees, with the shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painting inside the box may be disregarded</h2>
+  <p>Padding and border <q>may be disregarded when needed.</q> <q>Other properties that affect painting (like
+  background-color) may be disregarded when needed.</q></p>
+  <figure>
+    <div class="pr-stage stage"><input type=checkbox checked class="big pr-ghost" style="padding: 10px; color: #c0392b"><div class=pr-a>after</div></div>
+    <figcaption><code>padding: 10px</code> and a red <code>color</code>: either may be disregarded. Chrome, Safari
+    and Firefox all draw the control as in the first figure.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Popovers and the focus</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.12 The popover attribute</div>
+  <h1>Popovers and the focus</h1>
+  <p class=pr-lede>Showing a popover will <q>Run the popover focusing steps given element</q>, and hiding it with
+  focusPreviousElement will return the focus <q>If focusPreviousElement is true and document's focused area of the
+  document's DOM anchor is a shadow-including inclusive descendant of element</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">HTML §6.12</a></span></p>
+</header>
+<section>
+  <h2>Into the popover, and back</h2>
+  <p>The focusing steps focus the popover's autofocus delegate: <q>If subject has the autofocus attribute, then let
+  control be subject.</q> <q>Otherwise, let control be the autofocus delegate for subject given "other".</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">§6.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=pr-target id=field value="a field; then Tab to the button">
+        <button class=pr-target id=trigger popovertarget=pop>show the popover</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=3 data-on=document></ol>
+    </div>
+    <figcaption>Click the field, press Tab to the button and press Enter: the popover shows, and its field with
+    <code>autofocus</code> takes the focus. Press Esc: the popover closes and the focus goes back to the button,
+    which had it before.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Without autofocus, the focus stays</h2>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=trigger2 popovertarget=pop2>show a popover without autofocus</button>
+      </div>
+    </div>
+    <figcaption>Tab to the button and press Enter: the popover shows and the button keeps the focus. Press Tab: the
+    popover's first button, next after its trigger in the order.</figcaption>
+  </figure>
+</section>
+<div popover id=pop>
+  <button class=pr-target id=first>a button</button>
+  <input class=pr-target id=auto value="autofocus" autofocus>
+</div>
+<div popover id=pop2>
+  <button class=pr-target id=inner>a button in the popover</button>
+</div>
+<script src=../shared/events.js></script>
+</body>
+</html>

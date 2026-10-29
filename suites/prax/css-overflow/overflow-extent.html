@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A box's overflow: its containing block chain</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .ab { position: absolute; left: 60px; top: 30px; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2 Overflow Concepts and Terminology</div>
+  <h1>A box's overflow: its containing block chain</h1>
+  <p class=pr-lede><q>A box's overflow is computed based on the layout and styling of the box itself and of all
+  descendants whose containing block chain includes the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-concepts">CSS Overflow 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Only descendants it contains</h2>
+  <p>Each dashed box is 120 by 40 with <code>overflow: auto</code>, and holds an absolutely positioned B 30px from its
+  top, across its bottom edge. Each stage is 100px tall and is B's containing block unless the dashed box is
+  positioned.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div id=a1 class="pr-frame sc"><div class="pr-b ab">B</div></div></div>
+    <figcaption>The dashed box is not positioned: B's containing block is the stage, so B is not the box's overflow.
+    B is whole, not clipped, and the box's <code>scrollHeight</code> is <code class=pr-computed data-of=a1
+    data-dom=scrollHeight></code>, its own height.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div id=a2 class="pr-frame sc" style="position: relative"><div class="pr-b ab">B</div></div></div>
+    <figcaption><code>position: relative</code>: the box is B's containing block, B is its overflow, cut at its bottom
+    edge and scrolled to: <code>scrollHeight</code> is <code class=pr-computed data-of=a2
+    data-dom=scrollHeight></code>, to B's bottom at 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two kinds of overflow</h2>
+  <p><q>There are two different types of overflow, which are used for different purposes by the UA: ink overflow,
+  scrollable overflow</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-concepts">CSS Overflow 3 §2</a></span> Each box holds a
+  child whose shadow spreads 20px, and a C 20px past its bottom.</p>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div id=k1 class="pr-frame sc" style="overflow: visible"><div class="pr-a pr-fit" style="width: 60px; margin: 10px 30px; box-shadow: 0 0 0 20px #b9cde6">A</div><div class="pr-c pr-fit" style="width: 40px; height: 20px">C</div></div></div>
+    <figcaption><code>visible</code>: both paint outside the box. C is scrollable overflow and the shadow ink
+    overflow: <code>scrollHeight</code> is <code class=pr-computed data-of=k1 data-dom=scrollHeight></code>, to C's
+    bottom, not the shadow's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div id=k2 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 60px; margin: 10px 30px; box-shadow: 0 0 0 20px #b9cde6">A</div><div class="pr-c pr-fit" style="width: 40px; height: 20px">C</div></div></div>
+    <figcaption><code>auto</code>: both are clipped, and C can be scrolled to, the shadow's bottom not:
+    <code>scrollHeight</code> is <code class=pr-computed data-of=k2 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

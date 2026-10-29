@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(prophoto-rgb …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.7 The Predefined ProPhoto RGB Color Space: the prophoto-rgb keyword</div>
+  <h1>color(prophoto-rgb …)</h1>
+  <p class=pr-lede><q>The transfer curve is a gamma function with a value of 1/1.8, and a small linear portion near black. The white
+  point is D50, the same as is used by CIE Lab.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-prophoto-rgb">CSS Color 4
+  §10.7</a></span></p>
+</header>
+
+<section>
+  <h2>Inside the sRGB gamut</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(prophoto-rgb 0.5 0.4 0.2)"></div><div class=sw style="background: rgb(68.5% 45% 19.7%)"></div></div>
+    <figcaption><code>color(prophoto-rgb 0.5 0.4 0.2)</code> beside <code>rgb(68.5% 45% 19.7%)</code>: one tan.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(prophoto-rgb 0.36589 0.41717 0.31333)"></div><div class=sw style="background: rgb(41.587% 50.367% 36.664%)"></div></div>
+    <figcaption>The leaf, <code>color(prophoto-rgb 0.36589 0.41717 0.31333)</code>, beside its <code>rgb()</code>: one sage green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(prophoto-rgb 1 1 1)"></div><div class=sw style="background: white"></div></div>
+    <figcaption>ProPhoto white, D50, adapted to sRGB's D65: white.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the sRGB gamut</h2>
+  <p>The stills are taken on an sRGB display, where this color is out of gamut: <q>for display,
+  they are css gamut mapped using a relative colorimetric intent</q> (<a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">§14.2</a>), at constant OkLCh lightness and hue, its
+  chroma reduced.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(prophoto-rgb 0.2 1.0 0.1)"></div><div class=sw style="background: rgb(0% 98% 43.3%)"></div></div>
+    <figcaption><code>color(prophoto-rgb 0.2 1.0 0.1)</code>, mapped, beside <code>rgb(0% 98% 43.3%)</code>: one spring green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to pure green, <code>rgb(0% 100% 0%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

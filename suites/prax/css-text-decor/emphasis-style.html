@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-emphasis-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/48px "PR Noto Sans JP"; }
+  .j span { margin-right: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.1 Emphasis Mark Style: the text-emphasis-style property</div>
+  <h1>text-emphasis-style</h1>
+  <p class=pr-lede><q>This property applies emphasis marks to the element's text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-style-property">CSS Text Decoration 4 §3.1</a></span>
+  <q>The marks should be drawn using the element's font settings with the addition of the ruby feature and the size
+  scaled down 50%.</q></p>
+</header>
+
+<section>
+  <h2>The shapes, filled and open</h2>
+  <p><q>The shape is filled with solid color.</q> <q>The shape is hollow.</q> <q>If a shape keyword is specified but
+  neither of filled nor open is specified, filled is assumed.</q></p>
+  <figure>
+    <div class="pr-stage pr-wide j" lang=ja><span style="text-emphasis-style: dot">強調</span><span style="text-emphasis-style: open dot">強調</span><span style="text-emphasis-style: circle">強調</span><br><span style="text-emphasis-style: circle open">強調</span><span style="text-emphasis-style: double-circle">強調</span><span style="text-emphasis-style: open double-circle">強調</span></div>
+    <figcaption><code>dot</code>: small dots •, then open ◦; <code>circle</code>: large ●, then open ○;
+    <code>double-circle</code>: ◉, then ◎.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" style="width: 140px" lang=ja><span style="text-emphasis-style: triangle">強調</span><span style="text-emphasis-style: open triangle">強調</span><br><span style="text-emphasis-style: sesame">強調</span><span style="text-emphasis-style: open sesame">強調</span></div>
+    <figcaption><code>triangle</code>: ▲, then △; <code>sesame</code>: ﹅, then ﹆.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A string</h2>
+  <p><q>Display the given string as marks.</q> <q>The UA may truncate or ignore strings consisting of more than one
+  grapheme cluster.</q></p>
+  <figure>
+    <div class="pr-stage j" lang=ja><span style="text-emphasis-style: '*'">強調</span><span style="text-emphasis-style: '★'">強調</span></div>
+    <figcaption><code>'*'</code>: an asterisk over each character; <code>'★'</code>: a star.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage j" lang=ja><span style="text-emphasis-style: 'xyz'">強調</span><span style="text-emphasis-style: none">強調</span></div>
+    <figcaption><code>'xyz'</code>: "xyz", or "x", or nothing, as the browser chooses; <code>none</code>: no
+    marks.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

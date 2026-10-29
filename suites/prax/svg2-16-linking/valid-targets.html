@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Valid URL targets</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 18px "PR Arimo"; fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <pattern id="tiles" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#d68a3c" /></pattern>
+  <linearGradient id="from-pattern" href="#tiles"><stop stop-color="#6aa36a" /></linearGradient>
+  <g id="group"><path d="M 20 40 H 140" /></g>
+  <rect id="not-marker" width="10" height="10" fill="#d68a3c" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7.5 Valid URL targets</div>
+  <h1>Valid URL targets</h1>
+  <p class=pr-lede><q>In all other cases, if the resolved target element type (or document type) is not allowed for the
+  URL reference, it is an invalid reference.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL-validity">SVG 2 §16.1.7.5</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Each reference, its own targets</h2>
+  <p><q>the ‘textPath’ element must reference an element type that implements the SVGGeometryElement interface</q>;
+  <q>the ‘use’ element must reference an SVG-namespaced element</q>; <q>the ‘marker’, ‘marker-start’, ‘marker-mid’ and
+  ‘marker-end’ properties must reference a ‘marker’ element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text><textPath href="#group">on a group</textPath></text></svg></div>
+    <figcaption>A <code>textPath</code> of a <code>g</code> holding a path: invalid, no text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#html-box" x="20" y="10" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg><div id="html-box" style="display: none; width: 120px; height: 40px; background: #4f81bd"></div></div>
+    <figcaption>A <code>use</code> of an HTML <code>div</code>: invalid, nothing in the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" stroke-width="2" marker-mid="url(#not-marker)" /></svg></div>
+    <figcaption><code>marker-mid</code> of a rect: invalid, no marker; the line alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A template of the wrong type</h2>
+  <p><q>the ‘linearGradient’ element must reference a different ‘linearGradient’ or ‘radialGradient’ element</q>. A
+  gradient of one green stop whose <code>href</code> is a pattern.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#from-pattern)" /></svg></div>
+    <figcaption>The template invalid, the gradient its own: green, no orange tiles.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

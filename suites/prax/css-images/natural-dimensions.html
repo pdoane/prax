@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Natural dimensions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .col { width: 80px; margin: 10px; }
+  .col img { display: block; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.1 Object-Sizing Terminology</div>
+  <h1>Natural dimensions</h1>
+  <p class=pr-lede><q>The term natural dimensions refers to the set of the natural height, natural width, and natural
+  aspect ratio (the ratio between the width and height), each of which may or may not exist for a given object.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#sizing-terms">CSS Images 3 §4.1</a></span>
+  Each image is an <code>img</code> of <code>auto</code> size on a light orange background, in a column 80px wide;
+  each is a flag of four colors.</p>
+</header>
+
+<section>
+  <h2>All three, or one</h2>
+  <p><q>Raster images are an example of an object with all three natural dimensions. SVG images designed to scale
+  might have only a natural aspect ratio; SVG images can also be created with only a natural width or height. CSS
+  gradients, defined in this specification, are an example of an object with no natural dimensions at all.</q> <q>If an
+  object has a degenerate natural aspect ratio (at least one part being zero or infinity), it is treated as having no
+  natural aspect ratio.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=col><img src=../shared/resources/flag-40x20.png alt=""></div></div>
+    <figcaption>A PNG 40 by 20: its natural size.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=col><img src=../shared/resources/flag-ratio.svg alt=""></div></div>
+    <figcaption>An SVG with only a 2:1 <code>viewBox</code>: as wide as the column, 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 170px"><div class=col><img src=support/flag-width.svg alt=""></div></div>
+    <figcaption>An SVG with only <code>width="40"</code>: 40 by 150, the default height of a replaced element.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 170px"><div class=col><img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' viewBox='0 0 40 0'><rect width='40' height='20' fill='%234f81bd'/></svg>" alt=""></div></div>
+    <figcaption><code>width="40"</code> and a <code>viewBox</code> 0 tall, a degenerate ratio: 40 by 150, as with only a width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

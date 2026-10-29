@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative and sticky table parts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; height: 20px; background: #b9cde6; box-shadow: inset 0 0 0 1px #2c5a8f; }
+  tr + tr td { background: #f6d7b4; }
+  .scroller { height: 60px; overflow: auto; }
+  thead td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 4.2 With a table-internal as containing block, positioned parts</div>
+  <h1>Relative and sticky table parts</h1>
+  <p class=pr-lede>Table rows, groups and cells take 'position' like any box, which <a href="https://drafts.csswg.org/css-tables-3/#abspos-boxes-in-table-internal">§4.2</a>
+  makes containing blocks; how they move is CSS Positioned Layout's. <q>If specified on a table-row-group,
+  table-header-group, table-footer-group, or table-row box the shift affects all the contents of the box, including all
+  table cells that originate in the affected row, but not those that don't.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#relpos-insets">CSS Positioned Layout 3 §3.3</a></span>
+  Cells are 40 by 20, outlined; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Relative</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><tr style="position: relative; left: 20px"><td>a</td><td rowspan=2 style="background: #c3d08b">s</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>The first row <code>left: 20px</code>: "a" and the green cell "s" that spans down from it move 20px
+    right; "b" stays. <span class=pr-flag>Safari</span> does not move the row.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>a</td><td style="position: relative; top: 10px">c</td></tr><tr><td>b</td><td>d</td></tr></table></div>
+    <figcaption>Cell "c" <code>top: 10px</code>: it moves down over "d", and nothing else moves.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sticky</h2>
+  <p>Each stage scrolls, 60px tall, and is scrolled 40px down by a script.</p>
+  <figure>
+    <div class="pr-stage pr-measure scroller"><table><thead style="position: sticky; top: 0"><tr><td>h</td><td>h</td></tr></thead><tr><td>1</td><td>1</td></tr><tr><td>2</td><td>2</td></tr><tr><td>3</td><td>3</td></tr><tr><td>4</td><td>4</td></tr><tr><td>5</td><td>5</td></tr></table></div>
+    <figcaption>A sticky header group, <code>top: 0</code>: the green "h" row stays at the top, over row 2; rows 3
+    and 4 below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure scroller"><table><tr><td style="position: sticky; top: 0; background: #c3d08b">s</td><td>1</td></tr><tr><td>2</td><td>2</td></tr><tr><td>3</td><td>3</td></tr><tr><td>4</td><td>4</td></tr><tr><td>5</td><td>5</td></tr></table></div>
+    <figcaption>A sticky first cell: its containing block is the table, so it stays at the top while its row scrolls
+    away, over the first "3".</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const scroller of document.querySelectorAll(".scroller"))
+    scroller.scrollTop = 40;
+</script>
+</body>
+</html>

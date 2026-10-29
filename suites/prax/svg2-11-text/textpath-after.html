@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>After a textPath</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="rise" d="M 20 60 L 100 20" /><path id="long" d="M 20 60 H 140" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.3 Text on a path layout rules</div>
+  <h1>After a textPath</h1>
+  <p class=pr-lede><q>After positioning all characters within the ‘textPath’, the current text position is set to the
+  end point of the path, after adjusting for the ‘startOffset’ in the case of paths that are a single closed loop. In
+  other words, text that follows a ‘textPath’ element (but is still inside a ‘text’ element) that does not have
+  explicit positioning information (‘x’ and ‘y’ attributes) is positioned from the end of the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextpathLayoutRules">SVG 2 §11.8.3</a></span>
+  Each stage is an SVG 160 by 80, the paths dashed in red with their ends marked. The text is PR Noto Sans Mono at
+  <code>calc(50px / 3)</code>, 10 a letter; the text after the path is orange.</p>
+</header>
+
+<section>
+  <h2>From the end of the path</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#rise" class=pr-baseline /><path d="M100 10V30" stroke="#c0392b" /><text class=pr-measure><textPath href="#rise">abc</textPath><tspan fill="#d68a3c">def</tspan></text></svg></div>
+    <figcaption>"abc" on a line from 20, 60 up to 100, 20, then "def": "def" upright, from the end of the line at
+    100, 20 to 130. <span class=pr-flag>Safari</span> "def" right after the c, on the line.
+    <span class=pr-flag>Firefox</span> No "def".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#long" class=pr-baseline /><path d="M140 50V70" stroke="#c0392b" /><text class=pr-measure><textPath href="#long">ab</textPath><tspan fill="#d68a3c">c</tspan></text></svg></div>
+    <figcaption>"ab" on a line from 20 to 140, then "c": not after the b, at 40, but at the end of the line, 140 to
+    150. <span class=pr-flag>Safari</span> After the b, at 40. <span class=pr-flag>Firefox</span>
+    No "c".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unless placed</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#rise" class=pr-baseline /><path d="M100 10V30" stroke="#c0392b" /><text class=pr-measure><textPath href="#rise">abc</textPath><tspan fill="#d68a3c" x="60" y="70">def</tspan></text></svg></div>
+    <figcaption>"def" in a <code>tspan</code> at 60, 70: placed there, from 60 to 90.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

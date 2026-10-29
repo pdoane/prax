@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Clipping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.13 Drawing paths to the canvas</div>
+  <h1>Clipping</h1>
+  <p class=pr-lede>clip <q>Further constrains the clipping region to the current default path or the given path, using
+  the given fill rule to determine what points are in the path.</q> <q>When the context is initialized, its current
+  clipping region must be set to the largest infinite surface (i.e. by default, no clipping occurs).</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-paths-to-the-canvas">HTML §4.12.5.1.13</a></span>
+  In each figure the page clips, then fills the whole canvas with blue and orange stripes 10 wide.</p>
+</header>
+<section>
+  <h2>A region that only narrows</h2>
+  <p>The clip steps <q>create a new clipping region by calculating the intersection of context's current clipping
+  region and the area described by the intended path</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clip data-clips="circle"></canvas></div>
+    <figcaption>A circle of radius 40 round (100, 50): stripes only inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clip data-clips="left right"></canvas></div>
+    <figcaption>Two clips, to x 0–120 and then to x 80–200: stripes only where they overlap, x 80 to 120.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Fill rules, and open subpaths</h2>
+  <p><q>Open subpaths must be implicitly closed when computing the clipping region, without affecting the actual
+  subpaths.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clip data-clips="ring"></canvas></div>
+    <figcaption>Circles of radius 45 and 20 round (100, 50), with <code>evenodd</code>: stripes in the ring between
+    them; the guides show in its middle.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=clip data-clips="vee"></canvas></div>
+    <figcaption>An open "V", (40, 10) to (100, 90) to (160, 10): stripes in the triangle it closes.</figcaption>
+  </figure>
+</section>
+<script>
+  const clips = {
+    circle(context) { context.beginPath(); context.arc(100, 50, 40, 0, 2 * Math.PI); context.clip(); },
+    left(context) { context.beginPath(); context.rect(0, 0, 120, 100); context.clip(); },
+    right(context) { context.beginPath(); context.rect(80, 0, 120, 100); context.clip(); },
+    ring(context) {
+      context.beginPath();
+      context.arc(100, 50, 45, 0, 2 * Math.PI);
+      context.moveTo(120, 50);
+      context.arc(100, 50, 20, 0, 2 * Math.PI);
+      context.clip("evenodd");
+    },
+    vee(context) {
+      context.beginPath();
+      context.moveTo(40, 10); context.lineTo(100, 90); context.lineTo(160, 10);
+      context.clip();
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]")) {
+    const context = canvas.getContext("2d");
+    for (const name of canvas.dataset.clips.split(" "))
+      clips[name](context);
+    for (let x = 0; x < 200; x += 10) {
+      context.fillStyle = x % 20 ? "#d68a3c" : "#4f81bd";
+      context.fillRect(x, 0, 10, 100);
+    }
+  }
+</script>
+</body>
+</html>

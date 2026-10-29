@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>cross-fade(): averaging the pixels</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .orange { background-color: #d68a3c; }
+  .white { background-color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.6.2 cross-fade() Painting</div>
+  <h1>cross-fade(): averaging the pixels</h1>
+  <p class=pr-lede>Every pixel is <q>the weighted linear average of the corresponding pixels of each item’s image</q>.
+  <q>For the purpose of this calculation, each pixel's color must be in pre-multiplied sRGB.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#cross-fade-painting">CSS Images 4 §2.6.2</a></span>
+  Each dashed box is 80 by 40.</p>
+</header>
+
+<section>
+  <h2>Premultiplied</h2>
+  <p>A Note: <q>this means that cross-fade(white 50%, transparent 50%) will produce a partially-transparent solid
+  white image. (Rather than a partially-transparent gray</q>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box orange" style="background-image: cross-fade(white 50%, transparent 50%)"></div></div>
+    <figcaption>Over orange: white at half opacity, a clear light orange, not a muddy one. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Plain
+    orange.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box white" style="background-image: cross-fade(rgb(255 0 0 / 1) 40%, rgb(0 255 0 / .5) 20%, rgb(0 0 255 / 0) 40%)"></div></div>
+    <figcaption>The Note's three colors: <code>rgb(204 51 0 / .5)</code>, over white a salmon pink, with no blue.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    White.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each argument at the result's size</h2>
+  <p>An image is rescaled <q>to size’s width and height</q>; a color is <q>a solid-color image of the
+  &lt;color&gt;, with size’s dimensions.</q> The backgrounds are not repeated or sized.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: cross-fade(url(../shared/resources/flag-40x20.png) 50%, black 50%)"></div></div>
+    <figcaption>The 40 by 20 flag with black: a dark flag 40 by 20, the black only where the flag is. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: cross-fade(url(../shared/resources/flag-40x20.png) 50%, url(../shared/resources/flag-ratio.svg) 50%)"></div></div>
+    <figcaption>With an SVG flag that has only a ratio: it is drawn 40 by 20 too, so one flag 40 by 20 at full
+    color. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

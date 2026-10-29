@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where captions lie</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; height: 20px; background: #b9cde6; }
+  caption { background: #f6d7b4; }
+  caption + caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.11 Positioning of cells, captions and other internal table boxes, captions</div>
+  <h1>Where captions lie</h1>
+  <p class=pr-lede>A top caption's top <q>is the sum of: the height reserved for previous top captions (including
+  margins), if any; any necessary extra top margin remaining after collapsing margins with the previous caption, if
+  any.</q> Its left <q>is the sum of: the margin left of the caption; half of (the table width minus the width of
+  caption and its total horizontal margin).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#bounding-box-assignment">CSS Table 3 §3.11</a></span>
+  Each grid box is outlined, its cells blue; captions are orange and green, text <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Centred</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><caption style="width: 60px">cap</caption><tr><td></td></tr></table></div>
+    <figcaption>A 60px caption over a 200px table: centred, 70px in from each side. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> put it at the
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><caption style="width: 60px; margin: 0 auto 0 0">cap</caption><tr><td></td></tr></table></div>
+    <figcaption>The same with <code>margin-right: auto</code>: the formula's margins are used values, so the auto
+    margin takes the 140px and the caption is at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Captions one after another, margins collapsing</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="width: 120px"><caption style="margin-bottom: 20px">one</caption><caption style="margin-top: 10px">two</caption><tr><td></td></tr></table></div>
+    <figcaption>"one" with <code>margin-bottom: 20px</code>, "two" with <code>margin-top: 10px</code>: the margins
+    collapse to 20px between them. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> add them,
+    30px. <span class=pr-flag>Firefox</span> draws only the first.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="width: 120px"><caption style="caption-side: bottom; margin-top: 10px">one</caption><caption style="caption-side: bottom">two</caption><tr><td></td></tr></table></div>
+    <figcaption>Two bottom captions: under the table, 10px below it, one after the other in order.
+    <span class=pr-flag>Firefox</span> draws only the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

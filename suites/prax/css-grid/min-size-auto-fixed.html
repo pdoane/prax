@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic minimum size: fixed tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; width: 40px; }
+  .ta { background: #b9cde6; }
+  .bar { height: 6px; background: #8a93a1; }
+  .bar2 { height: 6px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.6 Automatic Minimum Size of Grid Items, fixed tracks</div>
+  <h1>Automatic minimum size: fixed tracks</h1>
+  <p class=pr-lede><q>if in a given dimension the grid item spans only grid tracks that have a fixed max track sizing
+  function, then its specified size suggestion and content size suggestion in that dimension […] are further clamped
+  to less than or equal to the stretch fit into the grid area’s maximum size in that dimension, as represented by the
+  sum of those grid tracks’ max track sizing functions plus any intervening fixed gutters.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#min-size-auto">CSS Grid Layout 2 §6.6</a></span></p>
+</header>
+
+<section>
+  <h2>Clamped by the track's maximum</h2>
+  <p>Each dashed grid holds "abcdefgh", 80px of text; the bars below fill the columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: minmax(auto, 30px)"><div class=ta>abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>minmax(auto, 30px)</code>: the 80px minimum is clamped to 30px; the column is 30px and the
+    text spills.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: minmax(auto, 30px)"><div class=ta style="min-width: min-content">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption>For comparison, an explicit <code>min-width: min-content</code> is not clamped: the column is
+    80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across a gutter; not by fit-content()</h2>
+  <p>A spanning item's limit includes <q>any intervening fixed gutters</q>; and <q>The argument to fit-content() does
+  not clamp the content-based minimum size in the same way as a fixed max track sizing function.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="width: 70px; column-gap: 10px; grid-template-columns: minmax(auto, 30px) minmax(auto, 30px)"><div class=ta style="grid-column: span 2">abcdefgh</div><div class=bar></div><div class=bar2></div></div></div>
+    <figcaption>Spanning two <code>minmax(auto, 30px)</code> columns and a 10px gap: clamped to 70px, so the
+    columns stay 30px, at 0 and 40px. Unclamped, they would be 35px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: fit-content(30px)"><div class=ta>abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>fit-content(30px)</code>: the minimum stays 80px, and the column is 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

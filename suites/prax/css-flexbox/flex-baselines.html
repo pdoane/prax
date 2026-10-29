@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A flex container's baseline, along its main axis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .if { display: inline-flex; align-items: flex-start; outline: 1px dashed #6b7381; }
+  .if > span { background: #b9cde6; }
+  .if > span:nth-child(2) { background: #f6d7b4; }
+  .e { width: 20px; height: 40px; }
+  .e2 { width: 20px; height: 20px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.5 Flex Container Baselines, main-axis baseline set</div>
+  <h1>A flex container's baseline, along its main axis</h1>
+  <p class=pr-lede><q>When the inline axis of the flex container matches its main axis, its baselines are determined as
+  follows</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-baselines">CSS Flexible Box Layout 2 §8.5</a></span>.
+  In each stage a dashed <code>inline-flex</code> container, <code>align-items: flex-start</code>, follows "ab";
+  its baseline is on the line's, in red.</p>
+</header>
+
+<section>
+  <h2>From the first line, or synthesized</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span>cd</span><span style="align-self: baseline; padding-top: 20px">ef</span></span></div>
+    <figcaption>Step 1: "ef", <code>align-self: baseline</code>, takes part in baseline alignment: "ef" on the red
+    line, not "cd", 20px above it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span class=e></span><span>cd</span></span></div>
+    <figcaption>Step 3: the first item, empty, has no baseline; "cd", the first that has one, is on the red
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span style="padding-top: 20px">cd</span><span style="order: -1">ef</span></span></div>
+    <figcaption>Step 3, in <q>order-modified document order</q>: "ef", <code>order: -1</code>, on the red line; "cd"
+    20px below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if><span class=e></span><span class=e2></span></span></div>
+    <figcaption>Step 4: no item has a baseline; one is <q>synthesized</q> from the first: the 40px box's bottom on
+    the red line, the 20px box's 20px above.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if style="width: 30px; height: 40px"></span></div>
+    <figcaption>Step 5: an empty container, 30 by 40px: synthesized from the container, its bottom on the red
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>ab <span class=if style="width: 40px; flex-wrap: wrap; baseline-source: last"><span style="width: 40px">cd</span><span style="width: 40px">ef</span></span></div>
+    <figcaption><q>Last baselines are analogous</q>: two lines, and <code>baseline-source: last</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-source">CSS Inline Layout 3 §4.2.1</a></span>
+    asks for the container's last baseline, from the last line: "ef" on the red line, "cd" above it. <span class=pr-flag>Safari</span> takes the first:
+    "cd" on the red line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>foreignObject: a containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .half { width: 50%; height: 50%; }
+  .corner { position: absolute; right: 0; bottom: 0; width: 40px; height: 20px; }
+  .mid { position: absolute; left: 50%; top: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>foreignObject: a containing block</h1>
+  <p class=pr-lede><q>When the embedded content consists of a document fragment (e.g., a ‘foreignObject’), the
+  positioning rectangle defines the bounds of a containing block for laying out the child content using CSS.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60 with a <code>foreignObject</code> at 20, 10, 120 by 40, outlined dashed grey. A and B
+  are HTML boxes, each a line 20 tall.</p>
+</header>
+
+<section>
+  <h2>The containing block</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class="pr-a pr-fit half">A</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>A with <code>width: 50%; height: 50%</code>: 60 by 20, from 20 to 80 across and 10 to 30 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class=pr-a>A</div><div class="pr-b pr-fit" style="width: 40px">B</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>Blocks: A as wide as the containing block, 20 to 140; B, 40 wide, below it, from 20 to 60 across
+    and 30 to 50 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Implicitly absolutely positioned</h2>
+  <p><q>The ‘foreignObject’, or other element that is positioned using SVG layout attributes, is implicitly
+  absolutely-positioned for the purposes of CSS layout. As a result, any absolutely-positioned child elements are
+  positioned relative to this containing block.</q> No box of the page around the stage is positioned.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class="pr-a pr-fit corner">A</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>A, 40 by 20, with <code>position: absolute; right: 0; bottom: 0</code>: in the bottom right corner,
+    100 to 140 across, 30 to 50 down. <span class=pr-flag>Safari</span> Placed against the page, at its top left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class="pr-b mid">B</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>B with <code>position: absolute; left: 50%; top: 0</code>: its left edge at x 80, half of 120 from
+    20, its top at y 10. <span class=pr-flag>Safari</span> Placed against the page, at its top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The width property: what it applies to</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.2 Content width: the 'width' property</div>
+  <h1>The width property: what it applies to</h1>
+  <p class=pr-lede><code>width</code> applies to <q>all elements but non-replaced inline elements, table rows, and row
+  groups</q>.</p>
+</header>
+
+<section>
+  <h2>Not to non-replaced inline elements</h2>
+  <p><q>This property does not apply to non-replaced inline elements. The content width of a non-replaced inline
+  element's boxes is that of the rendered content within them (before any relative offset of children).</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2 §10.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="width: 150px">span</span> b</div>
+    <figcaption>A <code>span</code> with <code>width: 150px</code> is as wide as the word in it, not 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <img style="width: 100px" alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"> b</div>
+    <figcaption>An image is a replaced inline element: its 60px is set to 100px by <code>width:
+    100px</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not to table rows</h2>
+  <p>A row is as wide as its table. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2
+  §10.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-row style="width: 150px"><div class=pr-table-cell>a row</div></div></div></div>
+    <figcaption>A row with <code>width: 150px</code> does not widen its table, which stays as wide as its
+    text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

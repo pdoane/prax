@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lexical word breaking</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .th { font: 20px/36px "PR Noto Sans Thai"; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1.1.1 Lexical Word Breaking</div>
+  <h1>Lexical word breaking</h1>
+  <p class=pr-lede><q>To provide the expected 'normal' behavior for Southeast Asian languages, typographic character
+  units with line breaking class SA in [UAX14] must be treated as if they had class AL. However, the user agent must
+  additionally analyze the content of a run of such characters to detect word boundaries and treat each boundary as
+  a soft wrap opportunities.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#lexical-breaking">CSS Text 4 §6.1.1.1</a></span>
+  Thai is written without spaces between words.</p>
+</header>
+
+<section>
+  <h2>Breaks between words, not letters</h2>
+  <p>The stages hold the specification's Thai, ตัวอย่างการเขียนภาษาไทย, "example of writing Thai", its words
+  ตัวอย่าง, การ, เขียน, ภาษา and ไทย highlighted in turn.</p>
+  <figure>
+    <div class="pr-stage th" lang=th style="width: 120px"><span class=t>ตัวอย่าง</span><span class=u>การ</span><span class=t>เขียน</span><span class=u>ภาษา</span><span class=t>ไทย</span></div>
+    <figcaption>120px wide: each line ends where a word, and its color, ends.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage th" lang=th style="width: 200px"><span class=t>ตัวอย่าง</span><span class=u>การ</span><span class=t>เขียน</span><span class=u>ภาษา</span><span class=t>ไทย</span></div>
+    <figcaption>200px wide: the same, the line full but for a word that does not fit.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not between any two letters</h2>
+  <p>Treated as AL, Thai letters do not break as ideographs do. The stage is 30px wide, narrower than the word
+  ภาษา, "language".</p>
+  <figure>
+    <div class="pr-stage th" lang=th style="width: 30px"><span class=t>ภาษา</span></div>
+    <figcaption>One word, wider than the line: it stays whole and runs past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

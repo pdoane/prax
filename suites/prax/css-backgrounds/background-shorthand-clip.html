@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background shorthand: values only background-clip takes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { margin: 10px; font: 700 30px/40px sans-serif; color: transparent; }
+  .a { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>") text; padding: 10px; border: 10px solid transparent; }
+  .b { width: 100px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed rgba(31, 36, 48, 0.2); background: linear-gradient(to right, #4f81bd, #d68a3c) 0 0 / 50% 100% no-repeat border-area; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.12 Backgrounds Shorthand: the background property</div>
+  <h1>The background shorthand: values only background-clip takes</h1>
+  <p class=pr-lede><q>If one &lt;visual-box&gt; value is present, then it sets both 'background-origin' and
+  'background-clip' to that value. However, if a value is set that is only valid in 'background-clip', then it sets
+  'background-clip' to that value and 'background-origin' to border-box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background">CSS Backgrounds 4 §2.12</a></span></p>
+</header>
+
+<section>
+  <h2>text and border-area set the origin to border-box</h2>
+  <figure>
+    <div class=pr-stage><div class="t a">Gloves</div></div>
+    <figcaption><code>background: url(dots) text</code>, transparent text, 10px of padding in a 10px border: the 20px
+    dots, tiled from the border box's corner, show in the letters.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=b></div></div>
+    <figcaption><code>0 0 / 50% 100% no-repeat border-area</code>: a gradient over the left half of the border box,
+    seen only in the dashes on that half. <span class=pr-flag>Firefox</span> No gradient.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

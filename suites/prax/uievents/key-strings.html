@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Key strings</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 2.1 Unicode Values</div>
+  <h1>Key strings</h1>
+  <p class=pr-lede><q>A key string is a string containing a 0 or 1 non-control characters ("base" characters) followed by 0 or more combining characters. The string MUST be in Normalized Form C (NFC)</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-unicode">UI Events KeyboardEvent key Values §2.1</a></span></p>
+</header>
+<section>
+  <h2>Precomposed characters</h2>
+  <p><q>"ô" = U+00F4 (NOT "o" + " ̂" (U+006F U+0302) because pre-composed characters must be used if available)</q>. The page's script lists the code points of each key value, as <code>points</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-unicode">§2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key points" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box. On a French layout, press the 2 key: <code>key="é"</code> with <code>points="U+00E9"</code>, one precomposed character. On any layout, press A: <code>points="U+0061"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Whitespace</h2>
+  <p><q>With the exception of Tab and Enter (see § 2.1.1 Control Characters), all non-control whitespace Unicode characters are considered to be valid key strings.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-unicode">§2.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=space tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key points" data-on="#space" data-lines=2></ol>
+    </div>
+    <figcaption>Click the box and press Space: <code>key=" "</code>, <code>points="U+0020"</code>, a key string and not a name.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the code points of each key value as the event reaches the box, before the log reads it.
+  for (const id of ["field", "space"]) {
+      for (const type of ["keydown", "keyup"]) {
+          document.getElementById(id).addEventListener(type, event => {
+              event.points = [...event.key].map(c => "U+" + c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")).join(" ");
+          }, {capture: true});
+      }
+  }
+</script>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("space").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

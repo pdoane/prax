@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inserting quotes: the nesting depth</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .qs { quotes: "<" ">" "(" ")"; }
+  .qt::before { content: open-quote; }
+  .qt::after { content: close-quote; }
+  .oq::before { content: open-quote; }
+  .cq::after { content: close-quote; }
+  .stray::before { content: "[" close-quote "]"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.3.2 Inserting quotes with the 'content' property</div>
+  <h1>Inserting quotes: the nesting depth</h1>
+  <p class=pr-lede><q>Each occurrence of 'open-quote' or 'close-quote' is replaced by one of the strings from the value of
+  'quotes', based on the depth of nesting.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span> Every figure has <code>quotes:
+  "&lt;" "&gt;" "(" ")"</code>.</p>
+</header>
+
+<section>
+  <h2>The depth picks the pair</h2>
+  <p><q>the nesting level of quotes: the number of occurrences of 'open-quote' in all generated text before the
+  current occurrence, minus the number of occurrences of 'close-quote'. If the depth is 0, the first pair is used, if
+  the depth is 1, the second pair is used, etc. If the depth is greater than the number of pairs, the last pair is
+  repeated.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class=qt>a <span class=qt>b</span> a</span> <span class=qt>c</span></div>
+    <figcaption>"&lt;a (b) a&gt; &lt;c&gt;": after "a" closes, the depth is back to 0 for "c".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class=qt>a <span class=qt>b <span class=qt>c <span class=qt>d</span></span></span></span></div>
+    <figcaption>Depths 2 and 3 are past the two pairs, so they repeat the last: "&lt;a (b (c (d)))&gt;".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Independent of the document's nesting</h2>
+  <p><q>The quoting depth is independent of the nesting of the source document or the formatting structure.</q> <q>A
+  'close-quote' or 'no-close-quote' that would make the depth negative is in error and is ignored (at rendering time):
+  the depth stays at 0 and no quote mark is rendered (although the rest of the 'content' property's value is still
+  inserted).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class=oq>a</span> <span>b</span> <span class=cq>c</span></div>
+    <figcaption>Three sibling spans, an <code>open-quote</code> before "a" and a <code>close-quote</code> after "c":
+    "&lt;a b c&gt;".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class=stray>a</span> <span class=qt>b</span></div>
+    <figcaption><code>"[" close-quote "]"</code> at depth 0: no mark, but the brackets are inserted, "[]a", and "b"
+    is still at depth 0: "&lt;b&gt;".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

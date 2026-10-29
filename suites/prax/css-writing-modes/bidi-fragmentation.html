@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>When reordering splits a box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/26px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .pr-stage em { font-style: normal; background: #f9cc9d; border: solid #c0392b; border-width: 0 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.5.1 Conditions of Reordering-induced Box Fragmentation</div>
+  <h1>When reordering splits a box</h1>
+  <p class=pr-lede><q>The box is considered to be thus fragmented if it would be divided by intervening content on an
+  infinitely long line, even if line breaking happens to result in both box fragments being placed adjacent to each
+  other on the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-fragmentation">CSS Writing Modes 4 §2.4.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Split on a long line, still split on a short one</h2>
+  <p>Each <code>em</code> is tinted, with a red border at its left and right; <code>box-decoration-break:
+  clone</code> draws both on every fragment, so each fragment shows as its own bordered piece. The text is the example of <a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-box-model">§2.4.5</a>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">here is <em>some עברית</em> טקסט.</div>
+    <figcaption>A long line: two bordered pieces, "some" and עברית, with טקסט between.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>here is <em>some עברית</em> טקסט.</div>
+    <figcaption>A line that ends after the <code>em</code>: its pieces adjoin, but stay two, with a border between
+    "some" and עברית. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> merge them into one
+    piece.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An isolate is never split from outside</h2>
+  <p><q>an inline box is not considered to be broken into multiple box fragments due to bidi reordering if no
+  intervening content would force it to split.</q> With <code>dir=rtl</code>, the <code>em</code> is an isolate:
+  <q>only one fragment is generated</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">here is <em dir=rtl>some עברית</em> טקסט.</div>
+    <figcaption>One bordered piece, עברית left of "some" inside it, then טקסט. <span class=pr-flag>Firefox</span>
+    draws two pieces, with a border between עברית and "some".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

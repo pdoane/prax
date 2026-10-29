@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lengths, percentages, auto and none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2 Sizing Values</div>
+  <h1>Lengths, percentages, auto and none</h1>
+  <p class=pr-lede><code>&lt;box-size&gt; = &lt;length-percentage [0,∞]&gt; | stretch | min-content | max-content |
+  fit-content</code>. A &lt;length-percentage&gt; <q>Specifies the size of the box using &lt;length&gt; and/or
+  &lt;percentage&gt;.</q> <q>Percentages are resolved against the width/height, as appropriate, of the box's
+  containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">CSS Box Sizing 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>&lt;length-percentage&gt;</h2>
+  <p>Each stage is 150px wide.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 90px">90px</div></div>
+    <figcaption><code>width: 90px</code>: 90px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 40%">40%</div></div>
+    <figcaption><code>width: 40%</code>: 60px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: calc(40% + 30px)">calc</div></div>
+    <figcaption><code>width: calc(40% + 30px)</code>: 90px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Never negative</h2>
+  <p><q>In all cases, the used value is floored to preserve a non-negative inner
+  size.</q></p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a" style="width: calc(20px - 50%); height: 18px; color: #1f2430">calc</div></div>
+    <figcaption><code>width: calc(20px - 50%)</code>, −55px: floored at 0, so only the 12px of padding and borders.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto and none</h2>
+  <p>For width and height, auto <q>specifies an automatic size</q>; for the minimums, <q>Unless otherwise defined by
+  the relevant layout module, however, it resolves to a used value of 0.</q> none: <q>No limit on the size of the
+  box.</q></p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: auto">auto</div></div>
+    <figcaption><code>width: auto</code>, a block: it fills the stage, 150px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 0; min-width: auto; overflow: hidden">auto</div></div>
+    <figcaption><code>width: 0; min-width: auto</code>: 0, the box's 2px of border.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 130px; max-width: none">none</div></div>
+    <figcaption><code>width: 130px; max-width: none</code>: 130px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

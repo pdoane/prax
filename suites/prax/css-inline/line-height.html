@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-height: its values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 10pt "PR Arimo"; }
+  .pr-stage figure { margin: 0; }
+  .big { font-size: 20pt; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 5.1 Line Spacing: the line-height property</div>
+  <h1>line-height: its values</h1>
+  <p class=pr-lede><q>This property specifies the box’s preferred line height, which is used in calculating its
+  “layout bounds”, i.e. its contribution to the logical height of its line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#line-height-property">CSS Inline Layout 3 §5.1</a></span>
+  Each line's text is in an orange span.</p>
+</header>
+
+<section>
+  <h2>A number, a length, a percentage</h2>
+  <p>The spec's example: <q>The three rules in the example below have the same used line height</q>: <code>1.2</code>,
+  <code>1.2em</code> and <code>120%</code> at <code>font-size: 10pt</code>, all 16px. Each block's second line is
+  20pt.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="line-height: 1.2"><span class=pr-hl>1.2</span><br><span class="pr-hl big">big</span></div>
+    <figcaption><code>1.2</code>: 16px lines; it <q>inherits as a number</q>, so the 20pt line is 32px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="line-height: 1.2em"><span class=pr-hl>1.2em</span><br><span class="pr-hl big">big</span></div>
+    <figcaption><code>1.2em</code>: 16px, and inherited <q>as absolute lengths</q>: the 20pt line is 16px too, its
+    text crossing out of it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="line-height: 120%"><span class=pr-hl>120%</span><br><span class="pr-hl big">big</span></div>
+    <figcaption><code>120%</code>: the same as <code>1.2em</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="line-height: normal"><span class=pr-hl>normal</span><br><span class="pr-hl big">big</span></div>
+    <figcaption><code>normal</code>: <q>automatically based on the metrics of the used font</q>, for each size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The minimum height of the lines</h2>
+  <p><q>Because it applies to the root inline box when specified on a block container, line-height effectively
+  establishes the minimum height of the block’s line boxes.</q></p>
+  <figure>
+    <div class=pr-stage style="line-height: 40px"><span class=pr-hl style="line-height: 10px">a span on 10px lines, but the lines are 40px apart</span></div>
+    <figcaption>A block on 40px lines holding a span on 10px lines: the lines are 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

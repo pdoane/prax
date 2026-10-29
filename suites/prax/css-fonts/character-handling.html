@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Character handling</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: "Private"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+E000-F8FF; }
+  .pr-sample { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.4 Character handling issues</div>
+  <h1>Character handling</h1>
+  <p class=pr-lede><q>The font matching process does not assume that text runs are in either normalized or denormalized
+  form</q>. <q>If a given character is a Private-Use Area Unicode codepoint, user agents must only match font families
+  named in the 'font-family' list that are not generic families.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#char-handling-issues">CSS Fonts 4 §5.4</a></span></p>
+</header>
+
+<section>
+  <h2>Private use: no installed fallback</h2>
+  <p><q>If none of the families named in the 'font-family' list contain a glyph for that codepoint, user agents must
+  display some form of missing glyph symbol for that character rather than attempting installed font
+  fallback</q>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos', serif">a &#xE000; b</div>
+    <figcaption>U+E000 in <code>'PR Tinos', serif</code>: neither the named family nor the generic is consulted
+    past it: a missing glyph symbol.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Private, 'PR Tinos'">a &#xE000; b</div>
+    <figcaption>"Private" covers the private use area but Cousine has no glyph there: a missing glyph symbol in
+    the same place.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Precomposed and decomposed</h2>
+  <p>A font may have é but not e with a combining acute; the text decides which one is matched.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Architects Daughter', 'PR Tinos'">&#xE9; e&#x301;</div>
+    <figcaption>é precomposed and decomposed: both from the handwriting face, which has é.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

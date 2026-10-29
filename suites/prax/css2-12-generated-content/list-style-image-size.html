@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-image property: image size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage ul { padding-left: 50px; font-size: 20px; line-height: 40px; }
+  .s1 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8'><rect width='100%' height='100%' fill='%23d68a3c'/></svg>"); }
+  .s2 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' viewBox='0 0 2 1'><rect width='2' height='1' fill='%23d68a3c'/></svg>"); }
+  .s3 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%23d68a3c'/></svg>"); }
+  .s4 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 2'><rect width='1' height='2' fill='%23d68a3c'/></svg>"); }
+  .s5 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='10'><rect width='100%' height='100%' fill='%23d68a3c'/></svg>"); }
+  .s6 { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%23d68a3c'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-image property: image size</h1>
+  <p class=pr-lede><q>The size of the image is calculated from the following rules</q>. Each figure is a list item with
+  <code>font-size: 20px</code>, so 1em is 20px, and an orange SVG image marker. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Intrinsic sizes</h2>
+  <p><q>If the image has an intrinsic width and height, the used width and height are the intrinsic width and
+  height.</q> <q>Otherwise, if the image has an intrinsic ratio and either an intrinsic width or an intrinsic height,
+  the used width/height is the same as the provided intrinsic width/height, and the used value of the missing dimension
+  is calculated from the provided dimension and the ratio.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=s1><li>14 by 8</ul></div>
+    <figcaption><code>width=14 height=8</code>: 14 by 8.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=s2><li>24 by 12</ul></div>
+    <figcaption><code>width=24</code>, a 2:1 ratio: 24 by 12.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No intrinsic size</h2>
+  <p><q>Otherwise, if the image has an intrinsic ratio, the used width is 1em and the used height is calculated from
+  this width and the intrinsic ratio. If this would produce a height larger than 1em, then the used height is instead
+  set to 1em and the used width is calculated from this height and the intrinsic ratio.</q> <q>Otherwise, the image's
+  used width is its intrinsic width if it has one, or else 1em. The image's used height is its intrinsic height if it
+  has one, or else 1em.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ul class=s3><li>20 by 10</ul></div>
+    <figcaption>A 2:1 ratio and no size: 1em wide, 20 by 10. <span class=pr-flag>Chrome</span> 10 by 5.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ul class=s4><li>10 by 20</ul></div>
+    <figcaption>A 1:2 ratio, too tall at 1em wide: 1em tall, 10 by 20. <span
+    class=pr-flag>Chrome</span> 5 by 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ul class=s5><li>20 by 10</ul></div>
+    <figcaption><code>height=10</code>, no ratio: 1em wide, 20 by 10. <span class=pr-flag>Chrome</span> 10 by 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ul class=s6><li>20 by 20</ul></div>
+    <figcaption>No size or ratio: 1em square, 20 by 20. <span class=pr-flag>Chrome</span> 10 by 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

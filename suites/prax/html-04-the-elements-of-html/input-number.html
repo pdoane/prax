@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Number controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.12 Number state (type=number)</div>
+  <h1>Number controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing
+  a number.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#number-state-(type=number)">HTML §4.10.5.1.12</a></span></p>
+</header>
+
+<section>
+  <h2>Only numbers</h2>
+  <p><q>User agents must not allow the user to set the value to a non-empty string that is not a valid floating-point
+  number.</q> <q>While the user interface describes input that the user agent cannot convert to a valid floating-point
+  number, the control is suffering from bad input.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#number-state-(type=number)">§4.10.5.1.12</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=number value=42 size=10></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Type "x" after "42": the browser refuses it, or turns red, bad input. Delete it: green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=number value=1.5 step=0.5 size=10></div>
+        <div><input type=number value=1.25 step=0.5 min=0 size=10></div>
+      </div>
+    </div>
+    <figcaption>A step of 0.5: "1.5" is green. "1.25", counted from <code>min</code>, 0, is not a multiple of it:
+    red, a step mismatch.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A spinner</h2>
+  <p>The control type is <q>A text control or spinner control</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#number-state-(type=number)">§4.10.5.1.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><input type=number value=5 min=0 max=10 step=1 size=10> <code>min=0 max=10</code></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the up arrow, or focus the field and press ArrowUp: 6, and <code>input</code> is logged. Go on
+    to 10, where it stops; ArrowDown from 0 stops too. Tab away: <code>change</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

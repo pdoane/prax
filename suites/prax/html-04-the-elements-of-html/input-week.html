@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Week controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.9 Week state (type=week)</div>
+  <h1>Week controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing
+  a specific week.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#week-state-(type=week)">HTML §4.10.5.1.9</a></span></p>
+</header>
+
+<section>
+  <h2>A week control</h2>
+  <p><q>An input element whose type attribute is in the Week state is a devolvable widget expected to render as an
+  'inline-block' box depicting a week control.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-domain-specific-widgets">§15.5.7</a></span>
+  A week is a week-year and a week number, its week starting on a Monday.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#week-state-(type=week)">§4.10.5.1.9</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=week value="2026-W43"></div>
+        <div><input type=week></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Week controls, the first showing week 43 of 2026, both green. Choose a week in the second's picker:
+    <code>input</code> and <code>change</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    plain text fields, "2026-W43", in which any text can be typed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=week value="2026-W43"></div>
+      </div>
+    </div>
+    <figcaption>Click into the week number and press Backspace: the control describes no week it can convert, so it
+    is red, suffering from bad input. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> a text
+    field, in which "2026-W4" is accepted, green.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

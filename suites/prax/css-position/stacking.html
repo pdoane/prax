@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>z-index and stacking contexts of positioned boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; overflow: hidden; }
+  .head { position: sticky; top: 0; height: 30px; background: #d68a3c; }
+  .row { height: 20px; margin: 0 20px; background: #4f81bd; border-bottom: 2px solid #2c5a8f; }
+  .tall { height: 200px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+  .child { position: relative; z-index: 5; width: 60px; height: 40px; margin-left: 20px; background: #8e44ad; }
+  .sib { position: relative; z-index: 1; height: 30px; margin: 0 0 0 50px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2.2 Painting Order and Stacking Contexts</div>
+  <h1>z-index and stacking contexts of positioned boxes</h1>
+  <p class=pr-lede><q>The z-index property applies to all positioned boxes. When z-index is auto: Fixed and sticky
+  positioned boxes nonetheless form a stacking context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stacking">CSS Positioned Layout 3 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Sticky and fixed boxes at a level</h2>
+  <p>The first two stages are stacking contexts, scrolled 40px; an orange header with <code>position: sticky; top:
+  0</code> is held at the top, and blue rows scroll up beneath it. The third is transformed, so it holds a fixed orange
+  box at <code>top: 10px; left: 20px</code>, which a blue block in flow overlaps.</p>
+  <figure>
+    <div class="pr-stage pr-stacking scroller" data-scroll=40 style="width: 160px"><div class=tall><div class=head></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div></div></div>
+    <figcaption><code>z-index: auto</code>: the header, at level 0, covers the rows under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking scroller" data-scroll=40 style="width: 160px"><div class=tall><div class=head style="z-index: -1"></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div><div class=row></div></div></div>
+    <figcaption><code>z-index: -1</code>: the header is painted below the rows, which show over it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking" style="width: 160px; height: 80px; transform: translate(0)"><div class=head style="position: fixed; top: 10px; left: 20px; width: 80px; z-index: -1"></div><div class=row style="margin-top: 20px"></div></div>
+    <figcaption>The fixed box with <code>z-index: -1</code>: the block covers it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A sticky box is a stacking context</h2>
+  <p>Each header holds a purple child with <code>z-index: 5</code>; after the header, a green relative box with
+  <code>z-index: 1</code> scrolls up beneath it.</p>
+  <figure>
+    <div class="pr-stage pr-stacking scroller" data-scroll=40><div class=tall><div class=head style="height: 20px"><div class=child></div></div><div style="height: 40px"></div><div class=sib></div></div></div>
+    <figcaption>Sticky at <code>auto</code>: the child's 5 counts only inside the header, so green covers
+    the child.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking scroller" data-scroll=40><div class=tall><div style="height: 40px"></div><div class=head style="position: relative; height: 20px"><div class=child></div></div><div class=sib style="margin-top: -20px"></div></div></div>
+    <figcaption>For comparison, relative at <code>auto</code>: no stacking context, and the child covers
+    green.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

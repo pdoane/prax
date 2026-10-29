@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-emphasis-style in vertical text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/50px "PR Noto Sans JP"; }
+  .pr-stage.v { padding: 6px 6px; font: 24px/50px "PR Noto Sans JP"; height: 100px; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 110px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3.1 Emphasis Mark Style: the text-emphasis-style property, vertical</div>
+  <h1>text-emphasis-style in vertical text</h1>
+  <p class=pr-lede><q>If only filled or open is specified, the shape keyword computes to circle in horizontal
+  typographic modes and sesame in vertical typographic modes.</q> <q>Marks must remain upright in vertical typographic
+  modes: like CJK characters, they do not rotate to match the writing mode.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-emphasis-style-property">CSS Text Decoration 4 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>filled alone: a circle across, a sesame down</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage j" lang=ja><span style="text-emphasis-style: filled">強調</span> <span style="text-emphasis-style: open">強調</span></div>
+    <figcaption>Horizontal: <code>filled</code> draws ● over each character, <code>open</code> ○. <span class=pr-flag>Chrome</span> Draws the small dots • and ◦.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" lang=ja><span style="text-emphasis-style: filled">強調</span>　<span style="text-emphasis-style: open">強調</span></div>
+    <figcaption>Vertical: <code>filled</code> draws ﹅ to the right, <code>open</code> ﹆.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Upright</h2>
+  <p>Shapes that would show a turn: triangles and a string.</p>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-vertical v" lang=ja><span style="text-emphasis-style: triangle">強調</span>　<span style="text-emphasis-style: '→'">強調</span></div>
+    <figcaption>Each ▲ points up the page and each → points right, as written, not turned with the line. <span class=pr-flag>Chrome</span> Turns the arrows to point down.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage pr-vertical v" lang=ja><span style="text-emphasis-style: 'R'">強調</span></div>
+    <figcaption>The string <code>'R'</code>: each R stands upright, not on its side as a Latin letter in the line would be. <span class=pr-flag>Chrome</span> Turns it on its side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

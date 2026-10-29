@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: boxes that cannot split</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: boxes that cannot split</h1>
+  <p class=pr-lede><q>When an inline box exceeds the width of a line box, it is split into several boxes and these boxes
+  are distributed across several line boxes.</q></p>
+</header>
+
+<section>
+  <h2>A box that cannot split</h2>
+  <p><q>If an inline box cannot be split (e.g., if the inline box contains a single character, or language specific
+  word breaking rules disallow a break within the inline box, or if the inline box is affected by a white-space value
+  of nowrap or pre), then the inline box overflows the line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure style="display: block">
+    <div class="pr-stage pr-text">A <span class=pr-chip>Pneumonoultramicroscopicsilicovolcanoconiosis</span> word.</div>
+    <figcaption>One word, with no place to break: it overflows the stage's right edge.</figcaption>
+  </figure>
+  <figure style="display: block">
+    <div class="pr-stage pr-text">A <span class=pr-chip style="white-space: nowrap">box of several words that does not wrap</span> here.</div>
+    <figcaption><code>white-space: nowrap</code>: the box goes to the next line whole, and overflows it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

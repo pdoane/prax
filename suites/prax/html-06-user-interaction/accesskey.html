@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The accesskey attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.7.2 The accesskey attribute</div>
+  <h1>The accesskey attribute</h1>
+  <p class=pr-lede><q>The accesskey attribute's value is used by the user agent as a guide for creating a keyboard shortcut that
+  activates or focuses the element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-accesskey-attribute">HTML §6.7.2</a></span></p>
+</header>
+<section>
+  <h2>Activating, or focusing</h2>
+  <p>The modifiers are the user agent's: Alt in Chrome on Windows and Linux, Alt+Shift in Firefox, Control+Option on
+  a Mac. A button's command's Action is <q>to fire a click event at the element</q>; that of
+  another element with an access key is to <q>Run the focusing steps for the element</q>, then <q>Fire a click event
+  at the element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#commands">§4.11.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=button accesskey=b>a button, accesskey=b</button>
+        <label class=pr-target><input type=checkbox id=check accesskey=c> a checkbox, accesskey=c</label>
+        <input class=pr-target id=field accesskey=f value="a field, accesskey=f">
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Press the access key with <code>b</code>: a click at the button, without the focus. With
+    <code>c</code>: a click at the checkbox, which is checked. With <code>f</code>: focus at the field, then a click
+    at it, and typing goes into it.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Alternatives, in order</h2>
+  <p>The value is <q>an ordered set of unique space-separated tokens</q>, each one code point. <q>If the value does not
+  correspond to a key on the system's keyboard, then skip the remainder of these steps for this value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#keyboard-shortcuts-processing-model">§6.7.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=snow accesskey="☃ s">accesskey="☃ s"</button>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>No keyboard has a key for ☃, so the user agent may take the next: the access key with <code>s</code>
+    clicks the button. It may also choose a key of its own, or none.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

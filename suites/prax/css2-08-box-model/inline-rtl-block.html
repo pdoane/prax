@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline boxes in bidirectional text: broken around a block</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .he { font-family: "PR Arimo", "PR Noto Sans Hebrew"; }
+  .deco {
+    padding: 0 4px;
+    background: #f9cc9d;
+    border-left: 6px solid #c0392b;
+    border-right: 6px solid #2c5a8f;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.6 The box model for inline elements in bidirectional context</div>
+  <h1>Inline boxes in bidirectional text: broken around a block</h1>
+  <p class=pr-lede>An inline element that holds a block is broken around it, into a part before the block and a part
+  after it. Its left border is red and its right blue; the block is blue.</p>
+</header>
+
+<section>
+  <h2>The broken side follows the direction</h2>
+  <p>In <q>the right-most generated box of the first line box in which the element appears has the right padding,
+  right border and right margin, and the left-most generated box of the last line box in which the element appears
+  has the left margin, left border and left padding</q> when <code>direction</code> is <code>rtl</code>, and the
+  other way round in <code>ltr</code>. The part before a block is on the element's first line, and the part after it
+  on its last. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#bidi-box-model">CSS 2 §8.6</a>, <a href="https://drafts.csswg.org/css2/#anonymous-block-level">§9.2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text he"><span class=deco>before<span class=pr-a style="display: block">a block</span>after</span></div>
+    <figcaption><code>ltr</code>: red at the left of "before", blue at the right of "after", nothing at the
+    break.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" dir=rtl><span class=deco>לפני<span class=pr-a style="display: block">a block</span>אחרי</span></div>
+    <figcaption><code>rtl</code>, Hebrew: blue at the right of the part before the block, which starts at the right,
+    and red at the left of the part after it. Nothing at the break.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

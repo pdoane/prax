@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ladder { padding: 0 6px; font: 16px/22px 'PR Roboto Flex'; white-space: nowrap; }
+  .ref { color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.3 Font width: the 'font-width' property</div>
+  <h1>font-width</h1>
+  <p class=pr-lede><q>The 'font-width' property selects a normal, condensed, or expanded face from a font family.</q>
+  Percentages <q>represent the fractional width of the glyphs, with 100% representing “normal” glyph widths</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-width-prop">CSS Fonts 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>The keywords and their percentages</h2>
+  <p>PR Roboto Flex has a <code>wdth</code> axis from 25% to 151%. On each line the black word sets 'font-width'
+  to a keyword, from <code>ultra-condensed</code> to <code>ultra-expanded</code>, and the blue one to the keyword's
+  percentage.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ladder pr-wide">
+      <div><span style="font-width: ultra-condensed">Handgloves</span> <span class=ref style="font-width: 50%">Handgloves</span></div>
+      <div><span style="font-width: extra-condensed">Handgloves</span> <span class=ref style="font-width: 62.5%">Handgloves</span></div>
+      <div><span style="font-width: condensed">Handgloves</span> <span class=ref style="font-width: 75%">Handgloves</span></div>
+      <div><span style="font-width: semi-condensed">Handgloves</span> <span class=ref style="font-width: 87.5%">Handgloves</span></div>
+      <div><span style="font-width: normal">Handgloves</span> <span class=ref style="font-width: 100%">Handgloves</span></div>
+      <div><span style="font-width: semi-expanded">Handgloves</span> <span class=ref style="font-width: 112.5%">Handgloves</span></div>
+      <div><span style="font-width: expanded">Handgloves</span> <span class=ref style="font-width: 125%">Handgloves</span></div>
+      <div><span style="font-width: extra-expanded">Handgloves</span> <span class=ref style="font-width: 150%">Handgloves</span></div>
+      <div><span style="font-width: ultra-expanded">Handgloves</span> <span class=ref style="font-width: 200%">Handgloves</span></div>
+    </div>
+    <figcaption>On each line the two words alike, at 50%, 62.5%, 75%, 87.5%, 100%, 112.5%, 125%, 150% and
+    200%. Each line wider than the one above, up to 150%; 200% is past the axis and as wide as 151%. <span
+    class=pr-flag>Chrome</span> draws every line at the normal width.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No width axis: no stretching</h2>
+  <p><q>User agents must not synthesize condensed or expanded faces for font families which lack such faces and
+  which do not have a width variation axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-stretch-prop">§2.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: 'PR Tinos'; font-width: condensed">condensed Handgloves</div>
+    <div class="pr-stage ladder" style="font-family: 'PR Tinos'; font-width: expanded">expanded Handgloves</div>
+    <figcaption>PR Tinos has one width: both lines at its normal width.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

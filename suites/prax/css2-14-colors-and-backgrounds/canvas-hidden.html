@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas: visibility hidden</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2 The background</div>
+  <h1>The canvas: visibility hidden</h1>
+  <p class=pr-lede>Each figure is a frame. The frame's canvas is transparent unless a background is given to it, so the
+  stage's guides show through it.</p>
+</header>
+
+<section>
+  <h2>Hidden boxes still give their background</h2>
+  <p><q>Note that, if the element has 'visibility: hidden' but not 'display: none', boxes are generated for it and its
+  background is used for the canvas.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background">CSS 2 §14.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { visibility: hidden; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>html { visibility: hidden; background: #d68a3c }</code>: the whole frame is orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { visibility: hidden; background: #d68a3c }</style>"></iframe></div>
+    <figcaption><code>body { visibility: hidden; background: #d68a3c }</code>: the whole frame is orange too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

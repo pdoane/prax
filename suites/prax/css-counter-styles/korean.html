@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Korean longhand styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.1.1.2 Korean: korean-hangul-formal, korean-hanja-informal, and korean-hanja-formal</div>
+  <h1>Korean longhand styles</h1>
+  <p class=pr-lede><q>Korean Hangul numbering (e.g., 일천일백일십일)</q> <q>Informal Korean Hanja numbering (e.g., 千百十一)</q> <q>Formal Korean Han (Hanja) numbering (e.g., 壹仟壹百壹拾壹)</q> Their suffix is ", " and their negative sign "마이너스 ". <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#limited-korean">CSS Counter Styles 3 §7.1.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Hangul, informal Hanja, formal Hanja</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: korean-hangul-formal; font-family: "PR Noto Sans KR", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-5>-5<li value=0>0<li value=1111>1111<li value=9090>9090</ol></div>
+    <figcaption><code>korean-hangul-formal</code>: <bdi dir=ltr>"마이너스 오,"</bdi>, <bdi dir=ltr>"영,"</bdi>, <bdi dir=ltr>"일천일백일십일,"</bdi>, <bdi dir=ltr>"구천구십,"</bdi>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: korean-hanja-informal; font-family: "PR Noto Sans KR", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-5>-5<li value=0>0<li value=1111>1111<li value=9090>9090</ol></div>
+    <figcaption><code>korean-hanja-informal</code>: <bdi dir=ltr>"마이너스 五,"</bdi>, <bdi dir=ltr>"零,"</bdi>, <bdi dir=ltr>"千百十一,"</bdi>, <bdi dir=ltr>"九千九十,"</bdi>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: korean-hanja-formal; font-family: "PR Noto Sans KR", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-5>-5<li value=0>0<li value=1111>1111<li value=9090>9090</ol></div>
+    <figcaption><code>korean-hanja-formal</code>: <bdi dir=ltr>"마이너스 五,"</bdi>, <bdi dir=ltr>"零,"</bdi>, <bdi dir=ltr>"壹仟壹百壹拾壹,"</bdi>, <bdi dir=ltr>"九仟九拾,"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

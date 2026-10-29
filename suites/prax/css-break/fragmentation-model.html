@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fragmentainers and fragments</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .boxed { margin: 10px 0; border: 4px solid #2c5a8f; padding: 6px 0; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2 Fragmentation Model and Terminology</div>
+  <h1>Fragmentainers and fragments</h1>
+  <p class=pr-lede>A fragmentainer is <q>A box—such as a page box, column box, or region—that contains a portion (or
+  all) of a fragmented flow.</q> <q>When breakable content would overflow a fragmentainer in the block dimension, it
+  breaks into the next container in its fragmentation context instead.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#fragmentation-model">CSS Fragmentation 4 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Columns and pages</h2>
+  <p>The same eight lines, in columns 60px tall, and on pages of 240 by 160 with 10px margins, whose content areas
+  are 140px tall. A frame shows its document as a screen does, in one piece; the pages are its printed output.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols">one two three four five six seven eight</div>
+    <figcaption>Three lines in each of the first two columns, two in the third. Safari breaks after two
+    lines, as a UA may: two in each, and "seven" and "eight" past the third.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight"></iframe>
+    <figcaption>Printed: "one" to "seven" on the first page, "eight" on the second. Safari prints larger, six
+    lines to a page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

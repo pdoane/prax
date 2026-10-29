@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>margin-trim</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { border: 1px dashed #6b7381; background: rgba(79, 129, 189, 0.16); }
+  .box > .pr-a, .box > .pr-b, .box > div > .pr-a { margin: 20px 0; }
+  .cols { columns: 2; column-gap: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.3 Margins at Container Edges: the margin-trim property</div>
+  <h1>margin-trim</h1>
+  <p class=pr-lede><q>This property allows the container to trim the margins of its children where they adjoin the
+  container’s edges.</q> It takes <code>none | block | [ block-start || block-end ]</code> and applies to <q>block
+  containers, multi-column containers</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-trim">CSS Box Model 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><code>block-start</code>, <code>block-end</code>: <q>For in-flow boxes contained by this box, margins adjacent
+  to the box’s specified edges are truncated to zero.</q> <code>block</code> <q>Computes to block-start
+  block-end.</q> Each dashed container holds A and B, each with <code>margin: 20px 0</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>none</code>: 20px above A and below B; the container is 100px tall.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block-start"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>block-start</code>: A at the top, 20px below B; 80px tall. <span class=pr-flag>Firefox</span> 100px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block-end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>block-end</code>: 20px above A, B at the bottom; 80px tall. <span class=pr-flag>Firefox</span> 100px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>block</code>: A at the top, B at the bottom; 60px tall. <span class=pr-flag>Firefox</span> 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a multi-column container</h2>
+  <p>Each container has two columns and <code>margin-trim: block</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box cols" style="margin-trim: block"><div class=pr-a>A</div></div></div>
+    <figcaption>A alone, in the first column: both its margins trimmed, so the container is 20px tall. <span
+    class=pr-flag>Safari</span> A 20px down, broken into the second column. <span class=pr-flag>Firefox</span>
+    60px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box cols" style="margin-trim: block"><div class=pr-a style="column-span: all">A spans both columns</div></div></div>
+    <figcaption>A spanner: its margins trimmed too, so the container is 20px tall, A filling it. <span
+    class=pr-flag>Safari</span> Keeps the bottom margin: 40px. <span class=pr-flag>Firefox</span> 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

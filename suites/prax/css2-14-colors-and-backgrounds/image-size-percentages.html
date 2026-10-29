@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background image: percentage dimensions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { width: 160px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .pct-only { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='25%' height='20'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .pct-ratio { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50%' viewBox='0 0 4 1'><rect width='4' height='1' fill='%234f81bd'/></svg>"); }
+  .pct-h { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='50%'><rect width='100%' height='100%' fill='%234f81bd'/></svg>"); }
+  .pct-both { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' viewBox='0 0 2 1'><rect width='2' height='1' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background image: percentage dimensions</h1>
+  <p class=pr-lede>SVG images whose width or height is a percentage. Each dashed box is a padding box 160 by 60, the
+  rectangle <code>background-position</code> works in, with the image drawn once at its top left.</p>
+</header>
+
+<section>
+  <h2>Percentages of the positioning area</h2>
+  <p><q>Intrinsic dimensions expressed as percentages must be resolved relative to the dimensions of the rectangle that
+  establishes the coordinate system for the 'background-position' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost pct-only"></div></div>
+    <figcaption><code>width='25%' height='20'</code>: 25% of 160, 40 wide, and 20 tall. <span class="pr-flag
+    pr-since">Since CSS 2</span> 160 by 20: the percentage is no size.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost pct-ratio"></div></div>
+    <figcaption><code>width='50%'</code> and a 4:1 <code>viewBox</code>: 80 wide, and 20 tall from the ratio. <span
+    class="pr-flag pr-since">Since CSS 2</span> 160 by 40: a ratio alone, as large as fits.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-images-3/#sizing-terms">CSS Images 3 §4.1</a> · <a href="https://svgwg.org/svg2-draft/coords.html#SizingSVGInCSS">SVG 2 §8.12</a></div>
+  <h2>A percentage is no natural size</h2>
+  <p>CSS no longer resolves an image's own percentages: <q>CSS does not define how the natural dimensions are found in
+  general.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#sizing-terms">CSS Images 3 §4.1</a></span> For SVG, <q>'auto' and percentage lengths must not be used
+  to determine an intrinsic width or intrinsic height.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#SizingSVGInCSS">SVG 2 §8.12</a></span> The image lacks that
+  dimension, and is sized by the rules for a missing one.</p>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost pct-h"></div></div>
+    <figcaption><code>width='40' height='50%'</code>: a width alone, 40, and no ratio, so as tall as the box, 60, not
+    50% of it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area pr-ghost pct-both"></div></div>
+    <figcaption><code>width='100%' height='100%'</code> and a 2:1 <code>viewBox</code>: a ratio alone, the largest 2:1
+    size in the box, 120 by 60, not the whole box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

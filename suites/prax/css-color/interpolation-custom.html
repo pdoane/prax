@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating in a custom space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  @color-profile --swap { src: url(../../../third_party/wpt/css/css-color/support/swapped.icc); }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 9.1 Color Space for Interpolation</div>
+  <h1>Interpolating in a custom space</h1>
+  <p class=pr-lede><q>The &lt;color-interpolation-method&gt;, as defined in [css-color-4#interpolation-space], is extended to allow
+  use of the custom color spaces</q>: <code>in &lt;dashed-ident&gt;</code>. <code>--swap</code> is the
+  profile <code>swapped.icc</code>, sRGB with red and green swapped; interpolating in it is interpolating in sRGB. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#interpolation-space">CSS Color 5
+  §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>A gradient in --swap</h2>
+  <p>Red to blue, <code>linear-gradient(in --swap to right, red, blue)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide"><div class=bar style="background: linear-gradient(in --swap to right, red, blue)"></div></div>
+    <figcaption>Red, a dark purple, blue: as in sRGB. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the gradient draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background-image: linear-gradient(in --swap to right, red, blue); background-position: 50% 0; background-size: 4000px 100%"></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>Its middle beside <code>rgb(50% 0% 50%)</code>: one purple. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the gradient draws nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

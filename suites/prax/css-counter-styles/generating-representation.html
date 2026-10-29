@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generating a counter representation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style starred { system: cyclic; symbols: "★"; range: 1 3; prefix: "["; suffix: "] "; fallback: upper-roman; }
+  @counter-style wrapped { system: extends decimal; prefix: "["; suffix: "] "; negative: "(" ")"; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .starred { list-style-type: starred; }
+  .wrapped { list-style-type: wrapped; }
+  .fn { counter-reset: n -3; }
+  .fn div::before { content: counter(n, wrapped) " | "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 2 Counter Styles</div>
+  <h1>Generating a counter representation</h1>
+  <p class=pr-lede><q>A counter style defines how to convert a counter value into a string.</q> To generate one: an
+  unknown style uses <code>decimal</code>; <q>If the counter value is outside the 'range' of the counter style, exit this
+  algorithm and instead generate a counter representation using the counter style's fallback style</q>; then the
+  algorithm, the padding, and the negative sign. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-styles">CSS Counter Styles 3 §2</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>The prefix and suffix are the specified style's</h2>
+  <p><q>This also implies that the prefix and suffix always come from the specified counter-style, even if the actual
+  representation is constructed by a fallback style.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=starred><li>one<li>two<li>three<li>four<li>five</ol></div>
+    <figcaption>A star in range 1 to 3, falling back to <code>upper-roman</code>, prefix "[" and suffix "] ": "[★]"
+    three times, then "[IV]" and "[V]", still bracketed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>counter() has no prefix or suffix</h2>
+  <p><q>the prefix and suffix aren't part of the string returned by the counter() or counters() functions. Instead, the
+  prefix and suffix are added by the algorithm that constructs the value of the 'content' property for the ::marker
+  pseudo-element.</q> The style extends <code>decimal</code> with brackets and <code>negative: "(" ")"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=wrapped start=-1><li>minus one<li>zero<li>one</ol></div>
+    <figcaption>As markers: "[(1)]", "[0]", "[1]": the negative sign inside the prefix and suffix.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text fn"><div>a</div></div>
+    <figcaption><code>counter(n, wrapped)</code> at -3: "(3) | a", with no brackets.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

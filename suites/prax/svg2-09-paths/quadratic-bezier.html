@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Quadratic Béziers: Q and T</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.7 The quadratic Bézier curve commands</div>
+  <h1>Quadratic Béziers: Q and T</h1>
+  <p class=pr-lede><q>A quadratic Bézier segment is defined by a start point, an end point, and one control
+  point.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataQuadraticBezierCommands">SVG 2 §9.3.7</a></span>
+  Each stage is an SVG 160 by 60 with a path stroked dark blue, 4 wide; on it, grey lines join each control
+  point, ringed, to the ends of its curve.</p>
+</header>
+
+<section>
+  <h2>Q: the control point given</h2>
+  <p><q>Draws a quadratic Bézier curve from the current point to (x,y) using (x1,y1) as the control point.</q>
+  <q>Multiple sets of coordinates may be specified to draw a polybézier.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 Q 80 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 80 10 L 140 50" /><circle cx="80" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 Q 80 10 140 50</code>: an arch, its top at 80, 30, halfway to the control
+    point.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 q 0 40 60 40 q 60 0 60 -40" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 10 L 20 50 L 80 50 L 140 50 L 140 10" /><circle cx="20" cy="50" r="2.5" fill="#fff" /><circle cx="140" cy="50" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 10 q 0 40 60 40 q 60 0 60 -40</code>: the second from 80, 50, its control point 140,
+    50: a U, its bottom at 80, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 Q 50 10 80 50 110 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 50 10 L 80 50 L 110 10 L 140 50" /><circle cx="50" cy="10" r="2.5" fill="#fff" /><circle cx="110" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 Q 50 10 80 50 110 10 140 50</code>: two arches, their tops on y 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>T: the control point reflected</h2>
+  <p><q>The control point is assumed to be the reflection of the control point on the previous command relative to
+  the current point. (If there is no previous command or if the previous command was not a Q, q, T or t, assume the
+  control point is coincident with the current point.)</q> The reflected points are orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 Q 50 5 80 30 T 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 30 L 50 5 L 110 55 L 140 30" /><circle cx="50" cy="5" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="110" cy="55" r="3" /></svg></div>
+    <figcaption><code>M 20 30 Q 50 5 80 30 T 140 30</code>: 50, 5 reflected through 80, 30 is 110, 55: up to y
+    17.5, then down to y 42.5.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 C 40 10 60 10 80 30 T 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 40 10 M 60 10 L 80 30" /><circle cx="40" cy="10" r="2.5" fill="#fff" /><circle cx="60" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 C 40 10 60 10 80 30 T 140 30</code>: after a <b>C</b>, the control point is 80, 30
+    itself, so the <b>T</b> is straight, along y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 q 15 -25 30 0 t 30 0 30 0 30 0" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 30 L 35 5 L 65 55 L 95 5 L 125 55 L 140 30" /><circle cx="35" cy="5" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="65" cy="55" r="3" /><circle fill="#d68a3c" cx="95" cy="5" r="3" /><circle fill="#d68a3c" cx="125" cy="55" r="3" /></svg></div>
+    <figcaption><code>M 20 30 q 15 -25 30 0 t 30 0 30 0 30 0</code>: each <b>t</b> reflects the last control
+    point: a wave between y 17.5 and 42.5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

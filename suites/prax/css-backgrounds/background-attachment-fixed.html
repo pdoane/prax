@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-attachment: fixed</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.5 Affixing Images: the background-attachment property, fixed</div>
+  <h1>background-attachment: fixed</h1>
+  <p class=pr-lede><q>fixed: The background is fixed with regard to the viewport.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-attachment">CSS Backgrounds 4 §2.5</a></span>
+  Each figure is a frame, a document of its own, 200 by 100.</p>
+</header>
+
+<section>
+  <h2>fixed does not move with a scroll container</h2>
+  <p>A note: <q>There is only one viewport per view. Even if an box is a scroll container, a fixed background doesn't
+  move with the box.</q> The frame holds one box as big as itself, with the same eight lines, scrolled 40px.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } #s { height: 100px; overflow: hidden; font: 13px/20px sans-serif; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>&quot;) right 0 top 40px no-repeat fixed } #s div { padding: 0 6px }</style><div id=s><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div><script>document.getElementById('s').scrollTop = 40</script>"></iframe></div>
+    <figcaption><code>fixed</code>, at <code>right 0 top 40px</code> of the frame's viewport: beside line 5, which
+    the scroll brought there.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Seen only in the painting area</h2>
+  <p><q>Even if the image is fixed, it is still only visible when it is in the background painting area of the box or
+  otherwise unclipped.</q> <q>Thus, unless the image is tiled, it may be invisible.</q> The frame holds a dashed box
+  80 by 40, 60px from the left and 40px from the top, with an orange image <code>fixed</code> at <code>0 0</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { margin: 40px 0 0 60px; width: 80px; height: 40px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>&quot;) 0 0 no-repeat fixed }</style><div></div>"></iframe></div>
+    <figcaption><code>no-repeat</code>: the square is at the frame's top left, outside the box: nothing is
+    seen.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { margin: 40px 0 0 60px; width: 80px; height: 40px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='%23d68a3c'/></svg>&quot;) 0 0 fixed }</style><div></div>"></iframe></div>
+    <figcaption>Orange dots tiled from the frame's corner: the box shows those that fall in it, four across and two
+    down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

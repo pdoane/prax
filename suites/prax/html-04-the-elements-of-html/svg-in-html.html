@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG in HTML</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { padding: 10px; font-size: 13px; line-height: 20px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.16 SVG</div>
+  <h1>SVG in HTML</h1>
+  <p class=pr-lede><q>The SVG svg element falls into the embedded content, phrasing content, flow content, and
+  palpable content categories for the purposes of the content models in this specification.</q> <q>The semantics of
+  SVG elements are defined by SVG 2 and other applicable specifications.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content-other.html#svg-0">HTML §4.8.16</a></span></p>
+</header>
+
+<section>
+  <h2>An svg in a line of text, and its title</h2>
+  <p><q>The content model for the SVG title element inside HTML documents is phrasing content.</q> SVG 2 has a user
+  agent show an element's title, as a tooltip, for example. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#DescriptionAndTitleElements">SVG 2 §5.7</a></span></p>
+  <figure>
+    <div class="pr-stage line">a <svg width="40" height="20"><rect width="20" height="10" fill="#4f81bd"/><rect x="20" width="20" height="10" fill="#d68a3c"/><rect y="10" width="20" height="10" fill="#6aa36a"/><rect x="20" y="10" width="20" height="10" fill="#8e44ad"/></svg> flag</div>
+    <figcaption>"a", a flag 40 by 20 in quarters standing on the baseline, then "flag".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line"><svg width="40" height="40"><circle cx="20" cy="20" r="18" fill="#6aa36a"><title>A green circle</title></circle></svg></div>
+    <figcaption>Hold the pointer over the circle: a tooltip, "A green circle".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>HTML inside foreignObject</h2>
+  <p><q>When the SVG foreignObject element contains elements from the HTML namespace, such elements must all be flow
+  content.</q></p>
+  <figure>
+    <div class="pr-stage line"><svg width="180" height="60"><rect width="180" height="60" fill="#b9cde6"/><foreignObject x="20" y="10" width="140" height="40"><p style="margin: 0; background: #f6d7b4">A paragraph, in <b>HTML</b>, wrapping.</p></foreignObject></svg></div>
+    <figcaption>A light blue svg 180 by 60, and in it, from 20, 10, an orange paragraph 140 wide on two lines,
+    "HTML" in bold.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

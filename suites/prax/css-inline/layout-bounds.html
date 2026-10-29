@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout bounds: leading and the strut</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .d { font: 20px "PR Baseline Diagnostic Zero"; }
+  .ar { font: 13px/normal "PR Arimo"; }
+  .tall { font: 40px/normal "PR Noto Sans Arabic"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 5.3 Calculating the Logical Height Contributions (“Layout Bounds”) of Inline Boxes</div>
+  <h1>Layout bounds: leading and the strut</h1>
+  <p class=pr-lede><q>The contribution of an inline box to the logical height of its line box, here referred to as its
+  layout bounds, is always calculated with respect to its own text metrics</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#inline-height">CSS Inline Layout 3 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>Leading, split in half</h2>
+  <p><q>Calculate the leading L as L = line-height - (A + D). Half the leading (its half-leading) is added above A of
+  the first available font, and the other half below D</q>. <q>Note: L may be negative.</q> Each stage is 20px PR
+  Baseline Diagnostic, whose █ fills its ascent to its descent, 20px.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow d" style="line-height: 40px">██<br>██</div>
+    <figcaption><code>40px</code>: L is 20px, so 10px above and below each █: they are 20px apart.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow d" style="line-height: 20px">██<br>██</div>
+    <figcaption><code>20px</code>: no leading; the █ touch.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow d" style="line-height: 10px">██<br>██</div>
+    <figcaption><code>10px</code>: L is -10px; the lines are 10px apart and the █ overlap by 10px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The strut</h2>
+  <p><q>If the inline box contains no glyphs at all, or if it contains only glyphs from fallback fonts, it is considered
+  to contain a “strut” (an invisible glyph of zero width) with the metrics of the box's first available font.</q> Each
+  stage is 13px PR Arimo; the span's font is 40px PR Noto Sans Arabic, at <code>line-height: normal</code>.</p>
+  <figure>
+    <div class="pr-stage ar"><span class=pr-hl>one</span><span class=tall></span><span class=pr-hl>two</span></div>
+    <figcaption>An empty span: its strut, 40px Arabic, makes the line about 84px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ar"><span class=pr-hl>one</span><span class=tall style="font-family: 'PR Noto Sans Arabic', 'PR Noto Sans JP'; font-size: 13px">永</span><span class=pr-hl>two</span></div>
+    <figcaption>A 13px span of 永, which the Arabic font lacks, from Noto Sans JP: its strut is still the Arabic
+    font's, and the line about 28px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span>
+    No strut: Noto Sans JP's height. <span class=pr-flag>Safari</span> The same, and no 永.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

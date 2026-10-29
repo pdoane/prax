@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width: auto on flex items: the content size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; width: 60px; }
+  .f.col { flex-direction: column; width: 30px; height: 40px; }
+  .x { background: #b9cde6; }
+  .y { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.5 Automatic Minimum Size of Flex Items</div>
+  <h1>min-width: auto on flex items: the content size</h1>
+  <p class=pr-lede><q>the used value of a main axis automatic minimum size on a flex item whose computed overflow value
+  is non-scrollable is its content-based minimum size; for main-axis scroll containers the automatic minimum size is
+  zero, as usual.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#min-size-auto">CSS Flexible Box Layout 2 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>No narrower than the content's min-content size</h2>
+  <p><q>The content size suggestion is the min-content size in the main axis</q>. Each dashed container is 60px wide
+  and holds two items of the word "flex", 40px; together they want 80px, so they shrink. An item whose
+  <code>overflow</code> is <code>hidden</code>, <code>scroll</code> or <code>auto</code> is a scroll container, whose
+  automatic minimum size is 0; <code>clip</code> does not scroll.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure"><div class=x>flex</div><div class=y>flex</div></div></div>
+    <figcaption><code>min-width: auto</code>, the initial value: each item stops at 40px; the second overflows the
+    container to 80px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure"><div class=x style="min-width: 0">flex</div><div class=y style="min-width: 0">flex</div></div></div>
+    <figcaption><code>min-width: 0</code>: each item shrinks to 30px; the first one's "x" runs under the
+    second.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure"><div class=x style="overflow: hidden">flex</div><div class=y style="overflow: hidden">flex</div></div></div>
+    <figcaption><code>overflow: hidden</code>: a scroll container, minimum 0: each item 30px, its word cut at
+    "fle".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure"><div class=x style="overflow: clip">flex</div><div class=y style="overflow: clip">flex</div></div></div>
+    <figcaption><code>overflow: clip</code>: not scrollable: each item 40px, as with <code>visible</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a column: min-height</h2>
+  <p>The main axis is vertical, so <code>min-height: auto</code> is the automatic minimum. Each dashed container is
+  30px wide and 40px tall, and holds two items of "ab cd", two lines and 40px tall in 30px.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 90px"><div class="f col pr-parent pr-measure"><div class=x>ab cd</div><div class=y>ab cd</div></div></div>
+    <figcaption><code>min-height: auto</code>: each item stays 40px tall; the second runs from 40px to 80px, out of
+    the container.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 90px"><div class="f col pr-parent pr-measure"><div class=x style="min-height: 0">ab cd</div><div class=y style="min-height: 0">ab cd</div></div></div>
+    <figcaption><code>min-height: 0</code>: each item 20px tall; the first one's "cd" runs under the
+    second.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 90px"><div class="f col pr-parent pr-measure"><div class=x style="overflow-y: auto">ab cd</div><div class=y style="overflow-y: auto">ab cd</div></div></div>
+    <figcaption><code>overflow-y: auto</code>: each item 20px tall, scrolling its second line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

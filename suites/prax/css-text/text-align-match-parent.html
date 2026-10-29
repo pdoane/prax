@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-align: match-parent</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+  iframe.pr-view { width: 160px; height: 40px; background: #e7eaef; }
+  .pr-stage { width: 160px; }
+  figcaption { max-width: 162px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.1 Text Alignment: the text-align shorthand</div>
+  <h1>text-align: match-parent</h1>
+  <p class=pr-lede><code>match-parent</code>: <q>This value behaves the same as 'inherit' (computes to its parent’s
+  computed value) except that an inherited value of 'start' or 'end' is interpreted against the parent’s 'direction'
+  value and results in a computed value of either 'left' or 'right'. Computes to 'start' when specified on the root
+  element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-align-property">CSS Text 4 §7.1</a></span>
+  In each stage a left-to-right block, of one 30px box, is inside a parent; guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The parent's start and end, as left and right</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" dir=rtl style="text-align: start"><div dir=ltr style="text-align: match-parent"><span class="pr-a w">a</span></div></div>
+    <figcaption>Parent <code>rtl</code>, <code>start</code>: its start is its right, so the box is at the right.
+    <span class=pr-flag>Chrome</span> puts it at the left, the block's own start.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" dir=rtl style="text-align: end"><div dir=ltr style="text-align: match-parent"><span class="pr-a w">a</span></div></div>
+    <figcaption>Parent <code>rtl</code>, <code>end</code>: its end is its left, so the box is at the left.
+    <span class=pr-flag>Chrome</span> puts it at the right, the block's own end.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" dir=rtl style="text-align: center"><div dir=ltr style="text-align: match-parent"><span class="pr-a w">a</span></div></div>
+    <figcaption>Parent <code>center</code>: as <code>inherit</code>, centered, its left at 85px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On text-align-last, and on the root</h2>
+  <p>On the shorthand it <q>sets both 'text-align-all' and 'text-align-last' to 'match-parent'</q>; the longhand
+  <code>text-align-last</code> takes it too. The last stages are frames whose root has the declarations.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" dir=rtl style="text-align-last: end"><div dir=ltr style="text-align-last: match-parent"><span class="pr-a w">a</span></div></div>
+    <figcaption><code>text-align-last: match-parent</code> under an <code>rtl</code> parent's <code>end</code>: left.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Right, the block's own end.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-view srcdoc="<html dir=rtl style='text-align: match-parent'><body style='margin: 0; font: 13px/20px sans-serif'><span style='display: inline-block; width: 30px; height: 18px; background: #4f81bd'></span></body></html>"></iframe>
+    <figcaption>A root <code>rtl</code>, <code>match-parent</code>: <code>start</code>, so the box is at the
+    right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-view srcdoc="<html style='text-align: center; text-align-last: match-parent'><body style='margin: 0; font: 13px/20px sans-serif'><span style='display: inline-block; width: 30px; height: 18px; background: #4f81bd'></span></body></html>"></iframe>
+    <figcaption>A root of <code>center</code>, last line <code>match-parent</code>: the last line is
+    <code>start</code>, so the box is at the left. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> center it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

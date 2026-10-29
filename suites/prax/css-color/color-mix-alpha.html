@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix() with alpha</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3.5 Effect of Non-Unity Alpha on color-mix</div>
+  <h1>color-mix() with alpha</h1>
+  <p class=pr-lede><q>colors may have non-unity alpha components and thus the premultiply, interpolate, unpremultiply steps must
+  not be omitted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix-with-alpha">CSS Color 5
+  §3.5</a></span></p>
+</header>
+
+<section>
+  <h2>Premultiplied</h2>
+  <p><code>color-mix(in srgb, rgb(100% 0% 0% / 0.7) 25%, rgb(0% 100% 0% / 0.2))</code>: <q>the
+  mixed color is color(srgb 0.53846 0.46154 0 / 0.325)</q>; not premultiplied, it would be <q>color(srgb 0.25 0.75 0 /
+  0.325)</q>. On a checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: color-mix(in srgb, rgb(100% 0% 0% / 0.7) 25%, rgb(0% 100% 0% / 0.2))"></div><div class=sw style="background: color(srgb 0.53846 0.46154 0 / 0.325)"></div><div class=sw style="background: color(srgb 0.25 0.75 0 / 0.325)"></div></div>
+    <figcaption>The mix beside <code>color(srgb 0.53846 0.46154 0 / 0.325)</code>: one faint olive. The third, the wrong result, is greener.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With an alpha multiplier</h2>
+  <p>The same colors at 20% and 60%, which add to 80%: <q>so the alpha of the mixed
+  result is actually 0.325 * 0.8 = 0.260 so the mixed color is actually color(srgb 0.53846 0.46154 0 / 0.260)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: color-mix(in srgb, rgb(100% 0% 0% / 0.7) 20%, rgb(0% 100% 0% / 0.2) 60%)"></div><div class=sw style="background: color(srgb 0.53846 0.46154 0 / 0.26)"></div></div>
+    <figcaption>The mix beside <code>color(srgb 0.53846 0.46154 0 / 0.26)</code>: one fainter olive.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

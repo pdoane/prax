@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Caption position and alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; border: 3px solid #2c5a8f; font-size: 12px; line-height: 18px; }
+  td { width: 60px; height: 20px; padding: 0 6px; box-sizing: border-box; }
+  caption { background: #d68a3c; color: white; font-size: 12px; font-weight: 600; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.4.1 Caption position and alignment</div>
+  <h1>Caption position and alignment</h1>
+  <p class=pr-lede><code>caption-side</code> takes <code>top | bottom</code>. Initial <code>top</code>, inherited, and it
+  applies to <code>table-caption</code> elements. Each table has a 3px blue border and two 60px cells.</p>
+</header>
+
+<section>
+  <h2>top and bottom</h2>
+  <p><q>This property specifies the position of the caption box with respect to the table box.</q> <code>top</code>:
+  <q>Positions the caption box above the table box.</q> <code>bottom</code>: <q>Positions the caption box below the
+  table box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caption-position">CSS 2 §17.4.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><caption>caption</caption><tr><td>1<td>2</table></div>
+    <figcaption>No declaration, the initial <code>top</code>: the caption above the table.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="caption-side: bottom"><caption>caption</caption><tr><td>1<td>2</table></div>
+    <figcaption><code>caption-side: bottom</code> on the table, inherited by the caption: the caption below the
+    table.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Aligning the caption's content</h2>
+  <p><q>To align caption content horizontally within the caption box, use the 'text-align' property.</q> The
+  example: <code>caption { caption-side: bottom; width: auto; text-align: left }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#caption-position">CSS 2
+  §17.4.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><caption style="text-align: right">right</caption><tr><td>1<td>2</table></div>
+    <figcaption><code>text-align: right</code>: the text at the right of the caption box, which is as wide as the
+    table.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><caption style="caption-side: bottom; width: auto; text-align: left">left</caption><tr><td>1<td>2</table></div>
+    <figcaption>The example's rule: the caption below the table, its text at the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

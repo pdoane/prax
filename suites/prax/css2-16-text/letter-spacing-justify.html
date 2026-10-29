@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The letter-spacing property: justification and ligatures</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lig { font: 26px/40px "Hoefler Text", Georgia, serif; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.4 Letter and word spacing: the 'letter-spacing' and 'word-spacing' properties</div>
+  <h1>The letter-spacing property: justification and ligatures</h1>
+  <p class=pr-lede><code>letter-spacing</code> takes <code>normal | &lt;length&gt;</code>. Initial <code>normal</code>,
+  inherited, all elements.</p>
+</header>
+
+<section>
+  <h2>Justification and ligatures</h2>
+  <p>With <code>normal</code>, <q>This value allows the user agent to alter the space between characters in order to
+  justify text.</q> With a length, <q>User agents may not further increase or decrease the inter-character space in
+  order to justify text.</q> <q>When the resultant space between two characters is not the same as the default space,
+  user agents should not use ligatures.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#spacing-props">CSS 2 §16.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify; letter-spacing: 0">With letter-spacing: 0 only the spaces between words widen.</div>
+    <figcaption><code>letter-spacing: 0</code>, <code>justify</code>: the first line reaches both edges, its
+    letters spaced as on a left-aligned line. <span class="pr-flag pr-since">Since CSS 2</span> a length no longer
+    forbids respacing them.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lig">office <span style="letter-spacing: 4px">office</span></div>
+    <figcaption>In this serif font, "ffi" of the first "office" is one joined ligature; with <code>4px</code>, the
+    second has three separate letters.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#letter-spacing-property">CSS Text 3 §7.2</a></div>
+  <h2>Justification may add to any letter-spacing</h2>
+  <p><q>Depending on the justification rules in effect, user agents may further increase or decrease the space between
+  typographic character units in order to justify text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#letter-spacing-property">CSS Text 3 §7.2</a></span> <q>Space
+  distributed by justification is in addition to the spacing defined by the letter-spacing or word-spacing
+  properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#expanding-text">CSS Text 3 §6.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" lang=ja style="text-align: justify; letter-spacing: 10px">日本語の文章を両端揃えにするとき文字の間が広がります。</div>
+    <figcaption>Japanese, which has no spaces, <code>letter-spacing: 10px</code>, <code>justify</code>: the first
+    line reaches both edges, its characters more than 10px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" lang=ja style="letter-spacing: 10px">日本語の文章を両端揃えにするとき文字の間が広がります。</div>
+    <figcaption>The same, left-aligned: the first line ends short of the right edge, its characters 10px
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

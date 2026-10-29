@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feDisplacementMap: moving pixels by a map</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40. The source is an orange rectangle from x 60 to 100; the map, in2,
+     is a flood of one color over the whole canvas. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="right-one" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="rgb(255 0 0)" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="right-zero" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="rgb(0 0 0)" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="B"/>
+  </filter>
+  <filter id="scale-zero" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="rgb(255 0 0)" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="alpha" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#4f81bd" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="20"/>
+  </filter>
+  <filter id="linear" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="rgb(50% 0 0)" result="map"/>
+    <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="A"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.11 Filter primitive feDisplacementMap</div>
+  <h1>feDisplacementMap: moving pixels by a map</h1>
+  <p class=pr-lede><q>P'(x,y) ← P( x + scale * (XC(x,y) - .5), y + scale * (YC(x,y) - .5))</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feDisplacementMapElement">Filter Effects 1 §9.11</a></span>
+  Each canvas, 160 by 40, holds an orange rectangle from x 60 to 100, displaced by a map of one color. </p>
+</header>
+
+<section>
+  <h2>The channel picks the distance</h2>
+  <p>A pixel takes the color found <code>scale</code> × (XC − 0.5) to its right; where XC is 1 the image moves left by
+  half the scale. The map's green and blue are 0, so with the scale at 40 a selector on either moves the image
+  20px.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="60" width="40" height="40" fill="#d68a3c" filter="url(#right-one)"/></svg></div>
+    <figcaption>Red 1 for x, green 0 for y, <code>scale</code> 40: left 20 and down 20, from x 40 to 80, y 20
+    on.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="60" width="40" height="40" fill="#d68a3c" filter="url(#right-zero)"/></svg></div>
+    <figcaption>Red 0, blue 0: right 20 and down 20, x 80 to 120, y 20 on.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="60" width="40" height="40" fill="#d68a3c" filter="url(#scale-zero)"/></svg></div>
+    <figcaption><code>scale</code> left at 0: <q>this operation has no effect on the source image</q>, x 60 to
+    100.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alpha by default, and the map's color space</h2>
+  <p>Both selectors are <code>A</code> unless given. <q>The color-interpolation-filters property only applies to the
+  in2 source image</q>: in the initial <code>linearRGB</code>, a red of 50% is 0.214.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="60" width="40" height="40" fill="#d68a3c" filter="url(#alpha)"/></svg></div>
+    <figcaption>An opaque map, <code>scale</code> 20: left 10 and up 10, x 50 to 90, y 0 to 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="60" width="40" height="40" fill="#d68a3c" filter="url(#linear)"/></svg></div>
+    <figcaption>Red 50% in linearRGB, <code>scale</code> 40, y on the opaque alpha: right 11.4, from x 71 to 111,
+    and up 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

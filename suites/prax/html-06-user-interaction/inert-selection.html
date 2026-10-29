@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inert text: not selected, edited or found</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .line { margin: 0 0 10px; padding: 0 6px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  .faded { opacity: 0.5 }
+  /* A word to search for, written by generated content so that the search does not find the caption. */
+  .word::before { content: attr(data-word) }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.3 Inert subtrees</div>
+  <h1>Inert text: not selected, edited or found</h1>
+  <p class=pr-lede>When a node is inert, <q>Text selection functionality must act as if the 'user-select' CSS property were set
+  to 'none'.</q> <q>If it is editable, the node behaves as if it were non-editable.</q> <q>The user agent should
+  ignore the node for the purposes of find-in-page.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees">HTML §6.3</a></span></p>
+</header>
+<section>
+  <h2>Not selected</h2>
+  <p><q>User agents may allow the user to override the restrictions on find-in-page and text selection, however.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees">§6.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px 20px 0; width: 260px">
+      <div class=line>first line, not inert</div>
+      <div class="line faded" inert>second line, inert</div>
+      <div class=line>third line, not inert</div>
+    </div>
+    <figcaption>Drag from the start of the first line to the end of the third: the first and third lines are
+    highlighted, the second is not. Double-click a word of the second line: nothing is selected.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not edited, not found</h2>
+  <figure>
+    <div class="pr-stage" style="padding: 10px 20px 0">
+      <div class=line contenteditable>editable: type here</div>
+      <div class="line faded" contenteditable inert>editable, inert</div>
+    </div>
+    <figcaption>Click the first line and type: the text goes in. Click the second: no caret, and typing changes
+    nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="padding: 10px 20px 0">
+      <div class=line>plugh, not inert</div>
+      <div class="line faded" inert>plugh, inert</div>
+    </div>
+    <figcaption>Search the page for <code class=word data-word="plugh"></code> (Ctrl+F, or ⌘F on a Mac): one match, on the first line; the
+    second line's is not counted or highlighted.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

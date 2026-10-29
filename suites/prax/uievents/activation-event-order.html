@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of activation</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.1.2 Activation event order</div>
+  <h1>The order of activation</h1>
+  <p class=pr-lede><q>If the DOMActivate event is supported by the user agent, then the events MUST be dispatched in a
+  set order relative to each other</q>: click, DOMActivate, then <q>All other default actions, including the
+  activation behavior</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-uievent-event-order">UI Events §8.1.2</a></span></p>
+</header>
+<section>
+  <h2>By the mouse</h2>
+  <p>The button submits its form, which is its activation behavior; the page's script cancels the submission, so the
+  page stays. <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-uievent-event-order">§8.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form id=form style="padding: 10px 20px 0"><button class=pr-target id=send>send</button></form>
+      <ol class=pr-log data-log="keydown click DOMActivate submit" data-fields="target isTrusted" data-lines=4></ol>
+    </div>
+    <figcaption>Click <code>send</code>: click, DOMActivate, then submit, the activation behavior, last.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>By a key</h2>
+  <p><q>If the focused element is activated by a key event</q>: keydown, then click, <q>default action; synthesized;
+  isTrusted="true"</q>, then DOMActivate, then the activation behavior. <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-uievent-event-order">§8.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form id=keyed style="padding: 10px 20px 0"><button class=pr-target id=enter>send</button></form>
+      <ol class=pr-log data-log="keydown click DOMActivate submit" data-fields="target isTrusted" data-lines=4></ol>
+    </div>
+    <figcaption>Focus <code>send</code> (click it, or in Safari press Option+Tab) and press Enter: keydown, click with
+    <code>isTrusted</code>, DOMActivate, submit. A browser without DOMActivate leaves it out, which is
+    allowed.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the forms from leaving the page.
+  for (const id of ["form", "keyed"])
+      document.getElementById(id).addEventListener("submit", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

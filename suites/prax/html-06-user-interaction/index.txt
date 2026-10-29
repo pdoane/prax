@@ -1,0 +1,123 @@
+00-supports-1.html
+00-supports-2.html
+html/interaction.html#the-hidden-attribute 6.1 The hidden attribute
+    hidden.html
+    hidden-until-found.html
+html/interaction.html#page-visibility 6.2 Page visibility
+    page-visibility.html
+# html/interaction.html#the-visibilitystateentry-interface 6.2.1 The VisibilityStateEntry interface: a performance entry, object model only
+html/interaction.html#inert-subtrees 6.3 Inert subtrees
+    inert.html
+    inert-selection.html
+html/interaction.html#modal-dialogs-and-inert-subtrees 6.3.1 Modal dialogs and inert subtrees
+    modal-dialog-inert.html
+html/interaction.html#the-inert-attribute 6.3.2 The inert attribute
+    inert-attribute.html
+# html/interaction.html#tracking-user-activation 6.4 Tracking user activation: a heading; its subsections hold the text
+html/interaction.html#user-activation-data-model 6.4.1 Data model
+    activation-state.html
+html/interaction.html#user-activation-processing-model 6.4.2 Processing model
+    activation-triggering.html
+html/interaction.html#user-activation-gated-apis 6.4.3 APIs gated by user activation
+    activation-gated.html
+# html/interaction.html#the-useractivation-interface 6.4.4 The UserActivation interface: object model; the lamps of 6.4.1 to 6.4.3 read it
+# html/interaction.html#user-activation-user-agent-automation 6.4.5 User agent automation: a WebDriver command, nothing for a user
+html/interaction.html#activation 6.5 Activation behavior of elements
+    activation.html
+# html/interaction.html#the-toggleevent-interface 6.5.1 The ToggleEvent interface: an interface; its events are logged on the popover pages
+# html/interaction.html#the-commandevent-interface 6.5.2 The CommandEvent interface: an interface; its event belongs to the button element's command attribute
+# html/interaction.html#focus 6.6 Focus: a heading; its subsections hold the text
+# html/interaction.html#introduction-8 6.6.1 Introduction: non-normative; the routing of keys it describes is shown under 6.6.4
+html/interaction.html#data-model 6.6.2 Data model
+    focusable-areas.html
+    focusable-regions.html
+    being-rendered.html
+    focus-removed.html
+    click-focus.html
+    click-not-focus.html
+    focus-scopes.html
+html/interaction.html#the-tabindex-attribute 6.6.3 The tabindex attribute
+    tabindex.html
+    tabindex-scopes.html
+html/interaction.html#focus-processing-model 6.6.4 Processing model
+    focus-target.html
+    focus-delegation.html
+    focus-update.html
+    key-routing.html
+html/interaction.html#sequential-focus-navigation 6.6.5 Sequential focus navigation
+    sequential-navigation.html
+    sequential-starting-point.html
+    sequential-scopes.html
+html/interaction.html#focus-management-apis 6.6.6 Focus management APIs
+    focus-options.html
+    focus-scroll.html
+    focus-visible.html
+html/interaction.html#the-autofocus-attribute 6.6.7 The autofocus attribute
+    autofocus.html
+# html/interaction.html#assigning-keyboard-shortcuts 6.7 Assigning keyboard shortcuts: a heading; its subsections hold the text
+# html/interaction.html#introduction-9 6.7.1 Introduction: non-normative examples of what 6.7.2 and 6.7.3 require
+html/interaction.html#the-accesskey-attribute 6.7.2 The accesskey attribute
+    accesskey.html
+html/interaction.html#keyboard-shortcuts-processing-model 6.7.3 Processing model
+    accesskey-conditions.html
+# html/interaction.html#editing-2 6.8 Editing: a heading; its subsections hold the text
+html/interaction.html#contenteditable 6.8.1 Making document regions editable: The contenteditable content attribute
+    contenteditable.html
+html/interaction.html#making-entire-documents-editable:-the-designmode-idl-attribute 6.8.2 Making entire documents editable: the designMode getter and setter
+    design-mode.html
+html/interaction.html#best-practices-for-in-page-editors 6.8.3 Best practices for in-page editors
+    editing-white-space.html
+# html/interaction.html#editing-apis 6.8.4 Editing APIs: definitions, and the editing APIs are execCommand's; design-mode.html shows the editing host it defines
+html/interaction.html#spelling-and-grammar-checking 6.8.5 Spelling and grammar checking
+    spellcheck.html
+html/interaction.html#writing-suggestions 6.8.6 Writing suggestions
+    writing-suggestions.html
+html/interaction.html#autocapitalization 6.8.7 Autocapitalization
+    autocapitalize.html
+html/interaction.html#autocorrection 6.8.8 Autocorrection
+    autocorrect.html
+html/interaction.html#input-modalities:-the-inputmode-attribute 6.8.9 Input modalities: the inputmode attribute
+    inputmode.html
+html/interaction.html#input-modalities:-the-enterkeyhint-attribute 6.8.10 Input modalities: the enterkeyhint attribute
+    enterkeyhint.html
+# html/interaction.html#find-in-page 6.9 Find-in-page: a heading; its subsections hold the text
+html/interaction.html#introduction-10 6.9.1 Introduction
+    find-in-page.html
+html/interaction.html#interaction-with-details-and-hidden=until-found 6.9.2 Interaction with details and hidden=until-found
+    find-reveal.html
+html/interaction.html#interaction-with-selection 6.9.3 Interaction with selection
+    find-selection.html
+# html/interaction.html#close-requests-and-close-watchers 6.10 Close requests and close watchers: a heading; its subsections hold the text
+html/interaction.html#close-requests 6.10.1 Close requests
+    close-requests.html
+html/interaction.html#close-watcher-infrastructure 6.10.2 Close watcher infrastructure
+    close-watcher-groups.html
+html/interaction.html#the-closewatcher-interface 6.10.3 The CloseWatcher interface
+    close-watcher.html
+# html/dnd.html#dnd 6.11 Drag and drop: what any drag must have, which the pages of 6.11.1 and 6.11.5 show
+html/dnd.html#event-drag 6.11.1 Introduction
+    drag-and-drop.html
+# html/dnd.html#the-drag-data-store 6.11.2 The drag data store: a structure; its modes are what the DataTransfer API may read
+html/dnd.html#the-datatransfer-interface 6.11.3 The DataTransfer interface
+    drag-image.html
+# html/dnd.html#the-datatransferitemlist-interface 6.11.3.1 The DataTransferItemList interface: object model only
+# html/dnd.html#the-datatransferitem-interface 6.11.3.2 The DataTransferItem interface: object model only
+# html/dnd.html#the-dragevent-interface 6.11.4 The DragEvent interface: object model only
+html/dnd.html#drag-and-drop-processing-model 6.11.5 Processing model
+    drag-start.html
+    drag-operation.html
+    drag-text.html
+html/dnd.html#dndevents 6.11.6 Events summary
+    drag-events.html
+html/dnd.html#the-draggable-attribute 6.11.7 The draggable attribute
+    draggable.html
+# html/dnd.html#security-risks-in-the-drag-and-drop-model 6.11.8 Security risks in the drag-and-drop model: protections against pages, nothing a user sees
+html/popover.html#the-popover-attribute 6.12 The popover attribute
+    popover.html
+    popover-stack.html
+    popover-focus.html
+    popover-toggle-events.html
+html/popover.html#the-popover-target-attributes 6.12.1 The popover target attributes
+    popover-target.html
+html/popover.html#popover-light-dismiss 6.12.2 Popover light dismiss
+    popover-light-dismiss.html

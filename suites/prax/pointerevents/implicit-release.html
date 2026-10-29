@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Implicit release of pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .row { margin: 10px 20px; touch-action: none; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; margin: 0 16px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 8.5 Implicit release of pointer capture</div>
+  <h1>Implicit release of pointer capture</h1>
+  <p class=pr-lede><q>Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the
+  pending pointer capture target override for the pointerId of the pointerup or pointercancel event that was just
+  dispatched, and then run process pending pointer capture steps to fire lostpointercapture if necessary.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture">Pointer Events §8.5</a></span></p>
+</header>
+<section>
+  <h2>Then boundary events, where the pointer is</h2>
+  <p><q>After running process pending pointer capture steps, if the pointer supports hover, user agent MUST also send
+  corresponding boundary events necessary to reflect the current position of the pointer with no capture.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture">§8.5</a></span>
+  A <code>pointerdown</code> listener on A captures the pointer.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>A, press</div><div class=pr-target id=b>B</div></div>
+      <ol class=pr-log data-log="pointerup lostpointercapture pointerout pointerover" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Press A, drag onto B, and release there without moving further: <code>pointerup</code> and
+    <code>lostpointercapture</code> at A, then <code>pointerout</code> at A and <code>pointerover</code> at B, with
+    the mouse still.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A captor that is removed</h2>
+  <p><q>When the pointer capture target override is no longer connected [DOM], the pointer capture target override
+  SHOULD be set to the document.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture">§8.5</a></span>
+  C captures the pointer when pressed, and removes itself a second later; it comes back after two more.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row id=holder><div class=pr-target id=c>C, press and hold</div></div>
+      <ol class=pr-log data-log="lostpointercapture" data-fields="target" data-on="document" data-lines=2></ol>
+    </div>
+    <figcaption>Press C and hold, moving a little: when C disappears, the next move brings
+    <code>lostpointercapture</code> at the document, shown as <code>target=[object HTMLDocument]</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // A captures when pressed; C captures when pressed, is removed a second later, and comes back two seconds after.
+  const a = document.getElementById("a"), c = document.getElementById("c"), holder = document.getElementById("holder");
+  a.addEventListener("pointerdown", event => a.setPointerCapture(event.pointerId));
+  c.addEventListener("pointerdown", event => {
+    c.setPointerCapture(event.pointerId);
+    setTimeout(() => { c.remove(); setTimeout(() => holder.append(c), 2000); }, 1000);
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

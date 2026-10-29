@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box offsets: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.2 Box offsets: 'top', 'right', 'bottom', 'left'</div>
+  <h1>Box offsets: auto</h1>
+  <p class=pr-lede><code>top</code>, <code>right</code>, <code>bottom</code> and <code>left</code> take <code>&lt;length&gt;
+  | &lt;percentage&gt; | auto</code>. Each stage is 200 by 100 and the containing block of the absolutely positioned
+  box in it, 60 by 20.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <p>With <code>auto</code>, an absolutely positioned box's place comes from the other offsets and its size, or, with
+  both of a pair <code>auto</code>, from where it would have been in normal flow. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#position-props">CSS 2 §9.3.2</a>,
+  <a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">§10.3.7</a>, <a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">§10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pr-c>A</div><div class="pr-a pr-fit abs">box</div></div>
+    <figcaption>All four <code>auto</code>: the box is where it would have been, just below A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pr-c>A</div><div class="pr-a pr-fit abs" style="left: 100px">box</div></div>
+    <figcaption>Only <code>left: 100px</code>: below A vertically, 100px in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

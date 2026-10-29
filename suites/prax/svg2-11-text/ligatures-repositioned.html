@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ligatures kept when repositioned</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lit { font: 56px "PR Literata"; }
+  .hand { font: 36px "PR Architects Daughter"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.2 Fonts and glyphs</div>
+  <h1>Ligatures kept when repositioned</h1>
+  <p class=pr-lede><q>For this reason SVG requires support for downloadable fonts as defined in the Font Resources
+  section of the CSS Fonts Module. In particular, support for the Web Open Font Format [WOFF] is required.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#FontsGlyphs">SVG 2 §11.1.2</a></span>
+  Each stage is an SVG 160 by 60, the baseline at y 45 dashed in red. The ligature figures set "flo" in 56px PR
+  Literata, whose "fl" is one ligature, the f's hook running into the l's top.</p>
+</header>
+
+<section>
+  <h2>Repositioning keeps ligatures</h2>
+  <p><q>SVG attributes such as ‘dx’, ‘textLength’, and ‘spacing’ (in ‘textPath’) that may reposition typographic
+  characters do not break discretionary ligatures.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" dx="0 20">flo</text></svg></div>
+    <figcaption><code>dx="0 20"</code>: the 20 is the l's, inside the ligature, so it moves the o: "fl" one
+    glyph, then the o 20 to its right. <span class=pr-flag>Safari</span> A separate f and l.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160 M150 30V55" class=pr-baseline /><text class=lit x="10" y="45" textLength="140">flo</text></svg></div>
+    <figcaption><code>textLength="140"</code>: "fl" one glyph, and the o moved out so that the word ends at
+    150. <span class=pr-flag>Safari</span> f, l and o each apart, spread to 150.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

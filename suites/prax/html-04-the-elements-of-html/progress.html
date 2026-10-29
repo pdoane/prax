@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The progress element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 0; font-size: 10px; line-height: 20px; }
+  .pad progress { margin: 0; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.13 The progress element</div>
+  <h1>The progress element</h1>
+  <p class=pr-lede><q>The progress element represents the completion progress of a task.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-progress-element">HTML §4.10.13</a></span></p>
+</header>
+
+<section>
+  <h2>The current value against the maximum</h2>
+  <p>The maximum is <code>max</code> if <q>greater than zero</q>, else 1.0; the value is <code>value</code> if
+  greater than zero, else zero; <q>the current value is the maximum value, if value is greater than the maximum value,
+  and value otherwise.</q> Each bar is 10em, the stage's 100px, wide. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-progress-element">§4.10.13</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress value=0.25></progress></div>
+    <figcaption><code>value=0.25</code>: filled 25px from the left.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress value=30 max=60></progress></div>
+    <figcaption><code>value=30 max=60</code>: half filled.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress value=2></progress></div>
+    <figcaption><code>value=2</code>, past the maximum of 1: full.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress value=0.5 max=0></progress></div>
+    <figcaption><code>max=0</code>, so the maximum is 1.0: half filled.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Indeterminate, and in other directions</h2>
+  <p><q>If the value attribute is omitted, then the progress bar is an indeterminate progress bar.</q> <q>The start is
+  on the right and the end is on the left if the 'direction' property on this element has a computed value of 'rtl'</q>;
+  in a vertical writing mode, <q>with the start on the top and the end on the bottom otherwise.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-progress-element-2">§15.5.15</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress></progress></div>
+    <figcaption>No <code>value</code>: drawn unlike any determinate bar, often moving.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><progress value=0.25 dir=rtl></progress></div>
+    <figcaption><code>rtl</code>: a quarter filled from the right.</figcaption>
+  </figure><figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pad" style="height: 100px"><progress value=0.25 style="writing-mode: vertical-lr"></progress></div>
+    <figcaption><code>vertical-lr</code>: 10px by 100px, a quarter filled from the top. <span
+    class=pr-flag>Firefox</span> fills from the bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

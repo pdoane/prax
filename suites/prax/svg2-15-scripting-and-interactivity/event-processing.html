@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Processing a user interface event</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg a:hover rect { fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.5.2 Event processing</div>
+  <h1>Processing a user interface event</h1>
+  <p class=pr-lede><q>The algorithm and order for processing user interface events for a given target element, after
+  dispatching the DOM event, is as follows</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#event-processing">SVG 2 §15.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>preventDefault stops the rest</h2>
+  <p><q>If an event handler registered on this element invokes the preventDefault() DOM method, then no further processing
+  for this element is performed</q>; otherwise, for a hyperlink, <q>if the hyperlink traversal changes the context of the
+  content</q>, <q>no further processing for this element is performed</q>. Two links in an SVG, each a rect that turns
+  dark blue under the pointer: <code>#kept</code>, to <code>#kept-target</code> on this page, and
+  <code>#stopped</code>, the same link, whose click the page's script cancels. The log lists clicks and the page's
+  <code>hashchange</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><a id=kept href="#kept-target"><rect x="40" y="5" width="100" height="40" fill="#4f81bd" /></a><a id=stopped href="#kept-target"><rect x="160" y="5" width="100" height="40" fill="#4f81bd" /></a></svg>
+      <ol class=pr-log data-on="document" data-log="click" data-fields="defaultPrevented" data-lines=4></ol>
+    </div>
+    <figcaption>Hover either: dark blue, its <code>:hover</code>. Click the left: <code>click</code>, and the page's
+    address ends in <code>#kept-target</code>. Click the right: <code>click defaultPrevented</code>, and the address
+    is unchanged.</figcaption>
+  </figure>
+  <p id=kept-target class=pr-note>The links' target.</p>
+</section>
+
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("stopped").addEventListener("click", event => event.preventDefault());
+</script>
+</body>
+</html>

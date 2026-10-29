@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ol element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .t li { background: rgba(79, 129, 189, 0.16); }
+  .types ol { display: inline-block; width: 30px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.5 The ol element</div>
+  <h1>The ol element</h1>
+  <p class=pr-lede><q>The ol element represents a list of items, where the items have been intentionally ordered, such that changing the order would change the meaning of the document.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-ol-element">HTML §4.4.5</a></span></p>
+</header>
+<section>
+  <h2>start and reversed</h2>
+  <p><q>The reversed attribute is a boolean attribute. If present, it indicates that the list is a descending list
+  (..., 3, 2, 1).</q> The starting value is the start attribute's, else, <q>If the ol element has a reversed
+  attribute, then return the number of owned li elements.</q> Else 1. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-ol-element">§4.4.5</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol start=7><li>a<li>b<li>c</ol></div>
+    <figcaption><code>start=7</code>: 7., 8., 9.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol reversed><li>a<li>b<li>c</ol></div>
+    <figcaption><code>reversed</code>: 3., 2., 1.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol reversed start=10><li>a<li>b<li>c</ol></div>
+    <figcaption>Both, <code>start=10</code>: 10., 9., 8.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>type</h2>
+  <p><q>User agents should render the items of the list in a manner consistent with the state of the type attribute
+  of the ol element. Numbers less than or equal to zero should always use the decimal system regardless of the type
+  attribute.</q> As presentational hints, <q>ol[type=a s], li[type=a s] { list-style-type: lower-alpha; }</q> and so
+  on. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#lists">§15.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide t types"><ol type=1><li>x<li>x<li>x</ol><ol type=a><li>x<li>x<li>x</ol><ol type=A><li>x<li>x<li>x</ol><ol type=i><li>x<li>x<li>x</ol><ol type=I><li>x<li>x<li>x</ol></div>
+    <figcaption>Five lists, <code>type</code> 1, a, A, i and I: 1. 2. 3.; a. b. c.; A. B. C.; i. ii. iii.; I. II.
+    III.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow t"><ol type=a start=-1><li>x<li>x<li>x</ol></div>
+    <figcaption><code>type=a start=-1</code>: -1., 0., a.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

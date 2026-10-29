@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>round(), mod() and rem() at zero and infinity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+  .pr-a { min-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.3.1 Argument Ranges</div>
+  <h1>round(), mod() and rem() at zero and infinity</h1>
+  <p class=pr-lede><q>In round(A, B), if B is 0, the result is NaN.</q> <q>If A is finite but B is infinite, the
+  result depends on the &lt;rounding-strategy&gt; and the sign of A</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#round-infinities">CSS Values and Units 4 §10.3.1</a></span>
+  A NaN is <q>censored into a zero value</q>, and an infinity clamped (<a href="https://drafts.csswg.org/css-values-4/#calc-ieee">§10.9.2</a>).
+  Each bar's <code>width</code> is under it; ∞ is <code>infinity * 1px</code>.</p>
+</header>
+
+<section>
+  <h2>round()</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + round(30px, 0px))"></div></div>
+    <figcaption><code>100px + round(30px, 0px)</code>: NaN, so 0: no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, round(up, 30px, infinity * 1px))">A</div></div>
+    <figcaption><code>min(150px, round(up, 30px, ∞))</code>: <q>If A is positive (not zero), return +∞</q>: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + round(down, 30px, infinity * 1px))">A</div></div>
+    <figcaption><code>100px + round(down, 30px, ∞)</code>: 0⁺, so 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + round(30px, infinity * 1px))">A</div></div>
+    <figcaption><code>nearest</code>: 0⁺ too, 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>mod() and rem()</h2>
+  <p><q>In mod(A, B) only, if B is infinite and A has opposite sign to B (including an oppositely-signed zero), the
+  result is NaN.</q> <q>All other "infinite B" cases are valid, and just return A immediately.</q></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + mod(30px, 0px))"></div></div>
+    <figcaption><code>100px + mod(30px, 0px)</code>: NaN, no bar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + mod(30px, infinity * 1px))">A</div></div>
+    <figcaption><code>100px + mod(30px, ∞)</code>: 130px. <span class=pr-flag>Firefox</span> makes it NaN: no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + mod(-30px, infinity * 1px))"></div></div>
+    <figcaption><code>100px + mod(-30px, ∞)</code>: NaN, no bar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + rem(-30px, infinity * 1px))">A</div></div>
+    <figcaption><code>100px + rem(-30px, ∞)</code>: 70px. <span class=pr-flag>Firefox</span> makes it NaN: no bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

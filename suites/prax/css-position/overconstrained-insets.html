@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Insets that leave less than no room</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.pr-cb { height: 80px; }
+  .chip { position: absolute; background: #f9cc9d; border: 0 solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.5.2 Resolving Overconstrained Insets</div>
+  <h1>Insets that leave less than no room</h1>
+  <p class=pr-lede><q>If the inset-modified containing block size in any axis is less than zero, then the weaker inset
+  in the affected axis is reduced</q> to make it zero. With neither inset
+  auto, <q>the weaker inset is the inset of the end edge (where end is interpreted relative to the writing mode of the
+  containing block).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#resolving-inset-overconstraint">CSS Positioned Layout 3 §3.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>The end inset gives way</h2>
+  <p>Each stage is relative, 200 by 80. The tinted box's size is <code>auto</code>; a 2px border marks its start
+  edge. CSS 2's pages show the left-to-right case.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure" style="direction: rtl"><div class=chip style="top: 10px; left: 150px; right: 150px; border-right-width: 2px">abc</div></div>
+    <figcaption>Right to left, <code>left: 150px; right: 150px</code>: the end is the left, and <code>left</code> gives
+    way to 50px. The box is 0 wide at 50, "abc" overflowing it to the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=chip style="left: 20px; top: 60px; bottom: 60px; border-top-width: 2px">abc</div></div>
+    <figcaption><code>top: 60px; bottom: 60px</code>: the end is the bottom, which gives way to 20px. The box is 0
+    tall at 60, "abc" overflowing it below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then auto margins</h2>
+  <p>Auto margins then share what is left <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-margins">CSS Positioned Layout 3 §4.2</a></span>, as <a href="https://github.com/w3c/csswg-drafts/issues/11478">csswg-drafts#11478</a> resolved; the draft
+  still notes that <q>CSS2.1 and this draft currently conflict.</q> Here <code>inset: 50px 90px; margin: auto</code>,
+  a box 60 by 20, in a stage 200 by 80. Across, the room is 20
+  wide, so the start margin is zero; down, the bottom inset gives way to make the room the line at 50, and the
+  margins share −20.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class=chip style="inset: 50px 90px; margin: auto; width: 60px; height: 20px"></div></div>
+    <figcaption>The box from 90 to 150 across, and from 40 to 60 down. <span class=pr-flag>Safari</span> Down, it
+    is centered in the stage, from 30 to 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

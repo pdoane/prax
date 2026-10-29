@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>frame-sizing: how a document opts in</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 110px; height: 154px; }
+  figure.f { margin-right: 8px; }
+  figure.f figcaption { max-width: 116px; }
+  iframe { display: block; width: 100px; border: 1px solid #2c5a8f; frame-sizing: content-height; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.3.1 HTML iframe Details</div>
+  <h1>frame-sizing: how a document opts in</h1>
+  <p class=pr-lede>The responsive embedded sizing flag <q>is set to true or false during the initial document parse,
+  depending on which of the following first occurs: If a &lt;meta name=responsive-embedded-sizing&gt; element is
+  encountered, it is set to true. If the &lt;body&gt; element is opened (explicitly or implicitly), or inserted into
+  the document by the parser, it is set to false.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#iframe-frame-sizing">CSS Box Sizing 4 §5.3.1</a></span>
+  Each iframe has <code>frame-sizing: content-height</code>, and its document a green block 60px tall.</p>
+</header>
+
+<section>
+  <h2>Before the body, or not at all</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe srcdoc="<!doctype html><html><head><meta name=responsive-embedded-sizing></head><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div></body></html>"></iframe></div>
+    <figcaption>The meta in the head: the flag is true, so 60px tall. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><iframe srcdoc="<!doctype html><html><head></head><meta name=responsive-embedded-sizing><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div></body></html>"></iframe></div>
+    <figcaption>The meta between head and body, still before the body opens: 60px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><iframe srcdoc="<!doctype html><body style='margin: 0'><div style='height: 60px; background: #6aa36a'></div><meta name=responsive-embedded-sizing></body>"></iframe></div>
+    <figcaption>The meta after the body opened: the flag is already false, so the default 150px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><iframe src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60'><rect width='120' height='60' fill='%236aa36a'/></svg>"></iframe></div>
+    <figcaption>An SVG document 60px tall: <q>SVG documents in &lt;iframe&gt; cannot do so</q>, 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

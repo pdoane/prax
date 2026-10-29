@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:required and :optional</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows > * { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; font-size: 12px; outline: 3px solid #b5bcc7; outline-offset: 1px; }
+  .rows textarea { height: 34px; }
+  .rows :required { outline-color: #d68a3c; }
+  .rows :optional { outline-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:required and :optional</h1>
+  <p class=pr-lede><code>:required</code> matches inputs that are required, and selects and textareas with a
+  <code>required</code> attribute; <code>:optional</code> matches <q>input elements to which the required attribute
+  applies that are not required</q>, and selects and textareas without one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Required, optional, or neither</h2>
+  <p>Outlines: orange <code>:required</code>, green <code>:optional</code>, grey neither. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <input required value="input required">
+        <input value="input">
+        <select required><option>select required</select>
+        <textarea>textarea</textarea>
+        <input type=button value="input type=button required" required>
+        <button>a button</button>
+      </div>
+    </div>
+    <figcaption>Orange, green, orange, green. The last two are grey: <code>required</code> does not apply to a button,
+    whether an <code>input</code> or a <code>button</code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> outline both buttons green, as <code>:optional</code>.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

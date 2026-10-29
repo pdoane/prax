@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: reference boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.3 Geometry Box References</div>
+  <h1>border-shape: reference boxes</h1>
+  <p class=pr-lede><q>Single &lt;basic-shape&gt;: The &lt;geometry-box&gt; defaults to the half-border-box value, which positions the stroke to match the default border behavior, with the border extending equally inward and outward from the shape path.</q> <q>Two &lt;basic-shape&gt;s: The first (outer) shape defaults to the border box, and the second (inner) shape defaults to the padding box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-geometry-box">CSS Borders and Box Decorations 4 §7.3</a></span></p>
+</header>
+
+<section>
+  <h2>Defaults and explicit boxes</h2>
+  <p>Each box is 112 by 72 with a 6px blue border and a dashed outline at its border box.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="border-shape: inset(0)"></div></div>
+    <figcaption><code>inset(0)</code>: the stroke on the middle of the border, where a plain border would be. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="border-shape: inset(0) border-box"></div></div>
+    <figcaption><code>inset(0) border-box</code>: centered on the outer edge, half outside the box. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="border-shape: inset(0 round 20px) inset(0 round 14px)"></div></div>
+    <figcaption>Two shapes: outer on the border box, inner on the padding box: a rounded border 6px wide. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-shadow-offset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 20px 30px; background: #f4f5f7; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 6.2 Offsetting shadows: the box-shadow-offset property</div>
+  <h1>box-shadow-offset</h1>
+  <p class=pr-lede><q>Each item in that list can either be the none value, which indicates no shadow, a pair of &lt;length&gt; values, which define the horizontal and vertical offsets, or a single &lt;length&gt; value, which sets both offsets to the same value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#box-shadow-offset">CSS Borders and Box Decorations 4 §6.2</a></span> Each box is 104 by 44, its shadows orange.</p>
+</header>
+
+<section>
+  <h2>Two lengths, one, or none</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 16px -8px; box-shadow-color: #d68a3c"></div></div>
+    <figcaption><code>16px -8px</code>: 16px right, 8px up. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: 10px; box-shadow-color: #d68a3c"></div></div>
+    <figcaption><code>10px</code>: 10px right and 10px down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="box-shadow-offset: none, 10px; box-shadow-color: #8e44ad, #d68a3c"></div></div>
+    <figcaption><code>none, 10px</code>: the purple first shadow is not drawn; the orange second is. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gradient stops: none, or one</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="none" />
+  <radialGradient id="none-radial" />
+  <linearGradient id="one"><stop offset="0.75" stop-color="#6aa36a" /></linearGradient>
+  <radialGradient id="one-radial"><stop offset="0.25" stop-color="#6aa36a" stop-opacity="0.5" /></radialGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.4.3 Notes on gradient stops</div>
+  <h1>Gradient stops: none, or one</h1>
+  <p class=pr-lede><q>It is necessary that at least two stops defined to have a gradient effect. If no stops are
+  defined, then painting shall occur as if ‘none’ were specified as the paint style. If one stop is defined, then paint
+  with the solid color fill using the color defined for that gradient stop.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#StopNotes">SVG 2 §14.2.4.3</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>No stops: none</h2>
+  <p>Each rect is outlined dashed.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#none) #d68a3c" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>An empty <code>linearGradient</code>, with an orange fallback: nothing, as <code>none</code>; the
+    fallback is for a reference that fails.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#none-radial)" stroke="url(#none-radial)" stroke-width="6" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>An empty <code>radialGradient</code> as fill and stroke: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One stop: a solid color</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#one)" /></svg></div>
+    <figcaption>One green stop at 0.75: all green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#one-radial)" /></svg></div>
+    <figcaption>One green stop at 0.25 with <code>stop-opacity="0.5"</code>, radial: all green at half opacity,
+    the guides showing through.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

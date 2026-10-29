@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Continuing a flex container in the next column</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols { column-count: 2; column-gap: 20px; column-fill: auto; height: 40px; }
+  .before { height: 20px; background: #c9ced6; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 10 Fragmenting Flex Layout, continuation</div>
+  <h1>Continuing a flex container in the next column</h1>
+  <p class=pr-lede><q>The exact layout of a fragmented flex container is not defined in this level of Flexible Box
+  Layout. However, breaks inside a flex container are subject to the following rules</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#pagination">CSS Flexible Box Layout 2 §10</a></span>
+  Each stage is two columns 90px wide and 40px tall.</p>
+</header>
+
+<section>
+  <h2>A container that does not fit moves whole</h2>
+  <p><q>If the first fragment of the flex container is not at the top of the page, and none of its flex items fit in
+  the remaining space on the page, the entire fragment is moved to the next page.</q> After a grey 20px block, 20px
+  are left; the items are <code>break-inside: avoid</code>.</p>
+  <figure>
+    <div class="pr-stage cols"><div class=before></div><div style="display: flex"><div class="pr-a pr-fit" style="width: 40px; height: 30px; break-inside: avoid">A</div><div class="pr-b pr-fit" style="width: 40px; height: 40px; break-inside: avoid">B</div></div></div>
+    <figcaption>A row of A, 30px, and B, 40px tall: neither fits, so the container starts the second
+    column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage cols"><div class=before></div><div style="display: flex; flex-direction: column"><div class="pr-a pr-fit" style="height: 30px; break-inside: avoid">A</div><div class="pr-b pr-fit" style="height: 10px; break-inside: avoid"></div></div></div>
+    <figcaption>A column of A, 30px, then B, 10px: A does not fit, so the container starts the second column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inside items</h2>
+  <p><q>When a flex container is continued after a break, the space available to its flex items</q> <q>is
+  reduced by the space consumed by flex container fragments on previous pages.</q> <q>A forced break inside a flex
+  item effectively increases the size of its contents; it does not trigger a forced break inside sibling
+  items.</q></p>
+  <figure>
+    <div class="pr-stage cols"><div class=pr-parent style="display: flex; flex-direction: column; height: 60px"><div class="pr-a pr-fit" style="flex: 1">A</div></div></div>
+    <figcaption>A <code>column</code> 60px tall, its item <code>flex: 1</code>: 40px in the first
+    column, 20px in the second.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div style="display: flex"><div style="width: 40px"><div class="pr-a pr-fit">A1</div><div class="pr-a pr-fit" style="break-before: column">A2</div></div><div class="pr-b pr-fit" style="width: 40px; height: 40px">B</div></div></div>
+    <figcaption>A row: item A's A2 is <code>break-before: column</code> and tops the second column; B, 40px,
+    stays whole beside A1. <span class=pr-flag>Firefox</span> A2 under A1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generic families in any script</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3.1 Generic font families</div>
+  <h1>Generic families in any script</h1>
+  <p class=pr-lede><q>Generic font families are a fallback mechanism, a means of preserving some of the style sheet
+  author's intent in the worst case when none of the specified fonts can be selected.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#generic-font-families">CSS 2
+  §15.3.1</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/generic-families-scripts.html">Generic families of one writing system</a>, <a href="../css-fonts/generic-by-language.html">Generics by language</a>.</p>
+</header>
+
+<section>
+  <h2>serif and sans-serif in other scripts</h2>
+  <p><q>CSS uses the term 'serif' to apply to a font for any script, although other names may be more familiar for
+  particular scripts, such as Mincho (Japanese)</q>; for sans-serif, <q>Gothic (Japanese)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#serif">CSS 2
+  §15.3.1.1</a>–2</span></p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-family: serif">明朝体の文字</div>
+    <figcaption>Japanese in <code>serif</code>: a Mincho face, thin horizontal strokes ending in small triangles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-family: sans-serif">明朝体の文字</div>
+    <figcaption>The same in <code>sans-serif</code>: a Gothic face, strokes of even width and plain ends.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: serif">Αθήνα Москва</div>
+    <figcaption>Greek and Cyrillic in <code>serif</code>: serifed ends.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: sans-serif">Αθήνα Москва</div>
+    <figcaption>The same in <code>sans-serif</code>: plain ends.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The worst case</h2>
+  <p>When no named family can be found, the generic family at the end of the list keeps the kind of font the author
+  asked for. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#generic-font-families">CSS 2 §15.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Such Serif', serif">Handgloves</div>
+    <figcaption><code>"No Such Serif", serif</code>: still a serif face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Such Script', cursive">Handgloves</div>
+    <figcaption><code>"No Such Script", cursive</code>: still a pen hand.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

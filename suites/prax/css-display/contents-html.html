@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: contents on replaced HTML elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .pr-stage > * { vertical-align: top; }
+  .c { display: contents; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · B.1 HTML Elements, replaced elements and controls</div>
+  <h1>display: contents on replaced HTML elements</h1>
+  <p class=pr-lede>For <code>br</code>, <code>wbr</code>, <code>meter</code>, <code>progress</code>,
+  <code>canvas</code>, <code>embed</code>, <code>object</code>, <code>audio</code>, <code>iframe</code>,
+  <code>img</code>, <code>video</code>, <code>frame</code>, <code>frameset</code>, <code>input</code>,
+  <code>textarea</code> and <code>select</code>, <q>display: contents computes to display: none.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox-html">CSS Display 4 §B.1</a></span></p>
+</header>
+
+<section>
+  <h2>Replaced elements</h2>
+  <p>Each stage has the element without, then with, <code>display: contents</code>, between x's.</p>
+  <figure>
+    <div class=pr-stage>x<img alt="" width=30 height=20 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 2'><rect width='3' height='2' fill='%238e44ad'/></svg>">x<img id=h1 class=c alt="alt" width=30 height=20 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 2'><rect width='3' height='2' fill='%238e44ad'/></svg>">x</div>
+    <figcaption><code>img</code>: "x", one image, "xx", and nothing for the second, not even its alt
+    text, as for <code>display: none</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x<canvas width=30 height=20 style="background: #8e44ad"></canvas>x<canvas id=h2 class=c width=30 height=20 style="background: #8e44ad">fallback</canvas>x</div>
+    <figcaption><code>canvas</code>: one purple box, and nothing, not its fallback, for the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x<iframe style="width: 30px; height: 20px; border: 1px solid #8e44ad" srcdoc=""></iframe>x<iframe id=h3 class=c style="width: 30px; height: 20px; border: 1px solid #8e44ad" srcdoc=""></iframe>x</div>
+    <figcaption><code>iframe</code>: one frame, and nothing for the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Form controls and line breaks</h2>
+  <figure>
+    <div class=pr-stage>x<input size=3 value=in>x<input id=h4 class=c size=3 value=in>x</div>
+    <figcaption><code>input</code>: one field, and nothing for the second, not its value.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x<select><option>opt</select>x<select id=h5 class=c><option>opt</select>x</div>
+    <figcaption><code>select</code>: one menu, and no "opt" for the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x<progress value=0.5 style="width: 40px"></progress>x<progress id=h6 class=c value=0.5 style="width: 40px"></progress>x</div>
+    <figcaption><code>progress</code>: one bar, and nothing for the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one<br id=h7 class=c>two</div>
+    <figcaption><code>br</code> with <code>display: contents</code>: no break, "onetwo" on one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

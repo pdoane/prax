@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating rotate3d() and perspective()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 20px; width: 80px; height: 40px; }
+  .half { animation: 4s ease-in-out -2s infinite alternate both; }
+  @keyframes same { from { transform: rotateY(0deg); } to { transform: rotate3d(0, 2, 0, 360deg); } }
+  @keyframes zero { from { transform: rotateX(0deg); } to { transform: rotateY(360deg); } }
+  @keyframes both { from { transform: rotateX(360deg); } to { transform: rotateY(360deg); } }
+  @keyframes pz { from { transform: perspective(100px) rotateY(0deg); } to { transform: perspective(100px) rotateY(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 14 Interpolation of primitives and derived transform functions</div>
+  <h1>Interpolating rotate3d() and perspective()</h1>
+  <p class=pr-lede><q>If the normalized vectors are not equal and both rotation angles are non-zero the transform
+  functions get converted into 4x4 matrices first</q>. <q>Otherwise the rotation angle gets interpolated numerically
+  and the rotation vector of the non-zero angle is used</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#interpolation-of-transform-functions">CSS Transforms 2 §14</a></span>
+  Each blue box is on the dashed outline, "AB" at its top left, animating; a still shows <i>p</i> = 0.5.</p>
+</header>
+
+<section>
+  <h2>Angles, or matrices; perspective() a matrix</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: same">AB</div></div>
+    <figcaption><code>rotateY(0deg)</code> to <code>rotate3d(0, 2, 0, 360deg)</code>, one axis: 180deg, "AB"
+    mirrored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: zero">AB</div></div>
+    <figcaption><code>rotateX(0deg)</code> to <code>rotateY(360deg)</code>, one angle zero: about Y, 180deg,
+    mirrored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: both">AB</div></div>
+    <figcaption><code>rotateX(360deg)</code> to <code>rotateY(360deg)</code>: two identity matrices,
+    unturned.</figcaption>
+  </figure>
+  <p><q>The transform functions matrix(), matrix3d() and perspective() get converted into 4x4 matrices first and
+  interpolated as defined in section Interpolation of Matrices afterwards.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p half" style="animation-name: pz">AB</div></div>
+    <figcaption><code>perspective(100px)</code> then <code>rotateY(0deg)</code> to <code>(360deg)</code>: the
+    perspective a matrix, the angle 180deg: mirrored.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

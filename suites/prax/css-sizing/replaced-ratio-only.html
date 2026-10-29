@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Replaced elements with only a ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 60px; overflow: hidden; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.1 Intrinsic Sizes, a ratio and no size</div>
+  <h1>Replaced elements with only a ratio</h1>
+  <p class=pr-lede>For a replaced element without natural sizes, <q>If it has a non-degenerate preferred aspect
+  ratio: For the min-content size, use zero.</q> For the max-content size, the stretch fit into a definite available
+  space; <q>Otherwise if the box has a &lt;length&gt; as its computed value for min-width or min-height, use that size
+  and calculate the other dimension using the aspect ratio</q>; <q>Otherwise use an inline size matching the
+  corresponding dimension of the initial containing block</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span>
+  Each image has a 2:1 ratio and no natural size; each stage, 150 by 60, clips what overflows it, and its width reads
+  back below. The page's initial containing block is 600px wide.</p>
+</header>
+
+<section>
+  <h2>The image's own keywords</h2>
+  <figure class=f>
+    <div class="pr-stage s"><img alt="" id=a1 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: auto</code>: the stretch fit into the stage, 150 by 75. Reads <code class=pr-computed data-of=a1 data-dom=width></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=b5 style="width: max-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: max-content</code>: sized as in an infinite space, so the initial containing block's 600px, filling the stage. Reads
+    <code class=pr-computed data-of=b5 data-dom=width></code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> 150px, the stretch fit into the stage. <span class=pr-flag>Safari</span> 2px, from
+    the viewBox.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=b6 style="width: min-content" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: min-content</code>: zero, so nothing shows. Reads <code class=pr-computed data-of=b6
+    data-dom=width></code>. <span class=pr-flag>Chrome</span> 150px. <span class=pr-flag>Safari</span> 2px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A length minimum in place of the initial containing block</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=m1 style="width: max-content; min-height: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: max-content; min-height: 30px</code>: the minimum through the ratio, 60 by 30. Reads
+    <code class=pr-computed data-of=m1 data-dom=width></code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> 150px. <span class=pr-flag>Safari</span> 2px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=m2 style="width: max-content; min-width: 50px; min-height: 40px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption>And <code>min-width: 50px; min-height: 40px</code>: <q>choose the one that results in the larger
+    overall size</q>, 80 by 40. Reads <code class=pr-computed data-of=m2 data-dom=width></code>. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> 150px. <span class=pr-flag>Safari</span> 50 by 25.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><img alt="" id=m3 style="width: max-content; min-height: 10%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>min-height: 10%</code> is not a &lt;length&gt;: the initial containing block's 600px again.
+    Reads <code class=pr-computed data-of=m3 data-dom=width></code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> 150px. <span class=pr-flag>Safari</span> 2px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:checked</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows label { display: block; margin: 0 0 6px; }
+  .rows label span { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows :checked + span { background: #8fd18f; }
+  .rows select { width: 170px; font-size: 12px; }
+  .rows option:checked { background: #8fd18f; color: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:checked</h1>
+  <p class=pr-lede><q>The :checked pseudo-class must match any element falling into one of the following
+  categories</q>: a checkbox or a radio button whose checkedness is true, and an option whose selectedness is true.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Checkedness and selectedness</h2>
+  <p>A label's text is green while its control matches <code>:checked</code>, and so is an option that matches it.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <label><input type=checkbox checked><span>checkbox, checked</span></label>
+        <label><input type=checkbox><span>checkbox</span></label>
+        <label><input type=radio name=size checked><span>radio, checked</span></label>
+        <label><input type=radio name=size><span>radio</span></label>
+      </div>
+    </div>
+    <figcaption>The first and third are green. Click each: a checkbox turns green or grey with its mark; clicking the
+    second radio button makes it green and the first grey.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <select size=3 multiple><option>oak<option selected>walnut<option>maple</select>
+      </div>
+    </div>
+    <figcaption>"walnut" is green. Click "oak", or Command- or Control-click "maple": each option the reader selects is
+    green, and each one deselected is not. Safari paints a selected option in its own grey, over the page's
+    background.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

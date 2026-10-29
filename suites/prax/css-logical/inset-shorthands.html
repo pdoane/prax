@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>inset-block, inset-inline and inset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .pr-stage.w { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.3 Flow-Relative Offsets, shorthands</div>
+  <h1>inset-block, inset-inline and inset</h1>
+  <p class=pr-lede><code>inset-block</code> and <code>inset-inline</code>: <q>The first value represents the start edge style, and the second value represents the end edge style. If only one value is given, it applies to both the start and end edges.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#position-properties">CSS Logical Properties and Values 1 §4.3</a></span> Each stage, 160 by 100px, contains A, absolutely positioned with no size, so it stretches between its offsets.</p>
+</header>
+
+<section>
+  <h2>inset-block and inset-inline</h2>
+  <p>Each A has <code>inset-block: 10px 40px; inset-inline: 20px 60px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="position: relative"><div class="pr-a pr-fit" style="position: absolute; inset-block: 10px 40px; inset-inline: 20px 60px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px in at the top, 40px at the bottom, 20px at the left, 60px at the right: 80 by 50px.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl; position: relative"><div class="pr-a pr-fit" style="position: absolute; inset-block: 10px 40px; inset-inline: 20px 60px">A</div></div>
+    <figcaption><code>rtl</code>: 20px in at the right, 60px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; position: relative"><div class="pr-a pr-fit" style="position: absolute; inset-block: 10px 40px; inset-inline: 20px 60px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 10px in at the right, 40px at the left, 20px at the top, 60px at the bottom: 110 by 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inset: physical, like margin</h2>
+  <p><q>Values are assigned to its sub-properties as for 'margin'.</q> Each A has <code>inset: 10px 20px 30px 40px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="position: relative"><div class="pr-a pr-fit" style="position: absolute; inset: 10px 20px 30px 40px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px in at the top, 20px at the right, 30px at the bottom, 40px at the left: 100 by 60px.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl; position: relative"><div class="pr-a pr-fit" style="position: absolute; inset: 10px 20px 30px 40px">A</div></div>
+    <figcaption><code>rtl</code>: the same: physical.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; position: relative"><div class="pr-a pr-fit" style="position: absolute; inset: 10px 20px 30px 40px">A</div></div>
+    <figcaption><code>vertical-rl</code>: the same.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: rules 4 to 6</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; left: 70px; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.4 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute heights: rules 4 to 6</h1>
+  <p class=pr-lede>Each stage, 200 by 100, is the containing block of the orange box in it. Auto margins are 0 in all six
+  rules.</p>
+</header>
+
+<section>
+  <h2>Solving for the one auto</h2>
+  <p><q>4. 'top' is 'auto', 'height' and 'bottom' are not 'auto', then set 'auto' values for 'margin-top' and
+  'margin-bottom' to 0, and solve for 'top'</q> <q>5. 'height' is 'auto', 'top' and 'bottom' are not 'auto', then
+  'auto' values for 'margin-top' and 'margin-bottom' are set to 0 and solve for 'height'</q> <q>6. 'bottom' is 'auto',
+  'top' and 'height' are not 'auto', then set 'auto' values for 'margin-top' and 'margin-bottom' to 0 and solve for
+  'bottom'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="height: 30px; bottom: 10px; margin-top: auto">rule 4</div></div>
+    <figcaption>4. <code>height: 30px; bottom: 10px; margin-top: auto</code>: the margin is 0, and
+    <code>top</code> is 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="top: 20px; bottom: 30px">rule 5</div></div>
+    <figcaption>5. <code>top: 20px; bottom: 30px</code>: the height is 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b abs pr-fit" style="top: 30px; height: 40px; margin-bottom: auto">rule 6</div></div>
+    <figcaption>6. <code>top: 30px; height: 40px; margin-bottom: auto</code>: the margin is 0 and
+    <code>bottom</code> is 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

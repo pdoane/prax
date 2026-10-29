@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>inline-sizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/40px "PR Arimo"; }
+  .s { background: rgba(214, 138, 60, 0.6); }
+  .big { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6.4 Inline Box Drawing Height: the inline-sizing property</div>
+  <h1>inline-sizing</h1>
+  <p class=pr-lede><q>This property specifies how the logical height of the content area of an inline box is measured
+  in relation to its contents. It has no effect on the size or position of the box’s contents, the line box, or any
+  other content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#line-fill">CSS Inline Layout 3 §6.4</a></span>
+  Each stage is 13px text on 40px lines; the orange spans show their content areas.</p>
+</header>
+
+<section>
+  <h2>normal and stretch</h2>
+  <p><code>normal</code>: <q>The content area of the inline box is sized and positioned to fit (possibly
+  hypothetical) text from its first available font.</q> <code>stretch</code>: <q>the inline box’s box edges are
+  shifted such that its over/under margin edges coincide with the corresponding line box’s edges</q>.</p>
+  <figure>
+    <div class=pr-stage>Xx <span class=s>normal</span> Xx <span class="s big">big</span></div>
+    <figcaption><code>normal</code>: each orange area only as tall as its own text.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="inline-sizing: stretch">Xx <span class=s>stretch</span> Xx <span class="s big">big</span></div>
+    <figcaption><code>stretch</code>, inherited: both orange areas fill the 40px line, top to bottom. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not
+    supported.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="inline-sizing: stretch">Xx <span class=s style="margin: 5px 0">margins</span> Xx</div>
+    <figcaption><code>stretch</code> with 5px margins above and below: the orange area 30px, its margin edges at
+    the line's. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

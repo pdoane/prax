@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines around split inline boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outlines around split inline boxes</h1>
+  <p class=pr-lede><q>Outlines may be non-rectangular.</q> Each figure's highlighted <code>span</code> breaks over three
+  lines.</p>
+</header>
+
+<section>
+  <h2>The minimum outline that encloses all the boxes</h2>
+  <p><q>For example, if the element is broken across several lines, the outline is the minimum outline that encloses
+  all the element's boxes. In contrast to borders, the outline is not open at the line box's end or start, but is
+  always fully connected if possible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px; width: 130px">Some text and <span class=pr-hl style="border: 2px solid #2c5a8f">a span that runs on and on over three lines</span> of it.</div>
+    <figcaption>A 2px border: open at the end of the first and second lines and at the start of the second and
+    third, three separate pieces.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px; width: 130px">Some text and <span class=pr-hl style="outline: 2px solid #c0392b">a span that runs on and on over three lines</span> of it.</div>
+    <figcaption>A 2px outline: the specification requires one closed shape round all three pieces, no line
+    where they meet. <span class="pr-flag pr-since">Since CSS 2</span> three closed outlines are allowed.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a></div>
+  <h2>A set of outlines, each closed, following the corners</h2>
+  <p><q>the outline should be an outline or minimum set of outlines that encloses all the element’s boxes. Each part of
+  the outline should be fully connected rather than open on some sides</q>. <q>it should follow the border-radius
+  curve</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px; width: 130px; line-height: 15px">Some text and <span class=pr-hl style="outline: 2px solid #c0392b">a span that runs on and on over three lines</span> of it.</div>
+    <figcaption>The second figure's span on lines 15px apart, its pieces overlapping: the minimum set is one
+    closed shape round all three, no lines inside.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-plain style="border-radius: 10px; outline: 4px solid #c0392b"></div></div>
+    <figcaption>A box with <code>border-radius: 10px</code> and a 4px outline: the outline's corners are rounded
+    with it, not square.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

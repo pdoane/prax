@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>colspan and rowspan</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; }
+  .t td.span { background: #f6d7b4; text-align: center; }
+  .groups { border-collapse: collapse; }
+  .groups tbody { border: 3px solid #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.11 Attributes common to td and th elements</div>
+  <h1>colspan and rowspan</h1>
+  <p class=pr-lede><q>These attributes give the number of columns and rows respectively that the cell is to span.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#attributes-common-to-td-and-th-elements">HTML §4.9.11</a></span>
+  The spanning cell is orange in each figure.</p>
+</header>
+<section>
+  <h2>Across columns, down rows</h2>
+  <p><q>For the purposes of the CSS table model, the colspan and rowspan attributes on td and th elements are expected
+  to provide the special knowledge regarding cells spanning rows and columns.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td class=span colspan=2>A<td>B<tr><td>C<td>D<td>E</table>
+    </div>
+    <figcaption><code>colspan=2</code>: A covers the two columns above C and D; B is above E.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td class=span rowspan=2>A<td>B<tr><td>C</table>
+    </div>
+    <figcaption><code>rowspan=2</code>: A covers both rows of the first column; C, the second row's only cell, is in
+    the second column, under B.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Zero rows: to the end of the row group</h2>
+  <p><q>For this attribute, the value zero means that the cell is to span all the remaining rows in the row group.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#attributes-common-to-td-and-th-elements">§4.9.11</a></span>
+  These tables collapse their borders, and each <code>tbody</code> has a 3px blue border.</p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t groups"><tbody><tr><td class=span rowspan=0>A<td>B<tr><td>C<tr><td>D</tbody><tbody><tr><td>E<td>F</tbody></table>
+    </div>
+    <figcaption><code>rowspan=0</code> in a group of three rows: A covers the first column beside B, C and D, and stops
+    at its group's frame; E and F, in the second group, are below it.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

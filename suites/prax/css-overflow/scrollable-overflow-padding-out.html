@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scrollable overflow area: padding and out-of-flow boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 40px; height: 40px; padding: 0 20px; margin: 10px 8px; overflow: auto; }
+  .stage { height: 100px; }
+  .long { width: 300px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.3 Calculating the Scrollable Overflow Area, out-of-flow boxes</div>
+  <h1>The scrollable overflow area: padding and out-of-flow boxes</h1>
+  <p class=pr-lede>The area unites <q>Additional padding added to the scrollable overflow rectangle as necessary to
+  enable scroll positions that satisfy the requirements of both place-content: start and place-content: end
+  alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Not around out-of-flow boxes</h2>
+  <p><q>It typically ends up being exactly the same size as the box's own padding, except in a few cases-- such as
+  when an out-of-flow positioned element, or the visible overflow of a descendent, has already increased the size of
+  the scrollable overflow rectangle outside the conceptual "content edge"</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span>
+  The box is 80px wide in 20px of padding, <code>position: relative</code>, and holds an absolutely positioned B,
+  60px wide, at 240, and an in-flow A 100px wide.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=p5 class="pr-frame sc" style="width: 80px; margin: 10px 40px; position: relative"><div class="pr-a pr-fit" style="width: 100px">A</div><div class="pr-b pr-fit" style="position: absolute; left: 240px; top: 20px; width: 60px">B</div></div></div>
+    <figcaption>A with its padding ends at 140; B's border box ends at 300, and no padding is added after it:
+    <code>scrollWidth</code> <code class=pr-computed data-of=p5 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=p6 class="pr-frame sc" style="width: 80px; margin: 10px 40px"><div class=pr-frame style="width: 100px; height: 20px"><div class="pr-a pr-fit" style="width: 200px">A</div></div></div></div>
+    <figcaption>A 200px wide overflowing a dashed 100px child: the padding goes around the child, at 142, and A's
+    visible overflow reaches 221: <code class=pr-computed data-of=p6 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vw, vh, vmin, vmax: percentages of the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.2 Viewport-percentage Lengths</div>
+  <h1>vw, vh, vmin, vmax: percentages of the viewport</h1>
+  <p class=pr-lede><q>The viewport-percentage lengths are relative to the size of the initial containing block-- which
+  is itself based on the size of either the viewport (for continuous media) or the page area (for paged media). When
+  the height or width of the initial containing block is changed, they are scaled accordingly.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#viewport-relative-lengths">CSS Values and Units 4 §6.1.2</a></span>
+  Each frame is a viewport 200px wide and 100px tall, and holds a blue box.</p>
+</header>
+
+<section>
+  <h2>A 200 by 100 viewport</h2>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><body style='margin: 0'><div style='width: 50vw; height: 50vh; background: #4f81bd'></div></body>"></iframe></div>
+    <figcaption><code>width: 50vw; height: 50vh</code>: 100px wide, 50px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><body style='margin: 0'><div style='width: 50vmin; height: 50vmin; background: #4f81bd'></div><div style='width: 50vmax; height: 20px; background: #d68a3c'></div></body>"></iframe></div>
+    <figcaption>A <code>50vmin</code> square, 50px, half the smaller height; under it an orange bar
+    <code>50vmax</code> wide, 100px, half the larger width.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scaled with the viewport</h2>
+  <p>The same box, <code>width: 50vw; height: 50vh</code>, in frames of other sizes.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="width: 100px" srcdoc="<!doctype html><body style='margin: 0'><div style='width: 50vw; height: 50vh; background: #4f81bd'></div></body>"></iframe></div>
+    <figcaption>A frame 100px wide: the box is 50 by 50.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<!doctype html><body style='margin: 0'><div style='width: 50vw; height: 50vh; background: #4f81bd'></div></body>"></iframe></div>
+    <figcaption>A frame 60px tall: the box is 100 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

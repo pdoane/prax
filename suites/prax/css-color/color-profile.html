@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>@color-profile</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  @color-profile --late { src: url(no-such-profile.icc); }
+  @color-profile --late { src: url(../../../third_party/wpt/css/css-color/support/swapped.icc); }
+  @color-profile --named { src: url(../../../third_party/wpt/css/css-color/support/swapped.icc); components: p, q, r; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 5.3 Specifying a Color Profile: the @color-profile at-rule</div>
+  <h1>@color-profile</h1>
+  <p class=pr-lede><q>The @color-profile rule defines and names a color profile which can later be used in the color() function
+  to specify a color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#at-profile">CSS Color 5
+  §5.3</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>The last rule of a name wins</h2>
+  <p><q>If multiple @color-profile rules are defined with the same name, the last
+  one in document order wins, and all preceding ones are ignored.</q> <code>--late</code> is first a profile that does
+  not exist, then <code>swapped.icc</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--late 0.6 0 0)"></div><div class=sw style="background: #009900"></div></div>
+    <figcaption><code>color(--late 0.6 0 0)</code>, in the swapped space: green, as <code>#009900</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Named components</h2>
+  <p><q>The value of this descriptor is a comma-separated list of &lt;ident&gt; tokens. Each
+  &lt;ident&gt;&gt; names a component</q>, for relative colors (<a href="https://drafts.csswg.org/css-color-5/#relative-color-function">§5.1</a>). <code>--named</code> is
+  <code>swapped.icc</code> with <code>components: p, q, r</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(from color(--named 0.6 0 0) --named q p r)"></div><div class=sw style="background: #990000"></div></div>
+    <figcaption><code>color(from color(--named 0.6 0 0) --named q p r)</code>: the first two swapped, red, as <code>#990000</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(from color(--named 0.6 0 0) --named p calc(p / 2) r)"></div><div class=sw style="background: rgb(30% 60% 0%)"></div></div>
+    <figcaption><code>q</code> as half of <code>p</code>: a green with some red, as <code>rgb(30% 60% 0%)</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the custom colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

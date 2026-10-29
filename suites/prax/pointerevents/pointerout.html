@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointerout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .outer { height: 80px; margin: 10px 20px; padding: 20px 40px; box-sizing: border-box;
+           background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; }
+  .inner { height: 40px; box-sizing: border-box; background: #f6d7b4; border: 1px solid #9c5f22;
+           font-size: 12px; text-align: center; line-height: 38px; }
+  .pad { height: 30px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.8 pointerout</div>
+  <h1>pointerout</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named pointerout when any of the following occurs:</q>
+  <q>The step to determine the target of a pointer detects that the pointer has moved out of an element.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerout">Pointer Events §3.3.8</a></span></p>
+</header>
+<section>
+  <h2>Out of an element, into its child</h2>
+  <p><q>the element whose bounds the pointer is entering (in the case of a pointerout or pointerleave)</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#attributes-and-default-actions">§3.1.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" id=stage>
+      <div class=outer id=outer><div class=inner id=inner>inner</div></div>
+      <ol class=pr-log data-log="pointerout" data-fields="target relatedTarget" data-on="#outer" data-lines=3></ol>
+    </div>
+    <figcaption>Move into the blue box, onto the orange one, and out to the stage: <code>pointerout</code> at
+    <code>outer</code> to <code>inner</code>, though the pointer is still within <code>outer</code>; at
+    <code>inner</code> to <code>outer</code>; at <code>outer</code> to <code>stage</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>After a finger lifts</h2>
+  <p><q>After the user agent fires a pointerup event for a device that does not support hover (see pointerup).</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerout">§3.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Tap here.</div>
+      <ol class=pr-log data-log="pointerup pointerout" data-fields="pointerType relatedTarget" data-on="#pad" data-lines=2></ol>
+    </div>
+    <figcaption>Needs a touch screen. Tap the box: <code>pointerup</code>, then <code>pointerout</code>, with the
+    finger in the same place; a mouse clicked there gives no <code>pointerout</code> until it moves away.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

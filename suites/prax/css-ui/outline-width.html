@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>outline-width: snapped as a border width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 100px; height: 40px; background: #b9cde6; outline-style: solid; outline-color: #c0392b; }
+  .ref { width: 100px; height: 40px; background: #b9cde6; border: 0 solid #2c5a8f; margin: 0 0 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.2 Outline Thickness: the outline-width property</div>
+  <h1>outline-width: snapped as a border width</h1>
+  <p class=pr-lede><q>The outline-width property accepts the same values as border-width with the same meaning.</q>
+  Its computed value is an <q>absolute length, snapped as a border width</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-width">CSS Basic User Interface 4 §3.2</a></span>
+  The keywords are on CSS 2's <a href="../css2-18-user-interface/outline-width-since.html">outline-width</a> pages.</p>
+</header>
+
+<section>
+  <h2>As wide as a border of the same width</h2>
+  <p>Snapping at one device pixel per CSS px: a width under 1px but above 0 rounds up to 1px, any other rounds down to
+  whole pixels. In each figure a blue border of the same width is above a red outline.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=ref style="border-width: 0.4px"></div><div class=box style="outline-width: 0.4px"></div></div>
+    <figcaption><code>0.4px</code>: both 1px, not lost.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class=ref style="border-width: 7.7px"></div><div class=box style="outline-width: 7.7px"></div></div>
+    <figcaption><code>7.7px</code>: both 7px, rounded down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A width with no style</h2>
+  <p>Level 3 made the computed width 0 when the style is <code>none</code>; level 4 does not, but an outline of style
+  <code>none</code> is still not drawn.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="outline: 10px none #c0392b"></div></div>
+    <figcaption><code>outline: 10px none</code>: no outline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

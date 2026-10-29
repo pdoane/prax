@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: color and visibility</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .red { color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: color and visibility</h1>
+  <p class=pr-lede><code>text-decoration</code> takes <code>none | [ underline || overline || line-through || blink
+  ]</code>. Initial <code>none</code>, not inherited, applies to all elements.</p>
+</header>
+
+<section>
+  <h2>In the element's color, and not when hidden</h2>
+  <p><q>This property describes decorations that are added to the text of an element using the element's color.</q>
+  <q>If an element E has both 'visibility: hidden' and 'text-decoration: underline', the underline is invisible
+  (although any decoration of E's parent is visible.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2 §16.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=red style="text-decoration: underline">red text, underlined in red, on each line</span></div>
+    <figcaption>The span's <code>color</code> is red: its text and its underline are red, on every line it
+    reaches.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-decoration: overline">shown <span style="visibility: hidden; text-decoration: underline">hidden</span> shown</div>
+    <figcaption>The hidden span's underline is not drawn. The block's overline is drawn over "shown", and over the
+    hidden span too. <span class="pr-flag pr-since">Since CSS 2</span> Text Decoration 3 hides it over the
+    span.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-decor-3/#line-decoration">CSS Text Decoration 3 §2</a></div>
+  <h2>Visibility hides an ancestor's decoration too</h2>
+  <p><q>Relatively positioning a descendant moves all text decorations applied to it along with the descendant’s
+  text</q>. <q>The visibility property, text-shadow, filters, and other graphical transformations likewise also affect all
+  text decorations applied to that box—including decorations propagated from an ancestor box—and do not affect the
+  calculation of their initial positions or thicknesses.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-3/#line-decoration">CSS Text Decoration 3 §2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text red" style="text-decoration: overline">shown <span style="visibility: hidden">hidden</span> shown</div>
+    <figcaption>The block's red overline is drawn over each "shown" and stops over the hidden span: a gap as wide as
+    the word.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text red" style="text-decoration: underline; padding-bottom: 10px">shown <span style="position: relative; top: 10px; opacity: 0.3">faded</span> shown</div>
+    <figcaption>The span is faded to 30% and moved 10px down: its stretch of the block's underline fades and moves
+    with it; the rest stays. <span class=pr-flag>Chrome</span> fades it but leaves it on the line, across the top
+    of "faded".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

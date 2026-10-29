@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-origin: the mask positioning area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 6px; }
+  .pr-stage.small { width: 120px; }
+  .small + figcaption { max-width: 120px; }
+  .subj { width: 40px; height: 10px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6;
+          mask-image: url(support/disc.svg); mask-repeat: no-repeat; }
+  svg.art { display: block; overflow: visible; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.6 Positioning Area: the mask-origin property</div>
+  <h1>mask-origin: the mask positioning area</h1>
+  <p class=pr-lede><q>The mask-origin property is similar to the background-origin property, but it has a different
+  set of values, and a different initial value.</q> (a Note) <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-origin">CSS Masking 1 §7.6</a></span>
+  Each box is 80 by 50 at 10, 10, masked by one 20px disc at <code>0 0</code>.</p>
+</header>
+
+<section>
+  <h2>The disc's corner, at each box's corner</h2>
+  <figure>
+    <div class="pr-stage small"><div class=subj></div></div>
+    <figcaption>The initial <code>border-box</code>: the disc at 10, 10, on the border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-origin: padding-box"></div></div>
+    <figcaption><code>padding-box</code>: at 20, 20, where a background starts.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-origin: content-box"></div></div>
+    <figcaption><code>content-box</code>: at 30, 30, on the blue content.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage small"><div class=subj style="mask-origin: border-box; mask-clip: padding-box"></div></div>
+    <figcaption>A Note's case, <code>mask-clip: padding-box</code>: the disc's lower right quarter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG's boxes</h2>
+  <p><q>For elements with associated CSS layout box, the values fill-box, stroke-box and view-box compute to the
+  initial value of mask-origin.</q> <q>For SVG elements without associated CSS layout box, the values content-box,
+  padding-box and border-box compute to fill-box.</q> Each SVG rectangle is 60 by 30 at 30, 20, its orange stroke 20
+  wide, with <code>mask-clip: no-clip</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><div class=subj style="mask-origin: fill-box"></div></div>
+    <figcaption>A CSS box with <code>fill-box</code>: as <code>border-box</code>, the disc at 10, 10.
+    <span class=pr-flag>Chrome</span> At 30, 30, as <code>content-box</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><svg class="art" width="120" height="70"><rect x="30" y="20" width="60" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="20" style="mask-image: url(support/disc.svg); mask-repeat: no-repeat; mask-clip: no-clip" /></svg></div>
+    <figcaption>The initial <code>border-box</code>, so the fill box: the disc at 30, 20.
+    <span class=pr-flag>Safari</span> No mask.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage small"><svg class="art" width="120" height="70"><rect x="30" y="20" width="60" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="20" style="mask-image: url(support/disc.svg); mask-repeat: no-repeat; mask-clip: no-clip; mask-origin: stroke-box" /></svg></div>
+    <figcaption><code>stroke-box</code>: the disc at 20, 10, the stroke's outer corner.
+    <span class=pr-flag>Safari</span> No mask.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

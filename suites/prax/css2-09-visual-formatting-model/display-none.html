@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The display property: none</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.4 The 'display' property</div>
+  <h1>The display property: none</h1>
+  <p class=pr-lede><code>display</code> takes <code>inline | block | list-item | inline-block | table | inline-table |
+  table-*</code> and <code>none</code>. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>No box at all</h2>
+  <p><q>This value causes an element to not appear in the formatting structure ... Descendant elements do not generate
+  any boxes either ... This behavior cannot be overridden by setting the 'display' property on the descendants.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#display-prop">CSS 2 §9.2.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-c style="margin: 10px 0">between</div><div class=pr-b>B</div></div>
+    <figcaption>A box between A and B, with 10px margins.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-c style="margin: 10px 0; display: none">between</div><div class=pr-b>B</div></div>
+    <figcaption><code>display: none</code>: no box and no margins; A and B touch.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div style="display: none"><div class=pr-c style="display: block">child</div></div><div class=pr-b>B</div></div>
+    <figcaption>A child with <code>display: block</code> inside an element with <code>display: none</code>: nothing
+    either.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not an invisible box</h2>
+  <p><q>Please note that a display of 'none' does not create an invisible box; it creates no box at all.</q>
+  <code>visibility: hidden</code> is the invisible box. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#display-prop">CSS 2 §9.2.4</a>, <a href="https://drafts.csswg.org/css2/#visibility">§11.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-c style="margin: 10px 0; visibility: hidden">between</div><div class=pr-b>B</div></div>
+    <figcaption><code>visibility: hidden</code>: nothing drawn, and the 40px it takes with its margins stays
+    between A and B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

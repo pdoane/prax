@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Selecting src entries</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Select Woff"; src: url(../../../third_party/fonts/AD.woff) format("woff"), url(../../../third_party/fonts/Literata.ttf) format("truetype"); }
+  @font-face { font-family: "Select Hint"; src: url(../../../third_party/fonts/AD.woff) format("truetype"), url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Select No Hint"; src: url(../../../third_party/fonts/AD.woff); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.3.3 Selecting items in the 'src'</div>
+  <h1>Selecting src entries</h1>
+  <p class=pr-lede><q>Conformant user agents must skip downloading a font resource if the format hint indicates an
+  unsupported or unknown font format, or if any of the font technologies are unsupported by the user agent. If no
+  format hint is supplied, the user agent should download the font resource.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-face-src-formats">CSS Fonts 4
+  §4.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>A hint chooses, the data decides</h2>
+  <p>AD.woff is a WOFF file of a handwriting face; Literata is a TrueType book serif.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Select Woff', sans-serif">Handgloves</div>
+    <figcaption><code>format("woff")</code> first: handwriting.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Select No Hint', sans-serif">Handgloves</div>
+    <figcaption>No hint: downloaded, and read as what its data is: handwriting.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Select Hint', sans-serif">Handgloves</div>
+    <figcaption>A WOFF file hinted <code>format("truetype")</code>: the hint is supported, so it is downloaded; its
+    data is a font, so handwriting.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

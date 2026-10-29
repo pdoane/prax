@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The implicit grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; justify-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.5 The Implicit Grid</div>
+  <h1>The implicit grid</h1>
+  <p class=pr-lede><q>When grid items are positioned outside of these bounds, the grid container generates implicit
+  grid tracks by adding implicit grid lines to the grid. These lines together with the explicit grid form the
+  implicit grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#implicit-grids">CSS Grid Layout 2 §7.5</a></span></p>
+</header>
+
+<section>
+  <h2>Placed outside the explicit grid</h2>
+  <p>Each grid has <code>grid-template-columns: 40px 40px</code>, and <code>grid-auto-columns: 30px</code> sizes
+  the columns it adds. A is at <code>grid-column: 1</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px; grid-auto-columns: 30px"><div class=pr-a style="grid-column: 1">A</div><div class=pr-b style="grid-row: 1; grid-column: 4">B</div></div></div>
+    <figcaption>B at <code>grid-column: 4</code>: columns 3 and 4 are added after the explicit grid, 30px each;
+    B from 110 to 140px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px; grid-auto-columns: 30px"><div class=pr-a style="grid-column: 1">A</div><div class=pr-b style="grid-row: 1; grid-column: -4">B</div></div></div>
+    <figcaption>B at <code>grid-column: -4</code>, one line before the explicit grid's first: a 30px column is
+    added before it. B from 0 to 30px, and A, still in explicit column 1, from 30 to 70px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto-placement adds tracks too</h2>
+  <p><q>Once the explicit grid is filled (or if there is no explicit grid) auto-placement will also cause the
+  generation of implicit grid tracks.</q> The auto properties also size <q>any explicit grid tracks created by
+  grid-template-areas but not explicitly sized</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template: 20px / 40px 40px 40px; grid-auto-rows: 30px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption>One 20px row of three 40px columns, and five items: D and E go to a second row, 30px tall from
+    <code>grid-auto-rows</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px; grid-template-areas: 'a b c'; grid-auto-columns: 60px"><div class=pr-a style="grid-area: a">A</div><div class=pr-b style="grid-area: b">B</div><div class=pr-c style="grid-area: c">C</div></div></div>
+    <figcaption><code>"a b c"</code> with <code>grid-template-columns: 40px</code>: columns 2 and 3 are explicit but
+    unsized, so 60px: A 40px wide, B from 40px, C from 100 to 160px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

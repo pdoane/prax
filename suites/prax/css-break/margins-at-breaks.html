@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins at column breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.2 Adjoining Margins at Breaks: the margin-break property</div>
+  <h1>Margins at column breaks</h1>
+  <p class=pr-lede><code>margin-break: auto</code>, the initial value: <q>When an unforced break occurs before or after the box, any margins adjoining the break truncate to the remaining fragmentainer extent before the break, and are truncated to zero after the break. When a forced break occurs there, adjoining margins before the break are truncated, but margins after the break are preserved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>In columns</h2>
+  <p>Three columns 60px tall. B has a 20px top margin.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-b style="margin-top: 20px">B</div></div>
+    <figcaption>After an unforced break: the margin is truncated to zero, and B is at the very top of the second column. <span class=pr-flag>Safari</span> Keeps the margin: B 20px down.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="margin-top: 20px; break-before: column">B</div></div>
+    <figcaption>After a forced break: the margin is kept, and B is 20px down the second column. <span class=pr-flag>Safari</span> Truncates the margin: B at the top. <span class=pr-flag>Firefox</span> No break: B 20px under A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a style="margin-bottom: 100px">A</div><div class=pr-b>B</div></div>
+    <figcaption>A has a 100px bottom margin: before the break it is truncated to the 40px left in the column. B atop the second column, not the third.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Clicking an image map</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 0 0; font-size: 0; line-height: 0; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.14.2 Processing model</div>
+  <h1>Clicking an image map</h1>
+  <p class=pr-lede><q>Pointing device interaction with an image associated with a set of layered shapes per the above
+  algorithm must result in the relevant user interaction events being first fired to the top-most shape covering the
+  point that the pointing device indicated, if any, or to the image element itself, if there is no shape covering that
+  point.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#image-map-processing-model">HTML §4.8.14.2</a></span>
+  Each log lists the target of the clicks in its stage.</p>
+</header>
+
+<section>
+  <h2>The first area is on top</h2>
+  <p>The shapes are layered <q>in reverse tree order (so the last specified area element in the map is the bottom-most
+  shape, and the first element in the map, in tree order, is the top-most shape).</q></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=layers src="support/map-layers.svg" usemap="#layers-map" alt="Two rectangles"><map name=layers-map>
+        <area id=hole shape=rect coords="30,35,50,65">
+        <area id=orange shape=rect coords="70,20,180,80" href="#orange-link" alt="Orange">
+        <area id=blue shape=rect coords="10,10,100,90" href="#blue-link" alt="Blue">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Where blue and orange overlap, from x 70 to 100: <code>target=orange</code>, first in the map. The
+    dashed hole, an area without href: <code>target=hole</code>, and no link followed.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=star src="support/map-star.svg" usemap="#star-map" alt="A star"><map name=star-map>
+        <area id=star-area shape=poly coords="100,5,126,90,57,37,143,37,74,90" href="#star-link" alt="Star">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>A polygon's <q>interior is established using the even-odd rule</q>: a point of the star,
+    <code>target=star-area</code>; the pentagon in its middle, <code>target=star</code>, the img.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

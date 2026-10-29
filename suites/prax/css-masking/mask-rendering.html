@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The mask image rendering model</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { position: relative; width: 140px; height: 60px; margin: 10px; background: #d68a3c; }
+  .back > div { position: absolute; left: 40px; top: 20px; width: 60px; height: 20px; z-index: -1; background: #6aa36a; }
+  .group { width: 100px; height: 40px; margin: 10px; background: #4f81bd; }
+  .group > div { position: relative; left: 40px; top: 20px; width: 80px; height: 40px; background: #d68a3c; }
+  .row { display: flex; margin: 10px; }
+  .row > div { flex: none; width: 70px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.10 The Mask Image Rendering Model</div>
+  <h1>The mask image rendering model</h1>
+  <p class=pr-lede><q>The application of the mask-image property with a value other than none to an element formatted
+  with the CSS box model establishes a stacking context in the same way that CSS opacity does, and all the element's
+  descendants are rendered together as a group with the masking applied to the group as a whole.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-image-rendering-model">CSS Masking 1 §7.10</a></span>
+  The masks here are an opaque <code>linear-gradient(black, black)</code>, or one that keeps a half.</p>
+</header>
+
+<section>
+  <h2>A stacking context, and a group</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=back style="mask-image: linear-gradient(black, black)"><div></div></div></div>
+    <figcaption>An orange box masked by an opaque gradient, and a green child at <code>z-index: -1</code>: the box is a
+    stacking context, so the child is drawn over its orange, 60 by 20 at the center.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium" style="height: 90px"><div class=group style="mask-image: linear-gradient(black, black)"><div></div></div></div>
+    <figcaption>A blue box 100 by 40 with an orange child that overflows it by 20 at the right and the bottom: the mask
+    covers the border box only, so the child is cut at the box's edges, x 110 and y 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No effect on geometry</h2>
+  <p><q>The mask-image property has no effect on the geometry or hit-testing of any element's CSS boxes.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div style="background: #4f81bd; mask-image: linear-gradient(to right, black 50%, transparent 50%)"></div><div style="background: #6aa36a"></div></div></div>
+    <figcaption>A blue box 70 by 40 masked to its left half, then a green one: the green one still starts at x 80, so a
+    gap 35 wide is left between them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

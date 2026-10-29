@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-set(): an image at its resolution</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  ul.list { margin: 10px 0; padding-left: 60px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.4 Resolution/Type Negotiation: the image-set() notation</div>
+  <h1>image-set(): an image at its resolution</h1>
+  <p class=pr-lede><q>The image-set() function allows an author to ignore most of these issues, simply providing
+  multiple resolutions of an image and letting the UA decide which is most appropriate in a given situation.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#image-set-notation">CSS Images 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>The resolution sizes a raster image</h2>
+  <p><q>If the image reference is for a raster image, it also specifies the image’s natural resolution, overriding any
+  other source of data that might supply a natural resolution.</q> The flags are 40 by 20 and 80 by 40 image pixels;
+  each box is 140 by 40, <code>no-repeat</code>.</p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background-image: image-set(url(../shared/resources/flag-1x.png) 2x)"></div></div>
+    <figcaption>The 80 by 40 flag at <code>2x</code>: drawn 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background-image: image-set(url(../shared/resources/flag-40x20.png) 0.5x)"></div></div>
+    <figcaption>The 40 by 20 flag at <code>0.5x</code>: drawn 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><ul class=list style="list-style-image: image-set(url(../shared/resources/flag-1x.png) 2x)"><li>&nbsp;</li></ul></div>
+    <figcaption>As a <code>list-style-image</code>, the 80 by 40 flag at <code>2x</code>: a marker 40 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Generated images, and the UA's choice</h2>
+  <p>An option <q>can be a URL, or a CSS generated image, such as a linear-gradient().</q> Then <q>make a UA-specific
+  choice of which to load</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background-image: image-set(linear-gradient(to right, #4f81bd, #d68a3c) 2x)"></div></div>
+    <figcaption>A gradient at <code>2x</code>: it has no natural size, so it fills the box, blue to orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background-image: image-set(url(support/image-set-blue.png) 1x, url(support/image-set-orange.png) 2x)"></div></div>
+    <figcaption>A blue 20px square at <code>1x</code> or an orange one at <code>2x</code>, drawn 10 by 10: either is
+    right. Here Chrome and Firefox show blue, Safari orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

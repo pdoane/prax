@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canceling a key</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.4 Default actions and cancelable keyboard events</div>
+  <h1>Canceling a key</h1>
+  <p class=pr-lede><q>Canceling the default action of a keydown event MUST NOT affect its respective keyup event, but it MUST prevent
+  the respective beforeinput and input (and keypress if supported) events from being generated.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-cancelable-keys">UI Events §4.3.4</a></span></p>
+</header>
+<section>
+  <h2>A keydown canceled</h2>
+  <p>The page's script cancels each keydown of <code>q</code> in the field. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-cancelable-keys">§4.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown keypress beforeinput input keyup" data-fields="key" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>Click the field and type <code>q</code>: keydown and keyup, nothing between them, and nothing typed.
+    Type <code>w</code>: keydown, keypress, beforeinput, input and keyup, the order of
+    <a href="keypress-order.html">keypress-order.html</a>, and <code>w</code> is in the field.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A modifier still counts</h2>
+  <p><q>If the key is a modifier key, the keystroke MUST still be taken into account for the modifiers states.</q>
+  The page's script also cancels each keydown of Shift in the box. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-cancelable-keys">§4.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=modifier tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key shiftKey" data-on="#modifier" data-lines=2></ol>
+    </div>
+    <figcaption>Click the box and press Shift+W: the keydown of <code>W</code> still has
+    <code>shiftKey</code>, and its <code>key</code> is <code>"W"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels a q in the first field, and a Shift in the second.
+  document.getElementById("field").addEventListener("keydown", event => {
+      if (event.key === "q")
+          event.preventDefault();
+  });
+  document.getElementById("modifier").addEventListener("keydown", event => {
+      if (event.key === "Shift")
+          event.preventDefault();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

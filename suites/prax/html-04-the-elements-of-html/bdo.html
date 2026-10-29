@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The bdo element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 13px/20px "PR Noto Sans", "PR Noto Sans Arabic", "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.25 The bdo element</div>
+  <h1>The bdo element</h1>
+  <p class=pr-lede><q>The bdo element represents explicit text directionality formatting control for its children. It allows authors to override the Unicode bidirectional algorithm by explicitly specifying a direction override.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-bdo-element">HTML §4.5.25</a></span></p>
+</header>
+<section>
+  <h2>An override</h2>
+  <p><q>bdo, bdo[dir] { unicode-bidi: isolate-override; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#bidi-rendering">§15.3.5</a></span> Every character is laid out in the bdo's direction,
+  whatever its own.</p>
+  <figure>
+    <div class="pr-stage t">Say <bdo dir=rtl>hello</bdo> now.</div>
+    <figcaption><code>dir=rtl</code> on English: "olleh", its letters right to left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t">Say <bdo dir=ltr>שלום</bdo> now.</div>
+    <figcaption><code>dir=ltr</code> on Hebrew: its letters left to right, ש at the left.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

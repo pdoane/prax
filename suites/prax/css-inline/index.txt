@@ -1,0 +1,134 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+00-supports-4.html
+# css-inline-3/#intro 1 Introduction: no page; it defines inline layout, which 2 shows
+# css-inline-3/#placement 1.1 Module Interactions: no page; it says what the module replaces in CSS 2
+# css-inline-3/#values 1.2 Value Definitions: no page; it defines terms
+css-inline-3/#model 2 Inline Layout Model
+    inline-layout-model.html
+css-inline-3/#line-boxes 2.1 Layout of Line Boxes
+    line-boxes.html
+css-inline-3/#line-layout 2.2 Layout Within Line Boxes
+    line-layout.html
+css-inline-3/#invisible-line-boxes 2.3 Phantom Line Boxes
+    phantom-line-boxes.html
+css-inline-3/#paint-order 2.4 Painting Order
+    paint-order.html
+# css-inline-3/#css-metrics 3 Baselines and Alignment Metrics: no page; it introduces the subsections
+css-inline-3/#baseline-intro 3.1 Introduction to Baselines
+    baselines.html
+css-inline-3/#baseline-types 3.2 Baselines and Metrics
+    baseline-metrics.html
+    baseline-metrics-edges.html
+css-inline-3/#ascent-descent 3.2.1 Ascent and Descent Metrics
+    ascent-descent.html
+css-inline-3/#font-line-gap 3.2.2 Line Gap Metrics
+    line-gap.html
+css-inline-3/#baseline-tables 3.3 Baselines of Glyphs and Boxes
+    baseline-sets.html
+css-inline-3/#alignment 4 Baseline Alignment
+    baseline-alignment.html
+css-inline-3/#dominant-baseline-property 4.1 Dominant Baselines: the dominant-baseline property
+    dominant-baseline.html
+css-inline-3/#transverse-alignment 4.2 Transverse Box Alignment: the vertical-align property
+    vertical-align.html
+    vertical-align-table-cells.html
+css-inline-3/#baseline-source 4.2.1 Alignment Baseline Source: the baseline-source longhand
+    baseline-source.html
+css-inline-3/#alignment-baseline-property 4.2.2 Alignment Baseline Type: the alignment-baseline longhand
+    alignment-baseline.html
+    alignment-baseline-boxes.html
+css-inline-3/#alignment-baseline-svg-legacy 4.2.2.1 Legacy Values for SVG
+    alignment-baseline-svg.html
+css-inline-3/#baseline-shift-property 4.2.3 Post-Alignment Shift: the baseline-shift longhand
+    baseline-shift.html
+    baseline-shift-line.html
+css-inline-3/#baseline-shift-svg-legacy 4.2.3.1 Legacy Values for SVG
+    baseline-shift-svg.html
+# css-inline-3/#line-height 5 Logical Heights and Inter-line Spacing: no page; it introduces line-height and line-fit-edge, which 5.1 and 5.2 show
+css-inline-3/#line-height-property 5.1 Line Spacing: the line-height property
+    line-height.html
+css-inline-3/#text-edges 5.2 Text Edge Metrics: the line-fit-edge property
+    line-fit-edge.html
+css-inline-3/#inline-height 5.3 Calculating the Logical Height Contributions (“Layout Bounds”) of Inline Boxes
+    layout-bounds.html
+    layout-bounds-quirks.html
+    layout-bounds-fonts.html
+css-inline-3/#leading-trim 6 Trimming Leading Over/Under Text
+    leading-trim.html
+css-inline-3/#text-box-shorthand 6.1 Shorthand for Text Box Trimming: the text-box property
+    text-box.html
+css-inline-3/#text-box-trim 6.2 Trimming Over/Under Text: the text-box-trim property
+    text-box-trim.html
+    text-box-trim-inline.html
+css-inline-3/#text-box-edge 6.3 Text Trimming Metrics: the text-box-edge property
+    text-box-edge.html
+css-inline-3/#line-fill 6.4 Inline Box Drawing Height: the inline-sizing property
+    inline-sizing.html
+# css-inline-3/#initial-letter-styling 7 Initial Letters: no page; it introduces the subsections
+# css-inline-3/#initial-letter-intro 7.1 An Introduction to Initial Letters: no page; it introduces the three kinds, which 7.1.1 to 7.1.3 show
+css-inline-3/#drop-initial 7.1.1 Drop Initial
+    drop-initial.html
+    drop-initial-scripts.html
+css-inline-3/#sunk-initial 7.1.2 Sunken Initial Letters
+    sunken-initial.html
+css-inline-3/#raise-initial 7.1.3 Raised Initial Letters
+    raised-initial.html
+css-inline-3/#selecting-drop-initials 7.2 Selecting Initial Letters
+    initial-letter-selecting.html
+css-inline-3/#sizing-drop-initials 7.3 Creating Initial Letters: the initial-letter property
+    initial-letter.html
+css-inline-3/#first-most-inline-level 7.3.1 Applicability
+    initial-letter-applicability.html
+css-inline-3/#aligning-initial-letter 7.4 Alignment of Initial Letters: the initial-letter-align property
+    initial-letter-align.html
+    initial-letter-align-border-box.html
+css-inline-3/#initial-letter-align-defaults 7.4.1 UA Default Stylesheet for initial-letter-align
+    initial-letter-align-defaults.html
+css-inline-3/#initial-letter-layout 7.5 Initial Letter Layout
+    initial-letter-layout.html
+css-inline-3/#initial-letter-properties 7.5.1 Properties Applying to Initial Letters
+    initial-letter-properties.html
+css-inline-3/#initial-letter-box 7.5.2 Margins, Borders, and Padding
+    initial-letter-box.html
+css-inline-3/#sizing-initial-letter 7.5.3 Font Sizing of Initial Letters
+    initial-letter-font-size.html
+css-inline-3/#initial-letter-shaping 7.5.4 Shaping and Glyph Selection
+    initial-letter-shaping.html
+css-inline-3/#initial-letter-box-size 7.5.5 Sizing the Initial Letter Box
+    initial-letter-box-size.html
+css-inline-3/#initial-letter-content-align 7.5.6 Alignment Within an Initial Letter Box
+    initial-letter-content-align.html
+# css-inline-3/#initial-letter-position 7.6 Initial Letter Positioning and Spacing: no page; it introduces 7.6.1 and 7.6.2
+css-inline-3/#initial-letter-block-position 7.6.1 Block-axis Positioning
+    initial-letter-block-position.html
+css-inline-3/#initial-letter-inline-position 7.6.2 Inline Kerning
+    initial-letter-kerning.html
+css-inline-3/#initial-letter-wrapping 7.7 Initial Letter Wrapping: the initial-letter-wrap property
+    initial-letter-wrap.html
+    initial-letter-wrap-length.html
+# css-inline-3/#initial-letter-line-layout 7.8 Line Layout: no page; it says an initial letter is in-flow content of its line, which 7.8.1 to 7.8.4 show
+css-inline-3/#initial-letter-inline-flow 7.8.1 Inline Flow Layout: Alignment, Justification, and White Space
+    initial-letter-inline-flow.html
+css-inline-3/#initial-letter-indentation 7.8.2 Edge Effects: Indentation and Hanging Punctuation
+    initial-letter-indent.html
+css-inline-3/#initial-letter-ancestors 7.8.3 Ancestor Inlines
+    initial-letter-ancestors.html
+css-inline-3/#initial-letter-multi-line 7.8.4 Multi-line Initial Letters
+    initial-letter-multi-line.html
+# css-inline-3/#initial-letter-paragraphs 7.9 Clearing Initial Letters: no page; it introduces 7.9.1 to 7.9.4
+css-inline-3/#raised-sunken-caps 7.9.1 Raised and sunken caps
+    initial-letter-raised-clearance.html
+css-inline-3/#short-para-initial-letter 7.9.2 Short paragraphs with initial letters
+    initial-letter-short-paragraph.html
+css-inline-3/#initial-letter-floats 7.9.3 Interaction with floats
+    initial-letter-floats.html
+css-inline-3/#initial-letter-breaking 7.9.4 Interaction with Fragmentation (Pagination)
+    initial-letter-fragmentation.html
+# css-inline-3/#baseline-synthesis A Synthesizing Alignment Metrics: no page; it introduces A.1 to A.3
+# css-inline-3/#baseline-synthesis-em A.1 A.1: Calculating Em-over and Em-under: no page; CSS does not use the em-over and em-under baselines, which Canvas TextMetrics reads
+css-inline-3/#baseline-synthesis-fonts A.2 A.2: Synthesizing Baselines (and Other Font Metrics) for Text
+    baseline-synthesis-fonts.html
+css-inline-3/#baseline-synthesis-box A.3 A.3: Synthesizing Baselines for Atomic Inlines
+    baseline-synthesis-box.html

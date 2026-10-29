@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-break: anywhere</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 50px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.2 Line Breaking Strictness: the line-break property</div>
+  <h1>line-break: anywhere</h1>
+  <p class=pr-lede><code>anywhere</code>: <q>There is a soft wrap opportunity around every typographic character
+  unit, including around any punctuation character or preserved white spaces, or in the middle of words, disregarding
+  any prohibition against line breaks, even those introduced by characters with the GL, WJ, or ZWJ line breaking
+  classes or mandated by the 'word-break' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-property">CSS Text 4 §6.2</a></span>
+  Each stage is 50px wide, five 10px letters to a line, <code>line-break: anywhere</code>.</p>
+</header>
+
+<section>
+  <h2>Every character a break</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere"><span class=t>abcdefgh</span></div>
+    <figcaption>A word: "abcde", then "fgh".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere"><span class=t>abcd(efg)</span></div>
+    <figcaption>"(" may end a line: "abcd(", then "efg)".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere"><span class=t>abcd&nbsp;efg</span></div>
+    <figcaption>U+00A0, of class GL: "abcd ", then "efg".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere"><span class=t>abcde&#x2060;fgh</span></div>
+    <figcaption>U+2060 WORD JOINER after "abcde": a break anyway, "fgh" on the next line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over word-break, without hyphens, and in preserved spaces</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere; word-break: keep-all"><span class=t>abcdefgh</span></div>
+    <figcaption><code>word-break: keep-all</code> as well: still "abcde", "fgh".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="line-break: anywhere; hyphens: auto"><span class=t>hyphenation</span></div>
+    <figcaption><code>hyphens: auto</code>: <q>Hyphenation is not applied.</q> "hyphe", "natio", "n", no hyphens.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="line-break: anywhere; white-space: break-spaces"><span class=t>abcde   fg</span></div>
+    <figcaption><code>break-spaces</code>, three spaces after "abcde": a break before the first, "abcde", then
+    the three spaces and "fg".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space: break-spaces"><span class=t>abcde   fg</span></div>
+    <figcaption>Without <code>anywhere</code>: no break before the first space, which runs 10px past the edge;
+    then two spaces and "fg".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

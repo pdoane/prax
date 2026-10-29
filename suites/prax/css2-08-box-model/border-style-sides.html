@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: each side and the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: each side and the shorthand</h1>
+  <p class=pr-lede><code>border-*-style</code> and <code>border-style</code> take <code>none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset</code>.</p>
+</header>
+
+<section>
+  <h2>Each side, and the shorthand</h2>
+  <p>One to four values take the sides as <code>margin</code>'s do. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid; border-top-style: dotted"></div></div>
+    <figcaption><code>border-top-style: dotted</code>, the rest solid.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid; border-left-style: double"></div></div>
+    <figcaption><code>border-left-style: double</code>, the rest solid.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid dashed"></div></div>
+    <figcaption><code>border-style: solid dashed</code>: solid top and bottom, dashed right and left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid dashed dotted"></div></div>
+    <figcaption><code>border-style: solid dashed dotted</code>: solid top, dashed right and left, dotted
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid dashed dotted double"></div></div>
+    <figcaption><code>border-style: solid dashed dotted double</code>: top, right, bottom, left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid none"></div></div>
+    <figcaption><code>border-style: solid none</code>: top and bottom only: the sides have no width, so the
+    background reaches the box's left and right edges.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

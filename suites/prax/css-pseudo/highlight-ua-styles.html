@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The user agent's highlight colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 20px/40px "PR Arimo"; color: #1f2430; }
+  .pr-stage { color-scheme: light; }
+  .system { background-color: Highlight; color: HighlightText; }
+  .mark { background-color: Mark; color: MarkText; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.3 Default UA Styles</div>
+  <h1>The user agent's highlight colors</h1>
+  <p class=pr-lede><q>Some highlight pseudo-elements should have paired default highlight colors—a default color and
+  background-color provided by the UA that are either used or overridden together</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-ua-styles">CSS Pseudo-Elements 4 §3.3</a></span>
+  The selection is set by a script. Safari's stills show no selection: their window is never the focused one.</p>
+</header>
+
+<section>
+  <h2>::selection, and the system colors it should match</h2>
+  <p><q>For ::selection they should correspond to HighlightText and Highlight, while for ::target-text they should
+  correspond to MarkText and Mark.</q> The page sets no style on <code>::selection</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=selection>Selected</span> text</div></div>
+    <figcaption>“Selected” in the default selection colors. Chrome and Firefox draw the system's selection colors
+    of the stage beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t><span class=system>Selected</span> text</div></div>
+    <figcaption>For comparison, a span with <code>background-color: Highlight</code> and <code>color:
+    HighlightText</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t><span class=mark>Target</span> text</div></div>
+    <figcaption><code>Mark</code> and <code>MarkText</code>, which ::target-text's defaults should be: a page cannot
+    target text in a still.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What CSS does not control</h2>
+  <p><q>UAs may apply additional effects to enhance the presentation of highlighted content, for example dimming
+  content other than the highlighted text or transitioning out a highlight style based on user interactions or
+  timing. These are not controlled by CSS.</q> The recommended rules <code>:root::spelling-error { text-decoration:
+  spelling-error; }</code> and its grammar-error counterpart style what a spell checker marks, which a still cannot
+  show.</p>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

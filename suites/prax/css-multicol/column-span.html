@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-span: all</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+  .fl { float: left; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns: the column-span property</div>
+  <h1>column-span: all</h1>
+  <p class=pr-lede><code>all</code>: <q>The element forces a column break and is taken out of flow to span across all
+  columns of the nearest multicol ancestor in the same block formatting context. Content in the normal flow that
+  appears before the element is automatically balanced across all columns in the immediately preceding multi-column
+  line before the element appears, and any subsequent content flows into a new multi-column line after the
+  element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage has three columns of 60px and red dashed rules.</p>
+</header>
+
+<section>
+  <h2>A spanner splits the columns into two lines</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one two three four<div class="pr-a all">A</div>five six</div>
+    <figcaption>A, <code>all</code>, 200px wide across the columns; above it, "one" to "four" balanced into 40px;
+    below it, "five" and "six" in a new line of columns. The rules stop at A and start again under it. <span
+    class=pr-flag>Safari</span> "five", after A, is set above it in the third column, half under A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure mc">one two three four<div class=pr-a style="column-span: none">A</div>five six</div>
+    <figcaption><code>none</code>: A is in a column, 60px wide, among the seven lines balanced into the three
+    columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Always an independent formatting context</h2>
+  <p><q>The element establishes an independent formatting context.</q> <q>Whether the element establishes a new
+  formatting context does not depend on whether the element is a descendant of a multicol or not.</q> These stages
+  have no columns; B is a float, and A follows it.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-b pr-fit fl">B</div><div class="pr-a all">A</div></div>
+    <figcaption>A, <code>column-span: all</code>, outside any multicol: a formatting context, so it sits beside B,
+    from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="pr-b pr-fit fl">B</div><div class=pr-a>A</div></div>
+    <figcaption><code>none</code>: A runs under B, from the stage's left edge, and only its text moves
+    aside.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

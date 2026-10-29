@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lineto: straight lines, and horizontal and vertical ones</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.5 The "lineto" commands</div>
+  <h1>lineto: straight lines, and horizontal and vertical ones</h1>
+  <p class=pr-lede><q>The various "lineto" commands draw straight lines from the current point to a new point</q>.
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataLinetoCommands">SVG 2 §9.3.5</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide, and not filled.</p>
+</header>
+
+<section>
+  <h2>L and l</h2>
+  <p><q>Draw a line from the current point to the given (x,y) coordinate which becomes the new current point.</q>
+  <q>A number of coordinates pairs may be specified to draw a polyline.</q> <q>When a relative <b>l</b> command is
+  used, the end point of the line is (cpx + x, cpy + y).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 60 10 100 50 140 10" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 60 10 100 50 140 10</code>: three lines, up to 60, 10, down to 100, 50 and up to
+    140, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 40 l 20 -20 20 20 20 -20 20 20 20 -20 20 20" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 40 l 20 -20 20 20 …</code>: each pair from the last, a zigzag of six strokes between y 20
+    and 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 140 50 l -60 0" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 140 50 l -60 0</code>: the <b>l</b> from the last pair, 140, 50, back to
+    80, 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>H and V, h and v</h2>
+  <p><q>Draws a horizontal line from the current point.</q> <q>Draws a vertical line from the current point.</q>
+  <q>an <b>h</b> command with a positive x value draws a horizontal line in the direction of the positive
+  x-axis.</q> <q>At the end of the command, the new current point is taken from the final coordinate value.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 V 40 H 50 V 30 H 80 V 20 H 110 V 10 H 140" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 V 40 H 50 V 30 …</code>: stairs up to the right, risers at x 20, 50, 80 and 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 140 50 h -40 v -20 h -40 v -20 h -40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 140 50 h -40 v -20 h -40 v -20 h -40</code>: stairs up to the left, from 140, 50 to 20,
+    10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 20 H 140 80 V 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 20 H 140 80 V 50</code>: along y 20 to 140 and back to 80, so the <b>V</b> drops from 80,
+    20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

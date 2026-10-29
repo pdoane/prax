@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The plus-lighter operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+<style>
+  .group { position: relative; isolation: isolate; width: 160px; height: 100px; margin: 10px; }
+  .group > div { position: absolute; width: 90px; height: 60px; }
+  .dst { left: 10px; top: 10px; background: rgb(0% 40% 80% / 0.8); }
+  .src { left: 60px; top: 30px; background: rgb(100% 60% 0% / 0.6); mix-blend-mode: plus-lighter; }
+  .fade { display: grid; isolation: isolate; width: 80px; height: 80px; margin: 10px; }
+  .fade > div { grid-area: 1 / 1; opacity: 0.5; }
+  .from { background-color: rgb(100% 0% 0% / 50%); }
+  .to { background-color: rgb(0% 0% 100% / 50%); }
+  .plus .to { mix-blend-mode: plus-lighter; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.15 Plus-lighter</div>
+  <h1>The plus-lighter operator</h1>
+  <p class=pr-lede><q>With the plus-lighter compositing operator, the following steps are performed:</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_plus_lighter">Compositing and Blending 2 §9.1.15</a></span>
+  On white, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code> at
+  (10, 10), then the source, orange <code>rgb(100% 60% 0% / 0.6)</code> at (60, 30), each 90 by 60.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = 1; Fb = 1
+co = min(1, αs x Cs + αb x Cb);
+αo = min(1, αs + αb);</pre>
+  <figure class=pr-erratum>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op=plus-lighter></canvas></div>
+    <figcaption>The overlap is the sum, <code>rgb(60% 68% 64% / 1)</code>, alpha min(1, 1.4).
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Source over.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: rgb(100% 60% 0% / 0.6)">source</div><div class=pd-swatch style="background: rgb(60% 68% 64%)">both</div><div class=pd-swatch style="background: rgb(0% 40% 80% / 0.8)">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In CSS: mix-blend-mode: plus-lighter</h2>
+  <p>'mix-blend-mode' takes <q>&lt;blend-mode&gt; | plus-lighter</q>. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#mix-blend-mode">§3.4.1</a></span>
+  Each group is isolated; in the cross-fades, red and blue, each <code>opacity: 0.5</code>.</p>
+  <figure>
+    <div class="pr-stage pd-stage pd-white"><div class=group><div class=dst></div><div class=src></div></div></div>
+    <figcaption>The orange box <code>plus-lighter</code>: the canvas's colors.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-white"><div class="fade plus"><div class=from></div><div class=to></div></div></div>
+    <figcaption>The blue <code>plus-lighter</code>: <code>rgb(50% 0% 50% / 50%)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-white"><div class=fade><div class=from></div><div class=to></div></div></div>
+    <figcaption>Source over: <q>roughly rgb(43% 0% 57% / 44%)</q>.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

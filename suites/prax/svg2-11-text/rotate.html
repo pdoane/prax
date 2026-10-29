@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rotate: turning each glyph</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.1 Attributes</div>
+  <h1>rotate: turning each glyph</h1>
+  <p class=pr-lede><q>The supplemental rotation, in degrees, about the current text position that will be applied to
+  all of the glyphs corresponding to each character within this element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanAttributes">SVG 2 §11.2.1</a></span>
+  Each stage is an SVG 160 by 60 holding 30px PR Noto Sans Mono, each letter 18 wide, at <code>x="10" y="40"</code>,
+  the baseline dashed in red and red ticks at each letter's start, 10, 28, 46, 64 and 82.</p>
+</header>
+
+<section>
+  <h2>A value for each character</h2>
+  <p><q>If more characters are provided than &lt;number&gt;s, then for each of these extra characters the rotation
+  value specified by the last number must be used.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160 M10 40V50 M28 40V50 M46 40V50 M64 40V50 M82 40V50" class=pr-baseline /><text class=big x="10" y="40" rotate="0 30 60 90">LLLLL</text></svg></div>
+    <figcaption><code>rotate="0 30 60 90"</code> on "LLLLL": each L turned clockwise about its start on the
+    baseline, by 0°, 30°, 60°, 90° and 90°, still 18 apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160 M10 40V50 M28 40V50 M46 40V50 M64 40V50 M82 40V50" class=pr-baseline /><text class=big x="10" y="40" rotate="-20">LLLLL</text></svg></div>
+    <figcaption><code>rotate="-20"</code>: every L turned 20° counterclockwise.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From an ancestor</h2>
+  <p><q>If the attribute is not specified and if an ancestor of a ‘tspan’ element specifies a supplemental rotation
+  for a given character via a ‘rotate’ attribute (nearest ancestor has precedence), then the given supplemental
+  rotation is applied to the given character.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160 M10 40V50 M28 40V50 M46 40V50 M64 40V50 M82 40V50" class=pr-baseline /><text class=big x="10" y="40" rotate="0 0 90 0 0">LL<tspan>LL</tspan>L</text></svg></div>
+    <figcaption><code>rotate="0 0 90 0 0"</code> on the <code>text</code>, none on a <code>tspan</code> of the
+    third and fourth L: the third L turned 90°, the others upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 40H160 M10 40V50 M28 40V50 M46 40V50 M64 40V50 M82 40V50" class=pr-baseline /><text class=big x="10" y="40" rotate="0 45">LL<tspan rotate="90">LL</tspan>L</text></svg></div>
+    <figcaption><code>rotate="0 45"</code> on the <code>text</code>, <code>rotate="90"</code> on the
+    <code>tspan</code>: L upright, then 45°, then 90° and 90°, then the <code>text</code>'s last value,
+    45°.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

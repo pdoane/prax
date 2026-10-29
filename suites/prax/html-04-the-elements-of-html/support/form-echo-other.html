@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Submitted elsewhere</title>
+<style>
+  html { color-scheme: light; }
+  body { margin: 0; padding: 0 6px; background: #b9cde6; color: #1f2430; font: 11px/20px ui-monospace, Menlo, monospace; }
+  p { margin: 0; white-space: nowrap; }
+</style>
+</head>
+<body>
+<script>
+  // A second action for a form, beside form-echo.html: it shows, on blue, that a submission came here, and the entries
+  // it was sent, one to a line.
+  const line = text => document.body.append(Object.assign(document.createElement("p"), {textContent: text}));
+  line("other action:");
+  for (const [name, value] of new URLSearchParams(location.search))
+      line(name + "=" + value);
+</script>
+</body>
+</html>

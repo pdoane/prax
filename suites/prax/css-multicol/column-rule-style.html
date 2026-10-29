@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 2; column-gap: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4.3 The Style Of Column Rules: the column-rule-style property</div>
+  <h1>column-rule-style</h1>
+  <p class=pr-lede><q>The column-rule-style property sets the style of the rule between columns of an element.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#crs">CSS Multi-column Layout 1 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>The &lt;line-style&gt; values</h2>
+  <p>Each stage is 100px wide, with two columns of 40px and a 20px gap; each rule is 6px wide and blue.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px solid #2c5a8f">one two six ten</div>
+    <figcaption><code>solid</code>: one line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px dashed #2c5a8f">one two six ten</div>
+    <figcaption><code>dashed</code>: dashes.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px dotted #2c5a8f">one two six ten</div>
+    <figcaption><code>dotted</code>: dots.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px double #2c5a8f">one two six ten</div>
+    <figcaption><code>double</code>: two lines with a space between.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px groove #2c5a8f">one two six ten</div>
+    <figcaption><code>groove</code>: carved in: dark on the left, light on the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>As in the collapsing border model</h2>
+  <p><q>The &lt;line-style&gt; values are interpreted as in the collapsing border model.</q> There, <code>inset</code> draws as <code>ridge</code> and <code>outset</code> as <code>groove</code>. <q>The none and hidden values force the used value of column-rule-width to be 0.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px ridge #2c5a8f">one two six ten</div>
+    <figcaption><code>ridge</code>: raised: light on the left, dark on the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px inset #2c5a8f">one two six ten</div>
+    <figcaption><code>inset</code>: as <code>ridge</code>, as in collapsing borders.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px outset #2c5a8f">one two six ten</div>
+    <figcaption><code>outset</code>: as <code>groove</code>, as in collapsing borders.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px none #2c5a8f">one two six ten</div>
+    <figcaption><code>none</code>: no rule.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="column-rule: 6px hidden #2c5a8f">one two six ten</div>
+    <figcaption><code>hidden</code>: no rule.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

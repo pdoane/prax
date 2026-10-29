@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The keywords in width</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2 Sizing Values, in the inline axis</div>
+  <h1>The keywords in width</h1>
+  <p class=pr-lede>stretch <q>Applies stretch-fit sizing, attempting to match the size of the box’s margin box to the
+  size of its containing block.</q> min-content: <q>Use the min-content size in the relevant axis</q>; max-content:
+  <q>Use the max-content size</q>; fit-content: <q>Use the fit-content size in the relevant axis, i.e.
+  min(max-content, max(min-content, stretch)).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">CSS Box Sizing 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>On boxes that would otherwise shrink or stretch</h2>
+  <p>Text is PR Cousine, 9px a character; each stage is 150px wide.</p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="float: left; width: stretch; margin: 0 20px">abc</div></div>
+    <figcaption>A float with <code>width: stretch; margin: 0 20px</code>: its margin box fills the stage, so it is
+    110px wide. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> shrink it to "abc".</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: fit-content">abc def ehg ijk lmn</div></div>
+    <figcaption>A block of <code>width: fit-content</code> whose text is longer than the stage: 150px, wrapped to
+    "abc def ehg ijk" and "lmn".</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: max-content; padding: 0 10px">abc def</div></div>
+    <figcaption><code>width: max-content; padding: 0 10px</code>: 63px of text and 20px of padding.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In flex-basis</h2>
+  <p><q>The flex-basis property hereby also gains these new keywords, as its values are defined by reference to
+  &lt;'width'&gt;.</q> Each stage is a flex container holding one item, <code>flex: 0 0</code> and the basis
+  named.</p>
+  <figure class=f>
+    <div class="pr-stage s t" style="display: flex"><div class=box style="flex: 0 0 min-content">abc def</div></div>
+    <figcaption><code>min-content</code>: 27px, two lines.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t" style="display: flex"><div class=box style="flex: 0 0 max-content">abc def</div></div>
+    <figcaption><code>max-content</code>: 63px, one line.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t" style="display: flex"><div class=box style="flex: 0 0 fit-content">abc def ehg ijk lmn</div></div>
+    <figcaption><code>fit-content</code>: the 150px of the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

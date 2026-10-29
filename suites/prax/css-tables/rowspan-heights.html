@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rows under a spanning cell</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  tr + tr td { background: #f6d7b4; }
+  td[rowspan] { background: #c3d08b; }
+  .b { background: rgba(31, 36, 48, 0.25); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.2 Row layout (first pass), spanning cells</div>
+  <h1>Rows under a spanning cell</h1>
+  <p class=pr-lede>A cell spanning rows has its height distributed to them <q>by running the same algorithm as the
+  column measurement, with the span=1 value being initialized (for min-content) with the largest of the resulting
+  height of the previous row layout, the height specified on the corresponding table-row (if any), and the largest
+  height specified on cells that span this row only</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-layout">CSS Table 3 §3.10.2</a></span>
+  Each green cell spans a blue row and an orange row and holds a grey block; the rows' cells hold blocks too.</p>
+</header>
+
+<section>
+  <h2>In proportion to the rows</h2>
+  <p>As for columns, what the cell needs beyond the rows goes to them in proportion to their sizes.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td rowspan=2><div class=b style="height: 80px"></div></td><td><div class=b style="height: 20px"></div></td></tr><tr><td><div class=b style="height: 20px"></div></td></tr></table></div>
+    <figcaption>Rows of 20px and 20px, green 80px: 20px more each, 40px and 40px. <span class=pr-flag>Safari</span>
+    gives all 40px to the last row: 20px and 60px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td rowspan=2><div class=b style="height: 80px"></div></td><td><div class=b style="height: 10px"></div></td></tr><tr><td><div class=b style="height: 30px"></div></td></tr></table></div>
+    <figcaption>Rows of 10px and 30px, green 80px: 40px more, 1:3, so 20px and 60px. <span class=pr-flag>Safari</span> gives it
+    all to the last row: 10px and 70px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cell's box fills its rows</h2>
+  <p><q>cell boxes that are smaller than the collective height of the rows they span receive extra top and/or bottom
+  padding such that their content does not move vertically but their top/bottom edges meet the ones of the first/last
+  row they span.</q></p>
+  <figure>
+    <div class=pr-stage><table><tr><td rowspan=2><div class=b style="height: 20px"></div></td><td><div class=b style="height: 30px"></div></td></tr><tr><td><div class=b style="height: 30px"></div></td></tr></table></div>
+    <figcaption>Green holds a 20px block: its box is the rows' 60px, green below the block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

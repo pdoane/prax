@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Monolithic content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.1 Possible Break Points, monolithic content</div>
+  <h1>Monolithic content</h1>
+  <p class=pr-lede><q>Some content is not fragmentable, for example many types of replaced elements (such as images or video), scrollable elements, or a single line of text content. Such content is considered monolithic: it contains no possible break points.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#possible-breaks">CSS Fragmentation 4 §4.1</a></span> Each stage has three columns 60px tall; two Bs leave 20px in the first.</p>
+</header>
+
+<section>
+  <h2>Not split</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><img alt="" style="display: block; width: 60px; height: 40px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 4'><rect width='6' height='4' fill='%238e44ad'/><circle cx='3' cy='2' r='1.5' fill='white'/></svg>"></div>
+    <figcaption>An image 40px tall: not split, it starts the second column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=k style="height: 40px; overflow: auto">one two</div></div>
+    <figcaption>A scroll container 40px tall: not split, it starts the second column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks inside are ignored</h2>
+  <p><q>Any forced breaks within such boxes therefore cannot split the box, and must therefore also be ignored by the box’s own fragmentation context.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=k style="height: 60px; overflow: auto"><div class=pr-a>A</div><div class=pr-a style="break-before: column">A</div></div><div class=pr-c>C</div></div>
+    <figcaption>A scroll container, 60px tall, holds two As, the second with <code>break-before: column</code>: no break. Both As in it, in the first column; C atop the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Borders: border-collapse</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border: 4px solid #2c5a8f; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  .t { border: 4px solid #2c5a8f; }
+  .t .pr-table-cell { height: 24px; padding: 0 4px; border: 2px solid #d68a3c; }
+  td { width: 40px; height: 24px; padding: 0 4px; box-sizing: border-box; border: 2px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6 Borders</div>
+  <h1>Borders: border-collapse</h1>
+  <p class=pr-lede><code>border-collapse</code> takes <code>collapse | separate</code>. Initial <code>separate</code>,
+  inherited, and it applies to <code>table</code> and <code>inline-table</code> elements. Each table has a 4px blue
+  border; its cells have 2px orange borders.</p>
+</header>
+
+<section>
+  <h2>Two border models</h2>
+  <p><q>There are two distinct models for setting borders on table cells in CSS. One is most suitable for so-called
+  separated borders around individual cells, the other is suitable for borders that are continuous from one end of the
+  table to the other.</q> <q>The value 'separate' selects the separated borders border model. The value 'collapse'
+  selects the collapsing borders model.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#borders">CSS 2 §17.6</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="border-spacing: 4px"><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption>No declaration, the initial <code>separate</code>, with
+    <code>border-spacing: 4px</code>: each cell has its own orange border, 4px apart, inside the table's blue
+    one.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="border-collapse: collapse"><tr><td>1<td>2<tr><td>3<td>4</table></div>
+    <figcaption><code>collapse</code>: one orange line between neighboring cells, and the table's wider blue border
+    wins on the outside.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited</h2>
+  <p><code>border-collapse</code> is inherited, so a table inside a cell of a collapsing table collapses too. The tables here are <code>div</code>s, which no HTML default sets. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#borders">CSS 2 §17.6</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><div class="pr-table t" style="border-collapse: collapse"><div class=pr-table-row><div class=pr-table-cell><div class="pr-table t" style="border-width: 2px"><div class=pr-table-row><div class=pr-table-cell>a</div><div class=pr-table-cell>b</div></div></div></div><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption>The inner table has no declaration and inherits <code>collapse</code>: its cells a and b share one
+    border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

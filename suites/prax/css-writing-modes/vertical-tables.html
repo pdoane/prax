@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A table in vertical-rl, rtl</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; writing-mode: vertical-rl; width: 200px; height: 160px; }
+  .pr-table-cell { font-family: "PR Arimo"; height: auto; padding: 4px 6px; }
+  .pr-table { margin: auto 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.1 Principles of Layout in Vertical Writing Modes, tables</div>
+  <h1>A table in vertical-rl, rtl</h1>
+  <p class=pr-lede><q>For example, in vertical writing modes, table rows are vertical and table columns are
+  horizontal. In a vertical-rl mixed rtl table, the first column would be on the bottom (the inline-start side), and
+  the first row on the right (the block-start side).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-layout">CSS Writing Modes 4 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>Rows from the right, columns from the inline start</h2>
+  <p>Each table has two rows of three cells, named by row and column: 12 is the first row's second cell. <q>if the
+  table had auto values for margin-top and margin-bottom it would be centered vertically within its block flow.</q>
+  Each table has <code>margin: auto 0</code>.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-table>
+        <div class=pr-table-row><div class=pr-table-cell>11</div><div class=pr-table-cell>12</div><div class=pr-table-cell>13</div></div>
+        <div class=pr-table-row><div class=pr-table-cell>21</div><div class=pr-table-cell>22</div><div class=pr-table-cell>23</div></div>
+      </div>
+    </div>
+    <figcaption><code>vertical-rl ltr</code>: row 1 is the right column of cells, row 2 left of it; column 1 at the
+    top. The table centered top to bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl">
+      <div class=pr-table>
+        <div class=pr-table-row><div class=pr-table-cell>11</div><div class=pr-table-cell>12</div><div class=pr-table-cell>13</div></div>
+        <div class=pr-table-row><div class=pr-table-cell>21</div><div class=pr-table-cell>22</div><div class=pr-table-cell>23</div></div>
+      </div>
+    </div>
+    <figcaption><code>vertical-rl rtl</code>: row 1 still at the right; column 1 at the bottom, read upward to
+    column 3.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

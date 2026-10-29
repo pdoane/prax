@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: scroll containers inside</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .ib { display: inline-block; width: 80px; }
+  .ib div { background: rgba(79, 129, 189, 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: scroll containers inside</h1>
+  <p class=pr-lede>CSS 2 aligns an inline-block by its last line box, wherever it is. Each stage's text is 13px on 20px lines, with the line's baseline dashed in red. Each orange inline-block is aligned <code>baseline</code> and holds block boxes, tinted blue.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></div>
+  <h2>A scroll container inside</h2>
+  <p><q>for legacy reasons if its 'baseline-source' is 'auto' (the initial value) a block-level or inline-level block
+  container that is a block-axis scroll container always has a last baseline set, whose baselines all correspond to
+  its block-end margin edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span> So
+  a block with <code>overflow: hidden</code> inside the inline-block gives it its bottom margin edge.</p>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib"><div style="overflow: hidden">first<br>last</div></span></div>
+    <figcaption>The block of two lines clips: its bottom edge is on the red line, not "last".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib">first<div style="overflow: hidden; height: 20px"></div></span></div>
+    <figcaption>A line, then an empty 20px block that clips: its bottom edge is on the red line. <span
+    class=pr-flag>Safari</span> Puts "first" on it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va" style="padding-top: 20px"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="padding-bottom: 10px"><div style="overflow: hidden; height: 20px; margin-bottom: 5px"></div></span></div>
+    <figcaption>Only the empty block, with a 5px bottom margin, in 10px of padding: its margin edge is on the red
+    line, 10px above the orange bottom. <span class=pr-flag>Safari</span> The inline-block's own bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

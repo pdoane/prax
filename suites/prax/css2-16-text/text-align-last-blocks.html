@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: the last line before a block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: the last line before a block</h1>
+  <p class=pr-lede>Each blue box is 30px wide, and the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Not stretched</h2>
+  <p>Inline content is <q>made flush with both sides of the line box if possible, by expanding or contracting the
+  contents of inline boxes, else aligned as for the initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span> As the last line of a
+  block is not stretched, nor is the last line of the anonymous block before a block inside an inline.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-align: justify"><span><span class="pr-a w">a</span> <span class="pr-a w">b</span><div class=pr-frame>a block</div>after</span></div>
+    <figcaption><code>text-align: justify</code>: a and b, then a block in the same span. Their line is the last of
+    its anonymous block, and is not stretched. <span class=pr-flag>Safari</span> Stretches it: b at the
+    right.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-align-last-property">CSS Text 3 §6.3</a></div>
+  <h2>The last line before a block</h2>
+  <p><code>text-align-last</code> <q>describes how the last line of a block or a line right before a forced line break
+  is aligned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-last-property">CSS Text 3 §6.3</a></span> A block inside an inline ends the
+  anonymous block before it, so the line before it is a last line.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align-last: right"><span><span class="pr-a w">a</span><div class=pr-frame>block</div><span class="pr-a w">b</span></span></div>
+    <figcaption><code>text-align-last: right</code>: a, before the dashed block in the span, and b, after it, are
+    each at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

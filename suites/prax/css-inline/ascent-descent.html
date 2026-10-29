@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ascent and descent</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 6px; box-sizing: border-box; }
+  .m .pr-stage { width: 160px; }
+  .m figcaption { max-width: 160px; }
+  .t { display: inline-block; font-size: 20px; line-height: normal; background: #f9cc9d; white-space: nowrap; }
+  .jp { font-family: "PR Noto Sans JP"; }
+  .ar { font-family: "PR Arimo"; }
+  .ti { font-family: "PR Tinos"; }
+  .li { font-family: "PR Literata"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 3.2.1 Ascent and Descent Metrics</div>
+  <h1>Ascent and descent</h1>
+  <p class=pr-lede><q>CSS assumes that every font has font metrics that specify a characteristic height above the
+  baseline—called the ascent metric—and a characteristic depth below it—called the descent metric—which CSS uses
+  for laying out text and boxes in an inline formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#ascent-descent">CSS Inline Layout 3 §3.2.1</a></span></p>
+</header>
+
+<section class=m>
+  <h2>sTypoAscender and sTypoDescender</h2>
+  <p>A note, so a recommendation and not a requirement: <q>It is recommended that implementations that use OpenType or
+  TrueType fonts use the metrics sTypoAscender and sTypoDescender from the font's OS/2 table (after scaling to the
+  current element's font size)</q>. Each orange block is one line of 20px text at <code>line-height: normal</code>,
+  which is the ascent, the descent and the line gap.</p>
+  <figure>
+    <div class=pr-stage><div class="t ar" id=ar>Hxg Arimo</div></div>
+    <figcaption>PR Arimo: sTypo 1854 and 434 of 2048, with a line gap of 67, as its hhea metrics are: 23px tall,
+    here <code class=pr-computed data-of=ar data-dom=offsetHeight></code>px. Firefox makes it 25px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="t jp" id=jp>永あ Hxg</div></div>
+    <figcaption>PR Noto Sans JP: sTypo 880 and 120 of 1000, no gap: 20px tall as recommended, here <code
+    class=pr-computed data-of=jp data-dom=offsetHeight></code>px. Chrome, Safari and Firefox take hhea's 1160 and
+    288: 29px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="t ti" id=ti>Hxg Tinos</div></div>
+    <figcaption>PR Tinos: sTypo 1420 and 442 of 2048, and a gap of 307: 21px tall as recommended, here <code
+    class=pr-computed data-of=ti data-dom=offsetHeight></code>px. Chrome, Safari and Firefox take hhea's 1825, 443
+    and 87: 23px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Of the font, not of the glyphs</h2>
+  <p><q>Note that these are metrics of the font as a whole and need not correspond to the ascender and descender of
+  any individual glyph.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="t li">xxx</div></div>
+    <figcaption>PR Literata, short letters alone: as tall as the next.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="t li">ÉÅjg</div></div>
+    <figcaption>Accents and descenders: the same height, 1.485em, about 30px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

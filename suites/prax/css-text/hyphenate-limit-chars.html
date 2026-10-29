@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hyphenate-limit-chars</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 50px; hyphens: auto; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.3.4 Hyphenation Character Limits: the hyphenate-limit-chars property</div>
+  <h1>hyphenate-limit-chars</h1>
+  <p class=pr-lede><q>This property specifies the minimum number of characters in a hyphenated word. If the word does
+  not meet the required minimum number of characters in the word / before the hyphen / after the hyphen, then the
+  word must not be hyphenated.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphenate-char-limits">CSS Text 4 §6.3.4</a></span>
+  Each stage is <code>lang=en</code>, <code>hyphens: auto</code>, 50px wide, five 10px letters to a line, and holds
+  "example", hyphenated as "ex-am-ple".</p>
+</header>
+
+<section>
+  <h2>The word, before and after</h2>
+  <p><q>If three values are specified, the first value is the required minimum for the total characters in a word, the
+  second value is the minimum for characters before the hyphenation point, and the third value is the minimum for
+  characters after the hyphenation point. If the third value is missing, it is the same as the second.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en><span class=t>example</span></div>
+    <figcaption><code>auto</code>: "exam-", then "ple".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-chars: 8"><span class=t>example</span></div>
+    <figcaption><code>8</code>: the word has seven: not hyphenated, one line past the edge. <span class=pr-flag>Safari</span> "exam-", "ple".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-chars: auto 5 2"><span class=t>example</span></div>
+    <figcaption><code>auto 5 2</code>: neither "ex" nor "exam" has five before: not hyphenated. <span class=pr-flag>Safari</span> "exam-", "ple".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-chars: auto 2 4"><span class=t>example</span></div>
+    <figcaption><code>auto 2 4</code>: "ple" has three after, too few, so "ex-", then "ample". <span class=pr-flag>Safari</span> "exam-", "ple".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One value or two</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-chars: auto 3"><span class=t>example</span></div>
+    <figcaption><code>auto 3</code>: three before and three after: "exam-", "ple".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-measure" lang=en style="hyphenate-limit-chars: auto 4"><span class=t>example</span></div>
+    <figcaption><code>auto 4</code>: four after too, so "ple" fails, and "ex" before: not hyphenated. <span class=pr-flag>Safari</span> "exam-", "ple".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

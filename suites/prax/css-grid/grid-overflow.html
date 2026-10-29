@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scrollable grid overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { display: grid; height: 60px; }
+  .s > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 5.3 Scrollable Grid Overflow</div>
+  <h1>Scrollable grid overflow</h1>
+  <p class=pr-lede><q>The overflow property applies to grid containers.</q> <q>Just as it is included in intrinsic
+  sizing, the grid is also included in a grid container’s scrollable overflow region.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overflow">CSS Grid Layout 2 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>overflow on a grid container</h2>
+  <p>Each stage is a grid container 60px tall, its rows <code>40px 40px</code>.</p>
+  <figure>
+    <div class="pr-stage s" style="grid-template-rows: 40px 40px; overflow: hidden"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>overflow: hidden</code>: B's row, from 40 to 80px, is cut at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" id=sc style="grid-template-rows: 40px 40px; overflow: auto"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>overflow: auto</code>: it scrolls; its <code>scrollHeight</code> is the grid's 80px, here
+    <code class=pr-computed data-of=sc data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The grid, not only its items</h2>
+  <p>The tracks count even where nothing is in them, and <q>additional padding is defined to be added to the
+  scrollable overflow rectangle as needed to enable place-content: end alignment of scrollable content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable">CSS Overflow 3 §2.2</a></span></p>
+  <figure>
+    <div class="pr-stage s" id=e style="grid-template-columns: 300px; grid-template-rows: 20px; overflow: auto"><div class=pr-a style="justify-self: start">A</div></div>
+    <figcaption>One 300px column, and A at its start, a few pixels wide: <code>scrollWidth</code> is the column's
+    300px, here <code class=pr-computed data-of=e data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" id=p style="grid-template-rows: 40px 40px; padding-bottom: 10px; height: 50px; overflow: auto"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption><code>padding-bottom: 10px</code>: the rows' 80px and the padding after them, so
+    <code>scrollHeight</code> is 90px, here <code class=pr-computed data-of=p data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

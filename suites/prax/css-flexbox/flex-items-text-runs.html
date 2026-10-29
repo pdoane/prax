@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Runs of text as anonymous items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; column-gap: 10px; }
+  .box { width: 40px; }
+  .abs { position: absolute; width: 10px; height: 10px; padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4 Flex Items</div>
+  <h1>Runs of text as anonymous items</h1>
+  <p class=pr-lede><q>each contiguous sequence of child text runs is wrapped in an anonymous block container flex
+  item.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-items">CSS Flexible Box Layout 2 §4</a></span>
+  The text is <code>.pr-measure</code>, 10px a letter; A is 40px wide; each stage has <code>column-gap: 10px</code>,
+  which shows where one item ends and the next begins.</p>
+</header>
+
+<section>
+  <h2>A run ends at an element</h2>
+  <p>A child that is absolutely positioned is not a flex item, but it is an element between two runs of text.</p>
+  <figure>
+    <div class="pr-stage pr-measure">abcd<div class="pr-a pr-fit box">A</div></div>
+    <figcaption>"abcd", one run: one item 40px wide, then A from 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="position: relative">ab<i class="pr-a abs"></i>cd<div class="pr-a pr-fit box">A</div></div>
+    <figcaption>"ab", an absolute box, then "cd": two items, "ab" at 0 and "cd" from 30px, a gap between them; A
+    from 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">ab<span>cd</span><div class="pr-a pr-fit box">A</div></div>
+    <figcaption>"ab" then a span of "cd": the span is an element, an item of its own, "cd" from 30px; A from
+    60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

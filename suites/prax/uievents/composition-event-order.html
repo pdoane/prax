@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of composition events</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.2 Composition Event Order</div>
+  <h1>The order of composition events</h1>
+  <p class=pr-lede><q>The Composition Events defined in this specification MUST occur in the following set order
+  relative to one another</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-order">UI Events §3.6.2</a></span></p>
+</header>
+<section>
+  <h2>A session</h2>
+  <p>compositionstart, then any number of compositionupdate events, then compositionend. <q>Conceptually, a
+  composition session consists of one compositionstart event, one or more compositionupdate events, and one
+  compositionend event, with the value of the data attribute persisting between each stage of this event chain during
+  each session.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-compositionevents">§3.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="compositionstart compositionupdate compositionend" data-fields="data" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji or Pinyin, click the field and type a word, then
+    commit it. compositionstart comes first; each key adds a compositionupdate whose <code>data</code> is the text
+    being composed; compositionend's <code>data</code> is the text committed, which is in the field.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

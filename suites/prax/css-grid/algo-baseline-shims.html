@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shims for baseline-aligned items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 80px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; grid-template-columns: 50px 50px; justify-content: start; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 1</div>
+  <h1>Shims for baseline-aligned items</h1>
+  <p class=pr-lede><q>Shim baseline-aligned items so their intrinsic size contributions reflect their baseline
+  alignment.</q> <q>For the items in each baseline-sharing group, add a “shim” (effectively, additional margin) on the
+  start/end side (for first/last-baseline alignment) of each item so that, when start/end-aligned together their
+  baselines align as specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span></p>
+</header>
+
+<section>
+  <h2>The shim counts toward the row's size</h2>
+  <p><q>Consider these “shims” as part of the items’ intrinsic size contribution for the purpose of track sizing</q>.
+  Each grid, outlined, has one <code>auto</code> row and two 50px columns. Blue is "ab" with <code>padding-top:
+  20px</code>; orange is "ab" with <code>padding-bottom: 20px</code>; each is 40px tall, and their baselines are 20px
+  apart; start-aligned, the row would be 40px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="align-items: baseline"><div class=a style="padding-top: 20px">ab</div><div class=b style="padding-bottom: 20px">ab</div></div></div>
+    <figcaption><code>align-items: baseline</code>: orange gets a 20px shim above it, so the row is 60px tall; blue
+    from 0 to 40px, orange from 20 to 60px, inside the grid.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="align-items: last baseline"><div class=a style="padding-bottom: 20px">ab</div><div class=b style="padding-top: 20px">ab</div></div></div>
+    <figcaption><code>last baseline</code>, the paddings swapped: the shim is on orange's end side; the row is 60px,
+    blue from 20 to 60px, orange from 0 to 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="align-items: baseline; grid-template-rows: 40px"><div class=a style="padding-top: 20px">ab</div><div class=b style="padding-bottom: 20px">ab</div></div></div>
+    <figcaption>A fixed 40px row has no intrinsic size to resolve: the grid is 40px, and orange, from 20 to 60px,
+    hangs out of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

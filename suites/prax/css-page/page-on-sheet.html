@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A page box smaller than the sheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 7.5 Positioning the page box on the sheet</div>
+  <h1>A page box smaller than the sheet</h1>
+  <p class=pr-lede><q>When the page box is smaller than the page sheet, the user agent should either</q> <q>center the page box on the sheet</q> <q>or</q> <q>position the page box in the upper left corner of the page sheet</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#positioning-page-box">CSS Paged Media 3 §7.5</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Centered or at the corner</h2>
+  <p>Page 2 is a named page of 160 by 100, with 10px margins. Firefox prints on paper the size of the first <code>@page</code> rule's, 240 by 160, which is larger. These are recommendations: the caption says what each browser does.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page small { size: 160px 100px } html { background: #8cb6c0 } .s { page: small }</style><div>line 1</div><div>line 2</div><div class=s><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Chrome prints page 2 on a sheet of its own size, 160 by 100. Firefox puts it in the upper left corner of the larger sheet. <span class=pr-flag>Safari</span> has no named pages and prints one page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

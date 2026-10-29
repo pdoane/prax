@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendering markers: clipping and display</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="clipped" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="6" fill="#d68a3c" /></marker>
+  <marker id="unclipped" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="20" markerHeight="20" markerUnits="userSpaceOnUse" overflow="visible"><circle cx="5" cy="5" r="6" fill="#d68a3c" /></marker>
+  <g display="none"><marker id="hidden" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#d68a3c" /></marker></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.4 Rendering markers</div>
+  <h1>Rendering markers: clipping and display</h1>
+  <p class=pr-lede><q>For each marker that is drawn, a temporary new user coordinate system is established so that the
+  marker will be positioned and sized correctly</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">SVG 2 §13.7.4</a></span>
+  Each stage is an SVG 160 by 60 with a line from 20, 30 to 140, 30.</p>
+</header>
+
+<section>
+  <h2>Clipped to the marker's viewport</h2>
+  <p><q>If the overflow property on the ‘marker’ element indicates that the marker needs to be clipped to its SVG
+  viewport, then an implicit clipping path is established at the bounds of the SVG viewport.</q> The user agent style
+  sheet makes it <code>hidden</code>. The marker is 20 by 20, at the middle vertex, 80, 30, and holds a circle of
+  radius 12.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#clipped)" /></svg></div>
+    <figcaption>Clipped to the square from 70, 20 to 90, 40: a square with its corners rounded.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 80 H 140" stroke="#2c5a8f" marker-mid="url(#unclipped)" /></svg></div>
+    <figcaption><code>overflow="visible"</code>: the whole circle, from x 68 to 92.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not rendered directly</h2>
+  <p><q>Markers are not rendered directly and must be referenced by one of the marker properties to be rendered.</q>
+  <q>‘marker’ elements are available for referencing even when the display property on the ‘marker’ element or any of
+  its ancestors is set to none.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" marker-start="url(#hidden)" marker-end="url(#hidden)" /></svg></div>
+    <figcaption>A marker in a <code>g</code> with <code>display="none"</code>: orange dots 14 across at 20, 30 and
+    140, 30. <span class=pr-flag>Firefox</span> No dots.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#2c5a8f" /><marker id="shown" style="display: inline" overflow="visible"><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /></marker></svg></div>
+    <figcaption>A <code>marker</code> in the stage with <code>display: inline</code>, holding an orange square at
+    60, 10, referenced by nothing: no square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

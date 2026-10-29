@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scrollable overflow area: padding at the end</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 40px; height: 40px; padding: 0 20px; margin: 10px 8px; overflow: auto; }
+  .stage { height: 100px; }
+  .long { width: 300px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.3 Calculating the Scrollable Overflow Area, end padding</div>
+  <h1>The scrollable overflow area: padding at the end</h1>
+  <p class=pr-lede>The area unites <q>Additional padding added to the scrollable overflow rectangle as necessary to
+  enable scroll positions that satisfy the requirements of both place-content: start and place-content: end
+  alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>At the end of the content, in each direction</h2>
+  <p>Each dashed box has 20px of padding on two opposite sides and holds a bar, blue at its left or top end and
+  orange at the other, longer than the box; a script scrolls it to the bar's end. Scrolled there, the padding shows
+  past the end.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div id=p1 class="pr-frame sc"><div class=long></div></div></div>
+    <figcaption><code>ltr</code>, a bar 300px wide, at its right end: 20px of padding after orange.
+    <code>scrollWidth</code> <code class=pr-computed data-of=p1 data-dom=scrollWidth></code>, 20 + 300 +
+    20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div id=p2 class="pr-frame sc" dir=rtl><div class=long></div></div></div>
+    <figcaption><code>rtl</code>, at the left end: 20px of padding before blue; <code class=pr-computed data-of=p2
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div id=p3 class="pr-frame sc" style="width: 80px; height: 40px; padding: 20px 0"><div class=long style="width: 60px; height: 100px; background: linear-gradient(#4f81bd, #d68a3c)"></div></div></div>
+    <figcaption>20px of padding at the top and bottom, a bar 100px tall, at the bottom: padding below orange.
+    <code>scrollHeight</code> <code class=pr-computed data-of=p3 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div id=p4 class="pr-frame sc" style="writing-mode: vertical-rl"><div class=long style="width: 100px; height: 20px"></div></div></div>
+    <figcaption><code>vertical-rl</code>, a bar 100px across the block flow, at its block end, the left: padding
+    beyond blue. <code class=pr-computed data-of=p4 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("p1").scrollLeft = 10000;
+  document.getElementById("p2").scrollLeft = -10000;
+  document.getElementById("p3").scrollTop = 10000;
+  document.getElementById("p4").scrollLeft = -10000;
+</script>
+<script src=../shared/computed.js></script>
+</body>
+</html>

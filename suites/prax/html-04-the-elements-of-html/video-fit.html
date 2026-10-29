@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Video in its box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .frame { outline: 1px dashed #c0392b; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.8 The video element</div>
+  <h1>Video in its box</h1>
+  <p class=pr-lede><q>In the absence of style rules to the contrary, video content should be rendered inside the
+  element's playback area such that the video content is shown centered in the playback area at the largest possible
+  size that fits completely within it</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/media.html#the-video-element">HTML §4.8.8</a></span>
+  The video, <code>clip.mp4</code>, is 160 by 80, its first frame blue. The poster is blue, 80 by 40. Each video is
+  outlined in dashed red.</p>
+</header>
+
+<section>
+  <h2>Contained and centered</h2>
+  <p><q>Areas of the element's playback area that
+  do not contain the video represent nothing.</q> The poster is drawn the same way. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#embedded-content-rendering-rules">§15.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pic"><video class=frame src="support/clip.mp4" width="180" height="40"></video></div>
+    <figcaption>180 by 40: blue, 80 by 40, centered, 50 of stage on each side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pic"><video class=frame poster="support/blue-80x40.png" width="180" height="80"></video></div>
+    <figcaption>A poster in 180 by 80: blue, 160 by 80, 10 of stage on each side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its contents are not shown</h2>
+  <p><q>User agents should not show this content to the user; it is intended for older web browsers which do not
+  support video</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video class=frame style="width: 140px; height: 40px"><b>fallback</b></video></div>
+    <figcaption>Markup inside: no "fallback".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

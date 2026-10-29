@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inner display types: flow and flow-root</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .float { float: left; width: 40px; height: 40px; background: #d68a3c; }
+  .blue { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.2 Inner Display Layout Models, flow and flow-root</div>
+  <h1>Inner display types: flow and flow-root</h1>
+  <p class=pr-lede><q>The &lt;display-inside&gt; keywords specify the element's inner display type, which defines the
+  type of formatting context that lays out its contents</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#inner-model">CSS Display 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>flow</h2>
+  <p><q>If its outer display type is inline or run-in, and it is participating in a block or inline formatting
+  context, then it generates an inline box. Otherwise it generates a block container box.</q> A flex item takes part
+  in a flex formatting context.</p>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><span class="pr-chip pr-fit" style="width: 60px; height: 40px">span</span></div></div>
+    <figcaption>A span in a flex container: a block container, so its <code>width: 60px; height: 40px</code>
+    apply.</figcaption>
+  </figure>
+  <p><q>Depending on the value of other properties ..., it either
+  establishes a new block formatting context for its contents or integrates its contents into its parent formatting
+  context.</q> Each blue block holds a 40px orange float and a line of text.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class=blue><div class=float></div>text</div></div>
+    <figcaption>A block: the float sticks out of the 20px block, below it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=blue style="overflow: hidden"><div class=float></div>text</div></div>
+    <figcaption><code>overflow: hidden</code>: the block establishes a formatting context and is 40px tall, round the
+    float.</figcaption>
+  </figure>
+  <p>A block of another writing mode is one too: <a href="https://drafts.csswg.org/css-writing-modes-4/#block-flow">CSS Writing Modes 4 §3.2</a>.</p>
+</section>
+
+<section>
+  <h2>flow-root</h2>
+  <p><q>The element generates a block container box, and lays out its contents using flow layout. It always
+  establishes a new block formatting context for its contents.</q></p>
+  <figure>
+    <div class=pr-stage><div class=blue style="display: flow-root"><div class=float></div>text</div></div>
+    <figcaption>The block is 40px tall, round its float.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=float></div><div class=blue style="display: flow-root">flow root</div></div>
+    <figcaption>After a float outside it: the flow root is beside the float, 160px wide, not under it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

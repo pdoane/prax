@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What a keydown does</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.5.6.1 keydown</div>
+  <h1>What a keydown does</h1>
+  <p class=pr-lede><q>The default action of the keydown event depends upon the key</q>. <q>If this event is canceled,
+  the associated event types MUST NOT be dispatched, and the associated actions MUST NOT be performed.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keydown">UI Events §3.5.6.1</a></span></p>
+</header>
+<section>
+  <h2>Tab</h2>
+  <p><q>If the key is the Tab key, the default action MUST be to shift the document focus from the currently focused
+  element (if any) to the new focused element</q>. The page's script cancels each keydown of Tab in
+  <code>stuck</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keydown">§3.5.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=free tabindex=0>free</div><div class=pr-target id=stuck tabindex=0>stuck</div>
+        <div class=pr-target id=last tabindex=0>last</div>
+      </div>
+    </div>
+    <figcaption>Click <code>free</code> and press Tab: the ring moves to <code>stuck</code>. Press Tab again: it stays
+    on <code>stuck</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Enter and Space</h2>
+  <p><q>If the key is the Enter or Space key and the current focus is on a state-changing element, the default action
+  MUST be to dispatch a click event</q>. The page's script cancels each keydown in <code>canceled</code>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keydown">§3.5.6.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div style="padding: 10px 20px 0"><button class=pr-target id=button>button</button></div>
+      <ol class=pr-log data-log="keydown click keyup" data-fields="key" data-on="#button" data-lines=3></ol>
+    </div>
+    <figcaption>Focus the button (click it, or in Safari press Option+Tab), then press
+    Enter, then Space: each time keydown, click, keyup. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> click on Space's keyup: keydown, keyup, click.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div style="padding: 10px 20px 0"><button class=pr-target id=canceled>canceled</button></div>
+      <ol class=pr-log data-log="keydown click keyup" data-fields="key" data-on="#canceled" data-lines=2></ol>
+    </div>
+    <figcaption>Focus the button and press Enter or Space: keydown and keyup, and no click.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels Tab in `stuck` and every key in `canceled`.
+  document.getElementById("stuck").addEventListener("keydown", event => {
+      if (event.key === "Tab")
+          event.preventDefault();
+  });
+  document.getElementById("canceled").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

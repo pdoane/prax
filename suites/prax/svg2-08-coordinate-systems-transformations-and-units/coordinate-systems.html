@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG viewports, nested</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .moved { transform: translate(60px, 0); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.1 Introduction</div>
+  <h1>SVG viewports, nested</h1>
+  <p class=pr-lede><q>Every SVG viewport defines a drawing region characterized by a size (width, height), and an
+  origin, measured in abstract user units.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#Introduction">SVG 2 §8.1</a></span>
+  Each stage is an SVG 160 by 60; a dashed outline marks each nested <code>svg</code>, 60 by 40.</p>
+</header>
+
+<section>
+  <h2>A nested viewport's origin, and its percentages</h2>
+  <p><q>By default, a nested SVG viewport's viewport coordinate system is equivalent to the local coordinate system of
+  the parent element, translated by the origin of the SVG viewport's element.</q> <q>Hence, nesting SVG viewports
+  provides an opportunity to redefine the meaning of percentage units</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="10" width="60" height="40" /><svg x="80" y="10" width="60" height="40"><rect width="20" height="20" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>A rect 20 by 20 at 0, 0 in a nested <code>svg</code> at 80, 10: drawn from 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="10" width="60" height="40" /><svg x="80" y="10" width="60" height="40"><rect width="50%" height="50%" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>A rect 50% by 50% in it: half the nested viewport, 30 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="50%" height="50%" fill="#d68a3c" /></svg></div>
+    <figcaption>The same rect in the stage: half of 160 by 60, 80 by 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A transform on the viewport's element</h2>
+  <p><q>However, a transform property on an SVG viewport's element will modify the viewport coordinate system relative
+  to the parent element's user coordinate system.</q> The nested <code>svg</code> is at 20, 10, holding a purple rect
+  as large as it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="10" width="60" height="40" /><svg x="20" y="10" width="60" height="40" transform="translate(60 0)"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption><code>transform="translate(60 0)"</code>: moved to 80, 10, in the outline. <span class=pr-flag>Safari</span> At
+    20, 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="10" width="60" height="40" /><svg class=moved x="20" y="10" width="60" height="40"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption>A style sheet's <code>transform: translate(60px, 0)</code>: the same, in the outline.
+    <span class=pr-flag>Safari</span> At 20, 10.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20.5" y="10.5" width="119" height="39" /><svg x="10" y="5" width="60" height="20" transform="scale(2)"><rect width="100%" height="100%" fill="#8e44ad" /></svg></svg></div>
+    <figcaption>At 10, 5, 60 by 20, with <code>scale(2)</code>: 120 by 40 from 20, 10.
+    <span class=pr-flag>Safari</span> 60 by 20 at 10, 5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The details element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 6px 10px; box-sizing: border-box; font-size: 13px; line-height: 20px; }
+  .stage details > :not(summary) { margin: 0; color: #2c5a8f; }
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.1 The details element</div>
+  <h1>The details element</h1>
+  <p class=pr-lede><q>The details element represents a disclosure widget from which the user can obtain additional
+  information or controls.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element">HTML §4.11.1</a></span></p>
+</header>
+<section>
+  <h2>The summary, and the rest only when open</h2>
+  <p><q>If present, it indicates that both the summary and the additional information is to be shown to the user. If
+  the attribute is absent, only the summary is to be shown.</q> The marker is a <code>disclosure-closed</code> or
+  <code>disclosure-open</code> triangle. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-details-and-summary-elements">§15.5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details><summary>Material</summary><div>Solid oak wood.</div></details>
+    </div>
+    <figcaption>No <code>open</code>: one line, "Material" after a triangle pointing to the end of the line; the blue
+    text is hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details open><summary>Material</summary><div>Solid oak wood.</div></details>
+    </div>
+    <figcaption><code>open</code>: the triangle points down, and "Solid oak wood." follows in blue on a second
+    line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium stage">
+      <details open><div>Solid oak wood.</div></details>
+    </div>
+    <figcaption>No <code>summary</code>: <q>the user agent should provide its own legend (e.g. "Details")</q>, with
+    its triangle, above the blue text.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The user shows and hides it</h2>
+  <p><q>To honor a request for the details to be shown, the user agent must set the open attribute on the element to
+  the empty string.</q> A <code>toggle</code> event follows each change, and changes in quick succession
+  <q>essentially get coalesced so that only one event is fired</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-details-element">§4.11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="act stage">
+        <details id=toggled><summary>Size</summary><div>40cm by 30cm.</div></details>
+      </div>
+      <ol class=pr-log data-log="toggle" data-fields="target oldState newState" data-lines=3></ol>
+    </div>
+    <figcaption>Click "Size": the blue line appears and <code>toggle oldState="closed" newState="open"</code> is
+    logged; click again: it hides and the opposite is logged.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class="act stage" style="padding: 10px 10px 0">
+        <button class=pr-target id=thrice>open, close, open</button>
+        <details id=coalesced><summary>Color</summary><div>Natural, or black.</div></details>
+      </div>
+      <ol class=pr-log data-log="toggle" data-fields="oldState newState" data-lines=2></ol>
+    </div>
+    <figcaption>The button sets <code>open</code>, removes it and sets it again in one task. Click it while "Color"
+    is closed: it opens, and one <code>toggle</code> is logged, from <code>closed</code> to
+    <code>open</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Changes the open attribute three times in one task.
+  const coalesced = document.getElementById("coalesced");
+  document.getElementById("thrice").addEventListener("click", () => {
+    coalesced.open = true;
+    coalesced.open = false;
+    coalesced.open = true;
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

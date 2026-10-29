@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic sizes: stretch or fit-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ab { position: absolute; background: #f9cc9d; outline: 1px solid #d68a3c; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 50px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+  img { position: absolute; }
+  button { position: absolute; margin: 0; padding: 0; border: 1px solid #2c5a8f; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4.1 Automatic Sizes of Absolutely-Positioned Boxes</div>
+  <h1>Automatic sizes: stretch or fit-content</h1>
+  <p class=pr-lede>The automatic size is the stretch-fit size <q>If its self-alignment property in the relevant axis
+  is stretch and neither of its inset properties in that axis are auto</q>, <q>Or if it is normal and the box is
+  non-replaced, not a table wrapper box, and has no auto inset in the relevant axis</q>; otherwise the fit-content
+  size. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-auto-size">CSS Positioned Layout 3 §4.1</a></span>
+  Each stage is relative, 160 by 50; the boxes hold 10px letters.</p>
+</header>
+
+<section>
+  <h2>Non-replaced boxes</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="top: 10px; left: 20px; right: 20px">abc</div></div>
+    <figcaption><code>left: 20px; right: 20px</code>: stretched, 120 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="top: 10px; left: 20px">abc</div></div>
+    <figcaption><code>left: 20px</code> alone: fit-content, 30 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="top: 10px; left: 20px; right: 20px; margin: 0 auto">abc</div></div>
+    <figcaption>Also <code>margin: 0 auto</code>: <q>any auto margins are treated as zero</q> for the size, so still
+    120 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="top: 10px; left: 20px; right: 20px; justify-self: center">abc</div></div>
+    <figcaption>Instead <code>justify-self: center</code>: fit-content, 30 wide, centered on 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="display: table; top: 10px; left: 20px; right: 20px">abc</div></div>
+    <figcaption>A table, <code>normal</code>: its wrapper box fits its content, 30 wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="display: table; top: 10px; left: 20px; right: 20px; justify-self: stretch">abc</div></div>
+    <figcaption>The table with <code>justify-self: stretch</code>: stretched, 120 wide. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 30 wide, as <code>normal</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced boxes and form controls</h2>
+  <p>A 40 by 20 image, and a <code>button</code> with no padding, each with <code>inset: 10px 20px</code>. <q>In HTML,
+  all form controls other than &lt;input type=image&gt; are treated as non-replaced.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb"><img alt="" style="inset: 10px 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div>
+    <figcaption>The image, <code>normal</code>: fit-content, its natural 40 by 20, at the top left of the room.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><button style="inset: 10px 20px; font: inherit">abc</button></div>
+    <figcaption>The button: non-replaced, so stretched to 120 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definitions: elements, pseudo-elements and anonymous boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .before::before { content: "before"; padding: 0 20px 0 6px; margin-right: -24px; background: #4f81bd; color: white; }
+  .after::after { content: "after"; padding: 0 6px 0 20px; margin-left: -24px; background: #6aa36a; color: white; }
+  .line { font-size: 12px; font-weight: 600; line-height: 20px; }
+  .item { display: list-item; margin-left: 40px; list-style: square outside; color: #c0392b; font-size: 24px; line-height: 30px; }
+  .item.cover::before { content: ""; display: inline-block; width: 30px; height: 30px; margin-left: -34px; vertical-align: top; background: #4f81bd; }
+  .item span { font-size: 12px; font-weight: 600; color: #1f2430; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.1 Definitions</div>
+  <h1>Definitions: elements, pseudo-elements and anonymous boxes</h1>
+  <p class=pr-lede><q>In this description, "element" refers to actual elements, pseudo-elements, and anonymous boxes.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2 §E.1</a></span></p>
+</header>
+
+<section>
+  <h2>Pseudo-elements take their places in the tree</h2>
+  <p><q>Pseudo-elements and anonymous boxes are treated as descendants in the appropriate places.</q> A
+  <code>:before</code> box is the element's first child and an <code>:after</code> box its last. Each figure's orange
+  box is the element's content, and a negative margin makes the pseudo-element overlap it by 24px. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2 §E.1</a></span></p>
+  <figure>
+    <div class="pr-stage line" style="padding: 20px 10px"><span class="before"><span class=pr-b>content</span></span></div>
+    <figcaption>The blue <code>:before</code> box comes before the content, so the content covers its right
+    end.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage line" style="padding: 20px 10px"><span class="after"><span class=pr-b>content</span></span></div>
+    <figcaption>The green <code>:after</code> box comes after the content, so it covers the content's right
+    end.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The marker, then :before, then the content</h2>
+  <p><q>For example, an outside list marker comes before an adjoining ':before' box in the line box, which comes before
+  the content of the box, and so forth.</q> In each figure, a list item has a red square marker outside it. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#stacking-defs">CSS 2 §E.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class=item><span>list item</span></div></div>
+    <figcaption>The red square marker, left of the item's content.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px 0"><div class="item cover"><span>list item</span></div></div>
+    <figcaption>A blue <code>:before</code> box 30px square, pulled left over the marker by a negative margin, comes
+    after the marker and hides it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

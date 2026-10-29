@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self on absolutely positioned boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .pr-stage.pr-cb { height: 40px; }
+  .ab { position: absolute; top: 10px; left: 20px; right: 20px; }
+  .imcb { position: absolute; top: 0; bottom: 0; left: 20px; right: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.2 Absolutely-Positioned Boxes</div>
+  <h1>justify-self on absolutely positioned boxes</h1>
+  <p class=pr-lede>The alignment container is <q>The box's containing block, as modified by the inset properties
+  ('top'/'right'/'bottom'/'left'), assuming the writing mode of the containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-abspos">CSS Box Alignment 3 §6.1.2</a></span>
+  In each stage, A has <code>left: 20px; right: 20px</code>: the dashed rectangle.</p>
+</header>
+
+<section>
+  <h2>Fit-content, aligned in the inset-modified containing block</h2>
+  <p><q>Values other than stretch or normal cause non-replaced absolutely-positioned boxes to use fit-content sizing
+  for calculating auto sizes in the affected axis.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><div class="ab pr-a">A</div></div>
+    <figcaption><code>normal</code>: as <code>stretch</code> for this box: A 160px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><div class="ab pr-a" style="justify-self: center">A</div></div>
+    <figcaption><code>center</code>: A as wide as its text, centered on 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><div class="ab pr-a" style="justify-self: end">A</div></div>
+    <figcaption><code>end</code>: A at the right of the dashed rectangle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><div class="ab pr-a pr-fit" style="width: 60px; justify-self: end">A</div></div>
+    <figcaption><code>width: 60px</code>, <code>end</code>: from 120 to 180px, not at 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced boxes, and one auto inset</h2>
+  <p><q>justify-self: stretch does cause replaced absolutely-positioned boxes to fill their containing block just as
+  non-replaced ones do.</q> <q>If only one inset property is auto</q>, <q>'justify-self' has no effect.</q> The
+  image is 40 by 20.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><img class=ab alt="" style="justify-self: stretch; height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An image 20px tall, <code>stretch</code>: 160px wide. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 40px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="imcb pr-ghost"></div><img class=ab alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div>
+    <figcaption>The image, <code>normal</code>: as <code>start</code>, 40px wide at 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="ab pr-a" style="right: auto; justify-self: end">A</div></div>
+    <figcaption><code>right: auto</code>, <code>end</code>: A at <code>left: 20px</code>, as CSS 2 places it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

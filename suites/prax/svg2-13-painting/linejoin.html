@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke-linejoin</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.5 Controlling line joins: the ‘stroke-linejoin’ and ‘stroke-miterlimit’ properties</div>
+  <h1>stroke-linejoin</h1>
+  <p class=pr-lede><q>'stroke-linejoin' specifies the shape to be used at the corners of paths or basic shapes when
+  they are stroked.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#LineJoin">SVG 2 §13.5.5</a></span>
+  Each stage is an SVG 160 by 60; a white line 1 wide over each stroke is the path itself.</p>
+</header>
+
+<section>
+  <h2>miter, round and bevel</h2>
+  <p>The path turns a right angle at 80, 15: <code>M 40 55 L 80 15 L 120 55</code>, stroked blue 16 wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="#4f81bd" stroke-width="16" /><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="white" /></svg></div>
+    <figcaption><code>miter</code>, the initial value: <q>The corner is formed by extending the outer edges of the
+    stroke at the tangents of the path segments until they intersect.</q> A point 8 × √2 ≈ 11.3 above the
+    corner, at y 3.7.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="#4f81bd" stroke-width="16" stroke-linejoin="round" /><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="white" /></svg></div>
+    <figcaption><code>round</code>: <q>a circular sector centered on the join point</q>, of radius 8, up to y
+    7.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="#4f81bd" stroke-width="16" stroke-linejoin="bevel" /><path d="M 40 55 L 80 15 L 120 55" fill="none" stroke="white" /></svg></div>
+    <figcaption><code>bevel</code>: <q>a triangle that fills the area between the two stroked segments</q>, cut
+    flat at 8 × √½ ≈ 5.7 above the corner, at y 9.3.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At every corner, of paths and basic shapes</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="15" width="100" height="30" fill="none" stroke="#4f81bd" stroke-width="12" stroke-linejoin="round" /><rect x="30" y="15" width="100" height="30" fill="none" stroke="white" /></svg></div>
+    <figcaption>A <code>rect</code> 100 by 30, <code>round</code>, 12 wide: all four outer corners rounded, of
+    radius 6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 45 L 50 15 L 80 45 L 110 15 L 140 45" fill="none" stroke="#4f81bd" stroke-width="12" stroke-linejoin="bevel" /><path d="M 20 45 L 50 15 L 80 45 L 110 15 L 140 45" fill="none" stroke="white" /></svg></div>
+    <figcaption>A zigzag, <code>bevel</code>: each of its three corners cut flat, the middle one below, the others
+    above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ink overflow: painted, never scrolled to</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .sc { width: 120px; height: 60px; margin: 5px 40px; overflow: auto; }
+  .vis { overflow: visible; }
+  .kid { width: 80px; margin: 20px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2.1 Ink Overflow</div>
+  <h1>Ink overflow: painted, never scrolled to</h1>
+  <p class=pr-lede><q>Ink overflow is the overflow of painting effects defined to not affect layout or otherwise
+  extend the scrollable overflow area, such as box shadows, border images, text decoration, overhanging glyphs (with
+  negative side bearings, or with ascenders/descenders extending outside the em box), outlines, etc.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#ink">CSS Overflow 3 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Effects that reach past the box</h2>
+  <p>Each dashed box is 120 by 60 and holds an 80px wide A 20px in from its left and top. The top row is
+  <code>visible</code>, so each effect paints in full; the bottom row is <code>auto</code>, where the effect is cut at
+  the padding edge, and the box has nothing to scroll: each caption reads its <code>scrollWidth</code> and
+  <code>scrollHeight</code>.</p>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame sc vis"><div class="pr-a pr-fit kid" style="box-shadow: 30px 30px 0 10px #b9cde6">A</div></div></div>
+    <div class=pr-stage style="height: 70px; margin-top: 6px"><div id=s1 class="pr-frame sc"><div class="pr-a pr-fit kid" style="box-shadow: 30px 30px 0 10px #b9cde6">A</div></div></div>
+    <figcaption>A box shadow 40px past the right and bottom: <code class=pr-computed data-of=s1 data-dom=scrollWidth></code>
+    by <code class=pr-computed data-of=s1 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame sc vis"><div class="pr-a pr-fit kid" style="outline: 6px solid #d68a3c; outline-offset: 20px">A</div></div></div>
+    <div class=pr-stage style="height: 70px; margin-top: 6px"><div id=s2 class="pr-frame sc"><div class="pr-a pr-fit kid" style="outline: 6px solid #d68a3c; outline-offset: 20px">A</div></div></div>
+    <figcaption>An outline 20 to 26px out, wholly past the padding edge, so the bottom box cuts all of it: <code class=pr-computed data-of=s2 data-dom=scrollWidth></code> by
+    <code class=pr-computed data-of=s2 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame sc vis"><div class=kid style="font: 40px/20px 'PR Arimo'; text-decoration: underline 6px #c0392b; text-underline-offset: 24px">Ag</div></div></div>
+    <div class=pr-stage style="height: 70px; margin-top: 6px"><div id=s3 class="pr-frame sc"><div class=kid style="font: 40px/20px 'PR Arimo'; text-decoration: underline 6px #c0392b; text-underline-offset: 24px">Ag</div></div></div>
+    <figcaption>40px glyphs on 20px lines, their underline 24px below, past the box: <code class=pr-computed data-of=s3
+    data-dom=scrollWidth></code> by <code class=pr-computed data-of=s3 data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

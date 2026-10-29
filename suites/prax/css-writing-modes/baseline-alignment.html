@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/50px "PR Arimo", "PR Noto Sans JP"; }
+  .v { writing-mode: vertical-rl; width: 60px; height: 110px; padding: 6px 0; }
+  .vguide { display: inline-block; width: 0; height: 98px; margin-bottom: -98px; border-left: 1px dashed #c0392b; }
+  .big { font-size: 32px; }
+  .pr-baseline { width: 200px; }
+  figure.s figcaption { max-width: 116px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 4.4 Baseline Alignment</div>
+  <h1>Baseline alignment</h1>
+  <p class=pr-lede><q>The dominant baseline (which can change based on the typographic mode) is used in CSS for
+  alignment in two cases</q>: glyphs from different fonts in one box, and a child box in its parent. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#baseline-alignment">CSS Writing Modes 4 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Glyphs from different fonts in one box</h2>
+  <p><q>The glyphs are aligned by matching up the positions of the dominant baseline in their corresponding
+  fonts.</q> PR Arimo, its Japanese from PR Noto Sans JP.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Ap 日本 Ap</div>
+    <figcaption>Horizontal, alphabetic: both faces' glyphs on the dashed line.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span>Ap日本Ap</div>
+    <figcaption>Vertical, central: both centered on the dashed line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A child in its parent</h2>
+  <p><q>child is aligned to the parent by matching the parent's dominant baseline to the same baseline in the
+  child</q>; for <code>super</code>, <q>the child is shifted</q>. Each child is highlighted.</p>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span>日<span class="pr-hl big" style="text-orientation: sideways">Ap</span>本</div>
+    <figcaption>Parent <code>mixed</code>, child <code>sideways</code>: the child centered.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="text-orientation: sideways"><span class=vguide></span>Ap<span class="pr-hl big" style="text-orientation: mixed">日本</span></div>
+    <figcaption>Parent <code>sideways</code>, child <code>mixed</code>: the child's alphabetic baseline on
+    the line.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span>日<span class=pr-hl style="vertical-align: super">本</span>語</div>
+    <figcaption><code>super</code>: 本 shifted toward line-over, the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

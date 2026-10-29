@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-optical-sizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; white-space: nowrap; }
+  .small { font-size: 9px; line-height: 20px; }
+  .zoom { transform: scale(3); transform-origin: 0 0; width: 66px; height: 60px; }
+  .big { font-size: 60px; line-height: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 8.1 Optical sizing control: the 'font-optical-sizing' property</div>
+  <h1>font-optical-sizing</h1>
+  <p class=pr-lede><q>to aid reading at small text sizes, strokes are often thicker with larger serifs. Larger text
+  often has a more delicate figure with more contrast between thicker and thinner strokes.</q> With
+  <code>auto</code>, <q>'font-size' must be considered when selecting a variation value for the "opsz" axis</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-optical-sizing-def">CSS Fonts 4 §8.1</a></span></p>
+</header>
+
+<section>
+  <h2>Small text, magnified</h2>
+  <p>PR Literata's <code>opsz</code> axis runs from 7 to 72. Each stage sets 9px text and magnifies it three times with
+  a transform, which does not change the optical size.</p>
+  <figure>
+    <div class="pr-stage pr-sample"><div class="zoom small" style="font-optical-sizing: auto">Handgloves</div></div>
+    <figcaption><code>auto</code>: the 9px design, heavier strokes and wider spacing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample"><div class="zoom small" style="font-optical-sizing: none">Handgloves</div></div>
+    <figcaption><code>none</code>: the default design, thinner and tighter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Large text</h2>
+  <figure>
+    <div class="pr-stage pr-sample pr-wide big" style="font-optical-sizing: auto">Handgloves</div>
+    <figcaption><code>auto</code> at 60px: high contrast, fine hairlines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample pr-wide big" style="font-optical-sizing: none">Handgloves</div>
+    <figcaption><code>none</code> at 60px: the default design, sturdier hairlines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

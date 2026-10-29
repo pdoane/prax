@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A magazine article with a hero image, a drop cap, floated figures, and a pull quote. Magazine layout: hero crop, drop cap, opposing floated figures, pull quote and cleared footer. -->
+<title>Article with figures</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.art { background:#fff; border:1px solid #dcdfe4; border-radius:8px; overflow:hidden; color:#24282e; font-family:serif; font-size:13.5px; line-height:1.6 }
+.hero { display:block; width:100%; height:150px; object-fit:cover }
+.pad { padding:14px 20px 18px }
+.eyebrow { font-family:sans-serif; font-size:9px; font-weight:bold; letter-spacing:.12em; text-transform:uppercase; color:#a8451f }
+.art h2 { font-size:24px; line-height:1.15; margin:2px 0 4px; font-weight:normal; letter-spacing:-.01em }
+.dek { font-size:13px; color:#5c6470; font-style:italic; margin-bottom:6px }
+.byline { font-family:sans-serif; font-size:10px; color:#79828e; border-top:1px solid #e7e9ed; border-bottom:1px solid #e7e9ed; padding:4px 0; margin-bottom:10px }
+.art p { margin:0 0 8px }
+.lead::first-letter { font-size:3.1em; float:left; line-height:.82; padding:3px 6px 0 0; font-weight:bold; color:#a8451f }
+figure { margin:0 0 8px }
+figure img { display:block; width:100%; height:110px; object-fit:cover; border-radius:3px }
+figcaption { font-family:sans-serif; font-size:9.5px; line-height:1.4; color:#79828e; margin-top:3px; border-left:2px solid #d9dde3; padding-left:6px }
+.fl { float:left; width:180px; margin:2px 14px 6px 0 }
+.fr { float:right; width:180px; margin:2px 0 6px 14px }
+.pull { float:right; width:200px; margin:4px 0 8px 16px; font-size:16px; line-height:1.35; color:#a8451f; border-top:2px solid #a8451f; border-bottom:2px solid #a8451f; padding:7px 0; font-style:italic }
+.end { clear:both; font-family:sans-serif; font-size:10px; color:#79828e; border-top:1px solid #e7e9ed; padding-top:6px; margin-top:2px }
+</style>
+</head>
+<body>
+<div class="art">
+  <img class="hero" src="support/landscape.jpg" alt="A ridge line above a valley at first light" />
+  <div class="pad">
+    <div class="eyebrow">Field report</div>
+    <h2>The last mill on the Ourthe still grinds by water</h2>
+    <div class="dek">Two families, one wheel, and a licence that has to be renewed every seven years.</div>
+    <div class="byline">By Margit Salomon &#183; Photographs by Tomas Rye &#183; 14 minute read</div>
+
+    <p class="lead">The wheel turns eleven times a minute. Water follows a channel cut in 1740, drops onto the buckets and leaves through a quiet tailrace. The loudest sound is the gearing overhead.</p>
+
+    <figure class="fl">
+      <img src="support/cat.jpg" alt="The mill cat asleep on a sack" />
+      <figcaption>Beatrix has held the post of mill cat since 2019. The sacks are
+      linen, refilled twice a week.</figcaption>
+    </figure>
+
+    <p>Marthe Colline runs the mill four days a week and teaches the other three. She learned stone dressing from her father. Every six weeks the stones are dressed; between dressings the flour warms enough for local bakers to notice.</p>
+
+    <div class="pull">Nobody keeps a mill for the money. You keep it because the
+    valley notices when it stops.</div>
+
+    <p>The seven-year licence covers the weir, fish pass and low-flow water allowance. Three offices review it. In 2018 they took fourteen months, leaving the mill idle for a summer.</p>
+
+    <figure class="fr">
+      <img src="support/portrait.jpg" alt="Marthe Colline at the hopper" />
+      <figcaption>Marthe Colline sets the hopper for a rye run. Rye takes a
+      slower feed than wheat.</figcaption>
+    </figure>
+
+    <p>Eleven bakeries buy the flour in twenty-five kilo sacks at prices close to the industrial mills. Marthe delivers on Tuesdays and telephones first when low water delays a run.</p>
+
+    <p>The oak beams will outlast the licence. The roof dates from 2009; the wheel has been replaced twice in three centuries, most recently in steel.</p>
+
+    <div class="end">Reported from Comblain-au-Pont over four days in March.</div>
+  </div>
+</div>
+</body>
+</html>

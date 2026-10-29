@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic sizes: a float in a zero or infinite space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.1 Intrinsic Sizes</div>
+  <h1>Intrinsic sizes: a float in a zero or infinite space</h1>
+  <p class=pr-lede><q>The min-content size of a box in each axis is the size it would have if it was a float given an
+  auto preferred size in that axis (and no minimum or maximum size in that axis) and if its containing block was
+  zero-sized in that axis.</q> The max-content size likewise, <q>if its containing block was infinitely-sized in that
+  axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The keyword and the float agree</h2>
+  <p>Each orange box holds "abc def ehg" in PR Cousine, 9px a character.</p>
+  <figure class=f>
+    <div class="pr-stage s t"><div style="width: 0"><div class=box style="float: left">abc def ehg</div></div></div>
+    <figcaption>A float in a containing block 0 wide: 27px, three lines.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: min-content">abc def ehg</div></div>
+    <figcaption><code>width: min-content</code>: the same, 27px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: max-content">abc def ehg</div></div>
+    <figcaption><code>width: max-content</code>: the float in an infinite space, 99px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Without the box's own limits</h2>
+  <p>The intrinsic sizes leave out the box's own minimum and maximum; a keyword then meets them as any width does.</p>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: max-content; max-width: 60px">abc def ehg</div></div>
+    <figcaption><code>width: max-content; max-width: 60px</code>: 99px held to 60px: a box 60px wide, its three words on three lines.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s t"><div class=box style="width: min-content; min-width: 50px">abc def ehg</div></div>
+    <figcaption><code>width: min-content; min-width: 50px</code>: 50px, three lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

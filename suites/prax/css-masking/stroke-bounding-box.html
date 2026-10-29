@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The stroke bounding box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · B Compute stroke bounding box</div>
+  <h1>The stroke bounding box</h1>
+  <p class=pr-lede><q>Let box be a rectangle initialized to the object bounding box of element.</q> <q>Let delta be the
+  inflation value initialized to the half of the stroke-width.</q> <q>Inflate box with the value of delta.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#compute-stroke-bounding-box">CSS Masking 1 §B</a></span>
+  Each figure clips an SVG shape with <code>clip-path</code> and a geometry box; the strokes are orange, 10px
+  wide.</p>
+</header>
+
+<section>
+  <h2>Half the stroke-width, and a container's union</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="15" width="100" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" style="clip-path: inset(0) fill-box"/></svg></div>
+    <figcaption><code>fill-box</code>, 100 by 30: the outer half of the stroke cut away, 5px of orange left inside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="30" y="15" width="100" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" style="clip-path: inset(0) stroke-box"/></svg></div>
+    <figcaption><code>stroke-box</code>: 5 bigger each way, 110 by 40, so the whole stroke.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g style="clip-path: inset(0 50% 0 0) stroke-box"><rect x="20" y="15" width="40" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /><rect x="100" y="15" width="40" height="30" fill="#6aa36a" stroke="#d68a3c" stroke-width="10" /></g></svg></div>
+    <figcaption>Two in a <code>g</code>, clipped to the left half of their union's stroke box, x 15 to 145: left of
+    x 80, the blue one whole, none of the green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A line: the join and the cap</h2>
+  <p>A horizontal line from x 20 to 80 at y 30, clipped to the top quarter of its stroke bounding box with
+  <code>inset(0 0 75% 0) stroke-box</code>. <q>If element is not rect, ellipse, circle or image</q>, a miter join
+  multiplies delta by the miter limit, and a square cap by the square root of 2. The appendix ends: <q>A future version
+  of the SVG specification may override this section.</q> SVG 2 bounds the stroke's own shape instead, which Chrome,
+  Safari and Firefox all follow.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width="100" height="60"><line x1="20" y1="30" x2="80" y2="30" stroke="#d68a3c" stroke-width="10" stroke-linejoin="round" style="clip-path: inset(0 0 75% 0) stroke-box"/></svg></div>
+    <figcaption><code>round</code> join: delta 5, the box y 25 to 35, kept to y 27.5: a strip 2.5 tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width="100" height="60"><line x1="20" y1="30" x2="80" y2="30" stroke="#d68a3c" stroke-width="10" style="clip-path: inset(0 0 75% 0) stroke-box"/></svg></div>
+    <figcaption><code>miter</code> join, the initial value, limit 4: delta 20, the box y 10 to 50, kept to y 20:
+    nothing. The browsers draw the 2.5 strip of the round join.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><svg width="100" height="60"><line x1="20" y1="30" x2="80" y2="30" stroke="#d68a3c" stroke-width="10" stroke-linejoin="round" stroke-linecap="square" style="clip-path: inset(0 0 75% 0) stroke-box"/></svg></div>
+    <figcaption><code>square</code> cap: delta 7.07, the box y 22.9 to 37.1, kept to y 26.5: a strip 1.5 tall. The
+    browsers draw a 2.5 strip, 5 longer at each end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

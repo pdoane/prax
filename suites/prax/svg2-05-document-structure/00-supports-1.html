@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Document Structure declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5 Document Structure · Support</div>
+  <h1>Document Structure declaration support</h1>
+  <p class=pr-lede>One declaration for each property the chapter's pages set from CSS, and the interfaces their scripts
+  use. This checks that they parse or exist, not what they do; the chapter's other pages show that.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>x: 80px</code>
+  <code class=pr-decl>y: 20px</code>
+  <code class=pr-decl>width: auto</code>
+  <code class=pr-decl>height: 30px</code>
+  <code class=pr-decl>display: inline</code>
+  <code class=pr-decl>display: none</code>
+  <code class=pr-decl>stroke-opacity: 0.5</code>
+  <code class=pr-decl>stroke: #6aa36a</code>
+  <code class=pr-decl>visibility: visible</code>
+  <code class=pr-decl>fill: #2c5a8f</code>
+  <code class=pr-decl>outline: none</code>
+  <code class=pr-decl>transform: translate(80px, 0)</code>
+  <code class=pr-decl>animation: slide 4s linear -1s infinite alternate both</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<section>
+  <h2>Interface support</h2>
+  <code class=pr-api>SVGUseElement</code>
+  <code class=pr-api>SVGSymbolElement</code>
+  <code class=pr-api>SVGSwitchElement</code>
+  <code class=pr-api>Node.prototype.getRootNode</code>
+  <code class=pr-api>Element.prototype.setAttribute</code>
+  <p class=pr-note>green is an interface or member this engine exposes, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

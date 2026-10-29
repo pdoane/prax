@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:defined</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 12px; }
+  .rows > * { display: block; margin: 0 0 8px; padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows > :defined { outline: 3px solid #6aa36a; }
+  .rows > :not(:defined) { outline: 3px solid #d68a3c; }
+  .rows > .pr-target { outline: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:defined</h1>
+  <p class=pr-lede><q>The :defined pseudo-class must match any element that is defined.</q> An element is defined
+  when its custom element state is "uncustomized" or "custom": a built-in element, or a custom element once its
+  definition has upgraded it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Defined or not</h2>
+  <p>Green outlines what matches <code>:defined</code>, orange what does not. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <p>a p element</p>
+        <blink>blink, an unknown element</blink>
+        <x-defined>x-defined, defined at load</x-defined>
+        <x-later>x-later, not defined yet</x-later>
+        <x-failing>x-failing, whose constructor throws</x-failing>
+        <button class=pr-target id=define>define x-later and x-failing</button>
+      </div>
+    </div>
+    <figcaption>The first three are green; <code>x-later</code> and <code>x-failing</code> are orange. Click the
+    button: <code>x-later</code> turns green as its definition upgrades it. <code>x-failing</code>'s upgrade fails, so
+    it stays orange.</figcaption>
+  </figure>
+</section>
+<script>
+  // Defines x-defined at load, and x-later and x-failing when the reader asks.
+  customElements.define("x-defined", class extends HTMLElement {});
+  document.getElementById("define").addEventListener("click", () => {
+    customElements.define("x-later", class extends HTMLElement {});
+    customElements.define("x-failing", class extends HTMLElement {
+      constructor() {
+        super();
+        throw new Error("x-failing does not construct");
+      }
+    });
+  }, {once: true});
+</script>
+</body>
+</html>

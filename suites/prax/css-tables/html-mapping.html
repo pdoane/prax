@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>HTML's attributes: spacing, padding, size, alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  td { background: #b9cde6; }
+  table { background: #e0e3e8; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 10.1 Mapping between CSS &amp; HTML attributes</div>
+  <h1>HTML's attributes: spacing, padding, size, alignment</h1>
+  <p class=pr-lede><q>The default style sheet for HTML4 illustrates how its model maps to css properties and
+  values</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#mapping">CSS Table 3 §10.1</a></span>
+  Each table is grey, with blue cells of <code>.pr-measure</code> text; the attributes named are on the
+  <code>table</code>.</p>
+</header>
+
+<section>
+  <h2>cellspacing, cellpadding, width, height</h2>
+  <p>They map to <code>border-spacing</code>, the cells' <code>padding</code>, <code>width</code> and
+  <code>height</code>, in pixels.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=10 cellpadding=0><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>cellspacing=10 cellpadding=0</code>: cells 10 by 20, 10px apart and in; the table 50 by
+    40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=0 cellpadding=10><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>cellspacing=0 cellpadding=10</code>: each cell 30 by 40, the text 10px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=0 cellpadding=0 width=150 height=40><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>width=150 height=40</code>: 150 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>align, and the cells' valign and nowrap</h2>
+  <p><q>table[align=center i] { margin-left: auto; margin-right: auto; }</q>; <code>left</code> and
+  <code>right</code> float. On cells, <code>valign</code> maps to <code>vertical-align</code> and
+  <code>nowrap</code> to <code>white-space: nowrap</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table align=center cellspacing=0 cellpadding=0><tr><td>aa</td></tr></table></div>
+    <figcaption><code>align=center</code>: 20px wide, 90px in from each side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table align=right cellspacing=0 cellpadding=0><tr><td>aa</td></tr></table>x</div>
+    <figcaption><code>align=right</code>: floated right, "x" at the left on its line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table cellspacing=0 cellpadding=0 width=10><tr><td valign=bottom>x</td><td nowrap style="background: #f6d7b4">aa bb</td><td>c d</td></tr></table></div>
+    <figcaption>A table of <code>width=10</code>: the orange <code>nowrap</code> cell keeps "aa bb" on one line,
+    while "c d" wraps to two; "x", <code>valign=bottom</code>, sits on the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

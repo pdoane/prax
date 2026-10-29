@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Conic color stops: around the circle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 80px; height: 80px; margin: 10px; }
+  .pr-stage.pr-row { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.3.2 Placing Color Stops</div>
+  <h1>Conic color stops: around the circle</h1>
+  <p class=pr-lede><q>Color stops are placed on a gradient line that curves around the gradient center in a circle,
+  with both the 0% and 100% locations at 0deg. Just like linear gradients, 0deg points to the top of the page, and
+  increasing angles correspond to clockwise movement around the circle.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#conic-color-stops">CSS Images 4 §3.3.2</a></span>
+  Each box is 80 by 80.</p>
+</header>
+
+<section>
+  <h2>Percentages and angles on one circle</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box" style="display: inline-block; background: conic-gradient(#4f81bd 0 25%, #d68a3c 0 100%)"></div><div class="box" style="display: inline-block; background: conic-gradient(#4f81bd 0deg 90deg, #d68a3c 0deg 360deg)"></div></div>
+    <figcaption><code>blue 0 25%, orange 0 100%</code> and <code>blue 0deg 90deg, orange 0deg 360deg</code>: alike,
+    blue in the top right quarter.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box" style="display: inline-block; background: conic-gradient(#4f81bd, #d68a3c)"></div><div class="box" style="display: inline-block; background: conic-gradient(#d68a3c 0deg, #4f81bd 0deg 1deg, #d68a3c 0)"></div></div>
+    <figcaption>Left: <code>blue, orange</code>, from blue at 0% round to orange at 100%, which meet at the top. Right,
+    for comparison, a blue ray straight up.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stops outside the turn</h2>
+  <p><q>A color-stop can be placed at a location before 0% or after 100%; though these regions are never directly
+  consulted for rendering, color stops placed there can affect the color of color-stops within the rendered region
+  through interpolation or repetition</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box" style="display: inline-block; background: conic-gradient(white -50%, black 150%)"></div><div class="box" style="display: inline-block; background: conic-gradient(rgb(75% 75% 75%), rgb(25% 25% 25%))"></div></div>
+    <figcaption><code>white -50%, black 150%</code>, and <code>rgb(75% 75% 75%), rgb(25% 25% 25%)</code>: alike,
+    the middle half of the white to black from -50% to 150%.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box" style="display: inline-block; background: conic-gradient(#4f81bd -90deg, #4f81bd 0 90deg, #d68a3c 0 450deg)"></div><div class="box" style="display: inline-block; background: conic-gradient(#4f81bd 0 25%, #d68a3c 0)"></div></div>
+    <figcaption><code>blue -90deg 90deg, orange 0 450deg</code>, and <code>blue 0 25%, orange 0</code>: alike, what lies
+    before 0deg and after 360deg not drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

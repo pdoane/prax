@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D transform functions: matrix3d and perspective</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .s3 { perspective: 100px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 20px; }
+  .q, .h { position: absolute; left: 40px; top: 10px; width: 80px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 12.2 3D Transform Functions</div>
+  <h1>3D transform functions: matrix3d and perspective</h1>
+  <p class=pr-lede><q>perspective() specifies a perspective projection matrix.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#three-d-transform-functions">CSS Transforms 2 §12.2</a></span>
+  Each blue box is 40 by 20 at the stage's center, on the dashed outline. <a href="functions-3d-rotate.html">The
+  rotations</a> follow.</p>
+</header>
+
+<section>
+  <h2>matrix3d() and perspective()</h2>
+  <p><q>matrix3d() specifies a 3D transformation as a 4x4 homogeneous matrix of 16 values in column-major order.</q>
+  These stages have no perspective.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 40, 20, 0, 1)">A</div></div>
+    <figcaption>The last column 40, 20, 0, 1: <code>translate(40px, 20px)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -0.01, 0, 0, 0, 1) translateZ(50px)">A</div></div>
+    <figcaption>m34 −0.01, <code>perspective(100px)</code>, then <code>translateZ(50px)</code>: 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: perspective(100px) translateZ(50px)">A</div></div>
+    <figcaption><code>perspective(100px) translateZ(50px)</code>: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: perspective(none) translateZ(50px)">A</div></div>
+    <figcaption><code>perspective(none)</code>, the identity: unchanged.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost h"></div><div class="pr-a pr-fit q" style="transform: perspective(0) translateZ(-9px)">A</div></div>
+    <figcaption>80 by 60, <code>perspective(0) translateZ(-9px)</code>: <q>treated as 1px</q>, so 8 by 6.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

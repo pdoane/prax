@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The principal writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.s figcaption { max-width: 200px; }
+  iframe.pr-view { border: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 8 The Principal Writing Mode</div>
+  <h1>The principal writing mode</h1>
+  <p class=pr-lede><q>As a special case for handling HTML documents, if the root
+  element has a &lt;body&gt; child element [HTML] whose display value is not none, the used value of the of
+  writing-mode and direction properties on root element are taken from the computed writing-mode and direction of the
+  first such child element instead of from the root element's own values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#principal-flow">CSS Writing Modes 4 §8</a></span></p>
+</header>
+
+<section>
+  <h2>From the body</h2>
+  <p>Each frame's <code>html</code> is tinted orange and has no <code>writing-mode</code> of its own.</p>
+  <figure class=s>
+    <iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><style>html{background:#f6d7b4;font:16px/24px 'PR Noto Sans JP'}body{margin:8px;background-clip:content-box}body{background-color:#b9cde6}</style><body style='writing-mode:vertical-rl'>縦書き</body>"></iframe>
+    <figcaption>The body, tinted blue, is <code>vertical-rl</code>, and so the root's used value: the body
+    placed from the frame's right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not from a body that is not displayed</h2>
+  <p>The draft's changes since 2019: <q>Specified that a display: none &lt;body&gt; element does not influence the
+  principal writing mode.</q></p>
+  <figure class="s pr-erratum">
+    <iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><style>html{background:#f6d7b4;font:16px/24px 'PR Noto Sans JP'}</style><body style='writing-mode:vertical-rl;display:none'><script>var d=document.createElement('div');d.style.cssText='writing-mode:vertical-rl;background:#b9cde6;height:60px';d.textContent='縦書き';document.documentElement.appendChild(d)</script></body>"></iframe>
+    <figcaption>The <code>vertical-rl</code> body is hidden; a <code>vertical-rl</code> div, the root's child, is
+    placed by the root's <code>horizontal-tb</code>: at the top left. <span class=pr-flag>Firefox</span>
+    takes the hidden body's mode: the top right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

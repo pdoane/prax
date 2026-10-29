@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Style sheets across HTML and SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .from-html { fill: #4f81bd; }
+  .box { height: 20px; margin: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.4 Style sheets in HTML documents</div>
+  <h1>Style sheets across HTML and SVG</h1>
+  <p class=pr-lede><q>When an SVG ‘style’ or an HTML ‘style’ element is used in an HTML document, those style sheets
+  must apply to all HTML and inline SVG content in the document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#StyleSheetsInHTMLDocuments">SVG 2 §6.4</a></span>
+  What each style sheet styles starts orange and turns blue.</p>
+</header>
+
+<section>
+  <h2>Each way</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=from-html x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption>The HTML <code>style</code> in the head sets <code>.from-html</code>: the SVG rect is blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="0" height="0" style="position: absolute"><style>.from-svg { background: #4f81bd !important; }</style></svg><div class="box from-svg"></div></div>
+    <figcaption>An SVG <code>style</code> sets <code>.from-svg</code>: the HTML <code>div</code>, 120 by 20 at
+    20, 20, is blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

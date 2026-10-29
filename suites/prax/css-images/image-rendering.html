@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-rendering: how an image is scaled</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 80px; height: 40px; margin: 10px; }
+  .bg { width: 80px; height: 40px; margin: 10px; background: url(support/pixels-4x2.png) 0 0 / 80px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 5.2 Determining How To Scale an Image: the image-rendering property</div>
+  <h1>image-rendering: how an image is scaled</h1>
+  <p class=pr-lede><q>The image-rendering property provides a hint to the user-agent about what aspects of an image are
+  most important to preserve when the image is scaled</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#the-image-rendering">CSS Images 3 §5.2</a></span>
+  Each image is 4 by 2 pixels, a blue and orange checkerboard, drawn 80 by 40 unless the caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>Twenty times as large</h2>
+  <p>pixelated: <q>For each axis independently, first determine the integer multiple of its natural size that puts it
+  closest to the target size and is greater than zero. Scale it to this integer-multiple-size using nearest
+  neighbor</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: smooth" alt=""></div>
+    <figcaption><code>smooth</code>: the colors blend from square to square.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: pixelated" alt=""></div>
+    <figcaption><code>pixelated</code>: sharp 20px squares on the guides.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: crisp-edges" alt=""></div>
+    <figcaption><code>crisp-edges</code>: sharp squares too, with no blended color.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: pixelated; width: 85px" alt=""></div>
+    <figcaption><code>pixelated</code>, 85px wide: 21 times across, 84px, then smoothed 1px wider: near-sharp
+    squares.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Every image of the element, and the old keywords</h2>
+  <p><q>it applies to all images given in properties for the element, such as background images</q>. <q>a user agent
+  must accept them as valid values but must treat them as having the same behavior as crisp-edges and smooth
+  respectively</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=bg style="image-rendering: pixelated"></div></div>
+    <figcaption>A background 80 by 40, <code>pixelated</code>: sharp 20px squares.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: optimizeSpeed" alt=""></div>
+    <figcaption><code>optimizeSpeed</code>, as <code>crisp-edges</code>: sharp squares. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Blended.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img src=support/pixels-4x2.png style="image-rendering: optimizeQuality" alt=""></div>
+    <figcaption><code>optimizeQuality</code>, as <code>smooth</code>: blended.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

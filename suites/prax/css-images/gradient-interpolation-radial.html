@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolating radial gradients</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .sq { width: 40px; height: 40px; margin: 10px; }
+  .wide { width: 100px; height: 40px; margin: 10px; }
+  .half { animation-duration: 100s; animation-timing-function: linear; animation-delay: -50s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; }
+  @keyframes radius {
+    from { background-image: radial-gradient(circle 10px at 20px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+    to { background-image: radial-gradient(circle 30px at 20px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+  }
+  @keyframes center {
+    from { background-image: radial-gradient(10px 10px at 10px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+    to { background-image: radial-gradient(10px 10px at 90px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+  }
+  @keyframes circle-ellipse {
+    from { background-image: radial-gradient(circle 20px at 50px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+    to { background-image: radial-gradient(40px 10px at 50px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+  }
+  @keyframes extent {
+    from { background-image: radial-gradient(closest-side at 50px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+    to { background-image: radial-gradient(10px 10px at 50px 20px, #4f81bd 100%, #d68a3c 100% 200%); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 7.4 Interpolating &lt;gradient&gt;</div>
+  <h1>Interpolating radial gradients</h1>
+  <p class=pr-lede><q>For radial gradients, the components are the horizontal and vertical position of the center and
+  the horizontal and vertical axis lengths.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#interpolating-gradients">CSS Images 4 §7.4</a></span>
+  Each gradient is animated to and fro; a still shows it at 50%. Its stops are hard, blue inside the ending shape (to 100%),
+  orange outside. Each flagged browser shows the end gradient: it switches at 50%.</p>
+</header>
+
+<section>
+  <h2>Center and size</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="sq half" style="animation-name: radius"></div></div>
+    <figcaption>Circle radius 10px to 30px: radius 20px, a disc touching the four sides, orange in the corners. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All blue:
+    radius 30px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: center"></div></div>
+    <figcaption>Centered 10px from the left to 10px from the right: a disc of radius 10px in the middle. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sizes made explicit</h2>
+  <p><q>Otherwise, the size must be changed to a pair of lengths that would produce an equivalent ending-shape. If the
+  radial-shape was specified as circle, change it to ellipse.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: circle-ellipse"></div></div>
+    <figcaption>A circle of radius 20px, as an ellipse 20px by 20px, to an ellipse 40px by 10px: an ellipse 30px by
+    15px, 60px wide and 30px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 80px wide and 20px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-motion"><div class="wide half" style="animation-name: extent"></div></div>
+    <figcaption><code>closest-side</code> in the middle, as 50px by 20px, to 10px by 10px: 30px by 15px, 60px wide
+    and 30px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> A disc 20px across.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

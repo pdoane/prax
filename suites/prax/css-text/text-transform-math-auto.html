@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-transform: math-auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .m { padding: 0 6px; font: 28px/44px "PR Noto Sans Math", "PR Noto Sans"; }
+  .m span { margin-right: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 2.1 Case Transforms: the text-transform property</div>
+  <h1>text-transform: math-auto</h1>
+  <p class=pr-lede><q>This property transforms text for styling purposes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-property">CSS Text 4 §2.1</a></span>
+  Its value <code>math-auto</code> is defined by MathML Core, to which the definition points: text that is a single character with a Mathematical Italic form is drawn as that form, so a
+  lone "x" becomes U+1D465 MATHEMATICAL ITALIC SMALL X, and any other text is left as it is. The font is PR Noto Sans
+  Math, which has the italic forms.</p>
+</header>
+
+<section>
+  <h2>One letter alone</h2>
+  <p>Each word is a span of its own, so its text is the span's.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide m"><span>x</span><span>A</span><span>&#x3B1;</span><span>sin</span><span>2</span></div>
+    <div class="pr-stage pr-wide m" style="text-transform: math-auto"><span>x</span><span>A</span><span>&#x3B1;</span><span>sin</span><span>2</span></div>
+    <figcaption>Above as they are; below with <code>math-auto</code>: "x", "A" and "α" alone become the italic
+    𝑥, 𝐴 and 𝛼; "sin", more than one character, and "2", which has no italic form, are unchanged. <span class=pr-flag>Safari</span> leaves all upright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In MathML</h2>
+  <p>MathML Core's user agent style sheet gives <code>mi</code> elements <code>math-auto</code>.</p>
+  <figure>
+    <div class="pr-stage m"><math><mi>y</mi><mo>=</mo><mi>sin</mi><mi>x</mi></math></div>
+    <figcaption><code>&lt;mi&gt;y&lt;/mi&gt;=&lt;mi&gt;sin&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;</code>: "𝑦 = sin𝑥", the lone
+    letters italic, "sin" upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

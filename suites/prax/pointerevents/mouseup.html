@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mouseup</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; user-select: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.11 mouseup</div>
+  <h1>mouseup</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device button is released over an
+  element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseup">Pointer Events §11.4.11</a></span></p>
+</header>
+<section>
+  <h2>Over the element where it is released</h2>
+  <p>detail: <q>indicates the current click count incremented by one.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseup">§11.4.11</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=a>Press here,</div>
+      <div class="pr-target pad" id=b>release here.</div>
+      <ol class=pr-log data-log="mousedown mouseup" data-fields="target detail" data-lines=2></ol>
+    </div>
+    <figcaption>Press <code>a</code> and release over <code>b</code>: <code>mousedown</code> at <code>a</code>,
+    <code>mouseup</code> at <code>b</code>, each <code>detail=1</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Outside the window</h2>
+  <p><q>In some implementation environments, such as a browser, a mouseup event can be dispatched even if the pointing
+  device has left the boundary of the user agent, e.g., if the user began a drag operation with a mouse button
+  pressed.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouseup">§11.4.11</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=away>Press here, release outside the window.</div>
+      <ol class=pr-log data-log="mouseup" data-fields="target clientX clientY" data-on="document" data-lines=2></ol>
+    </div>
+    <figcaption>Press the box, drag past the window's edge and release there: <code>mouseup</code> at
+    <code>away</code>, with coordinates outside the viewport.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

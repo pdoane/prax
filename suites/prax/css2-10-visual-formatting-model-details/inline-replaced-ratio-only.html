@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Widths: inline, replaced elements with only a ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.2 Inline, replaced elements</div>
+  <h1>Widths: inline, replaced elements with only a ratio</h1>
+  <p class=pr-lede>Each purple box is an inline <code>img</code> of an SVG image with a 4:1 ratio and no intrinsic size.</p>
+</header>
+
+<section>
+  <h2>A ratio and no size</h2>
+  <p><q>If 'height' and 'width' both have computed values of 'auto' and the element has an intrinsic ratio but no
+  intrinsic height or width, then the used value of 'width' is undefined in CSS 2.2. However, it is suggested that, if
+  the containing block's width does not itself depend on the replaced element's width, then the used value of 'width'
+  is calculated from the constraint equation used for block-level, non-replaced elements in normal flow.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-replaced-width">CSS 2 §10.3.2</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption>As suggested, it fills the 200px containing block, and is 50px tall. <span class="pr-flag pr-since">Since CSS 2</span> Sizing 3 requires it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="margin: 0 40px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption>With <code>margin: 0 40px</code>, the equation leaves it 120px, and 30px tall.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></div>
+  <h2>Defined as a max-content size</h2>
+  <p>The max-content size of such an image is the stretch fit, as CSS 2 suggested,
+  where the available space is definite. <q>Otherwise if the box has a &lt;length&gt; as its computed value for min-width or min-height,
+  use that size and calculate the other dimension using the aspect ratio</q> <q>Otherwise use an inline size matching
+  the corresponding dimension of the initial containing block</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-sizes">CSS Box Sizing 3 §5.1</a></span> The
+  undefined case is defined, also in a float, dashed here, that the image sizes.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-frame style="float: left"><img alt="" style="display: block" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>The image's max-content width is the 600px initial containing
+    block's, held to the 200px available: 200 by 50. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each takes its contribution as 0, so the float and
+    the image have no size.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-frame style="float: left"><img alt="" style="display: block; min-width: 80px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 1'><rect width='4' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>With <code>min-width: 80px</code>, the max-content width is
+    80px: the float is 80px wide, the image 80 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

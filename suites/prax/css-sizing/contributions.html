@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Contributions are outer sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 2.2 Intrinsic Size Contributions</div>
+  <h1>Contributions are outer sizes</h1>
+  <p class=pr-lede><q>Intrinsic size contributions are based on the outer size of the box; for this purpose auto
+  margins are treated as zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#contributions">CSS Box Sizing 3 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Margins count, auto margins as zero</h2>
+  <p>Each dashed float shrinks to the contribution of the blue block in it, a block of <code>width: 60px</code>; the
+  float's width reads back below.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div id=f1 class=pr-parent style="float: left"><div class="pr-a pr-fit" style="width: 60px; margin: 0 20px">60</div></div></div>
+    <figcaption><code>margin: 0 20px</code>: the float is 100px wide, <code class=pr-computed data-of=f1 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div id=f2 class=pr-parent style="float: left"><div class="pr-a pr-fit" style="width: 60px; margin: 0 auto 0 20px">60</div></div></div>
+    <figcaption><code>margin: 0 auto 0 20px</code>: the auto margin is zero, so 80px, <code class=pr-computed data-of=f2 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div id=f3 class=pr-parent style="float: left; margin-left: 40px"><div class="pr-a pr-fit" style="width: 60px; margin-left: -20px">60</div></div></div>
+    <figcaption><code>margin-left: -20px</code>: 40px, <code class=pr-computed data-of=f3 data-dom=offsetWidth></code>; the block sticks
+    out 20px to the left.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

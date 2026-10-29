@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Lengths and percentages together</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { height: 60px; background: linear-gradient(#4f81bd, #4f81bd) no-repeat; background-size: 40px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.6 Mixing Percentages and Dimensions</div>
+  <h1>Lengths and percentages together</h1>
+  <p class=pr-lede>&lt;length-percentage&gt; is <q>Equivalent to [ &lt;length&gt; | &lt;percentage&gt; ], where the
+  &lt;percentage&gt; will resolve to a &lt;length&gt;.</q> <q>This means that width: calc(500px + 50%); is allowed--
+  both values are converted to absolute lengths and added.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#mixed-percentages">CSS Values and Units 4 §5.6</a></span>
+  Each stage is 200px wide.</p>
+</header>
+
+<section>
+  <h2>In width</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(50px + 50%)">A</div></div>
+    <figcaption><code>calc(50px + 50%)</code>: 50px and 100px, a box 150px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 20px"><div class="pr-a pr-fit" style="width: calc(100% - 3em)">A</div></div>
+    <figcaption><code>calc(100% - 3em)</code> in 20px text: 200px less 60px, 140px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In margins and positions</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 40px; margin-left: calc(25% - 10px)">A</div></div>
+    <figcaption><code>margin-left: calc(25% - 10px)</code>: 40px in from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: calc(100% - 20px) calc(50% + 10px)"></div>
+    <figcaption><code>background-position: calc(100% - 20px) calc(50% + 10px)</code>: the image 20px left of the
+    right edge, and 10px below the middle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

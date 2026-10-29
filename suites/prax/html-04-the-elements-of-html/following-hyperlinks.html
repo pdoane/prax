@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Following hyperlinks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 80px; }
+  iframe.follow-view { display: block; width: 180px; height: 20px; margin: 0 10px 10px; border: 1px dashed var(--pr-line); }
+  .t { padding: 0 10px; font: 13px/20px sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.6.5 Following hyperlinks</div>
+  <h1>Following hyperlinks</h1>
+  <p class=pr-lede>To follow a hyperlink, the user agent chooses a navigable by the link's target, <q>Let targetNavigable be the first return value of applying the rules for choosing a navigable given targetAttributeValue, subject's node navigable, and noopener.</q>, and navigates it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#following-hyperlinks">HTML §4.6.5</a></span></p>
+</header>
+<section>
+  <h2>A named frame</h2>
+  <p>A target that names a navigable navigates that navigable. Below the link, a frame named
+  <code>follow-view</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=t><a href=support/target.html target=follow-view>Follow this link</a></div><iframe class=follow-view name=follow-view></iframe></div>
+    <figcaption><code>target=follow-view</code>. Click the link: "target.html" on green in the dashed frame; this page
+    stays.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The link's own navigable, or its parent</h2>
+  <p>With no target, the link's own node navigable; with <code>_parent</code>, that navigable's parent. Each frame's
+  document holds, in a dashed frame of its own, a document with a link.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px } iframe { width: 176px; height: 50px; border: 1px dashed #6b7381 }</style><iframe srcdoc='<style>body { margin: 4px; font: 13px/20px sans-serif }</style><a href=support/target.html>No target</a>'></iframe>"></iframe></div>
+    <figcaption>Click the link: "target.html" on green inside the dashed frame only.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px } iframe { width: 176px; height: 50px; border: 1px dashed #6b7381 }</style><iframe srcdoc='<style>body { margin: 4px; font: 13px/20px sans-serif }</style><a href=support/target.html target=_parent>target=_parent</a>'></iframe>"></iframe></div>
+    <figcaption>Click the link: "target.html" on green across the whole stage frame, the dashed frame
+    gone.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic table layout: specified widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; font-size: 0; line-height: 0; vertical-align: top; }
+  .blk { display: inline-block; width: 30px; height: 18px; background: #4f81bd; outline: 1px solid white; outline-offset: -1px; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.2 Automatic table layout</div>
+  <h1>Automatic table layout: specified widths</h1>
+  <p class=pr-lede>Cells hold 30px blocks, have a 1px border and no padding: a cell's minimum content width (MCW) is
+  32px.</p>
+</header>
+
+<section>
+  <h2>Specified widths and spanning cells</h2>
+  <p><q>If the specified 'width' (W) of the cell is greater than MCW, W is the minimum cell width.</q> <q>For each cell
+  that spans more than one column, increase the minimum widths of the columns it spans so that together, they are at
+  least as wide as the cell.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#auto-table-layout">CSS 2 §17.5.2.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="width: 80px"><span class=blk></span><td style="width: 10px"><span class="blk o"></span></table></div>
+    <figcaption><code>width: 80px</code> beats the 30px block: the first column is 82px. <code>width: 10px</code> is
+    less than the orange block: that column is 32px. <span class="pr-flag pr-since">Since CSS 2</span> In CSS Tables
+    3 the 80px is preferred, not a minimum; with room to spare, the result is the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td colspan=2><span class=blk style="width: 150px"></span><tr><td><span class=blk></span><td><span class="blk o"></span></table></div>
+    <figcaption>A cell spanning two columns holds a 150px block: the two 30px cells below it widen about equally,
+    76px each, 152px together.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></div>
+  <h2>A cell's width is not a minimum</h2>
+  <p>A cell's <code>width</code> no longer counts toward its minimum: <q>The outer min-content width of a table-cell is
+  max(min-width, min-content width) adjusted by the cell intrinsic offsets.</q> It counts only toward the width the
+  column prefers: <q>The outer max-content width of a table-cell in a constrained column is max(min-width, width,
+  min-content width, min(max-width, width)) adjusted by the cell intrinsic offsets.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-narrow"><table><tr><td style="width: 80px"><span class=blk></span><td style="width: 80px"><span class="blk o"></span></table></div>
+    <figcaption>In a 100px stage, two cells of <code>width: 80px</code>: they shrink to fit, and the table is 100px,
+    two 50px columns. CSS 2 made each at least 82px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

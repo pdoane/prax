@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: no effect on layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.5.4 Interaction with Layout</div>
+  <h1>border-shape: no effect on layout</h1>
+  <p class=pr-lede><q>'border-shape' does not affect geometry or layout, which is still computed using the existing 'border-width' properties. The shaped border is purely a visual effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-layout-interaction">CSS Borders and Box Decorations 4 §7.5.4</a></span></p>
+</header>
+
+<section>
+  <h2>Text placed as without the shape</h2>
+  <p>Each box is 112 by 72 with a 6px blue border, and holds text.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: circle(50%); font-size: 12px; line-height: 16px">aa bb cc dd ee ff gg</div></div>
+    <figcaption>A circle: the text starts at the top left of the content box, outside the circle, as without it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="font-size: 12px; line-height: 16px">aa bb cc dd ee ff gg</div></div>
+    <figcaption>No shape: the same text, the same place.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

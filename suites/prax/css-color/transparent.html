@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>transparent</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; box-sizing: border-box; }
+  .bar { height: 40px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.3 The transparent keyword</div>
+  <h1>transparent</h1>
+  <p class=pr-lede><q>The keyword transparent specifies a transparent black. It is a type of
+  &lt;named-color&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparent-color">CSS
+  Color 4 §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>Nothing drawn</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: transparent"></div><div class=sw style="background: #d68a3c; border: 10px solid transparent"></div><div class=sw style="background: rgb(0 0 0 / 0)"></div></div>
+    <figcaption><code>background: transparent</code>: nothing. A 10px <code>transparent</code> border on an orange
+    box: the orange shows through it, a 40px square. <code>rgb(0 0 0 / 0)</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Transparent black, in a gradient</h2>
+  <p>A gradient from red to <code>transparent</code> interpolates <q>premultiplied</q> (<a href="https://drafts.csswg.org/css-color-4/#interpolation-alpha">§13.4</a>), so transparent's black does not show: the
+  red only fades. The bars are <code>linear-gradient(to right, red, T)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+  <figure>
+    <div class="pr-stage pr-wide"><div class=bar style="background: linear-gradient(to right, red, transparent)"></div></div>
+    <figcaption>T is <code>transparent</code>: red fading out, pink, never brown or gray.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><div class=bar style="background: linear-gradient(to right, red, rgb(255 0 0 / 0))"></div></div>
+    <figcaption>T is <code>rgb(255 0 0 / 0)</code>, transparent red: the same bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

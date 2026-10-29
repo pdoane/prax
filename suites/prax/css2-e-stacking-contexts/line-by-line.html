@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: line by line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lines { width: 140px; padding: 12px 10px; font-size: 13px; line-height: 20px; }
+  .span { padding: 10px 0; }
+  .inner { padding: 10px 0; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: line by line</h1>
+  <p class=pr-lede>An inline's content is painted one line box at a time: its background on a line, then its text on that
+  line, then the next line. In each figure, an inline has 10px of padding above and below, so that its background on
+  one line reaches up over the text of the line before.</p>
+</header>
+
+<section>
+  <h2>An inline that forms a stacking context</h2>
+  <p><q>If the element is an inline element that generates a stacking context, then: For each line box that the element
+  is in: Jump to 7.2.1 for the box(es) of the element in that line box (in tree order).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2
+  §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage lines"><span class="pr-hl span" style="position: relative; z-index: 1">an inline that runs over three lines, with z-index 1</span></div>
+    <figcaption>A span with <code>position: relative; z-index: 1</code>: the orange of lines 2 and 3 covers the
+    bottom of the text of lines 1 and 2.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Any inline, line by line</h2>
+  <p><q>Otherwise, for each line box of that element: For each box that is a child of that element, in that line box,
+  in tree order: background color of element. background image of element. border of element.</q> then its text and
+  children, before the next line box. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage lines"><span class="pr-hl span">a plain inline span that runs over three lines of text</span></div>
+    <figcaption>A plain span, in step 7: the same as above, each line's orange over the text of the line before.
+    </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines"><span class="pr-hl span">an outer span <span class=inner>with an inner</span> span in it</span></div>
+    <figcaption>Within a line, tree order: the inner span's blue is over the outer's orange, and its text over both;
+    each line's backgrounds cover the text of the line before.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

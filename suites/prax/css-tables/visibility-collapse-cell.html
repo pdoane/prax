@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>visibility: collapse on a cell</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 30px; height: 20px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.4.1 Rendering a visibility: collapse table cell</div>
+  <h1>visibility: collapse on a cell</h1>
+  <p class=pr-lede><q>if a table-cell has its visibility set to that of collapse, it is rendered the same as if it had
+  visibility: hidden set.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#visibility-collapse-cell-rendering">CSS Table 3 §5.4.1</a></span>
+  Grey tables, <code>border-spacing: 10px</code>; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Hidden, keeping its place</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>a</td><td style="visibility: collapse">b</td><td>c</td></tr></table></div>
+    <figcaption>The middle cell collapsed: not drawn, but its column stays, grey between "a" and "c".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A spanning cell in a collapsed row keeps its content</h2>
+  <p>A note: <q>If you want to hide a row but continue to display its cells that span other rows, set
+  visibility:visible on those cells to prevent them from inheriting their value.</q> <q>If the table-cell is spanning
+  more than one table-track, and at least one of those table-track is set to visibility: collapse then clip the content
+  to the table-cell's border-box. This means that the top left (top right in rtl) content of the cell will continue to
+  show, regardless of which of the tracks the cell spans has been collapsed.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><tr style="visibility: collapse"><td rowspan=2 style="visibility: visible; background: #c3d08b">top<br>bot</td><td>a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>The first row collapsed, a green cell spanning it and the next, <code>visible</code>: it is the second
+    row's 20px, and shows its top line, "top", clipped below it. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> draw nothing of the cell. <span class=pr-flag>Safari</span> does not collapse the
+    row: both lines show.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

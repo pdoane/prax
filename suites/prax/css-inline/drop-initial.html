@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drop initials</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .d2::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .d3::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .rule { display: inline-block; width: 200px; height: 0; margin-right: -200px; border-top: 1px dashed #c0392b; vertical-align: text-top; }
+  .deva { font: 15px/24px "PR Noto Sans Devanagari"; }
+  .jp { font: 14px/22px "PR Noto Sans JP"; }
+  .pr-stage.pr-vertical { height: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.1.1 Drop Initial</div>
+  <h1>Drop initials</h1>
+  <p class=pr-lede><q>A dropped initial (or “drop cap”) is a larger-than-usual letter at the start of a paragraph, with a
+  baseline at least one line lower than the first baseline of the paragraph. The size of the drop initial is usually
+  indicated by how many lines it occupies.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#drop-initial">CSS Inline Layout 3 §7.1.1</a></span>
+  Each paragraph's <code>::first-letter</code>, in blue, has the caption's <code>initial-letter</code>.</p>
+</header>
+
+<section>
+  <h2>Latin: cap height to baseline</h2>
+  <p><q>In Western scripts, the top reference points are the cap height of the initial letter and of the first line of
+  text. The bottom reference points are the alphabetic baseline of the initial letter and the baseline of the Nth line
+  of text.</q> Each paragraph is 13px PR Literata on 20px lines.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d2">Two lines: its letter spans the first two lines, from the top of their capitals to the baseline of the second.</p></div>
+    <figcaption><code>2</code>: the T's top level with the first line's capitals, its foot on the second line's
+    baseline. <span class=pr-flag>Safari</span> Supports only <code>-webkit-initial-letter</code>: a plain T. <span
+    class=pr-flag>Firefox</span> Not supported: a plain T.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d3">Three lines are very common too: its letter spans three lines, and the text wraps beside it.</p></div>
+    <figcaption><code>3</code>: the T spans three lines, its foot on the third baseline. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A plain T.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Switch</title>
+<link rel=stylesheet href=support/gallery.css>
+</head>
+<body>
+<header>
+  <h1>Switch</h1>
+  <p>A checkbox with the switch attribute, drawn as a track and a thumb. Click one, or focus it and press Space.</p>
+</header>
+
+<section>
+  <h2>States</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th></tr>
+  <tr><th scope=row>off</th><td><input type=checkbox switch></td><td class=none><input type=checkbox switch></td><td class=base><input type=checkbox switch></td><td class=styled><input type=checkbox switch></td></tr>
+  <tr><th scope=row>on</th><td><input type=checkbox switch checked></td><td class=none><input type=checkbox switch checked></td><td class=base><input type=checkbox switch checked></td><td class=styled><input type=checkbox switch checked></td></tr>
+  <tr><th scope=row>indeterminate</th><td><input type=checkbox switch class=mixed></td><td class=none><input type=checkbox switch class=mixed></td><td class=base><input type=checkbox switch class=mixed></td><td class=styled><input type=checkbox switch class=mixed></td></tr>
+  <tr><th scope=row>disabled, on</th><td><input type=checkbox switch disabled checked></td><td class=none><input type=checkbox switch disabled checked></td><td class=base><input type=checkbox switch disabled checked></td><td class=styled><input type=checkbox switch disabled checked></td></tr>
+  <tr><th scope=row>with a label</th><td><label class=inline><input type=checkbox switch checked> Wi-Fi</label></td><td class=none><label class=inline><input type=checkbox switch checked> Wi-Fi</label></td><td class=base><label class=inline><input type=checkbox switch checked> Wi-Fi</label></td><td class=styled><label class=inline><input type=checkbox switch checked> Wi-Fi</label></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><input type=checkbox switch checked> <input type=checkbox switch></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><input type=checkbox switch checked> <input type=checkbox switch></div></div>
+  <div class="panel accent"><span class=cap>accent-color</span><div class=strip><input type=checkbox switch checked> <input type=checkbox switch></div></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><div class=strip><input type=checkbox switch checked> <input type=checkbox switch></div></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><div class=strip><label class=inline><input type=checkbox switch checked> نعم</label></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><input type=checkbox switch checked></div>
+</div>
+</section>
+
+<script>
+for (const box of document.querySelectorAll('.mixed'))
+  box.indeterminate = true;
+</script>
+</body>
+</html>

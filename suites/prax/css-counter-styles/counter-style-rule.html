@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The @counter-style rule</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style twice { system: cyclic; symbols: "A" "B"; suffix: ") "; }
+  @counter-style twice { system: cyclic; symbols: "x" "y" "z"; }
+  @counter-style last { system: cyclic; symbols: "p"; symbols: "q"; suffix: ": "; }
+  @counter-style lower-roman { system: alphabetic; symbols: "α" "β" "γ"; suffix: "> "; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 40px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3 Defining Custom Counter Styles: the @counter-style rule</div>
+  <h1>The @counter-style rule</h1>
+  <p class=pr-lede><q>The @counter-style rule allows authors to define a custom counter style. The components of a
+  counter style are specified by descriptors in the @counter-style rule.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#the-counter-style-rule">CSS Counter Styles 3 §3</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Rules of one name replace each other whole</h2>
+  <p><q>If multiple @counter-style rules are defined with the same name, only one wins, according to standard cascade
+  rules. @counter-style rules cascade "atomically": if one replaces another of the same name, it replaces it
+  entirely</q>. <q>When a given descriptor occurs multiple times in a given @counter-style rule, only the
+  last-specified valid value is used</q>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: twice"><li>one<li>two<li>three</ol></div>
+    <figcaption>Two rules named <code>twice</code>; the second has symbols x, y, z and no suffix: "x.", "y.", "z.",
+    with the initial suffix, not the first rule's ") ".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: last"><li>one<li>two</ol></div>
+    <figcaption><code>symbols: "p"; symbols: "q"</code> in one rule: "q:", "q:".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A predefined style redefined</h2>
+  <p><q>Note that even the predefined counter styles can be overridden; the UA stylesheet occurs before any other
+  stylesheets, so the predefined ones always lose in the cascade.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: lower-roman"><li>one<li>two<li>three<li>four</ol></div>
+    <figcaption><code>lower-roman</code> defined here as alphabetic α, β, γ with suffix "&gt; ": "α&gt;", "β&gt;",
+    "γ&gt;", "αα&gt;".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

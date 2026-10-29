@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color stop fixup</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 12px; margin-bottom: 8px; }
+  .pr-stage { padding: 10px 0; }
+  .bar { height: 10px; margin: 0 10px; }
+  .bar + .bar { margin-top: 10px; }
+  figcaption code { font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.5.3 Color Stop “Fixup”</div>
+  <h1>Color stop fixup</h1>
+  <p class=pr-lede><q>If a color stop or transition hint has a position that is less than the specified position of
+  any color stop or transition hint before it in the list, set its position to be equal to the largest specified
+  position of any color stop or transition hint before it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#color-stop-fixup">CSS Images 4 §3.5.3</a></span>
+  The section's pairs, <code>to right</code> on bars 140px wide: as written above, fixed up below.</p>
+</header>
+
+<section>
+  <h2>Each pair alike</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red, white 20%, blue)"></div><div class=bar style="background: linear-gradient(to right, red 0%, white 20%, blue 100%)"></div></div>
+    <figcaption>1. <code>red, white 20%, blue</code>: <code>red 0%</code>, <code>blue 100%</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red 40%, white, black, blue)"></div><div class=bar style="background: linear-gradient(to right, red 40%, white 60%, black 80%, blue 100%)"></div></div>
+    <figcaption>2. <code>red 40%, white, black, blue</code>: white at 60%, black at 80%.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red -50%, white, blue)"></div><div class=bar style="background: linear-gradient(to right, red -50%, white 25%, blue 100%)"></div></div>
+    <figcaption>3. <code>red -50%, white, blue</code>: white at 25%, x 35 on the bar.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red -50px, white, blue)"></div><div class=bar style="background: linear-gradient(to right, red -50px, white calc(-25px + 50%), blue 100%)"></div></div>
+    <figcaption>4. <code>red -50px, white, blue</code>: white at <code>calc(-25px + 50%)</code>, 45px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red 20px, white 0px, blue 40px)"></div><div class=bar style="background: linear-gradient(to right, red 20px, white 20px, blue 40px)"></div></div>
+    <figcaption>5. <code>red 20px, white 0px, blue 40px</code>: white moved up to 20px, so red ends sharply.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red, white -50%, black 150%, blue)"></div><div class=bar style="background: linear-gradient(to right, red 0%, white 0%, black 150%, blue 150%)"></div></div>
+    <figcaption>6. <code>red, white -50%, black 150%, blue</code>: no red; white to a mid grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, red 80px, white 0px, black, blue 100px)"></div><div class=bar style="background: linear-gradient(to right, red 80px, white 80px, black 90px, blue 100px)"></div></div>
+    <figcaption>7. <code>red 80px, white 0px, black, blue 100px</code>: red to 80px, then white, black at 90px, blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Mixed units, fixed up at one size only</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bar style="background: linear-gradient(to right, yellow 100px, blue 50%)"></div></div>
+    <figcaption><code>yellow 100px, blue 50%</code> on 140px: 50% is 70px, so moved to 100px: blue sharply from
+    x 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><div class=bar style="background: linear-gradient(to right, yellow 100px, blue 50%)"></div></div>
+    <figcaption>280px wide: <code>50%</code> is 140px, so no fixup: yellow to x 110, blending to blue at x 150.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Named instances</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Instance Auto"; src: url(../../../third_party/fonts/RobotoFlex.ttf); }
+  @font-face { font-family: "Instance Black Italic"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-named-instance: "Black Italic"; }
+  @font-face { font-family: "Instance Missing"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-named-instance: "No Such Instance"; }
+  @font-face { font-family: "Instance Override"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-named-instance: "Black Italic"; font-variation-settings: "wght" 100; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.7 Using named instances from variable fonts: the 'font-named-instance' descriptor</div>
+  <h1>Named instances</h1>
+  <p class=pr-lede>A named instance's <q>variation axis values are applied</q> to the face. <q>If no such named instance
+  exists, this descriptor is treated as if it has a value of 'auto'.</q> Roboto Flex names twenty, from "Thin" to
+  "ExtraBlack Italic". <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-named-instance">CSS Fonts 4 §4.7</a></span></p>
+</header>
+
+<section>
+  <h2>By name</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Instance Auto'">Handgloves</div>
+    <figcaption><code>auto</code>: the regular weight, upright.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'Instance Black Italic'">Handgloves</div>
+    <figcaption><code>"Black Italic"</code>: weight 900, slanted, though the element's style is normal. <span class=pr-flag>Safari</span> ignores 'font-named-instance': regular and upright.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Instance Missing'">Handgloves</div>
+    <figcaption><code>"No Such Instance"</code>: as <code>auto</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'Instance Override'">Handgloves</div>
+    <figcaption><code>"Black Italic"</code> and <code>"wght" 100</code>: the descriptor's variation comes later, so
+    thin and slanted. <span class=pr-flag>Safari</span> applies only the variation: thin and upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

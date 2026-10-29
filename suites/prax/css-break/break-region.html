@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>region and avoid-region</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+  .region { display: inline-block; vertical-align: top; width: 90px; height: 60px; margin-right: 10px; flow-from: story; }
+  .story { flow-into: story; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.4 Region Break Values</div>
+  <h1>region and avoid-region</h1>
+  <p class=pr-lede><q>These values only have an effect in multi-region contexts; if the flow is not linked across
+  multiple regions, these values have no effect.</q> <code>region</code>: <q>Always force a region break
+  before/after the principal box.</q> <code>avoid-region</code>: <q>Avoid a region break before/after the principal
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#region-break-values">CSS Fragmentation 4 §3.1.4</a></span>
+  B has the value.</p>
+</header>
+
+<section>
+  <h2>In a chain of regions</h2>
+  <p>The dashed boxes, 90 by 60, are regions (<code>flow-from: story</code>) <a href="https://drafts.csswg.org/css-regions-1/#flow-from">CSS Regions 1 §3.2</a>;
+  the blocks A, B and C are the named flow (<code>flow-into: story</code>).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="region pr-ghost"></div><div class="region pr-ghost"></div><div class=story><div class=pr-a>A</div><div class=pr-b style="break-before: region">B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>region</code>: A in the first region, B and C in the second. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No regions: the regions are empty and A, B
+    and C follow them in the normal flow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="region pr-ghost"></div><div class="region pr-ghost"></div><div class=story><div class=pr-a>A</div><div class=pr-a>A</div><div class=pr-a style="break-after: avoid-region">A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>avoid-region</code> on the third A: it moves to the second region, with B; two As in the
+    first. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    regions, as before.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No regions: no effect</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="break-before: region">B</div><div class=pr-c>C</div></div>
+    <figcaption>In three columns: <code>region</code> has no effect. A, B and C in the first column.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='break-before: region'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Printed: no effect. A, B and C on one page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

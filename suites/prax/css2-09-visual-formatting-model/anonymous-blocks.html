@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous block boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.1.1 Anonymous block boxes</div>
+  <h1>Anonymous block boxes</h1>
+  <p class=pr-lede><q>If a block container box ... has a block-level box inside it ..., then we force it to have only
+  block-level boxes inside it.</q> Inline content beside a block is wrapped in an anonymous block box.</p>
+</header>
+
+<section>
+  <h2>Text beside a block</h2>
+  <p>In <code>&lt;DIV&gt;Some text &lt;P&gt;More text&lt;/DIV&gt;</code>, <q>we assume that there is an anonymous block
+  box around "Some text".</q> <q>The properties of anonymous boxes are inherited from the enclosing non-anonymous
+  box</q>; the others take their initial values. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame>Some text<p class=pr-a style="margin: 0">More text</p></div></div>
+    <figcaption>"Some text" is on a line of its own above the P.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame style="color: #9c5f22; font-style: italic; padding: 10px">Some text<p class=pr-a style="margin: 0">More text</p></div></div>
+    <figcaption>The DIV's color and italics reach "Some text"; its 10px padding is around both, not around the
+    anonymous box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A block inside an inline</h2>
+  <p><q>When an inline box contains an in-flow block-level box, the inline box ... is broken around the block-level
+  box</q>, and the lines before and after are wrapped in anonymous block boxes. <q>If a border had been set on the P
+  element in the above example, the border would be drawn around C1 (open at the end of the line) and C2 (open at the
+  start of the line).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-chip>Text before. <span class=pr-a style="display: block">a block</span> Text after.</span></div>
+    <figcaption>An inline with an orange border holds a block: the border is open at the end of "Text before." and
+    at the start of "Text after."</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

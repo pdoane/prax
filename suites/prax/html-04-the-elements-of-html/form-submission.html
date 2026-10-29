@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Submitting a form</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button, .pad label { margin: 0 0 10px; font-size: 12px; }
+  #chosen { font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.22.3 Form submission algorithm</div>
+  <h1>Submitting a form</h1>
+  <p class=pr-lede><q>When a form is submitted, the data in the form is converted into the structure specified by the
+  enctype, and then sent to the destination specified by the action using the given method.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#introduction-5">HTML §4.10.22.1</a></span></p>
+</header>
+
+<section>
+  <h2>The submit event, then the navigation</h2>
+  <p><q>Let shouldContinue be the result of firing an event named submit at form using SubmitEvent, with the submitter
+  attribute initialized to submitterButton</q>; <q>If shouldContinue is false, then return.</q> For GET, <q>Set parsed
+  action's query component to query.</q> The action's own query is <code>?from=action</code>; the page's script
+  cancels <code>submit</code> while the box is checked. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-algorithm">§4.10.22.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad id=sent action="support/form-echo.html?from=action" target=sent-result>
+        <input name=t value=cats size=5> <input name=q value=fur size=5>
+        <button id=go name=by value=go>Go</button><br>
+        <label><input type=checkbox id=cancel> cancel submit</label>
+      </form>
+      <ol class=pr-log data-log="submit" data-fields="submitter cancelable" data-lines=1></ol>
+      <iframe class=pr-result name=sent-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Go: <code>submit submitter=go</code>, and the frame loads with <code>t=cats</code>,
+    <code>q=fur</code> and <code>by=go</code>, in place of <code>from=action</code>. Check the box and click Go: the
+    event is logged, and the frame stays as it was.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>method=dialog</h2>
+  <p><q>If method is dialog</q>: <q>Otherwise, if submitter is a submit button, then set result to submitter's optional
+  value.</q> <q>Close the dialog subject with result and null.</q> The page's script writes the dialog's
+  <code>returnValue</code> beside the button once it closes. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-algorithm">§4.10.22.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <button onclick="sizes.showModal()">Choose a size</button> <span id=chosen></span>
+      <dialog id=sizes>
+        <form method=dialog>Size: <button value=small>Small</button> <button value=large>Large</button>
+        <button>No value</button></form>
+      </dialog>
+    </div>
+    <figcaption>Click "Choose a size", then Large: the dialog closes, and "large" shows beside the button. Choose
+    again, then "No value": its optional value is null, so the dialog keeps "large".</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the first form's submission while the box is checked, and shows what the dialog returned once it closes.
+  document.getElementById("sent").addEventListener("submit", event => {
+      if (document.getElementById("cancel").checked)
+          event.preventDefault();
+  });
+  const sizes = document.getElementById("sizes");
+  sizes.addEventListener("close", () => {
+      document.getElementById("chosen").textContent = sizes.returnValue;
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

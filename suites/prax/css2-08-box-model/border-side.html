@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border shorthands: one side</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.4 Border shorthand properties</div>
+  <h1>Border shorthands: one side</h1>
+  <p class=pr-lede><code>border-top</code>, <code>border-right</code>, <code>border-bottom</code>,
+  <code>border-left</code> and <code>border</code>. Each takes <code>[ &lt;border-width&gt; || &lt;border-style&gt; ||
+  &lt;border-top-color&gt; ]</code>: any of the three, at most once each, in any order.</p>
+</header>
+
+<section>
+  <h2>One side</h2>
+  <p><q>This is a shorthand property for setting the width, style, and color of the top, right, bottom, and left border
+  of a box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-shorthand-properties">CSS 2 §8.5.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-top: 10px solid #c0392b"></div></div>
+    <figcaption><code>border-top: 10px solid #c0392b</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-right: 10px solid #c0392b"></div></div>
+    <figcaption><code>border-right: 10px solid #c0392b</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: 10px solid #c0392b"></div></div>
+    <figcaption><code>border-bottom: 10px solid #c0392b</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-left: 10px solid #c0392b"></div></div>
+    <figcaption><code>border-left: 10px solid #c0392b</code></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Any order</h2>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: #c0392b dashed 10px"></div></div>
+    <figcaption><code>border-bottom: #c0392b dashed 10px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: dashed 10px #c0392b"></div></div>
+    <figcaption><code>border-bottom: dashed 10px #c0392b</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

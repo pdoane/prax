@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Width, then style, then weight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each face is a different font, so the face chosen is plain to see. */
+  @font-face { font-family: Order; src: url(../../../third_party/fonts/Tinos.ttf); font-stretch: condensed; }
+  @font-face { font-family: Order; src: url(../../../third_party/fonts/Cousine.ttf); font-style: italic; }
+  @font-face { font-family: Order; src: url(../../../third_party/fonts/Arimo.ttf); font-weight: bold; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 4</div>
+  <h1>Width, then style, then weight</h1>
+  <p class=pr-lede>The family's faces are narrowed to one: <q>'font-width' is tried first</q>, <q>'font-style' is tried
+  next</q>, and <q>'font-weight' is matched next</q>. Each step keeps only the faces closest to the request. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Three faces, each nearest in one property</h2>
+  <p>Family "Order" has Tinos (serif), condensed; Cousine (monospace), italic; and Arimo (sans-serif), bold. Each
+  is otherwise normal.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Order; font-width: condensed; font-style: italic; font-weight: bold">Handgloves</div>
+    <figcaption>Condensed italic bold: width decides first, so Tinos, synthesized italic and bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Order; font-style: italic; font-weight: bold">Handgloves</div>
+    <figcaption>Italic bold: Cousine and Arimo are normal width; style decides next, so Cousine, synthesized
+    bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Order; font-weight: bold">Handgloves</div>
+    <figcaption>Bold: Cousine is italic and Arimo is not, so Arimo.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Order">Handgloves</div>
+    <figcaption>Normal: Arimo is the only normal-width, normal-style face, so Arimo, at its bold weight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Establishing a stacking context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .multiply { mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.4.1 Establishing a stacking context in SVG</div>
+  <h1>Establishing a stacking context</h1>
+  <p class=pr-lede><q>A new stacking context must be established at an SVG element for its descendants if any of the
+  following conditions are met.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#EstablishingStackingContex">SVG 2 §3.4.1</a></span>
+  A stacking context is a group, isolated for blending: a blend inside it does not reach what is behind it. Each stage
+  is an SVG 160 by 60 with an orange band behind a <code>g</code> or nested <code>svg</code> holding a blue square at
+  60, 10 with <code>mix-blend-mode: multiply</code>.</p>
+</header>
+
+<section>
+  <h2>Not a stacking context</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#d68a3c" /><g><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></g></svg></div>
+    <figcaption>A plain <code>g</code>: it multiplies with the band, dark where they cross.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#d68a3c" /><svg overflow="visible"><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>An inner <code>svg</code> with <code>overflow="visible"</code>: not one either; dark where they
+    cross.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stacking contexts</h2>
+  <p>Among the conditions: <q>Inner ‘svg’ with overflow</q> <q>computed value other than visible</q>; <q>clip-path
+  property</q> <q>computed value other than none</q>; <q>opacity property</q> <q>computed value other than 1</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#d68a3c" /><svg><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>An inner <code>svg</code>, <code>overflow: hidden</code> by default: plain blue over the band. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Dark where they
+    cross.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#d68a3c" /><g opacity="0.99"><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></g></svg></div>
+    <figcaption>A <code>g</code> with <code>opacity="0.99"</code>: plain blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><clipPath id="all"><rect width="160" height="60" /></clipPath><rect y="20" width="160" height="20" fill="#d68a3c" /><g clip-path="url(#all)"><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></g></svg></div>
+    <figcaption>A <code>g</code> clipped to the whole stage: plain blue. <span class=pr-flag>Safari</span> Dark where they cross.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

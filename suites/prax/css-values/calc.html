@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>calc(): arithmetic on lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .third { float: left; height: 20px; margin: 10px; border: 1px solid #2c5a8f; background: #b9cde6; width: calc(100% / 3 - 2 * 1em - 2 * 1px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.1 Basic Arithmetic: calc()</div>
+  <h1>calc(): arithmetic on lengths</h1>
+  <p class=pr-lede>A calc() <q>represents the result of evaluating the expression using standard operator precedence
+  rules (* and / bind tighter than + and -, and operators are otherwise evaluated left-to-right).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-func">CSS Values and Units 4 §10.1</a></span></p>
+</header>
+
+<section>
+  <h2>Precedence</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(20px + 30px * 2)">A</div></div>
+    <figcaption><code>calc(20px + 30px * 2)</code>: 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc((20px + 30px) * 2)">A</div></div>
+    <figcaption><code>calc((20px + 30px) * 2)</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(calc(20px + 30px) * 2)">A</div></div>
+    <figcaption><q>Parentheses and nesting additional calc() functions are equivalent</q>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(200px - 60px / 3 * 2 - 20px)">A</div></div>
+    <figcaption><code>calc(200px - 60px / 3 * 2 - 20px)</code>, left to right: 140px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Different units, one length</h2>
+  <p><q>In this example the author wants the margin box of each section to take up 1/3 of the space</q>: three floats,
+  each <code>margin: 1em; border: solid 1px; width: calc(100% / 3 - 2 * 1em - 2 * 1px)</code> in 10px text.</p>
+  <figure>
+    <div class=pr-stage style="font-size: 10px"><div class=third></div><div class=third></div><div class=third></div></div>
+    <figcaption>The three fill the stage's width on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 30px; background: linear-gradient(to right, #7b8494 0%, white 20px, white calc(100% - 20px), #7b8494 100%)"></div>
+    <figcaption><code>white 20px, white calc(100% - 20px)</code>: grey fades only in the first and last 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

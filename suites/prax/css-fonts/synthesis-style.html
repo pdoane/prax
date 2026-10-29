@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-synthesis-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8.2 Controlling synthesized oblique: the 'font-synthesis-style' property</div>
+  <h1>font-synthesis-style</h1>
+  <p class=pr-lede><q>This property controls whether user agents are allowed to synthesize oblique font faces when a
+  font family lacks oblique faces.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis-style">CSS Fonts 4 §2.8.2</a></span></p>
+</header>
+
+<section>
+  <h2>auto, none and oblique-only</h2>
+  <p>PR Cousine has no italic or oblique face.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: italic; font-synthesis-style: auto">Handgloves</div>
+    <figcaption><code>italic</code>, <code>auto</code>: sheared.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: italic; font-synthesis-style: none">Handgloves</div>
+    <figcaption><code>italic</code>, <code>none</code>: upright.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: italic; font-synthesis-style: oblique-only">Handgloves</div>
+    <figcaption><code>italic</code>, <code>oblique-only</code>: an oblique <q>must not be used as fallback if italic
+    is specified</q>, so upright. <span class=pr-flag>Safari</span> shears it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-style: oblique; font-synthesis-style: oblique-only">Handgloves</div>
+    <figcaption><code>oblique</code>, <code>oblique-only</code>: sheared.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In vertical text</h2>
+  <p><q>For positive oblique angles, the glyph is skewed such that the line-over edge shifts towards the line-right
+  side while the line-under edge shifts towards the line-left side.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Noto Sans JP'; writing-mode: vertical-rl; height: 120px; font-style: oblique 14deg">縦書き</div>
+    <figcaption>Upright glyphs in <code>vertical-rl</code>, <code>oblique 14deg</code>: the right of each glyph
+    shifted down, the left up. <span class=pr-flag>Safari</span> draws them unskewed.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

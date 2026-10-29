@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Visual layout: the grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.25); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5 Visual layout of table contents</div>
+  <h1>Visual layout: the grid</h1>
+  <p class=pr-lede><q>The visual layout of these boxes is governed by a rectangular, irregular grid of rows and
+  columns.</q> Every cell is 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Rows and row groups</h2>
+  <p><q>Each row box occupies one row of grid cells. Together, the row boxes fill the table from top to bottom in the
+  order they occur in the source document</q>. <q>A row group occupies the same grid cells as the rows it
+  contains.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tbody style="background: #d68a3c"><tr><td>3<td>4<tr><td>5<td>6</tbody><tbody><tr><td>7<td>8</tbody></table></div>
+    <figcaption>Four rows, 20px each, top to bottom in source order. The orange row group is the second and third
+    rows, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><col style="background: #6aa36a" span=2><col><tr><td>1<td>2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption>A green <code>col</code> spanning two: <q>A column box occupies one or more columns of grid
+    cells.</q> Columns 1 and 2 are green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Columns and direction; no margins</h2>
+  <p><q>The first column box may be either on the left or on the right, depending on the value of the 'direction'
+  property of the table.</q> <q>Internal table elements do not have margins.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2
+  §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="direction: rtl"><col style="background: #6aa36a"><col><col><tr><td>1<td>2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption><code>direction: rtl</code>: the first column, green, holding 1 and 4, is on the right; 3 and 6 on the
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td style="margin: 20px; background: #4f81bd">2<td>3</table></div>
+    <figcaption>Cell 2, blue, has <code>margin: 20px</code>, which does nothing: the three cells touch.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

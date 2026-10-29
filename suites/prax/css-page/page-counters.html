@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The page and pages counters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 6.1 Page-based counters</div>
+  <h1>The page and pages counters</h1>
+  <p class=pr-lede><q>A counter named page is automatically created and incremented by 1 on every page of the document, unless the 'counter-increment' property in the page context explicitly specifies a different increment for the page counter.</q> <q>Additionally, a counter named pages is automatically created by the UA. Its value is always the total number of pages in the document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-based-counters">CSS Paged Media 3 §6.1</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Page numbers</h2>
+  <p>A footer of <code>counter(page) ' / ' counter(pages)</code> on three pages.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; @bottom-center { content: counter(page) ' / ' counter(pages) } } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption>'1 / 3', '2 / 3' and '3 / 3' below the page areas. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; counter-increment: page 2; @bottom-center { content: counter(page) ' / ' counter(pages) } } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption><q>Adding the following rule will make all pages even-numbered.</q> <code>counter-increment: page 2</code>: '2 / 3', '4 / 3', '6 / 3'. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>pages cannot be changed</h2>
+  <p><q>The value of pages cannot be manipulated: while 'counter-reset' and 'counter-increment' statements that set it are valid, they have no effect.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; counter-increment: pages 5; @bottom-center { content: counter(page) ' / ' counter(pages) } } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption><code>counter-increment: pages 5</code> changes nothing: '1 / 3', '2 / 3', '3 / 3'. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

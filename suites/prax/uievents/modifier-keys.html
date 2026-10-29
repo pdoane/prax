@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Modifier keys</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.1 Modifier keys</div>
+  <h1>Modifier keys</h1>
+  <p class=pr-lede><q>Keyboard input uses modifier keys to change the normal behavior of a key. Like other keys, modifier keys
+  generate keydown and keyup events</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-modifiers">UI Events §4.3.1</a></span></p>
+</header>
+<section>
+  <h2>Shift and Q</h2>
+  <p><q>The KeyboardEvent interface provides convenient attributes for some common modifiers keys: ctrlKey, shiftKey,
+  altKey, metaKey.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-modifiers">§4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key shiftKey ctrlKey altKey metaKey" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box. Press Shift, then Q, then release Q and Shift: keydown <code>key="Shift"</code>,
+    keydown <code>key="Q"</code>, keyup <code>key="Q"</code>, each with <code>shiftKey</code>, then keyup
+    <code>key="Shift"</code> without it.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Shift released first</h2>
+  <p><q>The key value for the Q key will revert to its unshifted value for the keyup event</q> when <q>the Shift key
+  is released before the Q key</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-modifiers">§4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=typed></div>
+      <ol class=pr-log data-log="keydown beforeinput input keyup" data-fields="key shiftKey data" data-on="#typed" data-lines=5></ol>
+    </div>
+    <figcaption>Click the field. Press Shift, press Q, release Shift, then release Q: keydown <code>"Shift"</code>,
+    keydown <code>"Q"</code>, beforeinput with <code>data="Q"</code>, input, keyup <code>"Shift"</code>, keyup
+    <code>"q"</code> without <code>shiftKey</code>; the field holds <code>Q</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

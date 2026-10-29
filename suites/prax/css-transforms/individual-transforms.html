@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>translate, rotate and scale</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 70px; }
+  .p, .g { position: absolute; left: 20px; top: 15px; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 5 Individual Transform Properties: the translate, scale, and rotate properties</div>
+  <h1>translate, rotate and scale</h1>
+  <p class=pr-lede><q>The translate, rotate, and scale properties allow authors to specify simple transforms
+  independently</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#individual-transforms">CSS Transforms 2 §5</a></span>
+  Each blue box is a 40px square at (20, 15), on the dashed outline, its "A" at its top left.
+  <a href="individual-transforms-3d.html">3D values, and none</a>, follow.</p>
+</header>
+
+<section>
+  <h2>translate</h2>
+  <p><q>When the second or third values are missing, they default to 0px.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="translate: 60px">A</div></div>
+    <figcaption><code>translate: 60px</code>: 60px right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="translate: 60px 10px">A</div></div>
+    <figcaption><code>translate: 60px 10px</code>: and 10px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="translate: 150% 25%">A</div></div>
+    <figcaption><code>translate: 150% 25%</code> of the box: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>rotate</h2>
+  <p><q>rotate: 30deg, rotate: z 30deg, and rotate: 0 0 1 30deg are equivalent.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="rotate: 90deg">A</div></div>
+    <figcaption><code>rotate: 90deg</code>: a quarter turn clockwise, "A" at the top right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="rotate: x 180deg">A</div></div>
+    <figcaption><code>rotate: x 180deg</code>: flipped, "A" upside down at the bottom left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="rotate: y 180deg">A</div></div>
+    <figcaption><code>rotate: y 180deg</code>: "A" mirrored at the top right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>scale</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 1.5">A</div></div>
+    <figcaption><code>scale: 1.5</code>, <q>the Y value ... the same as the X value</q>: 60 square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 2 0.5">A</div></div>
+    <figcaption><code>scale: 2 0.5</code>: 80 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="scale: 50%">A</div></div>
+    <figcaption><code>scale: 50%</code>: a 20px square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

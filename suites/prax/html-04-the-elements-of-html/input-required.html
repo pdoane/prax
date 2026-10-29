@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Required controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+  iframe.pr-result { height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.4 The required attribute</div>
+  <h1>Required controls</h1>
+  <p class=pr-lede><q>If the element is required, and its value IDL attribute applies and is in the mode value, and the
+  element is mutable, and the element's value is the empty string, then the element is suffering from being
+  missing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-required-attribute">HTML §4.10.5.3.4</a></span></p>
+</header>
+
+<section>
+  <h2>Missing until filled</h2>
+  <p>Each control is outlined green while it is valid and red while it is not. A form whose controls are not all valid
+  is not submitted: the browser points at the first that is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class="pad pr-validity" action=support/form-echo.html target=required-result>
+        <div><input name=name required size=10 placeholder="name"> <input name=day type=date required></div>
+        <div><input type=submit value=Submit></div>
+      </form>
+      <ol class=pr-log data-log="invalid" data-fields="target" data-lines=2></ol>
+      <iframe class=pr-result name=required-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Both red. Click Submit: <code>invalid</code> at each, a message at the name, and the frame stays grey.
+    Type a name and choose a day: both green, and Submit submits.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A radio group is satisfied by any of its buttons</h2>
+  <p><q>For radio buttons, the required attribute is satisfied if any of the radio buttons in the group is selected.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-required-attribute">§4.10.5.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><label><input type=radio name=seen> no</label> <label><input type=radio name=seen required> yes</label>
+             <label><input type=radio name=seen> not sure</label></div>
+      </div>
+    </div>
+    <figcaption>Only "yes" is required, and all three are red. Click "not sure": all three green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

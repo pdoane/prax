@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement algorithm: dense packing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); grid-auto-rows: 20px; grid-auto-flow: dense; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.5 Grid Item Placement Algorithm, step 4, dense</div>
+  <h1>Placement algorithm: dense packing</h1>
+  <p class=pr-lede><code>dense</code> <q>attempts to fill in holes earlier in the grid if smaller items come up later.
+  This may cause items to appear out-of-order, when doing so would fill in holes left by larger items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-auto-flow-property">CSS Grid Layout 2 §7.7</a></span>
+  Each item starts its search from the start of the grid. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-placement-algo">CSS Grid Layout 2 §8.5</a></span>
+  The grids below are those of the sparse page, with <code>grid-auto-flow: dense</code>.</p>
+</header>
+
+<section>
+  <h2>An item with a definite column</h2>
+  <p><q>Set the row position of the cursor to the start-most row line in the implicit grid. Set the column position of
+  the cursor to the grid item’s column-start line.</q> Then increment the row <q>until a value is found where the
+  grid item does not overlap any occupied grid cells</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b style="grid-column: 3">B</div><div class=pr-c style="grid-column: 2">C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A auto, B <code>grid-column: 3</code>, C <code>grid-column: 2</code>, D auto: all in row 1, A, C, B;
+    D starts row 2.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An item with no position</h2>
+  <p><q>Set the cursor's row and column positions to start-most row and column lines in the implicit grid.</q> Then
+  search forward, as sparse packing does, for the first place the item fits.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b style="grid-column: span 2">B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A and B each <code>span 2</code>: A in row 1, B in row 2; C goes back to row 1's column 3, ahead
+    of B, and D to column 3 of row 2.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 3">1</div><div class=pr-b style="grid-column: span 2">2</div><div class=pr-c style="grid-column: span 2">3</div><div class=pr-d>4</div><div class=pr-a>5</div></div></div>
+    <figcaption>1 spans the first row; 2 and 3, each two columns, rows 2 and 3; 4 and 5 fill the holes they leave,
+    column 3 of rows 2 and 3.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

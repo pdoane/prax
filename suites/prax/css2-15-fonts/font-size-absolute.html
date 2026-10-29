@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: absolute keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .keys { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.15; white-space: nowrap; }
+  .keys .pr-computed { font-size: 12px; font-weight: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: absolute keywords</h1>
+  <p class=pr-lede><code>font-size</code> takes <code>&lt;absolute-size&gt; | &lt;relative-size&gt; | &lt;length&gt; |
+  &lt;percentage&gt;</code>. Initial <code>medium</code>, it applies to all elements, is inherited, percentages refer to
+  the inherited font size, and it computes to an absolute length.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-size.html">font-size</a>, <a href="../css-fonts/absolute-sizes.html">The absolute size keywords</a>.</p>
+</header>
+
+<section>
+  <h2>&lt;absolute-size&gt;</h2>
+  <p><q>An &lt;absolute-size&gt; keyword is an index to a table of font sizes computed and kept by the UA. Possible
+  values are: [ xx-small | x-small | small | medium | large | x-large | xx-large ]</q>. <q>The 'medium' value is the
+  user's preferred font size and is used as the reference middle value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide keys">
+      <div id=k1 style="font-size: xx-small">xx-small <code class=pr-computed data-of=k1 data-property=font-size></code></div>
+      <div id=k2 style="font-size: x-small">x-small <code class=pr-computed data-of=k2 data-property=font-size></code></div>
+      <div id=k3 style="font-size: small">small <code class=pr-computed data-of=k3 data-property=font-size></code></div>
+      <div id=k4 style="font-size: medium">medium <code class=pr-computed data-of=k4 data-property=font-size></code></div>
+      <div id=k5 style="font-size: large">large <code class=pr-computed data-of=k5 data-property=font-size></code></div>
+      <div id=k6 style="font-size: x-large">x-large <code class=pr-computed data-of=k6 data-property=font-size></code></div>
+      <div id=k7 style="font-size: xx-large">xx-large <code class=pr-computed data-of=k7 data-property=font-size></code></div>
+    </div>
+    <figcaption>Each keyword in its own size, and its computed length beside it, which grows from line to line;
+    <code>medium</code> is the user's preferred size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No smaller than 9 pixels</h2>
+  <p><q>To preserve readability, a UA applying these guidelines should nevertheless avoid creating font-size resulting
+  in less than 9 pixels per EM unit on a computer display.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage keys" style="font-size: 20px"><span id=xxs style="font-size: xx-small">xx-small text</span></div>
+    <figcaption><code>xx-small</code>, the smallest keyword, computes to <code class=pr-computed data-of=xxs
+    data-property=font-size></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

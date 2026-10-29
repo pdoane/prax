@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: lengths</h1>
+  <p class=pr-lede><code>text-indent</code> takes <code>&lt;length&gt; | &lt;percentage&gt;</code>. Initial
+  <code>0</code>, inherited, applies to block containers. In each figure the blue box is the first box on the first
+  line.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt;</h2>
+  <p><q>This property specifies the indentation of the first line of text in a block container. More precisely, it
+  specifies the indentation of the first box that flows into the block's first line box.</q> <q>The indentation is a
+  fixed length.</q> <q>User agents must render this indentation as blank space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2
+  §16.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-a>first</span> and then text that wraps to a second line.</div>
+    <figcaption>The initial value, <code>0</code>: the first box starts at the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span class=pr-a>first</span> and then text that wraps to a second line.</div>
+    <figcaption><code>text-indent: 30px</code>: the first box starts 30px from the left, after blank space. The second
+    line starts at the left edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative, and wider than the block</h2>
+  <p><q>The value of 'text-indent' may be negative, but there may be implementation-specific limits. If the value of
+  'text-indent' is either negative or exceeds the width of the block, that first box, described above, can overflow
+  the block. The value of 'overflow' will affect whether such text that overflows the block is visible.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span></p>
+  <figure>
+    <div style="padding-left: 30px"><div class="pr-stage pr-text" style="text-indent: -30px"><span class=pr-a>first</span> and then text that wraps to a second line.</div></div>
+    <figcaption><code>text-indent: -30px</code>: the first box starts 30px left of the stage, outside it. The second
+    line starts at the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div style="padding-left: 30px"><div class="pr-stage pr-text" style="text-indent: -30px; overflow: hidden"><span class=pr-a>first</span> and then text that wraps to a second line.</div></div>
+    <figcaption>The same with <code>overflow: hidden</code>: the 30px outside the stage is clipped, so the box shows
+    cut off at the stage's left edge.</figcaption>
+  </figure>
+  <figure style="display: block">
+    <div class="pr-stage pr-narrow pr-text" style="text-indent: 120px"><span class=pr-a>first</span></div>
+    <figcaption style="max-width: none"><code>text-indent: 120px</code> in a 100px stage: the first box starts 20px
+    past the stage's right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

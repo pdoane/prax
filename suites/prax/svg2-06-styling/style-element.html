@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The style element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.2 Inline style sheets: the ‘style’ element</div>
+  <h1>The style element</h1>
+  <p class=pr-lede><q>The ‘style’ element allows style sheets to be embedded directly within SVG content.</q> <q>The
+  semantics and processing of a ‘style’ and its attributes must be the same as is defined for the HTML ‘style’
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#StyleElement">SVG 2 §6.2</a></span>
+  Each stage is an SVG 160 by 60 holding a <code>style</code> element and a rect 120 by 40 at 20, 10, orange by its
+  <code>fill</code> attribute; each style sheet makes it blue.</p>
+</header>
+
+<section>
+  <h2>Applied</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><style>#plain { fill: #4f81bd }</style><rect id=plain x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption>No attributes: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><style type="text/css">#typed { fill: #4f81bd }</style><rect id=typed x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>type="text/css"</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><style media="screen">#screen { fill: #4f81bd }</style><rect id=screen x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>media="screen"</code>, which matches: blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not applied</h2>
+  <p>The ‘media’ attribute <q>specifies a media query that must be matched for the style sheet to apply.</q> The ‘type’
+  attribute <q>specifies the style sheet language of the element's contents</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><style media="print">#print { fill: #4f81bd }</style><rect id=print x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>media="print"</code>, which does not match: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><style type="text/plain">#other { fill: #4f81bd }</style><rect id=other x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>type="text/plain"</code>, not CSS: orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

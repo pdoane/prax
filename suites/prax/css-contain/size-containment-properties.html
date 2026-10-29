@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment keeps the box's own properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { height: 50px; }
+  .k { contain: size; }
+  .k.fl, .k:not(img):not(canvas):not(iframe) { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .it { background: #f6d7b4; }
+  img, canvas, iframe { display: block; outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, the box's own properties</div>
+  <h1>Size containment keeps the box's own properties</h1>
+  <p class=pr-lede><q>All CSS properties of the size containment box are taken into account as they would be when
+  performing layout normally.</q> <q>Even when the element's sizing properties specify an intrinsic size, this does
+  not necessarily make the element zero-sized</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  Each blue box has <code>contain: size</code>; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>A container's own tracks and columns</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-measure"><div class="k fl" style="display: grid; grid-template-columns: auto 60px; grid-template-rows: 30px; column-gap: 20px"><span>much text</span></div></div>
+    <figcaption>A floated grid, <code>auto 60px</code> columns 20px apart, one 30px row: the auto column is empty,
+    so 80 by 30. <span class=pr-flag>Firefox</span> makes it 0 by 0.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="k fl" style="columns: 2 40px; column-gap: 20px; min-height: 20px">some text here</div></div>
+    <figcaption>A floated multicol, <code>columns: 2 40px</code> 20px apart, <code>min-height: 20px</code>: 100 by
+    20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="k fl" style="display: flex; padding: 5px"><span class=it>flex item</span></div></div>
+    <figcaption>A floated flex container with 5px padding: 10 by 10; its item is laid out inside the empty
+    box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced elements</h2>
+  <p>Each has a 2px orange border; the image is the 80 by 40 one.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px"><canvas class=k style="border: 2px solid #d68a3c"></canvas></div>
+    <figcaption>A <code>canvas</code>, 300 by 150 by default: 4 by 4, its border alone.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px"><iframe class=k style="border: 2px solid #d68a3c"></iframe></div>
+    <figcaption>An <code>iframe</code>: 4 by 4 too.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px"><img class=k alt="" style="border: 2px solid #d68a3c; width: min-content; min-width: 30px; min-height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption>The image with <code>width: min-content; min-width: 30px; min-height: 20px</code>: 34 by 24.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

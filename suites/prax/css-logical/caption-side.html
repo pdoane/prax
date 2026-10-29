@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>caption-side: block-start and block-end</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .tb { border-collapse: collapse; font: 12px/18px 'PR Arimo'; }
+  .tb td { border: 1px solid #2c5a8f; background: #f4f5f7; padding: 0 6px; }
+  .tb caption { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 2.1 Logical Values for the caption-side Property</div>
+  <h1>caption-side: block-start and block-end</h1>
+  <p class=pr-lede><q>The existing top and bottom values are idiosyncratically redefined as assigning to the block-start and block-end sides of the table, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#caption-side">CSS Logical Properties and Values 1 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>top and bottom</h2>
+  <p><code>caption-side: top</code>, the initial value, then <code>bottom</code>; <code>direction</code> plays no part.</p>
+  <figure class="w">
+    <div class="pr-stage w"><table class=tb><caption>caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption><code>top</code>, horizontal: the caption above the cells.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><table class=tb><caption>caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption><code>top</code>, <code>vertical-rl</code>: at the right, the block-start side.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w"><table class=tb><caption style="caption-side: bottom">caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption><code>bottom</code>, horizontal: below the cells.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><table class=tb><caption style="caption-side: bottom">caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption><code>bottom</code>, <code>vertical-rl</code>: at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><table class=tb><caption style="caption-side: bottom">caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption><code>bottom</code>, <code>rtl</code>: below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The table wrapper's writing mode, not the caption's</h2>
+  <p><q>The mapping on this property uses the writing mode of the caption’s containing block (that is, the table wrapper box).</q> Each caption has a writing mode of its own.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><table class=tb><caption style="writing-mode: horizontal-tb">caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption>A <code>vertical-rl</code> table, a horizontal caption: at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w"><table class=tb><caption style="writing-mode: vertical-rl">caption</caption><tr><td>cell</td><td>cell</td></tr></table></div>
+    <figcaption>A horizontal table, a <code>vertical-rl</code> caption: above.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image(): images with a direction</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage ul { margin: 10px 0; padding: 0 30px; }
+  li[dir=rtl] { text-align: start; }
+  .box { width: 100px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 5 · 2.1.4 Bidi-sensitive Images</div>
+  <h1>image(): images with a direction</h1>
+  <p class=pr-lede><q>If a directional image is used on or in an element with opposite direction, the image must be
+  flipped in the inline direction (as if it was transformed by, e.g., scaleX(-1), if the inline direction is the X
+  axis).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-5/#bidi-images">CSS Images 5 §2.1.4</a></span>
+  The image is an orange arrow, 20 by 20, that points right.</p>
+</header>
+
+<section>
+  <h2>A marker that points into its text</h2>
+  <p>Each list has two items, the first <code>dir=ltr</code>, the second
+  <code>dir=rtl</code>, so the second's marker is at the right.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><ul class=pr-text style="list-style-image: image(ltr 'support/arrow.svg')"><li dir=ltr>Left<li dir=rtl>Right</ul></div>
+    <figcaption><code>image(ltr …)</code>: the first arrow points right, the second, flipped, left, each toward its
+    text. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Disc markers.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><ul class=pr-text style="list-style-image: image('support/arrow.svg')"><li dir=ltr>Left<li dir=rtl>Right</ul></div>
+    <figcaption>No direction: <q>images default to no directionality at all</q>, so both arrows point right. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Disc
+    markers.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On the element itself</h2>
+  <p>The dashed box is 100 by 40, with its background drawn once at the top left.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" dir=rtl style="background-image: image(ltr 'support/arrow.svg')"></div></div>
+    <figcaption><code>dir=rtl</code>, <code>image(ltr …)</code>: the arrow at the top left, flipped to point left.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" dir=rtl style="background-image: image(rtl 'support/arrow.svg')"></div></div>
+    <figcaption><code>dir=rtl</code>, <code>image(rtl …)</code>: the same direction, so not flipped: pointing right.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

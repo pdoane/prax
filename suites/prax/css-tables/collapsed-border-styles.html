@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: hidden, inset, outset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.3.4 Border styles (collapsed-borders mode)</div>
+  <h1>Collapsed borders: hidden, inset, outset</h1>
+  <p class=pr-lede><q>Some of the values of the 'border-style' have different meanings for tables in collapsed-borders
+  mode than usual.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-style-overrides">CSS Table 3 §5.3.4</a></span>
+  Each table is collapsed, one row of two cells.</p>
+</header>
+
+<section>
+  <h2>hidden</h2>
+  <p><q>Same as none, but also inhibits any other border</q>.</p>
+  <figure>
+    <div class=pr-stage><table style="border: 2px hidden"><tr><td style="border: 10px solid #4f81bd"></td><td style="border: 10px solid #d68a3c"></td></tr></table></div>
+    <figcaption>A <code>hidden</code> table border, 10px cell borders: no border on the table's four sides; only the
+    blue 10px between the cells.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inset as ridge, outset as groove</h2>
+  <p><q>inset: Same as ridge.</q> <q>outset: Same as groove.</q> Every border is 8px blue.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border: 8px inset #4f81bd"></td><td style="border: 8px ridge #4f81bd"></td></tr></table></div>
+    <figcaption><code>inset</code>, then <code>ridge</code>: both cells look alike, raised in the middle of each
+    border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border: 8px outset #4f81bd"></td><td style="border: 8px groove #4f81bd"></td></tr></table></div>
+    <figcaption><code>outset</code>, then <code>groove</code>: both alike, carved in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

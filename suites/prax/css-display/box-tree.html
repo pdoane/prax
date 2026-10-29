@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The box tree</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .wrap { padding: 4px; background: #f6d7b4; border: 2px solid #d68a3c; }
+  .cell { display: table-cell; padding: 0 6px; background: #b9cde6; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 1 Introduction</div>
+  <h1>The box tree</h1>
+  <p class=pr-lede><q>for each element, CSS generates zero or more boxes as specified by that element's 'display'
+  property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#intro">CSS Display 4 §1</a></span></p>
+</header>
+
+<section>
+  <h2>Zero, one or more boxes</h2>
+  <p><q>Typically, an element generates a single box, the principal box</q>. <q>However, some 'display' values (e.g.
+  display: list-item) generate more than one box</q>. <q>And some values (such as none or contents) cause the element
+  and/or its descendants to not generate any boxes at all.</q> Each stage holds an element with a 2px orange border
+  and two children, A and B.</p>
+  <figure>
+    <div class=pr-stage><div class=wrap style="display: list-item; margin-left: 30px"><span class=pr-a>A</span> <span class=pr-b>B</span></div></div>
+    <figcaption><code>list-item</code>: two boxes, the bordered block and a disc, its marker, outside it to the
+    left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=wrap style="display: contents"><span class=pr-a>A</span> <span class=pr-b>B</span></div></div>
+    <figcaption><code>contents</code>: no box of its own, so no border; A and B are drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 28px"><div class=wrap style="display: none"><span class=pr-a>A</span> <span class=pr-b>B</span></div></div>
+    <figcaption><code>none</code>: no box for it or for A and B; the stage is empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A property given to another box than the principal one</h2>
+  <p><q>the 'border' properties applied to a table element are applied to its table grid box, not to its principal
+  table wrapper box.</q> The wrapper also holds the caption.</p>
+  <figure>
+    <div class=pr-stage><table id=t1 style="border: 2px solid #d68a3c; border-spacing: 2px"><caption class=pr-text style="background: #f6d7b4">caption</caption><tr><td class=cell>one</td><td class=cell>two</td></tr></table></div>
+    <figcaption>The orange border goes round the cells, and the caption is outside it, above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

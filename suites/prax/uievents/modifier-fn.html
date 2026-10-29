@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A modifier that changes the key</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.1 Modifier keys</div>
+  <h1>A modifier that changes the key</h1>
+  <p class=pr-lede><q>In some cases, modifier keys change the key value for a key event.</q> <q>on some MacOS keyboards, the key labeled "delete" functions the same as the Backspace key on the Windows OS
+  when unmodified, but when modified by the Fn key, acts as the Delete key, and the value of key will match the most
+  appropriate function of the key in its current modified state.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-modifiers">UI Events §4.3.1</a></span></p>
+</header>
+<section>
+  <h2>A modifier that changes the key</h2>
+  <p>The key's value follows the function it has with the modifier held. <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-modifiers">§4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=fn tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code" data-on="#fn" data-lines=2></ol>
+    </div>
+    <figcaption>On a Mac laptop, click the box and press delete: <code>key="Backspace"</code>. Hold Fn and press it:
+    <code>key="Delete"</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

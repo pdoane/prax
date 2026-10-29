@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grouping properties: clip-path, isolation, blending, masks, containment</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .ctx { position: absolute; left: 10px; top: 10px; width: 80px; height: 60px; transform-style: preserve-3d; }
+  .a, .b { position: absolute; width: 40px; height: 40px; }
+  .a { left: 0; top: 0; transform: translateZ(20px); }
+  .b { left: 30px; top: 20px; transform: translateZ(-20px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 7.1 Grouping property values</div>
+  <h1>Grouping properties: clip-path, isolation, blending, masks, containment</h1>
+  <p class=pr-lede><q>The following CSS property values require the user agent to create a flattened representation of
+  the descendant elements before they can be applied, and therefore force the element to have a used style of flat for
+  preserve-3d.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#grouping-property-values">CSS Transforms 2 §7.1</a></span>
+  Each stage holds a <code>preserve-3d</code> box with the declaration named, holding blue A with
+  <code>translateZ(20px)</code>, then orange B with <code>translateZ(-20px)</code>. In 3D, A, nearer, covers B;
+  flattened, B, later, covers A.</p>
+</header>
+
+<section>
+  <h2>clip-path, isolation, blending, masks and containment</h2>
+  <p><q>clip-path: any value other than none.</q> <q>isolation: used value of isolate.</q> <q>mask-image: any value other than none.</q> <q>mask-border-source: any value other than none.</q> <q>mix-blend-mode: any value other than normal.</q> <q>contain: paint and any other property/value combination that causes paint containment.</q></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="clip-path: inset(0)"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>clip-path: inset(0)</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="isolation: isolate"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>isolation: isolate</code>: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="mix-blend-mode: darken"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>mix-blend-mode: darken</code>, no change in color here: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="mask-image: linear-gradient(black, black)"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>mask-image</code>, opaque: flat.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="mask-border-source: linear-gradient(black, black); mask-border-slice: 1 fill"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>mask-border-source</code>, opaque, sliced to fill: flat. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> no mask border: A covers B.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="contain: paint"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>contain: paint</code>: flat. <span class=pr-flag>Chrome</span> A covers B.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-cb"><div class=ctx style="content-visibility: auto"><div class="pr-a pr-fit a">A</div><div class="pr-b pr-fit b">B</div></div></div>
+    <figcaption><code>content-visibility: auto</code>, paint containment: flat. <span class=pr-flag>Chrome</span> A covers B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-position property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  ul.outside { list-style: outside }
+  ul.compact { list-style: inside }
+  .before li::before { content: "[before] "; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-position property</h1>
+  <p class=pr-lede><code>list-style-position</code> takes <code>inside | outside</code>. Initial <code>outside</code>,
+  inherited, applies to elements with <code>display: list-item</code>. <q>This property specifies the position of the
+  marker box with respect to the principal block box.</q> Each item's principal box is tinted blue. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Outside and inside</h2>
+  <p><q>outside: The marker box is outside the principal block box.</q> <q>inside: The marker box is placed as the first
+  inline box in the principal block box, before the element's content and before any :before pseudo-elements.</q> The
+  specification's example, with the list set on the <code>ul</code> and inherited by its items: <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=outside><li>first list item comes first<li>second list item comes second</ul></div>
+    <figcaption><code>outside</code>: the discs are left of the tinted boxes, and wrapped lines start under the first
+    line's text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=compact><li>first list item comes first<li>second list item comes second</ul></div>
+    <figcaption><code>inside</code>: the discs are in the tinted boxes, and wrapped lines start at the
+    tinted box's left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="compact before"><li>text</ul></div>
+    <figcaption><code>inside</code> with a <code>:before</code>: the disc, then "[before]", then "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul><li>initial</ul></div>
+    <figcaption>No <code>list-style-position</code>: the initial <code>outside</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Right to left</h2>
+  <p>CSS 2.2 does <q>require that for list items whose 'direction' property is 'ltr' the marker box be on the left side
+  of the content and for elements whose 'direction' property is 'rtl' the marker box be on the right side of the
+  content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" dir=rtl><ul class=outside style="padding: 0 30px 0 0"><li>right to left</ul></div>
+    <figcaption><code>direction: rtl</code>: the disc is right of the tinted box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" dir=rtl><ul class=compact style="padding: 0 30px 0 0"><li>right to left</ul></div>
+    <figcaption><code>inside</code>: the disc is in the box, at its right end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

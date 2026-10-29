@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The primary pointer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 60px; margin: 10px 20px; touch-action: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.2 The primary pointer</div>
+  <h1>The primary pointer</h1>
+  <p class=pr-lede><q>At any given time, there can only ever be at most one primary pointer for each pointer type.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-primary-pointer">Pointer Events §3.1.2</a></span></p>
+</header>
+<section>
+  <h2>The first finger</h2>
+  <p><q>The first pointer to become active for a particular pointer type (e.g. the first finger to touch the screen in
+  a multi-touch interaction) becomes the primary pointer for that pointer type.</q> <q>Only a primary pointer will
+  produce compatibility mouse events.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-primary-pointer">§3.1.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Touch with one finger, then a second.</div>
+      <ol class=pr-log data-log="pointerdown mousedown" data-fields="pointerType pointerId isPrimary" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Needs a touch screen. Put one finger on the box, then a second beside it: the first
+    <code>pointerdown</code> is <code>isPrimary</code>, the second is not. No <code>mousedown</code> ever comes for
+    the second; a tap with one finger brings one for the first, where the browser maps touch to mouse
+    events.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>One primary of each type</h2>
+  <p><q>When two or more pointer device types are being used concurrently, multiple pointers (one for each pointerType)
+  are considered primary.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-primary-pointer">§3.1.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=both>Hold the mouse button here, and touch.</div>
+      <ol class=pr-log data-log="pointerdown" data-fields="pointerType pointerId isPrimary" data-on="#both" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen and a mouse. Hold the mouse button down over the box, and touch it: both
+    <code>pointerdown</code>s are <code>isPrimary</code>, with different <code>pointerId</code>s.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

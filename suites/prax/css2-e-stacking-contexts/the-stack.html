@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: the stack and the canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; box-sizing: border-box; width: 100px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: the stack and the canvas</h1>
+  <p class=pr-lede><q>The bottom of the stack is the furthest from the user, the top of the stack is the nearest to the
+  user</q>: what is painted later is nearer, and covers what is painted earlier. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+</header>
+
+<section>
+  <h2>From the background to the most positive level</h2>
+  <p><q>The stacking context background and most negative positioned stacking contexts are at the bottom of the stack,
+  while the most positive positioned stacking contexts are at the top of the stack.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2
+  §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-cb pr-stacking" style="height: 105px"><div class="pr-a p" style="z-index: 2; left: 170px; top: 55px">z-index: 2</div><div class="pr-c p" style="z-index: 1; left: 120px; top: 40px">z-index: 1</div><div class="pr-b p" style="z-index: 0; left: 70px; top: 25px">z-index: 0</div><div class="pr-d p" style="z-index: -1; left: 20px; top: 10px">z-index: −1</div></div>
+    <figcaption>The stage forms the stacking context and its background is at the bottom. Its boxes are in the source
+    from 2 down to −1, and are painted from −1 up to 2: each covers the one to its left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The canvas</h2>
+  <p><q>The canvas is transparent if contained within another, and given a UA-defined color if it is not. It is
+  infinite in extent and contains the root element. Initially, the viewport is anchored with its top left corner at the
+  canvas origin.</q> In each frame, neither root nor body has a
+  background. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } div { margin: 10px 0 0 10px; width: 100px; height: 20px; background: #4f81bd }</style><div></div>"></iframe></div>
+    <figcaption>The frame's canvas is within this page's, so it is transparent: the stage's guides show through.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; height: 300px } div { margin: 10px 0 0 10px; width: 100px; height: 20px; background: #4f81bd }</style><div></div><script>scrollTo(0, 20)</script>"></iframe></div>
+    <figcaption>The same, 300px tall and scrolled down 20px: the viewport is off the canvas origin,
+    and the box's top half is above it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

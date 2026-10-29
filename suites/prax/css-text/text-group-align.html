@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-group-align</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 60px; }
+  .x { display: inline-block; width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.6 Aligning a block of text within its container: the text-group-align property</div>
+  <h1>text-group-align</h1>
+  <p class=pr-lede><q>Group alignment is performed by finding the line box with the shortest remaining space and adding
+  that amount of space as padding to one or both sides of the line box, reducing the amount of space available for its
+  contents; text alignment is then applied to its contents within the remaining space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-group-align-property">CSS Text 4 §7.6</a></span>
+  No browser has the property. Each stage holds two lines, a 120px box and a 60px one; the shortest remaining space is
+  80px.</p>
+</header>
+
+<section>
+  <h2>The lines as a group</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-group-align: center"><span class="pr-a x">a</span><br><span class="pr-b w">b</span></div>
+    <figcaption><code>center</code>, <code>text-align: start</code>: 40px of padding each side; both lines start at
+    40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Both
+    at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-group-align: center; text-align: end"><span class="pr-a x">a</span><br><span class="pr-b w">b</span></div>
+    <figcaption><code>center</code>, <code>text-align: end</code>: both lines end at 160px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Both at the
+    right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-group-align: end; text-align: center"><span class="pr-a x">a</span><br><span class="pr-b w">b</span></div>
+    <figcaption><code>end</code>, <code>text-align: center</code>: 80px of padding at the start; the lines centered
+    in 80 to 200: a at 80px, b at 110. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Centered in the whole: a at 40, b at 70.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-group-align: left; text-align: right"><span class="pr-a x">a</span><br><span class="pr-b w">b</span></div>
+    <figcaption><code>left</code>, <code>text-align: right</code>: 80px of padding on the line-right; the lines
+    right-aligned in 0 to 120: a at 0, b at 60. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> At the right edge: a at 80, b at 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

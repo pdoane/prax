@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The five generic families</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.3.1 Generic font families</div>
+  <h1>The five generic families</h1>
+  <p class=pr-lede><q>All five generic font families are defined to exist in all CSS implementations (they need not
+  necessarily map to five distinct actual fonts).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#generic-font-families">CSS 2 §15.3.1</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/generic-families.html">Generic families</a>.</p>
+</header>
+
+<section>
+  <h2>serif, sans-serif, cursive, fantasy, monospace</h2>
+  <p>Each figure names its generic family alone. Serif glyphs <q>tend to have finishing strokes, flared or tapering
+  ends, or have actual serifed endings</q>; sans-serif ones <q>have stroke endings that are plain</q>; cursive ones
+  <q>generally have either joining strokes or other cursive characteristics beyond those of italic typefaces</q>;
+  fantasy fonts <q>are primarily decorative</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#serif">CSS 2 §15.3.1.1</a>–4</span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: serif">Handgloves</div>
+    <figcaption><code>serif</code>: small strokes finish the ends of the letters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: sans-serif">Handgloves</div>
+    <figcaption><code>sans-serif</code>: plain stroke ends, even stroke widths.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: cursive">Handgloves</div>
+    <figcaption><code>cursive</code>: a pen hand, letters flowing into each other.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: fantasy">Handgloves</div>
+    <figcaption><code>fantasy</code>: a decorative face, still readable letters.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>monospace</h2>
+  <p><q>The sole criterion of a monospace font is that all glyphs have the same fixed width.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#monospace">CSS 2
+  §15.3.1.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace; font-size: 24px">iiiii<br>WWWWW</div>
+    <figcaption><code>monospace</code>: five i's are as wide as five W's.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: sans-serif">iiiii<br>WWWWW</div>
+    <figcaption><code>sans-serif</code>, for comparison: the i's are much narrower.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Zero-sized fragments stay before the break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.5 Optimizing Unforced Breaks</div>
+  <h1>Zero-sized fragments stay before the break</h1>
+  <p class=pr-lede><q>Additionally, CSS imposes one requirement: a zero-sized box fragment, since it does not take up space, must appear on the earlier side of a fragmentation break if it is able to fit within the fragmentainer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#best-breaks">CSS Fragmentation 4 §4.5</a></span> Each stage has three columns 60px tall; the red line is the outline of an empty block, 0px tall.</p>
+</header>
+
+<section>
+  <h2>On the earlier side</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-b>B</div><div style="outline: 2px solid #c0392b"></div><div class=pr-c>C</div></div>
+    <figcaption>Three Bs fill the first column; the empty block fits at its foot, so it stays there, under the third B. C starts the second column. <span class=pr-flag>Safari</span> Pushes it to the top of the second column, above C.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After content that overflows</h2>
+  <p><q>Note: A zero-sized box fragment will be pushed to the next fragmentainer if it is placed immediately after content that itself overflows the fragmentainer.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><img alt="" style="display: block; width: 60px; height: 80px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 8'><rect width='6' height='8' fill='%238e44ad'/><circle cx='3' cy='4' r='1.5' fill='white'/></svg>"><div style="outline: 2px solid #c0392b"></div><div class=pr-c>C</div></div>
+    <figcaption>An image 80px tall overflows the first column: the empty block is pushed to the top of the second, above C. Safari slices the image, as a UA may when nothing else fits, and the block follows the slice. <span class=pr-flag>Firefox</span> leaves it under the image.</figcaption>
+  </figure>
+</section>
+
+<p class=pr-note>The section also recommends, without requiring it: <q>Break as few times as possible. Make all
+fragmentainers that don’t end with a forced break appear to be equally filled with content. Avoid breaking inside a
+replaced element.</q> Column balancing is shown in <a href="../css-multicol/balancing.html">balancing</a>.</p>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+  .pad input[type=range] { width: 180px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.9 The list attribute</div>
+  <h1>The list attribute</h1>
+  <p class=pr-lede><q>The list attribute is used to identify an element that lists predefined options suggested to the
+  user.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-list-attribute">HTML §4.10.5.3.9</a></span></p>
+</header>
+
+<section>
+  <h2>Suggestions while editing</h2>
+  <p><q>If appropriate, the user agent should use the suggestion's label and value to identify the suggestion to the
+  user.</q> <q>When the user selects a suggestion, the input element's value must be set to the selected suggestion's
+  value, as if the user had written that value themself.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-list-attribute">§4.10.5.3.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input list=function-types size=20 placeholder="a kind of function"></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <datalist id=function-types>
+      <option value="function">function</option>
+      <option value="async function">async function</option>
+      <option value="function*">generator function</option>
+      <option value="=>">arrow function</option>
+      <option value="async =>">async arrow function</option>
+      <option value="async function*">async generator function</option>
+    </datalist>
+    <figcaption>The standard's example. Click into the field: six suggestions, by label and value. Type "arrow": the
+    two arrow functions, matched by label. Choose "arrow function": the field holds <code>=&gt;</code>, and
+    <code>input</code> is logged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tick marks on a slider</h2>
+  <p><q>Predefined suggested values (provided by the list attribute) are expected to be shown as tick marks on the
+  slider, which the slider can snap to.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-a-range-control">§15.5.8</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=range min=-100 max=100 value=0 step=10 list=powers></div>
+      </div>
+    </div>
+    <datalist id=powers>
+      <option value="0"></option>
+      <option value="-30"></option>
+      <option value="30"></option>
+      <option value="++50"></option>
+    </datalist>
+    <figcaption>Ticks at -30, 0 and 30, from the standard's example; "++50" is no number, and has none. Drag the thumb
+    near a tick: it snaps to it.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

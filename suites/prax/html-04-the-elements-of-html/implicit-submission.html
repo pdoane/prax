@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Implicit submission</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0 0 10px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.22.2 Implicit submission</div>
+  <h1>Implicit submission</h1>
+  <p class=pr-lede><q>If the user agent supports letting the user submit a form implicitly (for example, on some
+  platforms hitting the "enter" key while a text control is focused implicitly submits the form), then doing so for a
+  form, whose default button has activation behavior and is not disabled, must cause the user agent to fire a click
+  event at that default button.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission">HTML §4.10.22.2</a></span></p>
+</header>
+
+<section>
+  <h2>The default button</h2>
+  <p><q>A form element's default button is the first submit button in tree order whose form owner is that form
+  element.</q> The page's script cancels each <code>submit</code> here, after it is logged. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission">§4.10.22.2</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad>
+        <input size=8 placeholder="press Enter"><br>
+        <button type=button id=plain>Plain</button>
+        <button id=first>First</button>
+        <button id=second>Second</button>
+      </form>
+      <ol class=pr-log data-log="click submit" data-fields="target submitter" data-lines=2></ol>
+    </div>
+    <figcaption>Press Enter in the field: <code>click</code> at <code>first</code>, then <code>submit</code> with
+    <code>submitter=first</code>; Plain is no submit button.</figcaption>
+  </figure><figure>
+    <div class=pr-stage>
+      <form class=pad>
+        <input size=8 placeholder="press Enter"><br>
+        <button id=off disabled>Disabled</button>
+        <button id=on>Enabled</button>
+      </form>
+      <ol class=pr-log data-log="click submit" data-fields="target submitter" data-lines=2></ol>
+    </div>
+    <figcaption>The default button is disabled. Press Enter in the field: nothing is logged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No submit button</h2>
+  <p><q>If the form has no submit button, then the implicit submission mechanism must perform the following steps: If
+  the form has more than one field that blocks implicit submission, then return.</q> Text fields block it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#implicit-submission">§4.10.22.2</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad>
+        <input size=8 placeholder="press Enter">
+      </form>
+      <ol class=pr-log data-log="submit" data-fields="target submitter" data-lines=1></ol>
+    </div>
+    <figcaption>One field: press Enter in it, and <code>submit</code>, with no submitter.</figcaption>
+  </figure><figure>
+    <div class=pr-stage>
+      <form class=pad>
+        <input size=8 placeholder="press Enter"><br>
+        <input size=8 placeholder="or here">
+      </form>
+      <ol class=pr-log data-log="submit" data-fields="target submitter" data-lines=1></ol>
+    </div>
+    <figcaption>Two fields: press Enter in either, and nothing is logged.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps every form here from navigating the page.
+  for (const form of document.forms)
+      form.addEventListener("submit", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

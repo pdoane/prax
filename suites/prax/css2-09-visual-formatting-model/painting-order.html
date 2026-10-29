@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The z-index property: painting order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .layer { box-sizing: border-box; height: 50px; padding: 2px 6px; color: white; font-size: 12px; font-weight: 600; line-height: 16px; border: 1px solid rgba(0, 0, 0, 0.4); }
+  .l2 { position: absolute; z-index: -1; left: 10px; top: 10px; width: 110px; background: #8e44ad; }
+  .l3 { margin: 30px 0 0 40px; width: 220px; height: 110px; background: #6aa36a; }
+  .l4 { float: left; margin: 20px -80px 0 30px; width: 110px; background: #4f81bd; }
+  .l5 { display: inline-block; vertical-align: top; margin: 40px 0 0 0; width: 100px; background: #d68a3c; }
+  .l6 { position: absolute; left: 140px; top: 80px; width: 110px; background: #c0392b; }
+  .l7 { position: absolute; z-index: 1; left: 200px; top: 100px; width: 90px; background: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.9.1 Specifying the stack level: the 'z-index' property</div>
+  <h1>The z-index property: painting order</h1>
+  <p class=pr-lede><q>Within each stacking context, the following layers are painted in back-to-front order.</q> The
+  detailed rules are in Appendix E.</p>
+</header>
+
+<section>
+  <h2>The seven layers</h2>
+  <p>1. <q>the background and borders of the element forming the stacking context.</q> 2. <q>the child stacking
+  contexts with negative stack levels.</q> 3. <q>the in-flow, non-inline-level, non-positioned descendants.</q> 4.
+  <q>the non-positioned floats.</q> 5. <q>the in-flow, inline-level, non-positioned descendants, including inline
+  tables and inline blocks.</q> 6. <q>the child stacking contexts with stack level 0 and the positioned descendants with
+  stack level 0.</q> 7. <q>the child stacking contexts with positive stack levels.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#z-index">CSS 2
+  §9.9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-cb pr-stacking" style="height: 150px"><div class="layer l7">7: z-index 1</div><div class="layer l6">6: positioned</div><div class="layer l3"><div class="layer l4">4: float</div><span class="layer l5">5: inline-block</span><br>3: block</div><div class="layer l2">2: z-index −1</div></div>
+    <figcaption>The stage forms the stacking context, and its background is layer 1. The boxes are in the source in
+    the opposite order, 7 first, and each paints over the one before it in the list.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

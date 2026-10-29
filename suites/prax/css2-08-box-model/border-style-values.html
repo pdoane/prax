@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: the values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: the values</h1>
+  <p class=pr-lede><code>border-*-style</code> and <code>border-style</code> take <code>none | hidden | dotted |
+  dashed | solid | double | groove | ridge | inset | outset</code>. Initial <code>none</code>, not inherited. Every
+  figure's border is 10px wide unless it says otherwise.</p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p>The specification describes each value, and leaves the details of drawing it to the user agent. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#border-style-properties">CSS 2 §8.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: none"></div></div>
+    <figcaption><code>none</code>: <q>No border; the computed border width is zero.</q> <span class="pr-flag pr-since">Since CSS 2</span> The used width is zero (8.5.1).</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: hidden"></div></div>
+    <figcaption><code>hidden</code>: <q>Same as 'none', except in terms of border conflict resolution for table
+    elements.</q></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: dotted"></div></div>
+    <figcaption><code>dotted</code>: <q>The border is a series of dots.</q> <span class="pr-flag pr-since">Since CSS 2</span> Round dots.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: dashed"></div></div>
+    <figcaption><code>dashed</code>: <q>The border is a series of short line segments.</q> <span class="pr-flag pr-since">Since CSS 2</span> Square-ended.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: solid"></div></div>
+    <figcaption><code>solid</code>: <q>The border is a single line segment.</q></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-width: 10px; border-style: double"></div></div>
+    <figcaption><code>double</code>: <q>The border is two solid lines. The sum of the two lines and the space between
+    them equals the value of 'border-width'.</q></figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

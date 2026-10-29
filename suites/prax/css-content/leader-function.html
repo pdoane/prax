@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The leader() function</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .toc div { margin: 0; }
+  .dotted span::after { content: leader(dotted) "9"; }
+  .solid span::after { content: leader(solid) "9"; }
+  .space span::after { content: leader(space) "9"; }
+  .string span::after { content: leader(". ") "9"; }
+  .star span::after { content: leader("*") "13"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.5.1 The leader() function</div>
+  <h1>The leader() function</h1>
+  <p class=pr-lede><q>A leader, sometimes known as a tab leader or a dot leader, is a repeating pattern used to visually
+  connect content across horizontal spaces.</q> <q>This function takes a string (the leader string), which describes
+  the repeating pattern for the leader.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leaders">CSS Generated Content 3 §2.5</a></span></p>
+</header>
+
+<section>
+  <h2>Three keywords</h2>
+  <p><q>Three keywords are shorthand values for common strings:</q> <q>dotted Equivalent to leader(".")</q> <q>solid
+  Equivalent to leader("_")</q> <q>space Equivalent to leader(" ")</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leader-function">§2.5.1</a></span>
+  Each line is <code>&lt;span&gt;Loomings&lt;/span&gt;</code> with <code>::after { content: leader(…) "9" }</code>,
+  in <code>.pr-measure</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc dotted"><div><span>Loomings</span></div></div>
+    <figcaption><code>dotted</code>: "Loomings", eleven dots, and "9" against the stage's right edge.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    None has leaders: "Loomings" alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc solid"><div><span>Loomings</span></div></div>
+    <figcaption><code>solid</code>: an underscore rule from "Loomings" to "9" at the right edge.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    "Loomings" alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc space"><div><span>Loomings</span></div></div>
+    <figcaption><code>space</code>: blank space, and "9" at the right edge. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "Loomings" alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A string of one's own</h2>
+  <p>The leader string repeats: <q>The leader string must appear in full at least once.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#leader-rules">§2.5.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc string"><div><span>Loomings</span></div></div>
+    <figcaption><code>leader(". ")</code>: dot, space, dot, space… from "Loomings" to "9".
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    "Loomings" alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure toc star"><div><span>The Carpet-Bag</span></div></div>
+    <figcaption><code>leader("*")</code> and "13": "The Carpet-Bag", four stars, "13" at the right edge, filling the
+    200px exactly. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> The title alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

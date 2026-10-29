@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inter-script spacing: which letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 6px; font: 40px/60px "PR Noto Sans JP"; white-space: nowrap; text-autospace: ideograph-alpha; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+  .pr-stage { width: 124px; }
+  .v { writing-mode: vertical-rl; width: auto; height: 130px; padding: 6px 0; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.4.1 Inter-script Spacing</div>
+  <h1>Inter-script spacing: which letters</h1>
+  <p class=pr-lede><q>In the context of the 'text-autospace' property the following definitions apply:</q>
+  <q>non-ideographic letters</q>, <q>Includes all typographic character units that belong to Unicode Letters [L*] and
+  Mark [M*] general category, except when any of the following conditions are met</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#inter-script-spacing">CSS Text 4 §8.4.1</a></span>
+  Ideographs are 40px, the space 5px. Each stage is <code>text-autospace: ideograph-alpha</code>, the last
+  <code>ideograph-numeric</code>.</p>
+</header>
+
+<section>
+  <h2>Not wide letters, nor upright ones</h2>
+  <p><q>non-ideographic letters</q> exclude a letter that <q>is categorized as East Asian Wide (W) or Fullwidth (F)</q>
+  or <q>is upright in vertical text flow using the 'text-orientation' property or the 'text-combine-upright'
+  property.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja>漢Ａ字</div>
+    <figcaption>Fullwidth "Ａ": no space.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja v" lang=ja>漢A字</div>
+    <figcaption>Vertical, "A" sideways: 5px above and below it. <span class=pr-flag>Chrome</span> None.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja v" lang=ja style="text-orientation: upright">漢A字</div>
+    <figcaption><code>text-orientation: upright</code>: none.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja v" lang=ja style="text-autospace: ideograph-numeric">漢<span style="text-combine-upright: all">12</span>字</div>
+    <figcaption>"12" combined upright: none.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

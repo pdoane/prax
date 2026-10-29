@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fragmenting a grid: rows that grow</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .pr-stage.cols { width: 140px; column-count: 2; column-gap: 20px; column-fill: auto; height: 60px; }
+  .g { display: grid; grid-template-columns: 30px 30px; }
+  .after { height: 10px; background: #c9ced6; }
+  .tall { height: 40px; break-inside: avoid; }
+  figure { margin-right: 10px; }
+  figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 13.1 Sample Fragmentation Algorithm</div>
+  <h1>Fragmenting a grid: rows that grow</h1>
+  <p class=pr-lede>A non-normative algorithm: lay out the grid <q>by using the fragmentation container’s inline size and
+  assume unlimited block size</q>, then <q>Layout the grid container using the values resolved in the previous
+  step.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#fragmentation-alg">CSS Grid Layout 2 §13.1</a></span>
+  The rules it follows: <q>UAs should attempt to minimize distortion of the grid container with respect to
+  unfragmented flow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#pagination">§13</a></span>
+  Each stage is two columns, 60px wide and 60px tall; each grid has two 30px columns.</p>
+</header>
+
+<section>
+  <h2>A row pushed to the next column grows</h2>
+  <p><q>If a grid area’s size changes due to fragmentation (do not include items that span rows in this decision),
+  increase the grid row size as necessary for rows that either: have a content min track sizing function.</q> Each
+  tall item is 40px with
+  <code>break-inside: avoid</code>; the rows are <code>auto</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g><div class="pr-a tall">1</div><div class="pr-b tall">2</div><div class="pr-c tall">3</div><div class=pr-d>4</div></div></div>
+    <figcaption>Row 1, 40px, fills the first column but 20px; row 2 does not fit there and moves to the top of the
+    second, 3 and 4 together, 4 stretched to 3's 40px. <span class=pr-flag>Safari</span> splits row 2 across the break.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=g><div class="pr-a tall">1</div><div class="pr-b tall">2</div><div class="pr-c tall">3</div><div class=pr-d>4</div></div><div class=after></div></div>
+    <figcaption>A grey block follows: <q>the height of the grid should be the sum of the final row sizes</q>, so
+    it is below row 2, from 40px in the second column. <span class=pr-flag>Safari</span> puts it at
+    20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

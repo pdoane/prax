@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>margin-trim: alignment, floats, other containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { border: 1px dashed #6b7381; background: rgba(79, 129, 189, 0.16); }
+  .box > .pr-a, .box > .pr-b { margin: 10px 0; }
+  .fl { float: left; width: 40px; margin-top: 20px; }
+  figure.pr-narrow figcaption { max-width: 160px; }
+  figure.pr-narrow { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.3 Margins at Container Edges: the margin-trim property, adjacency</div>
+  <h1>margin-trim: alignment, floats, other containers</h1>
+  <p class=pr-lede>It applies to <q>block containers, multi-column containers</q>, and trims margins <q>For in-flow boxes
+  contained by this box</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-trim">CSS Box Model 4 §3.3</a></span> Each
+  dashed container holds A and B, each with <code>margin: 10px 0</code>.</p>
+</header>
+
+<section>
+  <h2>Alignment does not change adjacency</h2>
+  <p><q>Adjacency is not sensitive to space governed by box alignment</q>. Each container is 90px tall with
+  <code>align-content: end</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="height: 90px; align-content: end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>none</code>: B 10px above the bottom, A at 30px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="height: 90px; align-content: end; margin-trim: block-end"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption><code>block-end</code>: B's margin trimmed though the free space is above it: B at the bottom, A at
+    40px. <span class=pr-flag>Firefox</span> As
+    <code>none</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not floats, nor flex or grid items</h2>
+  <p>Floats are not in flow. A flex or grid container is not a block container, so <code>margin-trim: block</code>
+  does nothing on one in this draft, though an earlier draft trimmed their items.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="margin-trim: block"><div class="pr-c fl">F</div><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>A float F with <code>margin-top: 20px</code>, then A: <q>no effect on the margins of floats</q>,
+    so F 20px down; A at the top. <span
+    class=pr-flag>Firefox</span> A 20px down.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="display: flex; flex-direction: column; margin-trim: block"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>A column flex container: 10px above A and below B. <span class=pr-flag>Safari</span> trims them.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="display: grid; margin-trim: block"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>A grid container: the same. <span class=pr-flag>Safari</span> trims them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

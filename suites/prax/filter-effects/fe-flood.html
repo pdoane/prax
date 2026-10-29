@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feFlood: a rectangle of one color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=whole>
+    <feFlood flood-color="#6aa36a"/>
+  </filter>
+  <filter id=part primitiveUnits="userSpaceOnUse">
+    <feFlood x="60" y="30" width="40" height="20" flood-color="#6aa36a"/>
+  </filter>
+  <filter id=over primitiveUnits="userSpaceOnUse">
+    <feFlood x="60" y="30" width="40" height="20" flood-color="#6aa36a"/>
+    <feMerge x="0" y="0" width="200" height="80"><feMergeNode in="SourceGraphic"/><feMergeNode/></feMerge>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.13 Filter primitive feFlood</div>
+  <h1>feFlood: a rectangle of one color</h1>
+  <p class=pr-lede><q>This filter primitive creates a rectangle filled with the color and opacity values from
+  properties flood-color and flood-opacity. The rectangle is as large as the filter primitive subregion established by
+  the feFlood element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feFloodElement">Filter Effects 1 §9.13</a></span>
+  Each stage is an SVG 200 by 80 with a blue rectangle 120 by 40 at (40, 20), outlined dashed; its filter floods it
+  green.</p>
+</header>
+
+<section>
+  <h2>As large as the subregion</h2>
+  <p>With no x, y, width or height of its own, the subregion is the filter region, which by default reaches 10% of the
+  rectangle past each side: 12px left and right, 4px above and below.</p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect x=40 y=20 width=120 height=40 fill="#4f81bd" filter="url(#whole)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>Green from x 28 to 172 and from y 16 to 64: the rectangle and 10% around it. No blue.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect x=40 y=20 width=120 height=40 fill="#4f81bd" filter="url(#part)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>A subregion of <code>x="60" y="30" width="40" height="20"</code> in user space: green from x 60 to
+    100 and y 30 to 50, nothing else.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its result is the rectangle</h2>
+  <p>The flood replaces its input: what else shows is what the filter puts with it.</p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect x=40 y=20 width=120 height=40 fill="#4f81bd" filter="url(#over)"/><rect x=40 y=20 width=120 height=40 fill=none stroke="#6b7381" stroke-dasharray="3 3"/></svg></div>
+    <figcaption>The flood merged over the rectangle's own drawing, <code>SourceGraphic</code>: the blue rectangle,
+    and on it green from x 60 to 100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

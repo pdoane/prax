@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Declarative shadow roots</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .host { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.3 The template element</div>
+  <h1>Declarative shadow roots</h1>
+  <p class=pr-lede>The <code>shadowrootmode</code> attribute's <q>open</q> keyword: <q>The template element represents
+  an open declarative shadow root.</q> <q>closed</q>: <q>The template element represents a closed declarative shadow
+  root.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-template-element">HTML §4.12.3</a></span>
+  In each figure the template's contents are a blue frame around a <code>slot</code>, and the host's own child is the
+  word "light".</p>
+</header>
+<section>
+  <h2>The template becomes the host's shadow tree</h2>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px">shadow, <slot></slot></div></template>light</div>
+    </div>
+    <figcaption><code>open</code>: a blue frame holding "shadow, light", the host's word drawn where the slot is.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=closed><div style="border: 3px solid #4f81bd; padding: 0 6px">shadow, <slot></slot></div></template>light</div>
+    </div>
+    <figcaption><code>closed</code>: drawn the same, a blue frame holding "shadow, light".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template><div style="border: 3px solid #4f81bd; padding: 0 6px">shadow, <slot></slot></div></template>light</div>
+    </div>
+    <figcaption>No <code>shadowrootmode</code>, the None state: an ordinary template, so only "light" is drawn, with no
+    frame.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Manual slot assignment</h2>
+  <p><code>shadowrootslotassignment</code>'s <q>manual</q>: <q>The declarative shadow root uses manual slot
+  assignment.</q> Nothing has been assigned to the slot here, so it draws its own contents.</p>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open shadowrootslotassignment=manual><div style="border: 3px solid #4f81bd; padding: 0 6px">shadow, <slot>fallback</slot></div></template>light</div>
+    </div>
+    <figcaption>A blue frame holding "shadow, fallback": "light" is not assigned to the slot, and is not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px">shadow, <slot>fallback</slot></div></template>light</div>
+    </div>
+    <figcaption>The same, named assignment, the default: "shadow, light".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

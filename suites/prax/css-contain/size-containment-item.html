@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment as an item, and its baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 60px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  .k { contain: size; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .it { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, in its parent</div>
+  <h1>Size containment as an item, and its baseline</h1>
+  <p class=pr-lede><q>The intrinsic sizes of the size containment box are determined as if the element had no
+  content</q>, and so is what it gives its parent to size. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  Each blue box has <code>contain: size</code>; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>As an item: what the parent sizes to</h2>
+  <p><q>This affects explicit invocations of the min-content or max-content keywords, as well as any calculation that
+  depends on these measurement, such as sizing grid tracks into which a size contained item is placed</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: auto auto; justify-content: start"><div class=k>blue</div><div class=it>next</div></div></div>
+    <figcaption>A grid of two auto columns: the blue item's column is 0 wide, so "next" starts at 0, over
+    "blue".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: flex; align-items: start"><div class=k style="height: 20px">blue</div><div class=it>next</div></div></div>
+    <figcaption>A flex row: the blue item's base size and minimum are 0, so it is 0 wide and "next" covers
+    "blue".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The baseline is kept</h2>
+  <p><q>Size containment does not suppress baseline alignment. See layout containment for that.</q> Compare <a href="layout-containment-baseline.html">Layout containment: no baseline</a>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>out <div class=k style="display: inline-block; width: 60px; height: 40px">in<br>box</div> out</div>
+    <figcaption>An inline-block 60 by 40: its last line's baseline sits on the outer line's, the dashed line, so
+    "box" is level with "out".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=pr-baseline></span>out <div class=k style="display: inline-block; width: 60px; height: 5px">in</div> out</div>
+    <figcaption>One 5px tall: its text still gives the baseline, so "in" is level with "out" and the box sits above
+    the line's baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

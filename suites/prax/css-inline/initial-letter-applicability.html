@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>initial-letter: which boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .ex em { initial-letter: 2; color: #2c5a8f; }
+  .ex b, .ex strong { initial-letter: 3; color: #8e44ad; }
+  .il { initial-letter: 2; color: #2c5a8f; }
+  ul.m { font: 13px/20px "PR Literata"; list-style-position: inside; }
+  ul.m li::marker { initial-letter: 2; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.3.1 Applicability</div>
+  <h1>initial-letter: which boxes</h1>
+  <p class=pr-lede><q>initial-letter applies to any inline-level box—including any such ::first-letter or ::marker
+  box—that is the first child of its parent box and whose ancestors (if any) that are descendants of its containing
+  block are all first-child inline boxes that have a computed initial-letter value of normal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#first-most-inline-level">CSS Inline Layout 3 §7.3.1</a></span>
+  Each paragraph is 13px PR Literata on 20px lines.</p>
+</header>
+
+<section>
+  <h2>First-most inline-level boxes, and markers</h2>
+  <p>The spec's example: <code>em { initial-letter: 2; } b, strong { initial-letter: 3; }</code>. <q>The
+  initial-letter property will take effect only on the &lt;em&gt;.</q> It also applies to
+  <q>list-style-position/inside-positioned ::marker pseudo-elements</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ex"><p class=p><span><em><b>This</b> phrase</em> is styled <strong>specially</strong>.</span> The rest of the paragraph follows.</p></div>
+    <figcaption>"This phrase", the <code>em</code>, two lines tall in blue; <code>b</code> inside it and the second
+    sibling <code>strong</code> plain size. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No initial letter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><ul class=m><li>A list item whose inside marker is an initial letter.</li></ul></div>
+    <figcaption>The bullet two lines tall in blue, the item's text beside it. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A plain bullet.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not at the start of the line</h2>
+  <p><q>If initial-letter is applied to an inline-level box that is not positioned at the start of the line due to bidi
+  reordering or which is otherwise preceded by other inline-level content, its used value is normal</q>.</p>
+  <figure>
+    <div class=pr-stage><p class=p>Before it, <span class=il>a span</span> with initial-letter in the middle of the line.</p></div>
+    <figcaption>A span after other text: plain size.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class=p dir=rtl><span class=il>abc</span> שלום עולם, וזה המשך הפסקה.</p></div>
+    <figcaption>"abc" first in the source, reordered to the end of a right-to-left line: plain size.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clip property: rect()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p, .where { position: absolute; top: 20px; left: 60px; width: 50px; height: 55px; }
+  .p { background: #d68a3c; }
+  .p .pr-a { width: 70px; margin-top: 15px; padding-left: 8px; }
+  .region { position: absolute; outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.2 Clipping: the 'clip' property</div>
+  <h1>The clip property: rect()</h1>
+  <p class=pr-lede><code>clip</code> takes <code>&lt;shape&gt; | auto</code>. Initial <code>auto</code>, not inherited,
+  and it applies to absolutely positioned elements. <q>A clipping region defines what portion of an element's border
+  box is visible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Offsets from the top left corner</h2>
+  <p><q>rect(&lt;top&gt;, &lt;right&gt;, &lt;bottom&gt;, &lt;left&gt;) where &lt;top&gt; and &lt;bottom&gt; specify
+  offsets from the top border edge of the box, and &lt;right&gt;, and &lt;left&gt; specify offsets from the left border
+  edge of the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="where pr-ghost"></div><div class=p></div><div class=region style="top: 20px; left: 60px; width: 50px; height: 55px; outline: 0"></div></div>
+    <figcaption><code>clip: auto</code>: the whole 50 by 55 orange box, at 60, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="where pr-ghost"></div><div class=p style="clip: rect(10px, 40px, 30px, 20px)"></div><div class=region style="top: 30px; left: 80px; width: 20px; height: 20px"></div></div>
+    <figcaption><code>rect(10px, 40px, 30px, 20px)</code>: 20 by 20 of it, from 20 to 40 across and 10 to 30 down, in
+    the red dashes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>p#one { clip: rect(5px, 40px, 45px, 5px); } p#two { clip: rect(5px, 55px, 45px, 5px); } and assuming both Ps
+  are 50 by 55 px, will create, respectively, the rectangular clipping regions delimited by the dashed lines.</q> Each
+  orange P holds a 70px wide A that overflows it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#clipping">CSS 2 §11.1.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="where pr-ghost"></div><div class=p style="clip: rect(5px, 40px, 45px, 5px)"><div class="pr-a pr-fit">A</div></div><div class=region style="top: 25px; left: 65px; width: 35px; height: 40px"></div></div>
+    <figcaption><code>p#one</code>: 35 by 40 is seen, and A is cut 10px inside the P's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="where pr-ghost"></div><div class=p style="clip: rect(5px, 55px, 45px, 5px)"><div class="pr-a pr-fit">A</div></div><div class=region style="top: 25px; left: 65px; width: 50px; height: 40px"></div></div>
+    <figcaption><code>p#two</code>: the region ends 5px past the P's right edge, and A is seen up to it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Introduction: a simple table</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ex { color-scheme: light; color: var(--pr-ink); background: white; font-size: 12px; line-height: 18px; }
+  .ex td, .ex th { padding: 0 6px; }
+  .ex th { text-align: center; font-weight: bold; vertical-align: baseline; }
+  .ex td { vertical-align: middle; }
+  table.ex { border-collapse: collapse; }
+  .ex #row1 { border: 3px solid blue; }
+  .ex #row2, .ex #row3 { border: 1px solid black; }
+  .ex caption { caption-side: top; }
+  .bar { color: #9c5f22; font-size: 12px; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.1 Introduction to tables</div>
+  <h1>Introduction: a simple table</h1>
+  <p class=pr-lede><q>Authors may specify the visual formatting of a table as a rectangular grid of cells.</q> Cells sit
+  in rows and columns; rows and columns may be grouped, have borders, and align their data.</p>
+</header>
+
+<section>
+  <h2>The specification's 3x3 table</h2>
+  <p><q>This code creates one table (the TABLE element), three rows (the TR elements), three header cells (the TH
+  elements), and six data cells (the TD elements).</q> The rules center and embolden the header cells, collapse the
+  borders, give row 1 a 3px solid blue border and rows 2 and 3 a 1px solid black one, and put the caption on top.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#tables-intro">CSS 2 §17.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px; width: 280px"><table class=ex><caption>This is a simple 3x3 table</caption><tr id=row1><th>Header 1<td>Cell 1<td>Cell 2<tr id=row2><th>Header 2<td>Cell 3<td>Cell 4<tr id=row3><th>Header 3<td>Cell 5<td>Cell 6</table></div>
+    <figcaption>Three columns, though no element names them: <q>there are as many columns in the table as required by
+    header and data cells.</q> The border between row 1 and row 2 is 3px blue, as <a href="https://drafts.csswg.org/css2/#tables">§17</a>.6.2.1 decides.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Any element can be a table element</h2>
+  <p><q>CSS 2.2 allows authors to "map" document language elements to table elements via the 'display' property.</q>
+  <code>FOO { display : table }</code> and <code>BAR { display : table-caption }</code> make FOO <q>act like an HTML
+  TABLE element</q> and BAR <q>act like a CAPTION element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#tables-intro">CSS 2 §17.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><div class=pr-table><div class="pr-table-caption bar">BAR</div><div class=pr-table-row><div class=pr-table-cell>one</div><div class=pr-table-cell>two</div></div></div></div>
+    <figcaption>Every element is a <code>div</code>: the FOO table, with BAR as its caption above a row of two
+    cells.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-ligatures</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 30px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.4 Ligatures: the 'font-variant-ligatures' property</div>
+  <h1>font-variant-ligatures</h1>
+  <p class=pr-lede><q>Ligatures and contextual forms are ways of combining glyphs to produce more harmonized forms.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-ligatures-prop">CSS Fonts 4 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>Common and discretionary ligatures</h2>
+  <p>PR Literata's common ligatures (<code>liga</code>) join Th, fi, fl and ff; its discretionary ligatures
+  (<code>dlig</code>) join ch, ct and st.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-ligatures: normal">The fist act</div>
+    <figcaption><code>normal</code>: Th and fi joined; st and ct apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-ligatures: no-common-ligatures">The fist act</div>
+    <figcaption><code>no-common-ligatures</code>: every letter apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-ligatures: discretionary-ligatures">The fist act</div>
+    <figcaption><code>discretionary-ligatures</code>: st and ct joined too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-ligatures: none">The fist act</div>
+    <figcaption><code>none</code>: no ligatures or contextual forms.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Letter-spacing</h2>
+  <p>Where letter-spacing is not zero, css-text says optional ligatures are not used, so the letters can be spaced
+  evenly. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#hanging">CSS Text 3 §8.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="letter-spacing: 4px">The fist</div>
+    <figcaption><code>letter-spacing: 4px</code>: Th and fi apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

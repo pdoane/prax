@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Application key values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 3.14 Application Keys</div>
+  <h1>Application key values</h1>
+  <p class=pr-lede><q>"LaunchMail"</q>, <q>"LaunchApplication2"</q> and the other launch keys are for keyboards that have them. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-apps">UI Events KeyboardEvent key Values §3.14</a></span></p>
+</header>
+<section>
+  <h2>Launch keys</h2>
+  <p>A launch key that reaches the page has its name. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-apps">§3.14</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=3></ol>
+    </div>
+    <figcaption>On a keyboard with a mail or calculator key, click the box and press it: <code>key="LaunchMail"</code> or <code>"LaunchApplication2"</code>, where the system passes the key to the page.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

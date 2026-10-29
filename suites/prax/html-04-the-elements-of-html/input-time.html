@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Time controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+  .pad code { display: inline-block; width: 70px; font-size: 11px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.10 Time state (type=time)</div>
+  <h1>Time controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing
+  a specific time.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#time-state-(type=time)">HTML §4.10.5.1.10</a></span></p>
+</header>
+
+<section>
+  <h2>To the minute, unless the step is finer</h2>
+  <p><q>The step attribute is expressed in seconds.</q> <q>The default step is 60 seconds.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#time-state-(type=time)">§4.10.5.1.10</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div><code>no step</code><input type=time value="09:30"></div>
+        <div><code>step=1</code><input type=time value="09:30:15" step=1></div>
+        <div><code>step=0.001</code><input type=time value="09:30:15.250" step=0.001></div>
+        <div><code>min=00:00</code><input type=time value="09:30:15" min="00:00"></div>
+      </div>
+    </div>
+    <figcaption>Hours and minutes, all green but the last. Where the step allows seconds, the control has seconds,
+    15; where it allows milliseconds, 15.250. The value is the step base without a <code>min</code>, so 15 seconds is
+    allowed; counted from <code>min</code>, midnight, it is not: a step mismatch, red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Bad input</h2>
+  <p><q>While the user interface describes input that the user agent cannot convert to a valid time string, the control
+  is suffering from bad input.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#time-state-(type=time)">§4.10.5.1.10</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=time value="09:30"></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click into the minutes and press Backspace: red, with an hour and no minutes. Type 45: green, 9:45,
+    and <code>input</code> is logged.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

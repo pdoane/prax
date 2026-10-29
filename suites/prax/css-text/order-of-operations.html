@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of text operations</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .s { padding: 0 6px; font: 20px/30px "PR Noto Sans"; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · A Text Processing Order of Operations</div>
+  <h1>The order of text operations</h1>
+  <p class=pr-lede><q>The following list defines the order of text operations. (Implementations are not bound to this
+  order as long as the resulting layout is the same.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#order">CSS Text 4 §A</a></span>
+  The appendix is normative. Each figure shows a step taking effect before a later one.</p>
+</header>
+
+<section>
+  <h2>Transforming before wrapping</h2>
+  <p>Text transformation comes before text wrapping, so a transform that widens the text changes where lines
+  break.</p>
+  <figure>
+    <div class="pr-stage s" style="width: 120px"><span class=t>wide words</span></div>
+    <figcaption>"wide words" fits on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" style="width: 120px; text-transform: uppercase"><span class=t>wide words</span></div>
+    <figcaption><code>uppercase</code>: "WIDE WORDS" is wider than the line, and wraps.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="width: 120px; text-transform: full-width"><span class=t>abc def</span></div>
+    <figcaption><code>full-width</code>: "ａｂｃ　ｄｅｆ", 140px, wider than the line, so it wraps. <span class=pr-flag>Chrome</span> No transform, one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Hanging, then alignment</h2>
+  <p>Hanging punctuation comes before justification and text alignment.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="width: 100px; hanging-punctuation: last; text-align: right"><span class=t>"abc"</span></div>
+    <figcaption><code>hanging-punctuation: last</code>: the quote hangs before alignment, so "c" is flush right and
+    the quote outside. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The quote inside.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

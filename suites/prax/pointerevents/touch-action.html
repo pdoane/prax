@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>touch-action</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 100px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller .content { height: 300px; padding: 10px; }
+  .strip { height: 40px; margin: 0 0 10px; padding: 0 6px; box-sizing: border-box; line-height: 38px; }
+  #none { touch-action: none; background: #b9cde6; border: 1px solid #2c5a8f; }
+  #auto { touch-action: auto; background: #f6d7b4; border: 1px solid #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.1 The touch-action CSS property</div>
+  <h1>touch-action</h1>
+  <p class=pr-lede><q>The touch-action CSS property determines whether direct manipulation interactions (which are not
+  limited to touch, despite the property's name) MAY trigger the user agent's panning and zooming behavior.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-touch-action-css-property">Pointer Events §7.1</a></span></p>
+</header>
+<section>
+  <h2>none, and auto</h2>
+  <p>none: <q>Direct manipulation interactions that begin on the element MUST NOT trigger behaviors related to viewport
+  panning and zooming.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span>
+  <q>Right before starting to pan or zoom, the user agent MUST suppress a pointer event stream if all of the following
+  conditions are true</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#the-touch-action-css-property">§7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=box><div class=content>
+        <div class=strip id=none>touch-action: none</div>
+        <div class=strip id=auto>touch-action: auto</div>
+      </div></div>
+      <ol class=pr-log data-log="pointerdown pointermove pointercancel" data-fields="target" data-on="#box" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen, or a pen that pans. Drag up on the blue strip: the box does not scroll, and
+    <code>pointermove</code>s keep coming. Drag up on the orange strip: the box scrolls, and the pointer's events end
+    in <code>pointercancel</code> as the pan begins.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

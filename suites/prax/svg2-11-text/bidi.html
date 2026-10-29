@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Bidirectional text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .override { direction: rtl; unicode-bidi: bidi-override; }
+  .heb { font: 20px "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.1.3 Glyph metrics and layout</div>
+  <h1>Bidirectional text</h1>
+  <p class=pr-lede><q>The user agent processes the characters which are provided in logical order (i.e., the order
+  the characters appear in the original document).</q> <q>After processing the Unicode bidirectional algorithm and
+  properties direction and unicode-bidi on each of the independent text blocks, the user agent will have a potentially
+  re-ordered list of characters which are now in left-to-right rendering order.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphsMetrics">SVG 2 §11.1.3</a></span>
+  Each stage is an SVG 160 by 60, the baseline at y 35 dashed in red. The Latin text is PR Noto Sans Mono at
+  <code>calc(50px / 3)</code>, each letter 10 wide.</p>
+</header>
+
+<section>
+  <h2>Reordered for display</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=heb x="20" y="35">ab אבג</text></svg></div>
+    <figcaption>"ab" then the Hebrew letters alef, bet, gimel, logically after it: "ab", then the Hebrew read from
+    the right, alef rightmost.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M120 25V45" class=pr-baseline /><text class="pr-measure override" x="120" y="35">abcd</text></svg></div>
+    <figcaption>"abcd" with <code>direction: rtl; unicode-bidi: bidi-override</code> at <code>x="120"</code>:
+    "dcba", its start, the right side, at 120, so from 80 to 120.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each text chunk on its own</h2>
+  <p><q>The user agent determines the set of independent blocks within each of which it should apply the Unicode
+  bidirectional algorithm.</q> <q>Each text chunk represents an independent block of text.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M40 25V45 M120 25V45" class=pr-baseline /><text class="pr-measure override" x="40 120" y="35">abcd</text></svg></div>
+    <figcaption>The same with <code>x="40 120"</code>: two chunks, "a" and "bcd", each reversed on its own: "a"
+    ending at 40, then "dcb" from 90 to 120. <span class=pr-flag>Safari</span> "dca" ending at 40, and no b.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

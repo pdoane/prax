@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overlay property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 3.4 Controlling the Top Layer: the overlay property</div>
+  <h1>The overlay property</h1>
+  <p class=pr-lede><q>the overlay property determines whether it is actually rendered in the top layer or
+  not.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#overlay">CSS Positioned Layout 4 §3.4</a></span>
+  In each frame, a dashed box that clips holds an orange box 100 by 40.</p>
+</header>
+
+<section>
+  <h2>Not for authors to set</h2>
+  <p><q>User agents must have the following rule in their UA stylesheet: * { overlay: none !important; }</q></p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .clip { position: relative; margin: 10px; width: 100px; height: 40px; overflow: hidden; outline: 1px dashed #6b7381 } .p { position: absolute; top: 20px; left: 20px; width: 100px; height: 40px }</style><div class=clip><div class='p b' style='overlay: auto !important'></div></div><script></script>"></iframe></div>
+    <figcaption>A plain box with <code>overlay: auto</code> from the page: the UA's rule wins, and it is clipped.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Leaving the top layer when a transition ends</h2>
+  <p>An element removed from the top layer is pending removal until its <code>overlay</code> is <code>none</code>;
+  in a transition, <q>values of p such that 0 &lt; p &lt; 1 map to auto</q>. <q>User agents may, at their discretion,
+  remove a running transition on overlay.</q></p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .clip { position: relative; margin: 10px; width: 100px; height: 40px; overflow: hidden; outline: 1px dashed #6b7381 } .p { position: absolute; top: 20px; left: 20px; width: 100px; height: 40px }</style><div class=clip><div popover=manual id=p class='p b'></div></div><script>p.showPopover(); getComputedStyle(p).overlay; p.hidePopover()</script>"></iframe></div>
+    <figcaption>A popover shown, then hidden: gone.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .clip { position: relative; margin: 10px; width: 100px; height: 40px; overflow: hidden; outline: 1px dashed #6b7381 } .p { position: absolute; top: 20px; left: 20px; width: 100px; height: 40px } .p { transition: overlay 1000s allow-discrete, display 1000s allow-discrete }</style><div class=clip><div popover=manual id=p class='p b'></div></div><script>p.showPopover(); getComputedStyle(p).overlay; p.hidePopover()</script>"></iframe></div>
+    <figcaption>The same with a transition of <code>overlay</code> and <code>display</code> over 1000s: while it runs, the popover is still drawn whole, in the top layer. Chrome draws it; Safari and Firefox take it away at once, as a UA may.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

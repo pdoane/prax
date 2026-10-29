@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Empty cells: what is empty</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #f2e394; empty-cells: hide; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 4px; box-sizing: border-box; background: #4f81bd; border: 2px solid #1f2430; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1.1 Borders and Backgrounds around empty cells: the 'empty-cells' property</div>
+  <h1>Empty cells: what is empty</h1>
+  <p class=pr-lede>Every table has <code>empty-cells: hide</code>, so a cell drawn blue with a black border is not empty,
+  and an empty one shows only the yellow table. The middle cell is the one that varies.</p>
+</header>
+
+<section>
+  <h2>White space is empty</h2>
+  <p><q>Cells are empty unless they contain one or more of the following:</q> <q>floating content (including empty
+  elements),</q> <q>in-flow content (including empty elements) other than white space that has been collapsed away by
+  the 'white-space' property handling.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#empty-cells">CSS 2 §17.6.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>   <td>3</table></div>
+    <figcaption>The middle cell holds only spaces, which collapse away: empty, not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td style="white-space: pre">   <td>3</table></div>
+    <figcaption>The same spaces with <code>white-space: pre</code> are not collapsed: the cell is drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Empty elements are content</h2>
+  <p>An empty element in the flow, or an empty float, makes a cell not empty. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#empty-cells">CSS 2
+  §17.6.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td><span></span><td>3</table></div>
+    <figcaption>An empty <code>span</code>: in-flow content, so the cell is drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td><div style="float: left"></div><td>3</table></div>
+    <figcaption>An empty float: floating content, so the cell is drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

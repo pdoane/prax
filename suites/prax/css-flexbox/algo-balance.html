@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Balancing flex items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: balance; align-items: flex-start; }
+  .pr-stage > div { flex: none; }
+  .z { width: 0; outline: 2px solid #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.7 Balancing Flex Items</div>
+  <h1>Balancing flex items</h1>
+  <p class=pr-lede><q>divide its flex items into exactly line count numbers of contiguous sequences</q>; <q>Calling the
+  difference between the line size and the flex container's inner main size a sequence's error, the sum of the squared
+  error across all sequences is minimized.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#algo-balance">CSS Flexible Box Layout 2 §9.7</a></span>
+  Each stage is a 200px <code>flex-wrap: balance</code> container of items that do not flex.</p>
+</header>
+
+<section>
+  <h2>The least squared error</h2>
+  <p>A and D are 100px, B and C 50px: two lines, as <code>wrap</code> would make.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px">A</div><div class="pr-b pr-fit" style="width: 50px">B</div><div class="pr-c pr-fit" style="width: 50px">C</div><div class="pr-d pr-fit" style="width: 100px">D</div></div>
+    <figcaption>A B | C D, errors 50 and 50, 5000, rather than wrap's A B C | D, 0 and 100, 10000: C starts the
+    second line. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ties, and items of no size</h2>
+  <p><q>If multiple possible sequence assignments have equal minimum error, select the sequence that assigns the most
+  items to the first line</q>. <q>If a flex item's size is zero, the preceding sequence was not overflowing, and it
+  could be assigned either to the end of the preceding sequence or the beginning of the next sequence, it is assigned
+  to the end of the preceding sequence.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 80px">A</div><div class="pr-b pr-fit" style="width: 80px">B</div><div class="pr-c pr-fit" style="width: 80px">C</div></div>
+    <figcaption>Three of 80px: A B | C and A | B C tie at 16000; A and B take the first line.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px">A</div><div class="pr-b pr-fit" style="width: 100px">B</div><div class="pr-fit z"></div><div class="pr-c pr-fit" style="width: 100px">C</div></div>
+    <figcaption>A and B of 100px, a red item of no width, then C: the red item ends the first line, at 200px, and C
+    is alone on the second. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

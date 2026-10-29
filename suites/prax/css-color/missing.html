@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Missing components: none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 8px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .bar { height: 40px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 4.4 “Missing” Color Components and the none Keyword</div>
+  <h1>Missing components: none</h1>
+  <p class=pr-lede>A component can be <q>specified explicitly, by providing the keyword none for a component in a
+  color function.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#missing">CSS Color 4
+  §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Drawn as zero</h2>
+  <p><q>For all other purposes, a missing component behaves as a zero value, in the appropriate unit for that
+  component: 0, 0%, or 0deg.</q>. Each pair is the color with
+  <code>none</code>, then with zero.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(none 128 0)"></div><div class=sw style="background: rgb(0 128 0)"></div></div>
+    <figcaption><code>rgb(none 128 0)</code> beside <code>rgb(0 128 0)</code>: the same green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0.6 0.15 none)"></div><div class=sw style="background: oklch(0.6 0.15 0)"></div></div>
+    <figcaption><code>oklch(0.6 0.15 none)</code> beside hue <code>0</code>: the same pinkish red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(44 90 143 / none)"></div><div class=sw style="background: rgb(44 90 143 / 0)"></div></div>
+    <figcaption>Alpha <code>none</code> beside <code>0</code>: nothing, twice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In interpolation, the other color's value</h2>
+  <p><q>to animate a color to "grayscale", no matter what the color is, one can interpolate it with oklch(none 0
+  none). This will take the hue and lightness from the starting color, but animate its chroma down to 0</q>. Each
+  bar is <code>linear-gradient(in oklch to right, oklch(0.6 0.2 30), B)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>), from a red.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><div class=bar style="background: linear-gradient(in oklch to right, oklch(0.6 0.2 30), oklch(none 0 none))"></div></div>
+    <figcaption>B is <code>oklch(none 0 none)</code>: from red to a gray of the same lightness, reddish all the way, with
+    no other hue between. <span class=pr-flag>Chrome</span> runs through orange and olive to a greenish
+    gray.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage"><div class=bar style="background: linear-gradient(in oklch to right, oklch(0.6 0.2 30), oklch(0.6 0 30))"></div></div>
+    <figcaption>B is <code>oklch(0.6 0 30)</code>, the same values written out: the same bar. <span
+    class=pr-flag>Chrome</span> the same orange, olive and greenish gray.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

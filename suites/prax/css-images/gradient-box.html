@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The gradient box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  .split { background-image: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%); }
+  .corner { background-image: linear-gradient(to bottom right, #4f81bd 50%, #d68a3c 50%); }
+  .padded { width: 100px; height: 20px; padding: 10px; border: 10px dashed var(--pr-line); }
+  ul.marker { font-size: 20px; line-height: 20px; list-style-image: linear-gradient(to bottom right, #4f81bd 50%, #d68a3c 50%); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3 Gradients</div>
+  <h1>The gradient box</h1>
+  <p class=pr-lede><q>A gradient is drawn into a box with the dimensions of the concrete object size, referred to as
+  the gradient box. However, the gradient itself has no natural dimensions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#gradients">CSS Images 3 §3</a></span>
+  Each gradient here changes abruptly from blue to orange at 50%.</p>
+</header>
+
+<section>
+  <h2>The box the gradient is sized to</h2>
+  <p><q>if you use a gradient as a background, by default the gradient will draw into a gradient box the size of the
+  element's padding box.</q> <q>for a gradient used as a list-style-image, the box would be a 1em square</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box split padded"></div></div>
+    <figcaption>A 120 by 40 padding box inside a dashed 10px border, <code>to right</code>: the edge halfway across
+    the padding box, at 80px on the guides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box corner pr-ghost" style="background-size: 40px 20px; background-repeat: repeat"></div></div>
+    <figcaption><code>background-size: 40px 20px</code>, <code>to bottom right</code>: each 40 by 20 tile split
+    from its bottom left to its top right corner.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-text"><ul class=marker><li>item</ul></div>
+    <figcaption><code>list-style-image</code>, 20px font: a 20 by 20 marker. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    draw about 10 by 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No natural dimensions</h2>
+  <p>Each dashed box is 140 by 40, with <code>background-size: 40px auto</code>, drawn once at the top left. With no
+  natural height or ratio, the gradient's height comes from the background positioning area.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box corner pr-ghost" style="background-size: 40px auto"></div></div>
+    <figcaption>The gradient: 40 by 40, split from its bottom left to its top right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: url(../shared/resources/flag-40x20.png); background-size: 40px auto"></div></div>
+    <figcaption>For comparison, a 40 by 20 raster flag: its natural ratio keeps it 40 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

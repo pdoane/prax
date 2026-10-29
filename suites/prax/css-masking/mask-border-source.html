@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-source</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+  .frame { mask-border-source: url(support/frame-alpha.svg); mask-border-slice: 10 fill; }
+  .back { position: relative; height: 60px; margin: 10px; background: #d68a3c; }
+  .back > div { position: absolute; left: 40px; top: 20px; width: 60px; height: 20px; z-index: -1; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.1 Mask Border Image Source: the mask-border-source property</div>
+  <h1>mask-border-source</h1>
+  <p class=pr-lede><q>Specifies an image to be used as mask border image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-source">CSS Masking 1 §8.1</a></span>
+  Each box is 140 by 60 and blue, sliced <code>10 fill</code>, masked by the frame of discs, bars and a middle square
+  that <a href="mask-border.html">mask-border.html</a> shows.</p>
+</header>
+
+<section>
+  <h2>An image, or one that is ignored</h2>
+  <p>An image <q>that fails to download, is non-existent, or that cannot be displayed</q> <q>does not mask the
+  element.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box frame"></div></div>
+    <figcaption>The frame. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box
+    unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box frame" style="mask-border-source: url(support/no-such-image.svg)"></div></div>
+    <figcaption>An image that fails to download: the box unmasked, 140 by 60. <span class=pr-flag>Safari</span>
+    Nothing drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With mask-image, and as a stacking context</h2>
+  <p><q>the element is masked by both masking operations one after the other.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box frame" style="mask-image: linear-gradient(to right, black 50%, transparent 50%)"></div></div>
+    <figcaption>And a <code>mask-image</code> keeping the left half: the frame's left half, to x 80.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The left half, not framed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="back" style="mask-border-source: linear-gradient(black, black); mask-border-slice: 0 fill"><div></div></div></div>
+    <figcaption>An orange box masked by an opaque gradient, <code>0 fill</code>, and a green child at
+    <code>z-index: -1</code>: a stacking context, so the child shows, 60 by 20 at the center.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

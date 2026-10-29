@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-content and align-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template: 20px 20px / 50px 50px; height: 60px; }
+  .blk { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.1 The justify-content and align-content Properties</div>
+  <h1>justify-content and align-content</h1>
+  <p class=pr-lede>Each property <q>Aligns the contents of the box as a whole (as the alignment subject) within the box itself
+  (as the alignment container)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-justify-content">CSS Box Alignment 3 §5.1</a></span>
+  The grids are 200 by 60, with two 50px columns and two 20px rows.</p>
+</header>
+
+<section>
+  <h2>The contents as a whole</h2>
+  <p>The four items move together, their places in the grid unchanged. <q>For all layout modes, the alignment
+  subject and alignment container both assume the writing mode of the box the '*-content' property is set on.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: end; align-content: center"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>justify-content: end; align-content: center</code>: the 2 by 2 block at the right, 10px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><div class=g style="justify-content: start; direction: ltr"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>An <code>ltr</code> grid in an <code>rtl</code> stage, <code>justify-content: start</code>: the
+    columns at the left, its own start.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>justify-content and block containers</h2>
+  <p><code>justify-content</code> applies to <q>multicol containers, flex containers, and grid containers</q>; it
+  <q>Does not apply to and has no effect on block containers.</q></p>
+  <figure>
+    <div class="pr-stage blk" style="justify-content: center"><div class=pr-a style="width: 40px">A</div></div>
+    <figcaption>A block, <code>justify-content: center</code>: A, 40px wide, stays at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blk" style="align-content: center"><div class=pr-a style="width: 40px">A</div></div>
+    <figcaption><code>align-content: center</code> does apply: A 20px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

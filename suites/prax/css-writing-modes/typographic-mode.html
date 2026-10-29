@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>writing-mode: vertical and sideways typography</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Noto Sans JP"; width: auto; height: 130px; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.2 Block Flow Direction: the writing-mode property, typographic modes</div>
+  <h1>writing-mode: vertical and sideways typography</h1>
+  <p class=pr-lede><q>The typographic mode determines whether to use typographic conventions specific to vertical
+  flow for vertical scripts (vertical typographic mode) or to use the typographic conventions of horizontal writing
+  modes (horizontal typographic mode). This concept distinguishes vertical typesetting from rotated horizontal
+  typesetting.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#block-flow">CSS Writing Modes 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Vertical lines, two typographic modes</h2>
+  <p>Each stage holds "日本語のabc。", a <code>br</code>, and "縦書き". <q>vertical-rl: ... Both the writing mode and the typographic mode
+  are vertical.</q> <q>sideways-rl: ... The writing mode is vertical, while the typographic mode is horizontal.</q></p>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-rl">日本語のabc。<br>縦書き</div>
+    <figcaption><code>vertical-rl</code>: the Japanese upright, "abc" turned clockwise, the 。 at the top right of
+    its square. The first line at the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-rl">日本語のabc。<br>縦書き</div>
+    <figcaption><code>sideways-rl</code>: everything turned clockwise, as horizontal text is, the 。 at the bottom
+    left of its square, now its top left. The first line at the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr">日本語のabc。<br>縦書き</div>
+    <figcaption><code>vertical-lr</code>: as <code>vertical-rl</code>, but the first line at the left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-lr">日本語のabc。<br>縦書き</div>
+    <figcaption><code>sideways-lr</code>: everything turned counter-clockwise, read from the bottom up; the first
+    line at the left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: horizontal-tb; width: 130px; height: auto">日本語のabc。<br>縦書き</div>
+    <figcaption><code>horizontal-tb</code>: horizontal lines, horizontal typography.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

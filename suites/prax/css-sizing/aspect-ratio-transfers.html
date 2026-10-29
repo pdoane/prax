@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Minimums and maximums through the ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { width: 150px; height: 100px; }
+  figure.f figcaption { max-width: 152px; }
+  .r { background: #b9cde6; outline: 1px solid #2c5a8f; font: 13px/20px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 4.4 Min/Max Size Transfers</div>
+  <h1>Minimums and maximums through the ratio</h1>
+  <p class=pr-lede><q>First, any definite minimum size is converted and transferred from the origin to destination axis.
+  This transferred minimum is capped by any definite preferred or maximum size in the destination axis.</q> <q>Then,
+  any definite maximum size is converted and transferred from the origin to destination. This transferred maximum is
+  floored by any definite preferred or minimum size in the destination axis as well as by the transferred minimum, if
+  any.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#aspect-ratio-size-transfers">CSS Box Sizing 4 §4.4</a></span>
+  Each blue box is an empty float, so that its width is auto.</p>
+</header>
+
+<section>
+  <h2>Transferred, then capped or floored</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="float: left; aspect-ratio: 2; min-height: 30px"></div></div>
+    <figcaption><code>aspect-ratio: 2; min-height: 30px</code>: a minimum width of 60px, so 60 by 30.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="float: left; aspect-ratio: 2; min-height: 30px; max-width: 40px"></div></div>
+    <figcaption>And <code>max-width: 40px</code>: the transferred minimum capped at 40px, so 40 by 30.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=r style="float: left; aspect-ratio: 2; width: 120px; max-height: 20px; min-width: 60px"></div></div>
+    <figcaption><code>width: 120px; max-height: 20px; min-width: 60px</code>: the width is definite, unaffected, so 120
+    by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The spec's two containers</h2>
+  <p>A dashed float holds an item of <code>height: 100%; aspect-ratio: 1/1</code> with the word "content".</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="float: left; height: 80px"><div class=r style="height: 100%; aspect-ratio: 1/1">content</div></div></div>
+    <figcaption>Container <code>height: 80px</code>: the item is 80 by 80, and so is the float.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class=pr-parent style="float: left"><div class=r style="height: 100%; aspect-ratio: 1/1">content</div></div></div>
+    <figcaption>Container of auto height: <q>a square box (and a container) sized to the width of the word
+    “content”</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

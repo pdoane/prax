@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Elliptical arcs: the large-arc and sweep flags</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.8 The elliptical arc curve commands</div>
+  <h1>Elliptical arcs: the large-arc and sweep flags</h1>
+  <p class=pr-lede><q>For most situations, there are actually four different arcs (two different ellipses, each with
+  two different arc sweeps) that satisfy these constraints. <b>large-arc-flag</b> and <b>sweep-flag</b> indicate
+  which one of the four arcs are drawn</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataEllipticalArcCommands">SVG 2 §9.3.8</a></span>
+  The first two stages of each card are SVGs 160 by 80 with the section's example at two fifths of its size,
+  <code>M 50 30 a 40 20 0 ?,? 40 20</code>, stroked dark blue, 4 wide; on it, dashed grey, the two ellipses 40 by 20
+  that pass through 50, 30 and 90, 50, about 90, 30 and 50, 50.</p>
+</header>
+
+<section>
+  <h2>large-arc-flag 0: one of the smaller arcs</h2>
+  <p><q>If <b>sweep-flag</b> is '1', then the arc will be drawn in a "positive-angle" direction</q>, which in these
+  coordinates, y down, is clockwise; <q>A value of 0 causes the arc to be drawn in a "negative-angle"
+  direction</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><g fill="none" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="3 2"><ellipse cx="90" cy="30" rx="40" ry="20" /><ellipse cx="50" cy="50" rx="40" ry="20" /></g><path d="M 50 30 a 40 20 0 0,0 40 20" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>0,0</code>: a quarter of the ellipse about 90, 30, its lower left, bulging down and left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><g fill="none" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="3 2"><ellipse cx="90" cy="30" rx="40" ry="20" /><ellipse cx="50" cy="50" rx="40" ry="20" /></g><path d="M 50 30 a 40 20 0 0,1 40 20" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>0,1</code>: a quarter of the ellipse about 50, 50, its upper right, bulging up and right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 40 A 50 30 0 0 1 130 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>An SVG 160 by 60, <code>M 30 40 A 50 30 0 0 1 130 40</code>: one ellipse fits, both its arcs 180°,
+    and this one the top half, up to 80, 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>large-arc-flag 1: one of the larger arcs</h2>
+  <p><q>Of the four candidate arc sweeps, two will represent an arc sweep of greater than or equal to 180 degrees
+  (the "large-arc"), and two will represent an arc sweep of less than or equal to 180 degrees (the
+  "small-arc").</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><g fill="none" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="3 2"><ellipse cx="90" cy="30" rx="40" ry="20" /><ellipse cx="50" cy="50" rx="40" ry="20" /></g><path d="M 50 30 a 40 20 0 1,0 40 20" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>1,0</code>: three quarters of the ellipse about 50, 50, round by its left, 10, 50, and its
+    bottom, 50, 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><g fill="none" stroke="#8a8a8a" stroke-width="1" stroke-dasharray="3 2"><ellipse cx="90" cy="30" rx="40" ry="20" /><ellipse cx="50" cy="50" rx="40" ry="20" /></g><path d="M 50 30 a 40 20 0 1,1 40 20" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>1,1</code>: three quarters of the ellipse about 90, 30, round by its top, 90, 10, and its
+    right, 130, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 40 A 50 30 0 1 1 130 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>An SVG 160 by 60, <code>M 30 40 A 50 30 0 1 1 130 40</code>: the large arc is the same half,
+    over the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

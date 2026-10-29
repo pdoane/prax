@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: the static position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: the static position</h1>
+  <p class=pr-lede>Each stage is the
+  containing block; blue A is in flow, and orange B is absolutely positioned with <code>left</code>,
+  <code>width</code> and <code>right</code> all <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>For left and for right</h2>
+  <p><q>The static position for 'left' is the distance from the left edge of the containing block to the left margin
+  edge of a hypothetical box that would have been the first box of the element if its 'position' property had been
+  'static' and 'float' had been 'none'.</q> The static position for 'right' is the same from the right edge. <q>If all
+  three of 'left', 'width', and 'right' are 'auto'</q> and the static-position containing block is <code>ltr</code>,
+  'left' is the static position, else 'right' is. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class=pr-frame style="margin-left: 40px"><div class=pr-a>A</div><div class="pr-b abs">B</div></div></div>
+    <figcaption>A sits in a dashed block 40px from the left, and B where its next block would have been: 40px from the
+    left, below A.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class=pr-frame style="margin-right: 40px; direction: rtl"><div class=pr-a>A</div><div class="pr-b abs">B</div></div></div>
+    <figcaption>The dashed block is <code>rtl</code> and 40px from the right: B's right edge is at its static position,
+    40px from the stage's right edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fixed boxes: the initial containing block</h2>
+  <p><q>For the purposes of calculating the static position, the containing block of fixed positioned elements is the
+  initial containing block instead of the viewport, and all scrollable boxes should be assumed to be scrolled to their
+  origin.</q> The frame is a viewport 200 by 100, scrolled down 40px. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0; height: 300px; font: 600 12px/18px sans-serif; color: white } div { height: 18px; padding: 0 6px; border: 1px solid #2c5a8f; background: #4f81bd } #b { position: fixed; margin-left: 40px; background: #d68a3c; border-color: #9c5f22 }</style><div style='height: 38px'>A</div><div id=b>B</div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption>A, 40px tall, scrolled out of view, but fixed B stays at its unscrolled static position: 40, 40 in
+    the viewport.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

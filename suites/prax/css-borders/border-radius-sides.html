@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-*-radius: the corners of one side</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.6.1 Sizing The Corners Of One Side</div>
+  <h1>border-*-radius: the corners of one side</h1>
+  <p class=pr-lede><q>The 'border-*-radius' shorthands set the two 'border-*-*-radius' longhand properties of the related side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-sizing-side-shorthands">CSS Borders and Box Decorations 4 §3.6.1</a></span> Each blue box is 120 by 60.</p>
+</header>
+
+<section>
+  <h2>Physical sides</h2>
+  <p><q>The two values for the radii are given in the order top-left, top-right for 'border-top-radius', top-right, bottom-right for 'border-right-radius'</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-top-radius: 40px"></div></div>
+    <figcaption><code>border-top-radius: 40px</code>: both top corners round, the bottom square. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-right-radius: 10px 40px"></div></div>
+    <figcaption><code>border-right-radius: 10px 40px</code>: top right 10, bottom right 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-left-radius: 40px / 20px"></div></div>
+    <figcaption><code>border-left-radius: 40px / 20px</code>: both left corners 40 across, 20 down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All square.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative sides</h2>
+  <p>The box is <code>vertical-rl</code>: block start is the right side.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; border-block-start-radius: 40px"></div></div>
+    <figcaption><code>border-block-start-radius: 40px</code>: both right corners round. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; border-inline-end-radius: 40px"></div></div>
+    <figcaption><code>border-inline-end-radius: 40px</code>: both bottom corners round. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> All square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

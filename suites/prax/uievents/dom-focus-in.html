@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>DOMFocusIn</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.2.1.1 DOMFocusIn</div>
+  <h1>DOMFocusIn</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when an event target receives focus. The focus MUST be
+  given to the element before the dispatch of this event type. This event type MUST be dispatched after the event type
+  focus.</q> It is deprecated, and a user agent need not support it. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-DOMFocusIn">UI Events §8.2.1.1</a></span></p>
+</header>
+<section>
+  <h2>After focus, with no related target</h2>
+  <p>Its relatedTarget is <code>null</code>, where focus's names the element losing the focus.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-DOMFocusIn">§8.2.1.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus DOMFocusIn" data-fields="target relatedTarget" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>: focus at <code>two</code> with
+    <code>relatedTarget=one</code>, then DOMFocusIn at <code>two</code> with <code>relatedTarget=null</code>.
+    <span class=pr-flag>Chrome</span> gives DOMFocusIn <code>relatedTarget=one</code>. Safari has no DOMFocusIn, and
+    logs focus alone, which is allowed.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

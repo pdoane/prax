@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>device-cmyk()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 6 Uncalibrated CMYK Colors: the device-cmyk() Function</div>
+  <h1>device-cmyk()</h1>
+  <p class=pr-lede><q>The arguments of the device-cmyk() function specify the cyan, magenta, yellow, and black components, in
+  order, as a number between 0 and 1 or, in the modern syntax, as a percentage between 0% and 100%.</q> <q>Otherwise,
+  the computed value of the device-cmyk() function must be the sRGB value of the CMYK color, as converted with the
+  following naive conversion algorithm.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#device-cmyk">CSS Color 5
+  §6</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>With no profile: the naive conversion</h2>
+  <p><q>with no @color-profile, the following colors are equivalent,
+  using the naive conversion</q>: <code>device-cmyk(0 81% 81% 30%)</code>, <code>rgb(178 34 34)</code>,
+  <code>firebrick</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0 81% 81% 30%)"></div><div class=sw style="background: rgb(178 34 34)"></div><div class=sw style="background: firebrick"></div></div>
+    <figcaption>The three: one firebrick red. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0, 0.81, 0.81, 0.3)"></div><div class=sw style="background: device-cmyk(0 0.81 0.81 0.3)"></div></div>
+    <figcaption>The legacy syntax, and numbers: the same red twice. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alpha, and clamping</h2>
+  <p><q>In the modern syntax, the fifth argument specifies the alpha component</q>.
+  <q>Values less than 0 or 0%, or greater than 1 or 100%, are not invalid; instead, they are clamped</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: device-cmyk(0 81% 81% 30% / 0.5)"></div><div class=sw style="background: rgb(178 34 34 / 0.5)"></div></div>
+    <figcaption>Alpha 0.5, on a checkerboard: one half-transparent red. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(1.5 0 0 0)"></div><div class=sw style="background: device-cmyk(1 0 0 0)"></div><div class=sw style="background: cyan"></div></div>
+    <figcaption>Cyan 1.5, as 1: cyan, as <code>cyan</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

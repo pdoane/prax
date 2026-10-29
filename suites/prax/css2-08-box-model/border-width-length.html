@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border width: lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.1 Border width</div>
+  <h1>Border width: lengths</h1>
+  <p class=pr-lede><code>border-*-width</code> and <code>border-width</code> take <code>thin | medium | thick | &lt;length&gt;</code>.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt;</h2>
+  <p><q>The border's thickness has an explicit value.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#border-width-properties">CSS 2 §8.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 1px"></div></div>
+    <figcaption><code>1px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 10px"></div></div>
+    <figcaption><code>10px</code>: one guide square on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 0.5em; font-size: 20px"></div></div>
+    <figcaption><code>0.5em</code> of a 20px font: 10px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></div>
+  <h2>Snapped to device pixels</h2>
+  <p>A border width's computed value is an <q>absolute length, snapped as a border width</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span> <q>If the absolute value of len is greater than zero, but less than 1 device pixel, round it
+  away from zero to 1 or -1 device pixel. If the absolute value of len is greater than 1 device pixel, round it towards
+  zero to the nearest integer number of device pixels.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#lengths">CSS Values and Units 4 §6</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 0.1px"></div></div>
+    <figcaption><code>0.1px</code> is drawn one device pixel wide, not dropped: as thick as the <code>1px</code>
+    border above, at one device pixel per CSS pixel.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 1.7px"></div></div>
+    <figcaption><code>1.7px</code> rounds down to whole device pixels: at one device pixel per CSS pixel, as thick as
+    the <code>1px</code> border above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

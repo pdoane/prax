@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where a dialog puts the focus</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 10px 0; }
+  dialog { font-size: 12px; }
+  dialog .pr-target { width: 140px; margin: 6px 0 0; }
+  dialog:focus, dialog :focus { outline: 3px solid #c0392b; outline-offset: 1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.4 The dialog element</div>
+  <h1>Where a dialog puts the focus</h1>
+  <p class=pr-lede>The dialog focusing steps: <q>If subject has the autofocus attribute, then set control to
+  subject.</q> <q>If control is null, then set control to the focus delegate of subject.</q> <q>If control is null,
+  then set control to subject.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">HTML §4.11.4</a></span></p>
+</header>
+<section>
+  <h2>The control that takes the focus</h2>
+  <p>Each button opens its dialog with <code>showModal()</code>, and what has the focus is outlined in red. The
+  focus delegate honors <code>autofocus</code> on a descendant, or else is the first focusable descendant. Escape
+  closes the dialog, and the focus returns to the button, the <q>previously focused element</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=act>
+        <button class=pr-target data-modal=first>first</button>
+        <dialog id=first>Plain fields.
+          <input class=pr-target id=first-a value=A><input class=pr-target id=first-b value=B>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Field A, the first focusable descendant, is outlined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=act>
+        <button class=pr-target data-modal=second>autofocus</button>
+        <dialog id=second>B has autofocus.
+          <input class=pr-target id=second-a value=A><input class=pr-target id=second-b value=B autofocus>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Field B, which has <code>autofocus</code>, is outlined.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=act>
+        <button class=pr-target data-modal=third>on the dialog</button>
+        <dialog id=third autofocus>The dialog has autofocus.
+          <input class=pr-target id=third-a value=A>
+        </dialog>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>The dialog itself is outlined, not its field.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=act>
+        <button class=pr-target data-modal=fourth>nothing focusable</button>
+        <dialog id=fourth>Only text.</dialog>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>No focusable descendant: the control is the dialog, outlined if the user agent lets it take the
+    focus, as the steps' note allows.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons open the dialogs as modal.
+  for (const button of document.querySelectorAll("[data-modal]"))
+    button.addEventListener("click", () => document.getElementById(button.dataset.modal).showModal());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

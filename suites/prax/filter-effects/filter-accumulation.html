@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Accumulating filter lists</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: #4f81bd; animation: 100s linear -50s infinite alternate both; }
+  .bar { width: 60px; height: 10px; margin: 0 10px; }
+  @keyframes half { from { filter: brightness(0.5); } to { filter: brightness(0.5); } }
+  @keyframes blur4 { from { filter: blur(4px); } to { filter: blur(4px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 14.3 Accumulation</div>
+  <h1>Accumulating filter lists</h1>
+  <p class=pr-lede><q>Accumulation of &lt;filter-value-list&gt;s follows the same matching and extending rules as
+  interpolation, falling back to replace behavior if the lists do not match. However instead of interpolating the
+  matching &lt;filter-function&gt; pairs, their arguments are arithmetically added together - except in the case of
+  &lt;filter-function&gt;s whose initial value for interpolation is 1, which combine using one-based addition</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#accumulation">Filter Effects 1 §14.3</a></span>
+  Each box is 60 by 30 and blue, with its own <code>filter</code> and an animation that holds one value, combined by
+  <code>animation-composition</code>. A bar under a box is the color expected.</p>
+</header>
+
+<section>
+  <h2>One-based, and arithmetic</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="filter: brightness(0.5); animation-name: half; animation-composition: accumulate"></div><div class=bar style="background: black"></div></div>
+    <figcaption><code>brightness(0.5)</code> accumulated with <code>brightness(0.5)</code>: 0.5 + 0.5 − 1 = 0,
+    black.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="filter: brightness(0.5); animation-name: half; animation-composition: add"></div><div class=bar style="background: rgb(20 32 47)"></div></div>
+    <figcaption>For comparison, <code>add</code>: both, 0.25 of the light, a very dark blue.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="filter: blur(2px); animation-name: blur4; animation-composition: accumulate"></div></div>
+    <figcaption><code>blur(2px)</code> accumulated with <code>blur(4px)</code>: added, <code>blur(6px)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lists that do not match</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-motion"><div class=box style="filter: invert(1); animation-name: half; animation-composition: accumulate"></div><div class=bar style="background: rgb(40 64 94)"></div></div>
+    <figcaption><code>invert(1)</code> accumulated with <code>brightness(0.5)</code>: replaced, the half-bright blue,
+    no inverting.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The visibility property: collapse elsewhere</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; }
+  td { width: 50px; box-sizing: border-box; }
+  .w40 { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.2 Visibility: the 'visibility' property</div>
+  <h1>The visibility property: collapse elsewhere</h1>
+  <p class=pr-lede>On boxes other than table rows and columns, CSS 2 makes <code>collapse</code> the same as
+  <code>hidden</code>. Every box is 20px tall unless its caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>Other elements: as hidden</h2>
+  <p>A block or an inline box with <code>collapse</code> keeps its room. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#visibility">CSS 2 §11.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b style="visibility: collapse">B</div><div class=pr-c>C</div></div>
+    <figcaption>B is <code>collapse</code>: not drawn, and C is 20px below A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td class=pr-a>1</td><td class=pr-b style="visibility: collapse">2</td></tr><tr><td class=pr-a>3</td><td class=pr-b>4</td></tr></table></div>
+    <figcaption>A cell is not a row or a column: cell 2 is not drawn, and its column stays.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-display-3/#visibility">CSS Display 3 §4</a></div>
+  <h2>Flex items collapse too</h2>
+  <p><code>collapse</code> <q>Indicates that the box is collapsed, which can cause it to take up less space than
+  otherwise in a formatting-context–specific way. See dynamic row and column effects in tables [CSS2] and collapsed
+  flex items in flex layout [CSS-FLEXBOX-1].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-3/#visibility">CSS Display 3 §4</a></span> <q>the collapsed flex
+  item is removed from rendering entirely, but leaves behind a "strut" that keeps the flex line's cross-size
+  stable.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#visibility-collapse">CSS Flexible Box Layout 2 §4.4</a></span> A flex item is no longer one of the other elements.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="display: flex; align-items: flex-start"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40" style="height: 40px">B</div><div class="pr-c pr-fit w40">C</div></div></div>
+    <figcaption>A flex container, tinted, holds A, B and C, each 40px wide; B is 40px tall, and so is the
+    container.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-parent style="display: flex; align-items: flex-start"><div class="pr-a pr-fit w40">A</div><div class="pr-b pr-fit w40" style="height: 40px; visibility: collapse">B</div><div class="pr-c pr-fit w40">C</div></div></div>
+    <figcaption>B is <code>collapse</code>: C is at 40, beside A, and the container stays 40px tall. <span
+    class=pr-flag>Chrome</span> treats B as <code>hidden</code>: C stays at 80, 40px of room between A and
+    C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

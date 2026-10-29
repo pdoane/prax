@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: baselines through blocks</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .ib { display: inline-block; width: 80px; }
+  .ib div { background: rgba(79, 129, 189, 0.3); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: baselines through blocks</h1>
+  <p class=pr-lede>Each stage's text is 13px on 20px lines, with the line's baseline dashed in red. Each orange
+  inline-block is aligned <code>baseline</code> and holds block boxes, tinted blue.</p>
+</header>
+
+<section>
+  <h2>The last line box, at any depth</h2>
+  <p><q>The baseline of an 'inline-block' is the baseline of its last line box in the normal flow</q>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va" style="padding-top: 10px"><span class=pr-baseline></span>Xx <span class="pr-chip ib">first<div>last</div></span></div>
+    <figcaption>A line, then a block child of one line: "last", in the block, is on the red line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage va" style="padding-top: 10px"><span class=pr-baseline></span>Xx <span class="pr-chip ib">first<span><div>last</div></span></span></div>
+    <figcaption>The block inside a span, which is broken around it: "last" is still the last line, on the red line.
+    <span class=pr-flag>Safari</span> Puts "first" on it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

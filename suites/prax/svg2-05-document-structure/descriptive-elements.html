@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The desc and title elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; font: 700 24px "PR Arimo"; fill: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.7 The ‘desc’ and ‘title’ elements</div>
+  <h1>The desc and title elements</h1>
+  <p class=pr-lede><q>‘desc’ and ‘title’ elements are not visually rendered as part of the graphics. The display value
+  for the ‘desc’ and ‘title’ elements must always be set to none by the user agent style sheet, and this declaration
+  must have importance over any other CSS rule or presentation attribute.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#DescriptionAndTitleElements">SVG 2 §5.7</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Not rendered, even made visible</h2>
+  <p>Each rect is 120 by 40 at 20, 10, and its <code>title</code> or <code>desc</code> is styled <code>display: inline
+  !important</code> in orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd"><title class=shown>Title</title></rect></svg></div>
+    <figcaption>A <code>title</code>: only the blue rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd"><desc class=shown>Desc</desc></rect></svg></div>
+    <figcaption>A <code>desc</code>: only the blue rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><title class=shown>Title</title><desc class=shown>Desc</desc></svg></div>
+    <figcaption>Both, children of the <code>svg</code>: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A tooltip</h2>
+  <p><q>existing user agents commonly render ‘title’ elements as a tooltip on hovering the parent element.</q> It is a
+  common practice, not a requirement.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd"><title>A blue rectangle</title></rect></svg></div>
+    <figcaption>Hover over the rect: Chrome, Safari and Firefox show <q>A blue rectangle</q> in a tooltip.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

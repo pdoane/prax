@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A three-column page laid out with grid template areas, sticky rails, and a footer. Named grid areas arrange a masthead, breadcrumbs, sticky rails, shrinking content and a full-width footer. -->
+<title>Sidebar layout</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.page { display:grid; grid-template-columns:118px 1fr 132px; grid-template-rows:auto auto 1fr auto;
+  grid-template-areas:"mast mast mast" "crumb crumb crumb" "nav main aside" "foot foot foot";
+  gap:10px; background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:12px 14px; color:#22282f; font-size:12px }
+.mast { grid-area:mast; display:flex; align-items:baseline; gap:12px; border-bottom:2px solid #22303f; padding-bottom:6px }
+.mast .nm { font-size:16px; font-weight:bold; letter-spacing:-.01em }
+.mast .tag { font-size:10px; color:#8a93a0; flex:1; margin:0 }
+.mast .find { font-size:10px; border:1px solid #ccd3da; border-radius:99px; padding:2px 10px; color:#8a93a0 }
+.crumb { grid-area:crumb; font-size:10px; color:#8a93a0 }
+.crumb b { color:#3f4954 }
+.nav { grid-area:nav }
+.aside { grid-area:aside }
+.main { grid-area:main; min-width:0 }
+.stick { position:sticky; top:8px }
+.nav h3, .aside h3 { font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:#8a93a0; margin-bottom:4px }
+.nav a { display:block; font-size:11px; color:#4a5561; text-decoration:none; padding:2px 0 2px 7px; border-left:2px solid transparent }
+.nav a.on { color:#1c5b96; font-weight:bold; border-left-color:#3d82c4 }
+.nav .grp { margin-bottom:9px }
+.main h2 { font-size:18px; margin:0 0 3px; letter-spacing:-.01em }
+.main .sub { font-size:11px; color:#8a93a0; margin-bottom:8px }
+.main p { margin:0 0 7px; line-height:1.6 }
+.main h4 { font-size:13px; margin:10px 0 3px }
+.main figure { margin:8px 0 }
+.main figure img { display:block; width:100%; height:110px; object-fit:cover; border-radius:4px }
+.main figcaption { font-size:10px; color:#8a93a0; margin-top:3px }
+.callout { background:#f2f7fc; border:1px solid #cfe0f0; border-radius:6px; padding:7px 10px; font-size:11px; color:#1c5b96; margin:8px 0 }
+.aside .card { border:1px solid #e2e6eb; border-radius:6px; padding:7px 9px; font-size:10.5px; color:#5d6673; line-height:1.5; margin-bottom:8px }
+.aside .card b { display:block; color:#22282f; font-size:11px; margin-bottom:2px }
+.aside .toc a { display:block; font-size:10.5px; color:#4a5561; text-decoration:none; padding:1px 0 }
+.aside .toc a.on { color:#1c5b96; font-weight:bold }
+.foot { grid-area:foot; border-top:1px solid #e6e9ed; padding-top:7px; display:flex; gap:16px; font-size:10px; color:#8a93a0 }
+.foot .sp { flex:1 }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="mast">
+    <span class="nm">Riverworks</span>
+    <span class="tag">Field guides for small hydraulic sites</span>
+    <span class="find">Search</span>
+  </div>
+
+  <div class="crumb">Guides &#8250; Water rights &#8250; <b>Abstraction at low flow</b></div>
+
+  <div class="nav">
+    <div class="stick">
+      <div class="grp">
+        <h3>Guides</h3>
+        <a href="#">Weirs</a>
+        <a href="#">Fish passes</a>
+        <a href="#" class="on">Water rights</a>
+        <a href="#">Sluices</a>
+      </div>
+      <div class="grp">
+        <h3>Reference</h3>
+        <a href="#">Flow tables</a>
+        <a href="#">Licence forms</a>
+        <a href="#">Glossary</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <h2>Abstraction at low flow</h2>
+    <div class="sub">Updated 14 March 2026 &#183; 9 minute read</div>
+
+    <p>A licence sets the volume a site may take and the flow below which it may
+    take nothing. The second number decides whether a mill runs in August, and it
+    is the number most operators discover late.</p>
+
+    <h4>Reading the hydrograph</h4>
+    <p>Start with the gauge nearest your intake and take the mean of the lowest
+    seven consecutive days in each of the last twenty years. Regulators write
+    conditions against this figure, and a mill sized above it will stop most
+    summers.</p>
+
+    <figure>
+      <img src="support/landscape.jpg" alt="A weir at summer level" />
+      <figcaption>The Ourthe at Vierset in August 2024, roughly 0.7 cubic metres
+      a second at the weir.</figcaption>
+    </figure>
+
+    <div class="callout">Take the gauge record before you buy. A site with two
+    dry summers in twenty years is a different business from one with nine.</div>
+
+    <h4>What the condition looks like</h4>
+    <p>Conditions are written as a pair: a maximum take and a hands-off flow.
+    A common form allows 1.2 cubic metres a second while the river carries more
+    than 0.9, and nothing below that. The wheel then works for about 300 days.</p>
+  </div>
+
+  <div class="aside">
+    <div class="stick">
+      <div class="card"><b>On this page</b>
+        <div class="toc">
+          <a href="#" class="on">Reading the hydrograph</a>
+          <a href="#">What the condition looks like</a>
+          <a href="#">Applying to vary</a>
+          <a href="#">Appeals</a>
+        </div>
+      </div>
+      <div class="card"><b>Related</b>
+        Fish pass sizing &#183; Weir crest repairs &#183; Gauge networks in Wallonia</div>
+      <div class="card"><b>Contribute</b>
+        Send corrections with a gauge reference. Every guide names its reviewer.</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Riverworks, a volunteer field guide.</span>
+    <span class="sp"></span>
+    <span>Licence CC BY-SA</span><span>Contact</span><span>Archive</span>
+  </div>
+</div>
+</body>
+</html>

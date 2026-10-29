@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The baselines of rows and tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/20px "PR Arimo"; padding-top: 10px; }
+  table { display: inline-table; border-spacing: 0; vertical-align: baseline; }
+  td { padding: 0; vertical-align: baseline; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .blk { width: 20px; height: 40px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.2 Row layout (first pass), baselines of rows and tables</div>
+  <h1>The baselines of rows and tables</h1>
+  <p class=pr-lede><q>The maximum distance between the top of the cell box and the baseline over all cells that have
+  'vertical-align: baseline' is used to set the baseline of the row.</q> <q>The baseline of a table-root is the
+  baseline of its first row, if any.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-layout">CSS Table 3 §3.10.2</a></span>
+  Each stage is a line: "x", an inline-table, "x", the red dashes the line's baseline.</p>
+</header>
+
+<section>
+  <h2>A row with baseline cells</h2>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x<table><tr><td>Hx</td><td style="font-size: 32px; line-height: 40px">Hx</td></tr><tr><td colspan=2>row 2</td></tr></table>x</div>
+    <figcaption>Two baseline cells, small and large text: the row's baseline is the large one's, and the table sits
+    on the line by it, its second row below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Without baseline cells, or without rows</h2>
+  <p><q>If a row doesn't have any cell that has 'vertical-align: baseline', the baseline of that row is the bottom
+  content edge of the lowest cell in the row.</q> <q>Otherwise, it is the bottom content edge of the
+  table-root.</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>x<table><tr><td style="vertical-align: top">Hx</td><td style="vertical-align: top"><div class=blk></div></td></tr><tr><td colspan=2>row 2</td></tr></table>x</div>
+    <figcaption>The first row's cells are <code>top</code>; the lowest, the orange one with a 40px block, sets the
+    baseline at its bottom, 40px down.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>x<table style="height: 30px; width: 40px; background: #c3d08b; padding-bottom: 10px"></table>x</div>
+    <figcaption>A green table, no rows, <code>height: 30px</code>, 10px of bottom padding, border-box: by the text
+    its baseline is 10px above its bottom edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> use the
+    bottom edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

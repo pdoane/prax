@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The grid shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; justify-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.8 Grid Definition Shorthand: the grid property</div>
+  <h1>The grid shorthand</h1>
+  <p class=pr-lede><q>The grid property is a shorthand that sets all of the explicit grid properties
+  (grid-template-rows, grid-template-columns, and grid-template-areas), and all the implicit grid properties
+  (grid-auto-rows, grid-auto-columns, and grid-auto-flow), in a single declaration. (It does not reset the gutter
+  properties.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-shorthand">CSS Grid Layout 2 §7.8</a></span></p>
+</header>
+
+<section>
+  <h2>auto-flow on one side of the slash</h2>
+  <p>These forms set <q>the tracks in one axis explicitly</q>, and <code>grid-auto-flow</code> by the side
+  <code>auto-flow</code> is on, <q>with dense if it's specified.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid: auto-flow 30px / 40px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>auto-flow 30px / 40px 40px</code>: A and B in a 30px row, C in a second 30px row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid: 20px 20px / auto-flow 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>20px 20px / auto-flow 40px</code>: A and B down a 40px column, C at the top of a second, at
+    40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid: auto-flow dense 20px / repeat(4, 40px)"><div class=pr-a>A</div><div class=pr-b style="grid-column: span 4">B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>auto-flow dense 20px / repeat(4, 40px)</code>: B, spanning 4, in row 2; C fills the hole
+    beside A, at 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What it resets, and what it leaves</h2>
+  <p><q>All other grid sub-properties are reset to their initial values.</q> Each grid first sets other
+  properties, then <code>grid: 20px 20px / 40px 40px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-auto-flow: column; grid-auto-rows: 40px; grid: 20px 20px / 40px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption>After <code>grid-auto-flow: column; grid-auto-rows: 40px</code>, both reset: rows of A, B and
+    C, D, and E in an <code>auto</code> row, 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 10px; grid: 20px 20px / 40px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>After <code>gap: 10px</code>: the gaps stay. B at 50px, C at 30px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

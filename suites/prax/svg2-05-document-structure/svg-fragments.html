@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>SVG document fragments</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.1.1 Overview</div>
+  <h1>SVG document fragments</h1>
+  <p class=pr-lede><q>An SVG document fragment consists of any number of SVG elements contained within an ‘svg’
+  element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#NewDocumentOverview">SVG 2 §5.1.1</a></span>
+  <q>An SVG document fragment can stand by itself as a self-contained file or resource, in which case the SVG document
+  fragment is an SVG document, or it can be embedded inline as a fragment within a parent HTML or XML
+  document.</q></p>
+</header>
+
+<section>
+  <h2>Inline, stand-alone, and nested</h2>
+  <p><q>‘svg’ elements can appear in the middle of SVG content. This is the mechanism by which SVG document fragments
+  can be embedded within other SVG document fragments.</q> Each stage is 160 by 60; each fragment draws a blue rect
+  120 by 40 at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>Inline in this HTML document: the rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/standalone.svg"></iframe></div>
+    <figcaption>A stand-alone SVG document, in an <code>iframe</code>: the rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/in-xml.xml"></iframe></div>
+    <figcaption>Inline in a parent XML document of another namespace: the rect. Safari paints the XML document's page white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

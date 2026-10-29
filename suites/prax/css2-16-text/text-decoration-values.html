@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: values</h1>
+  <p class=pr-lede><code>text-decoration</code> takes <code>none | [ underline || overline || line-through || blink
+  ]</code>. Initial <code>none</code>, not inherited (but see the next pages), applies to all elements.</p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><q>Produces no text decoration.</q> <q>Each line of text is underlined.</q> <q>Each line of text has a line above
+  it.</q> <q>Each line of text has a line through the middle.</q> <q>Text blinks (alternates between visible and
+  invisible). Conforming user agents may simply not blink the text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2 §16.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">none <span style="text-decoration: underline">underline</span><br><span style="text-decoration: overline">overline</span> <span style="text-decoration: line-through">line-through</span></div>
+    <figcaption>"none" plain; "underline" with a line below; "overline" with a line above; "line-through" struck
+    through the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span style="text-decoration: blink">blink</span><br><span style="text-decoration: underline overline line-through">all three</span></div>
+    <figcaption>"blink" either blinks or stays still: both conform. <code>underline overline line-through</code>
+    draws all three lines on "all three".</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-decor-3/#text-decoration-line-property">CSS Text Decoration 3 §2.1</a></div>
+  <h2>blink is deprecated</h2>
+  <p>The keywords are now values of <code>text-decoration-line</code>, which <code>text-decoration</code> sets as a
+  shorthand. Of <code>blink</code>: <q>Conforming user agents may simply not blink the text.</q> <q>This value is
+  deprecated in favor of Animations [CSS-ANIMATIONS-1].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-3/#text-decoration-line-property">CSS Text Decoration 3 §2.1</a></span>
+  It still may blink; authors are to use an animation instead.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-decoration: blink">blink</div>
+    <figcaption><code>text-decoration: blink</code>: the text may blink or stay still, and no line is
+    drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-decoration: overline underline">two lines</div>
+    <figcaption>The shorthand sets <code>text-decoration-line</code> to <code>overline underline</code>: a line
+    above "two lines" and a line below.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

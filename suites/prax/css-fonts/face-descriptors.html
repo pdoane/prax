@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Face descriptors: weight, width and style</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A family whose faces are three different fonts, so the face matching chose is plain to see. */
+  @font-face { font-family: "Pick"; src: url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: "Pick"; src: url(../../../third_party/fonts/Cousine.ttf); font-weight: bold; }
+  @font-face { font-family: "Pick"; src: url(../../../third_party/fonts/AD.woff); font-style: italic; }
+  /* Bold data declared as the normal weight. */
+  @font-face { font-family: "Declared"; src: url(../../../third_party/fonts/Tinos-Bold.ttf); font-weight: normal; }
+  /* A variable font limited to part of its weight range. */
+  @font-face { font-family: "Clamped"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-weight: 300 500; }
+  @font-face { font-family: "Reversed"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-weight: 500 300; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.4 Font property descriptors: 'font-style', 'font-weight' and 'font-width'</div>
+  <h1>Face descriptors: weight, width and style</h1>
+  <p class=pr-lede><q>These descriptors define the characteristics of a font face and are used in the process of
+  matching styles to specific faces.</q> <q>The value for these font face style attributes is used in place of the
+  style implied by the underlying font data.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-prop-desc">CSS Fonts 4 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Choosing among a family's faces</h2>
+  <p>Family "Pick" has three faces: Tinos as normal, Cousine as bold and a handwriting face as italic.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Pick">Handgloves</div>
+    <figcaption>Normal: Tinos, a serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Pick; font-weight: bold">Handgloves</div>
+    <figcaption>Bold: Cousine, a monospace, not emboldened, as the descriptor says it is bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Pick; font-style: italic">Handgloves</div>
+    <figcaption>Italic: the handwriting face, upright, as the descriptor says it is italic.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Declared; font-weight: bold">Handgloves</div>
+    <figcaption>Tinos Bold declared <code>normal</code>, at <code>bold</code>: synthesized bold over its bold
+    strokes, heavier than Tinos Bold.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ranges clamp variation</h2>
+  <p><q>variation values applied to fonts defined with @font-face will be clamped to both the values specified in
+  these descriptors</q> and those the font supports. A decreasing range is swapped.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Clamped; font-weight: 900">Handgloves</div>
+    <figcaption><code>300 500</code> at 900: drawn at 500, medium.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Reversed; font-weight: 100">Handgloves</div>
+    <figcaption><code>500 300</code>, swapped to 300 500, at 100: drawn at 300, light.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

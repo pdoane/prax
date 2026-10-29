@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: as many tracks as they span</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; }
+  .s { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, span</div>
+  <h1>Subgrids: as many tracks as they span</h1>
+  <p class=pr-lede><q>The number of explicit tracks in the subgrid in a subgridded dimension always corresponds to the
+  number of grid tracks that it spans in its parent grid</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px; the tinted, outlined box is a subgrid of its columns, and holds A,
+  B and C, auto-placed. Its rows are its own.</p>
+</header>
+
+<section>
+  <h2>A span given: the span</h2>
+  <p><q>If the subgrid’s grid span in the subgridded dimension is explicit or implicit, then the number of explicit
+  tracks in each subgridded dimension is taken from its used grid span in that dimension (regardless of its
+  grid-template-* properties).</q></p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: span 2; grid-template-columns: subgrid [a] [b] [c] [d]"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div></div>
+    <figcaption><code>span 2</code> and four line names: two tracks, A in the 40px and B in the 60px, and C on a
+    second row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 3; grid-template-columns: subgrid [a] [b] [c]"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div></div>
+    <figcaption><code>grid-column: 2 / 3</code> and three line names: one track, A, B and C down the 60px
+    column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No span given: the line names</h2>
+  <p><q>If it has an automatic grid span, then its used grid span is taken from the number of explicit tracks
+  specified for that axis by its grid-template-* properties, floored at one.</q> Its span <q>is determined from its
+  &lt;line-name-list&gt;</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#placement">§8</a></span>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-template-columns: subgrid [a] [b] [c]"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div></div>
+    <figcaption>Three line names: three lines, two tracks; A in the 40px, B in the 60px, C on a second row.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> span one track, and put A, B and C down
+    the 40px column.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-template-columns: subgrid"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div></div>
+    <figcaption>No names: no tracks, floored at one; A, B and C down the 40px column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

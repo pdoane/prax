@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A column flex container paginates like a block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols { column-count: 2; column-gap: 20px; column-fill: auto; height: 60px; orphans: 1; widows: 1; }
+  .col { display: flex; flex-direction: column; justify-content: flex-start; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 10.1 Sample Flex Fragmentation Algorithm</div>
+  <h1>A column flex container paginates like a block</h1>
+  <p class=pr-lede><q>This informative section presents a possible fragmentation algorithm for flex containers.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#pagination-algo">CSS Flexible Box Layout 2 §10.1</a></span>
+  Its test of intent: <q>a flex container with justify-content:start and no flexible items should paginate identically
+  to a block with in-flow children with same content, same used size and same used margins.</q> Pages cannot be shown
+  here; each stage is two columns, 90px wide and 60px tall.</p>
+</header>
+
+<section>
+  <h2>Breaking between and inside items</h2>
+  <p>Left, a <code>column</code> flex container; right, a block; each holds A, B and D, 20px tall, and C, 40px
+  tall with two lines, all with no margins; <code>orphans: 1; widows: 1</code> let C break between its lines.</p>
+  <figure>
+    <div class="pr-stage cols"><div class=col><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="height: 40px">C1<br>C2</div><div class="pr-d pr-fit">D</div></div></div>
+    <figcaption>Flex: A, B and C1 in the first column; C2 and D in the second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage cols"><div><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="height: 40px">C1<br>C2</div><div class="pr-d pr-fit">D</div></div></div>
+    <figcaption>Block: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An unbreakable item is pushed</h2>
+  <p><q>the item or fragment that does not fit is pushed to the next page.</q> C is <code>break-inside: avoid</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage cols"><div class=col><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="height: 40px; break-inside: avoid">C1<br>C2</div><div class="pr-d pr-fit">D</div></div></div>
+    <figcaption>Flex: A and B in the first column, 20px left empty; C whole, then D, in the second.
+    <span class=pr-flag>Safari</span> Splits C after C1, unlike its block.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage cols"><div><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="height: 40px; break-inside: avoid">C1<br>C2</div><div class="pr-d pr-fit">D</div></div></div>
+    <figcaption>Block: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

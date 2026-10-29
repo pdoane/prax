@@ -1,0 +1,117 @@
+00-supports-1.html
+SVG2/text.html#Introduction 11.1 Introduction
+    text-graphics.html
+SVG2/text.html#Definitions 11.1.1 Definitions
+    addressable-characters.html
+SVG2/text.html#FontsGlyphs 11.1.2 Fonts and glyphs
+    fonts-and-glyphs.html
+    ligatures-repositioned.html
+SVG2/text.html#GlyphsMetrics 11.1.3 Glyph metrics and layout
+    initial-position.html
+    baselines.html
+    baselines-alignment.html
+    bidi.html
+    line-boxes.html
+SVG2/text.html#TextElement 11.2 The ‘text’ and ‘tspan’ elements
+    text-and-tspan.html
+    object-bounding-box.html
+SVG2/text.html#TSpanAttributes 11.2.1 Attributes
+    x-y.html
+    dx-dy.html
+    rotate.html
+    text-length.html
+    length-adjust.html
+SVG2/text.html#TSpanNotes 11.2.2 Notes on 'x', 'y', 'dx', 'dy' and 'rotate'
+    positioning-glyphs.html
+    positioning-reordered.html
+    rotate-propagation.html
+SVG2/text.html#TextLayout 11.3 Text layout – Introduction
+    text-layout.html
+SVG2/text.html#TextLayoutContentArea 11.4 Text layout – Content Area
+    content-area.html
+SVG2/text.html#InlineSize 11.4.1 The ‘inline-size’ property
+    inline-size.html
+    inline-size-anchor.html
+SVG2/text.html#TextLayoutAlgorithm 11.5 Text layout – Algorithm
+    layout-display.html
+    addressable-white-space.html
+    anchored-chunks.html
+SVG2/text.html#TextLayoutPre 11.6 Pre-formatted text
+    pre-formatted.html
+SVG2/text.html#TextLayoutPreMultiline 11.6.1 Multi-line text via 'white-space'
+    multi-line.html
+SVG2/text.html#TextLayoutPreAdjustments 11.6.2 Repositioning Glyphs
+    repositioning.html
+SVG2/text.html#TextLayoutAuto 11.7 Auto-wrapped text
+    auto-wrapped.html
+# SVG2/text.html#TextLayoutAutoNotes 11.7.1 Notes on Text Wrapping: no page; its subsections are about wrapping areas of arbitrary shape, which the chapter cannot make: its one content area is inline-size's rectangle
+# SVG2/text.html#TextLayoutAutoNotesStart 11.7.1.1 First Line Positioning: no page; a first line fits flush at the top of inline-size's rectangle, so the case it describes never arises
+# SVG2/text.html#TextLayoutAutoNotesBrokenLines 11.7.1.2 Broken Lines: no page; inline-size's rectangle never breaks a line into parts
+SVG2/text.html#TextLayoutPath 11.8 Text on a path
+    text-on-a-path.html
+SVG2/text.html#TextPathElement 11.8.1 The ‘textPath’ element
+    textpath-path-href.html
+SVG2/text.html#TextPathAttributes 11.8.2 Attributes
+    start-offset.html
+    start-offset-closed.html
+    start-offset-closed-anchor.html
+    method.html
+    side.html
+    textpath-coordinates.html
+SVG2/text.html#TextpathLayoutRules 11.8.3 Text on a path layout rules
+    textpath-layout.html
+    textpath-layout-end.html
+    textpath-x-dy.html
+    textpath-after.html
+SVG2/text.html#TextRenderingOrder 11.9 Text rendering order
+    rendering-order.html
+SVG2/text.html#TextProperties 11.10 Properties and pseudo-elements
+    pseudo-elements.html
+    properties-no-effect.html
+# SVG2/text.html#TextPropertiesSVG 11.10.1 SVG properties: no page; its subsections have them
+SVG2/text.html#TextAnchoringProperties 11.10.1.1 Text alignment, the ‘text-anchor’ property
+    text-anchor.html
+    text-anchor-chunks.html
+# SVG2/text.html#GlyphOrientationHorizontalProperty 11.10.1.2 The ‘glyph-orientation-horizontal’ property: no page; SVG 2 removes the property
+SVG2/text.html#GlyphOrientationVerticalProperty 11.10.1.3 The ‘glyph-orientation-vertical’ property
+    glyph-orientation-vertical.html
+# SVG2/text.html#KerningProperty 11.10.1.4 The ‘kerning’ property: no page; SVG 2 removes the property for font-kerning, which css-fonts walks
+# SVG2/text.html#TextPropertiesAdaptions 11.10.2 SVG adaptions: no page; its subsections have them
+SVG2/text.html#FontVariantProperty 11.10.2.1 The ‘font-variant’ property
+    font-variant.html
+SVG2/text.html#LineHeightProperty 11.10.2.2 The ‘line-height’ property
+    line-height.html
+SVG2/text.html#WritingModeProperty 11.10.2.3 The ‘writing-mode’ property
+    writing-mode.html
+SVG2/text.html#DirectionProperty 11.10.2.4 The ‘direction’ property
+    direction.html
+SVG2/text.html#DominantBaselineProperty 11.10.2.5 The ‘dominant-baseline’ property
+    dominant-baseline.html
+SVG2/text.html#AlignmentBaselineProperty 11.10.2.6 The ‘alignment-baseline’ property
+    alignment-baseline.html
+SVG2/text.html#BaselineShiftProperty 11.10.2.7 The ‘baseline-shift’ property
+    baseline-shift.html
+SVG2/text.html#LetterSpacingProperty 11.10.2.8 The ‘letter-spacing’ property
+    letter-spacing.html
+SVG2/text.html#WordSpacingProperty 11.10.2.9 The ‘word-spacing’ property
+    word-spacing.html
+SVG2/text.html#TextOverflowProperty 11.10.2.10 The ‘text-overflow’ property
+    text-overflow.html
+# SVG2/text.html#WhiteSpace 11.10.3 White space: no page; its subsections have them
+SVG2/text.html#TextWhiteSpace 11.10.3.1 SVG 2 Preferred white space handling, the ‘white-space’ property
+    white-space.html
+SVG2/text.html#LegacyXMLSpace 11.10.3.2 Legacy white-space handling, the ‘xml:space’ property
+    xml-space.html
+SVG2/text.html#DuplicateWhiteSpace 11.10.3.3 Duplicate white-space directives
+    duplicate-white-space.html
+SVG2/text.html#TextDecorationProperties 11.11 Text decoration
+    text-decoration.html
+    text-decoration-paint.html
+# SVG2/text.html#TextSelection 11.12 Text selection and clipboard operations: no page; it is interaction, and what it draws, ::selection's highlight, shows only while a user selects; css-pseudo's pages show ::selection
+# SVG2/text.html#TextSelectionImplementationNotes 11.12.1 Text selection implementation notes: no page; it is which characters a pointer selects
+# SVG2/text.html#DOMInterfaces 11.13 DOM interfaces: no page; it is object model
+# SVG2/text.html#InterfaceSVGTextContentElement 11.13.1 Interface SVGTextContentElement: no page; it is object model
+# SVG2/text.html#InterfaceSVGTextPositioningElement 11.13.2 Interface SVGTextPositioningElement: no page; it is object model
+# SVG2/text.html#InterfaceSVGTextElement 11.13.3 Interface SVGTextElement: no page; it is object model
+# SVG2/text.html#InterfaceSVGTSpanElement 11.13.4 Interface SVGTSpanElement: no page; it is object model
+# SVG2/text.html#InterfaceSVGTextPathElement 11.13.5 Interface SVGTextPathElement: no page; it is object model

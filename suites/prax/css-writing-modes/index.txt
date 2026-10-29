@@ -1,0 +1,119 @@
+00-supports-1.html
+00-supports-2.html
+# css-writing-modes-4/#intro 1 Introduction to Writing Modes: no page; it defines writing mode, inline base direction, block flow direction and typographic mode, which 2, 3.2 and 5.1 show
+# css-writing-modes-4/#placement 1.1 Module Interactions: no page; it says what the module replaces and how its values reach other properties
+# css-writing-modes-4/#values 1.2 Value Definitions and Terminology: no page; it defines terms
+css-writing-modes-4/#text-direction 2 Inline Direction and Bidirectionality
+    bidirectionality.html
+css-writing-modes-4/#direction 2.1 Specifying Directionality: the direction property
+    direction.html
+    direction-layout.html
+css-writing-modes-4/#unicode-bidi 2.2 Embeddings and Overrides: the unicode-bidi property
+    unicode-bidi.html
+    unicode-bidi-plaintext.html
+    unicode-bidi-blocks.html
+css-writing-modes-4/#bidi-example 2.3 Example of Bidirectional Text
+    bidi-example.html
+css-writing-modes-4/#bidi-algo 2.4 Applying the Bidirectional Reordering Algorithm
+    bidi-paragraphs.html
+css-writing-modes-4/#bidi-para-direction 2.4.1 Bidi Paragraph Embedding Levels
+    paragraph-level.html
+css-writing-modes-4/#bidi-control-codes 2.4.2 CSS–Unicode Bidi Control Translation, Text Reordering
+    bidi-control-codes.html
+css-writing-modes-4/#bidi-atomic-inlines 2.4.3 Bidi Treatment of Atomic Inlines
+    bidi-atomic-inlines.html
+css-writing-modes-4/#bidi-embedding-breaks 2.4.4 Paragraph Breaks Within Embeddings and Isolates
+    bidi-embedding-breaks.html
+css-writing-modes-4/#bidi-box-model 2.4.5 Reordering-induced Box Fragmentation
+    bidi-box-split.html
+css-writing-modes-4/#bidi-fragmentation 2.4.5.1 Conditions of Reordering-induced Box Fragmentation
+    bidi-fragmentation.html
+css-writing-modes-4/#bidi-fragment-boxes 2.4.5.2 Box Model of Reordering-induced Box Fragments
+    bidi-fragment-edges.html
+# css-writing-modes-4/#vertical-modes 3 Vertical Writing Modes: no page; it introduces the subsections
+css-writing-modes-4/#vertical-intro 3.1 Introduction to Vertical Writing
+    vertical-writing.html
+css-writing-modes-4/#block-flow 3.2 Block Flow Direction: the writing-mode property
+    writing-mode.html
+    typographic-mode.html
+    writing-mode-replaced.html
+    writing-mode-boxes.html
+# css-writing-modes-4/#svg-writing-mode 3.2.1 Obsolete SVG1.1 writing-mode Values: no page; its two subsections show the values
+css-writing-modes-4/#svg-writing-mode-css 3.2.1.1 Supporting SVG1.1 writing-mode values in CSS syntax
+    svg-writing-mode-css.html
+css-writing-modes-4/#svg-writing-mode-markup 3.2.1.2 Supporting SVG1.1 writing-mode values in presentational attributes
+    svg-writing-mode-attributes.html
+# css-writing-modes-4/#inline-alignment 4 Inline-level Alignment: no page; it introduces the subsections
+css-writing-modes-4/#intro-baselines 4.1 Introduction to Baselines
+    baselines.html
+css-writing-modes-4/#text-baselines 4.2 Text Baselines
+    text-baselines.html
+css-writing-modes-4/#replaced-baselines 4.3 Atomic Inline Baselines
+    atomic-baselines.html
+css-writing-modes-4/#baseline-alignment 4.4 Baseline Alignment
+    baseline-alignment.html
+css-writing-modes-4/#intro-text-layout 5 Introduction to Vertical Text Layout
+    orientation-transforms.html
+css-writing-modes-4/#text-orientation 5.1 Orienting Text: the text-orientation property
+    text-orientation.html
+    text-orientation-direction.html
+css-writing-modes-4/#vertical-font-features 5.1.1 Vertical Typesetting and Font Features
+    vertical-font-features.html
+    vertical-font-features-cursive.html
+css-writing-modes-4/#vertical-orientations 5.1.2 Mixed Vertical Orientations
+    mixed-orientations.html
+css-writing-modes-4/#glyph-orientation 5.1.3 Obsolete: the SVG1.1 glyph-orientation-vertical property
+    glyph-orientation-vertical.html
+# css-writing-modes-4/#abstract-box 6 Abstract Box Terminology: no page; it defines the physical, flow-relative and line-relative terms, which 6.4 shows
+# css-writing-modes-4/#abstract-axes 6.1 Abstract Dimensions: no page; it defines block and inline size, which 6.4 and 7.2 show
+# css-writing-modes-4/#logical-directions 6.2 Flow-relative Directions: no page; it defines block-start and inline-start, which 6.4 and 7.4 show
+# css-writing-modes-4/#line-directions 6.3 Line-relative Directions: no page; it defines over and line-left, which 6.4 and 7.5 show
+css-writing-modes-4/#logical-to-physical 6.4 Abstract-to-Physical Mappings
+    logical-to-physical.html
+    logical-to-physical-lines.html
+# css-writing-modes-4/#abstract-layout 7 Abstract Box Layout: no page; it introduces the subsections
+css-writing-modes-4/#vertical-layout 7.1 Principles of Layout in Vertical Writing Modes
+    vertical-layout.html
+    vertical-tables.html
+css-writing-modes-4/#dimension-mapping 7.2 Dimensional Mapping
+    dimension-mapping.html
+css-writing-modes-4/#orthogonal-flows 7.3 Orthogonal Flows
+    orthogonal-flows.html
+    orthogonal-shrink-to-fit.html
+css-writing-modes-4/#orthogonal-auto 7.3.1 Available Space in Orthogonal Flows
+    orthogonal-available-space.html
+css-writing-modes-4/#auto-multicol 7.3.2 Auto-sizing Block Containers in Orthogonal Flows
+    orthogonal-multicol.html
+css-writing-modes-4/#orthogonal-layout 7.3.3 Auto-sizing Other Orthogonal Flow Roots
+    orthogonal-other-roots.html
+css-writing-modes-4/#orthogonal-pagination 7.3.4 Fragmenting Orthogonal Flows
+    orthogonal-fragmentation.html
+css-writing-modes-4/#logical-direction-layout 7.4 Flow-Relative Mappings
+    flow-relative-boxes.html
+    flow-relative-content.html
+css-writing-modes-4/#line-mappings 7.5 Line-Relative Mappings
+    line-relative-left-right.html
+    line-relative-over-under.html
+css-writing-modes-4/#physical-only 7.6 Purely Physical Mappings
+    physical-only.html
+css-writing-modes-4/#principal-flow 8 The Principal Writing Mode
+    principal-writing-mode.html
+css-writing-modes-4/#icb 8.1 Propagation to the Initial Containing Block
+    icb-propagation.html
+# css-writing-modes-4/#page-direction 8.2 Page Flow: the page progression direction: no page; page progression shows only in paged media, which a page on a screen cannot show or read back
+# css-writing-modes-4/#text-combine 9 Glyph Composition: no page; it introduces 9.1
+css-writing-modes-4/#text-combine-upright 9.1 Horizontal-in-Vertical Composition: the text-combine-upright property
+    text-combine-upright.html
+    text-combine-digits.html
+css-writing-modes-4/#text-combine-runs 9.1.1 Text Run Rules
+    text-combine-runs.html
+css-writing-modes-4/#text-combine-layout 9.1.2 Layout Rules
+    text-combine-layout.html
+css-writing-modes-4/#text-combine-compression 9.1.3 Compression Rules
+    text-combine-compression.html
+css-writing-modes-4/#text-combine-fullwidth 9.1.3.1 Full-width Characters
+    text-combine-fullwidth.html
+# css-writing-modes-4/#privacy 10 Privacy Considerations: no page; nothing to see
+# css-writing-modes-4/#security 11 Security Considerations: no page; nothing to see
+css-writing-modes-4/#script-orientations A Vertical Scripts in Unicode
+    script-orientations.html

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Independent formatting contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .float { float: left; width: 40px; height: 40px; background: #d68a3c; }
+  .blue { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · A Glossary, independent formatting context</div>
+  <h1>Independent formatting contexts</h1>
+  <p class=pr-lede><q>When a box establishes an independent formatting context ..., it essentially creates a new, independent layout environment</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#glossary">CSS Display 4 §A</a></span></p>
+</header>
+
+<section>
+  <h2>Floats stay in, and stay out</h2>
+  <p><q>the box establishing their formatting context grows to fully contain them, and floats from outside that box
+  are not allowed to protrude into and affect the contents inside the box.</q> Each blue box is a flow root.</p>
+  <figure>
+    <div class=pr-stage><div class=blue style="display: flow-root"><div class=float></div>text</div></div>
+    <figcaption>The blue box is 40px tall, round its float.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=float></div><div class=blue style="display: flow-root">text in a flow root, on lines</div></div>
+    <figcaption>After a float: the blue box is beside it, 160px wide; its lines start at its own left edge, 40px
+    in.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins do not collapse across</h2>
+  <p><q>margins do not collapse across formatting context boundaries.</q> The orange child has a 10px top
+  margin.</p>
+  <figure>
+    <div class=pr-stage><div class=blue><div class=pr-b style="margin-top: 10px">child</div></div></div>
+    <figcaption>In a plain block: the margin collapses through, so the blue block starts 10px down, with no blue
+    above the child.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=blue style="display: flow-root"><div class=pr-b style="margin-top: 10px">child</div></div></div>
+    <figcaption>In a flow root: 10px of blue above the child.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What makes one</h2>
+  <p><q>making a box out-of-flow causes it to blockify as well as to establish an independent formatting
+  context.</q> So does a scroll container.</p>
+  <figure>
+    <div class=pr-stage><div class=blue style="float: left; width: 80px"><div class=float></div>a</div></div>
+    <figcaption>A blue float holding a float: 40px tall, round it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=blue style="overflow: auto"><div class=float></div>scroll</div></div>
+    <figcaption><code>overflow: auto</code>: 40px tall, round its float.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

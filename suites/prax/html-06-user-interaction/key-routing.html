@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where key events go</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.4 Processing model</div>
+  <h1>Where key events go</h1>
+  <p class=pr-lede>When a key event is routed, <q>Let target area be the currently focused area of the top-level traversable.</q>
+  <q>Let target node be target area's DOM anchor.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">HTML §6.6.4</a></span></p>
+</header>
+<section>
+  <h2>The focused element, or else the body</h2>
+  <p><q>If target node is a Document that has a body element, then let target node be the body element of that
+  Document.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=box tabindex=0>box, tabindex=0</div>
+        <div style="height: 20px; margin: 0 0 10px; font-size: 12px; line-height: 20px">plain text, not focusable</div>
+      </div>
+      <ol class=pr-log data-log="keydown" data-fields="key target" data-lines=3 data-on=document></ol>
+    </div>
+    <figcaption>Click the box and press a letter: keydown at <code>box</code>. Click the plain text, which leaves
+    nothing focused, and press a letter: keydown at the <code>body</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not to the inside of a frame that is not focused</h2>
+  <p>A key goes to the focused area of the top-level traversable, wherever the pointer is: a frame's document gets it
+  only when the focus is in it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-processing-model">§6.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=box2 tabindex=0>box2, tabindex=0</div>
+        <iframe id=frame style="display: block; width: 100%; height: 30px; margin: 0 0 10px; border: 0"
+                srcdoc="<body style='margin: 0; font: 12px/20px sans-serif; background: #b9cde6'>the frame's body</body>"></iframe>
+      </div>
+      <ol class=pr-log id=log data-lines=3></ol>
+    </div>
+    <figcaption>Click <code>box2</code>, move the pointer over the frame and press a letter: keydown at
+    <code>box2</code>. Click the frame and press a letter: keydown at the frame's <code>body</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs the keydowns of the page and of the frame's document for the second figure.
+  const log = document.getElementById("log");
+  log.style.setProperty("--pr-log-lines", 3);
+  function watch(doc, name) {
+      doc.addEventListener("keydown", event => {
+          const item = document.createElement("li");
+          item.textContent = "keydown key=" + JSON.stringify(event.key) + " target=" + (event.target.id || event.target.localName) + name;
+          log.append(item);
+          while (log.children.length > 3)
+              log.firstElementChild.remove();
+      }, true);
+  }
+  watch(document, "");
+  const frame = document.getElementById("frame");
+  if (frame.contentDocument && frame.contentDocument.URL === "about:srcdoc")
+      watch(frame.contentDocument, ", in the frame");
+  else
+      frame.addEventListener("load", () => watch(frame.contentDocument, ", in the frame"));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

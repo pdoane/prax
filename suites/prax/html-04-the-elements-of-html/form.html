@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The form element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad input, .pad button { margin: 0 0 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.3 The form element</div>
+  <h1>The form element</h1>
+  <p class=pr-lede><q>The form element represents a hyperlink that can be manipulated through a collection of
+  form-associated elements, some of which can represent editable values that can be submitted to a server for
+  processing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-form-element">HTML §4.10.3</a></span></p>
+</header>
+
+<section>
+  <h2>A hyperlink that its controls complete</h2>
+  <p>The form's action is a page that lists what it was sent; it is the form's target, below the stage.
+  <q>Resets the form.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-form-element">§4.10.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad action=support/form-echo.html target=hyperlink>
+        <input name=q value=hello size=10> <input type=submit value=Go>
+      </form>
+      <iframe class=pr-result name=hyperlink src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Grey until the reader clicks Go, then green: <code>q=hello</code>. Type something else and click Go:
+    the frame follows the link that the field now completes.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <form class=pad id=resettable>
+        <input value=default size=10> <input type=checkbox checked><br>
+        <button type=button onclick="resettable.reset()">reset()</button>
+      </form>
+      <ol class=pr-log data-log="reset" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Edit the field, clear the box, and click <code>reset()</code>: <code>reset</code> is logged, the field
+    says "default" and the box is checked again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>requestSubmit() and submit()</h2>
+  <p><q>Unlike submit(), this method includes interactive constraint validation and firing a submit event, either of
+  which can cancel submission.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-form-element">§4.10.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad id=requested action=support/form-echo.html target=requested-result>
+        <input name=name required placeholder="required" size=10>
+        <button type=button onclick="requested.requestSubmit()">requestSubmit()</button>
+        <button type=button onclick="requested.submit()">submit()</button>
+      </form>
+      <ol class=pr-log data-log="submit invalid" data-fields="target" data-lines=2></ol>
+      <iframe class=pr-result name=requested-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>The field is <code>required</code> and empty. <code>requestSubmit()</code>: <code>invalid</code> is
+    logged, the browser points at the field, and the frame stays grey. <code>submit()</code>: nothing is logged, and the
+    frame turns green, <code>name=</code>. Type a name, and <code>requestSubmit()</code> logs <code>submit</code> and
+    submits it.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

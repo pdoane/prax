@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An ellipsis at both ends while scrolled</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; height: 20px; margin: 10px 50px; overflow: scroll; white-space: nowrap; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 4.6 ellipsis interaction with scrolling interfaces</div>
+  <h1>An ellipsis at both ends while scrolled</h1>
+  <p class=pr-lede><q>If that content's block container element is the same that's doing the scrolling, and the
+  computed value of text-overflow has two values, with the value applying to the start edge being a non-clip value,
+  then implementations must render an ellipsis/string in place of the clipped content, with the same details as
+  described in the value definition above, except that the ellipsis/string is drawn in the start (rather than end)
+  of the block's direction</q>. <q>If there is insufficient space for both start and end ellipses/strings, then only
+  the end ellipsis/string should be rendered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#ellipsis-scrolling">CSS Overflow 4 §4.6</a></span></p>
+</header>
+
+<section>
+  <h2>Scrolled into the middle</h2>
+  <p>Each box is 100 by 20, <code>overflow: scroll</code>, and holds "abcdefghijklmnopqrst" in
+  <code>.pr-measure</code> text, 200px; a script scrolls each 50px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t s" style="text-overflow: ellipsis ellipsis">abcdefghijklmnopqrst</div></div>
+    <figcaption><code>ellipsis ellipsis</code>: content is clipped at both edges, so "…ghijklm…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw no ellipsis at either end.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t s" style="text-overflow: clip ellipsis">abcdefghijklmnopqrst</div></div>
+    <figcaption><code>clip ellipsis</code>: the start value is <code>clip</code>: "fghijklmn…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw no ellipsis.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t s" style='text-overflow: "[" "]"'>abcdefghijklmnopqrst</div></div>
+    <figcaption><code>"[" "]"</code>: "[ghijklm]". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw no string.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t s" style="width: 15px; text-overflow: ellipsis ellipsis">abcdefghijklmnopqrst</div></div>
+    <figcaption>A box 15px wide, no room for both: only the end ellipsis. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw none.</figcaption>
+  </figure>
+</section>
+
+<script>
+  const scroll = () => { for (const e of document.querySelectorAll(".s")) e.scrollLeft = 50; };
+  scroll();
+  document.fonts.ready.then(scroll);
+</script>
+</body>
+</html>

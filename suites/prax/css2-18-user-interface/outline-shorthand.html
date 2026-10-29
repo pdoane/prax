@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline: the shorthand</h1>
+  <p class=pr-lede><code>outline</code> takes <code>[ &lt;'outline-color'&gt; || &lt;'outline-style'&gt; ||
+  &lt;'outline-width'&gt; ] | inherit</code>. Not inherited, applies to all elements.</p>
+</header>
+
+<section>
+  <h2>Any of the three, in any order</h2>
+  <p><q>The 'outline' property is a shorthand property, and sets all three of 'outline-style', 'outline-width', and
+  'outline-color'.</q> One that is left out takes its initial value. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-plain style="outline: 10px dashed #c0392b"></div></div>
+    <figcaption><code>outline: 10px dashed #c0392b</code>: red, dashed, 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-plain style="outline: #c0392b dashed 10px"></div></div>
+    <figcaption><code>outline: #c0392b dashed 10px</code>: the same in another order.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><div class=pr-plain style="outline: 10px #c0392b"></div></div>
+    <figcaption><code>outline: 10px #c0392b</code>: the style is left out and takes its initial <code>none</code>, so
+    there is no outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The same on all sides</h2>
+  <p><q>The outline is the same on all sides. In contrast to borders, there is no 'outline-top' or 'outline-left'
+  property.</q> The specification's example: <code>button { outline : thick solid}</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2
+  §18.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 20px"><button style="outline: thick solid">button</button></div>
+    <figcaption><code>outline: thick solid</code> on a <code>button</code>: a thick outline in the button's text
+    color, round all four sides.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

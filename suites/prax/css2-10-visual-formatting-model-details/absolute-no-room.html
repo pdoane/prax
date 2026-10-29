@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: insets that leave no room</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; }
+  .sq { position: absolute; top: 90px; right: 90px; bottom: 90px; left: 90px; margin: auto; border: 10px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: insets that leave no room</h1>
+  <p class=pr-lede>In each stage, the containing block, a box's insets add up to more than the stage.</p>
+</header>
+
+<section>
+  <h2>A width below zero</h2>
+  <p><q>5. 'width' is 'auto', 'left' and 'right' are not 'auto', then solve for 'width'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span>,
+  and <q>Negative values for 'width' are illegal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2 §10.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 40px"><div class="pr-chip abs" style="left: 150px; right: 150px; border-width: 0 0 0 2px">abc</div></div>
+    <figcaption><code>left: 150px; right: 150px</code> in 200px: the width would be −100, and is 0, at 150;
+    "abc" overflows it.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#resolving-inset-overconstraint">CSS Positioned Layout 3 §3.5.2</a>, <a href="https://drafts.csswg.org/css-position-3/#abspos-margins">CSS Positioned Layout 3 §4.2</a></div>
+  <h2>The room floored at zero, then auto margins</h2>
+  <p><q>If the inset-modified containing block size in any axis is less than zero, then the weaker inset in the affected
+  axis is reduced (possibly becoming negative) to bring that size up to zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#resolving-inset-overconstraint">CSS Positioned Layout 3 §3.5.2</a></span> Auto margins share
+  the rest, but <q>if in the inline axis the remaining space is negative and both margins are auto, the start margin
+  resolves to zero</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-margins">CSS Positioned Layout 3 §4.2</a></span> Resolved in
+  <a href="https://github.com/w3c/csswg-drafts/issues/11478">csswg-drafts#11478</a>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow" style="position: relative; height: 100px"><div class=sq></div></div>
+    <figcaption>Insets 90px, <code>margin: auto</code>, a 10px border: the room is the point 90, 90. Across,
+    the box starts at 90; down, it is centered on 90. <span class=pr-flag>Safari</span> Down, it is centered in the
+    stage, at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Segment break transformation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3.3 Segment Break Transformation Rules</div>
+  <h1>Segment break transformation</h1>
+  <p class=pr-lede><q>When 'white-space-collapse' is 'collapse', segment breaks are collapsible, and are collapsed as
+  follows: First, any collapsible segment break immediately following another collapsible segment break is removed.
+  Then any remaining segment break is either transformed into a space (U+0020) or removed depending on the context
+  before and after the break. The rules for this operation are UA-defined in this level.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-transform">CSS Text 4 §4.3.3</a></span>
+  The text is highlighted.</p>
+</header>
+
+<section>
+  <h2>Consecutive breaks are one</h2>
+  <p>Letters are 10px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>one
+
+
+two</span></div>
+    <figcaption>"one", three newlines, "two": one space, "two" at 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>one
+
+two</span></div>
+    <figcaption>Two newlines with spaces between, which are removed beside them first: one space.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Space or nothing: the UA's choice</h2>
+  <p>The specification's example: <q>In languages that use word separators, such as English and Korean, “unbreaking” a
+  line requires joining the two lines with a space.</q> <q>In languages that have no word separators, such as
+  Chinese, “unbreaking” a line requires joining the two lines with no intervening space.</q> Which a browser does is
+  its own choice in this level, so nothing here is flagged.</p>
+  <figure>
+    <div class="pr-stage ja" lang=zh-Hant><span class=t>這個段落是
+那麼長</span></div>
+    <figcaption><code>lang=zh-Hant</code>, a newline between two Han characters: joined with no space, 160px, or
+    with one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja" lang=ja><span class=t>あいうえ
+かきくけ</span></div>
+    <figcaption><code>lang=ja</code>, between kana: likewise.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

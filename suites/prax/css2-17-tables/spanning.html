@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Visual layout: spanning cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; background: #f4f5f7; border: 1px solid #2c5a8f; }
+  td[rowspan], td[colspan] { background: #d68a3c; color: white; font-weight: 600; }
+  tbody + tbody td { border-top-width: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5 Visual layout of table contents</div>
+  <h1>Visual layout: spanning cells</h1>
+  <p class=pr-lede><q>Cells may span several rows or columns.</q> CSS does not say how many; HTML's
+  <code>rowspan</code> and <code>colspan</code> do. Spanning cells are orange; the others are 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Where a spanning cell goes</h2>
+  <p><q>The top row of this rectangle is in the row specified by the cell's parent. The rectangle must be as far to the
+  left as possible, but the part of the cell in the first column it occupies must not overlap with any other cell box
+  (i.e., a row-spanning cell starting in a prior row), and the cell must be to the right of all cells in the same row
+  that are earlier in the source document.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td rowspan=2>2<td>3<tr><td>4<td>5</table></div>
+    <figcaption>2 spans two rows. In the second row, 4 is in the first column, and 5 skips the column 2 occupies: 5 is
+    under 3.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td rowspan=2>1<td>2<td>3<tr><td colspan=2>4</table></div>
+    <figcaption>1 spans two rows, so the second row's first cell, 4, spanning two columns, starts in the second
+    column, under 2 and 3.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Shortened to fit</h2>
+  <p><q>A cell box cannot extend beyond the last row box of a table or row group; the user agents must shorten it until
+  it fits.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td rowspan=5>1<td>2<tr><td>3</table></div>
+    <figcaption><code>rowspan=5</code> in a table of two rows: 1 is 40px tall, the two rows.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tbody><tr><td>1<td rowspan=3>2<tr><td>3</tbody><tbody><tr><td>4<td>5</tbody></table></div>
+    <figcaption><code>rowspan=3</code> in a row group of two rows: 2 stops at the end of its group, and 5 is beside 4
+    in the next group, whose cells have a 3px top border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

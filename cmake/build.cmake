@@ -1,0 +1,160 @@
+# The functions that the build's CMakeLists.txt files declare targets with.
+
+# One warning set for every target of the engine. Under MSVC, some warnings are off because they fire on the C API's
+# design: a C function returning a record that has C++ constructors under __cplusplus (C4190), a record's anonymous
+# union or struct (C4201), and a record that ends in a flexible array (C4200). Others are off because the other
+# compilers' warnings below check the same code more precisely: conversions and comparisons between integer types
+# (C4244, C4245, C4267, C4018, C4389), which MSVC reports where a closed set's enum constant converts to the set's
+# integer type; shadowing (C4456, C4457, C4458); and the flow analysis that guesses at uninitialized variables and
+# unreachable code (C4701, C4703, C4702). Negating an unsigned value (C4146), truncating a constant in a cast (C4310),
+# adding constants of different enums (C5054), and an array rvalue decaying in C (C4223) are deliberate.
+#
+# A development build makes every warning an error, the linker's too. A build that includes Prax as a dependency keeps
+# the warnings, because a newer compiler's new warnings must not break a consumer's build.
+add_library(pr_warnings INTERFACE)
+target_compile_options(pr_warnings INTERFACE
+    $<$<C_COMPILER_ID:MSVC>:/W4 /wd4190 /wd4201 /wd4200 /wd4244 /wd4245 /wd4267 /wd4018 /wd4389 /wd4456 /wd4457
+        /wd4458 /wd4701 /wd4703 /wd4702 /wd4146 /wd4310 /wd5054 /wd4223>
+    $<$<NOT:$<C_COMPILER_ID:MSVC>>:-Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wimplicit-fallthrough
+        -Wcast-align -Wcast-qual -Wundef -Wdouble-promotion -Wmissing-prototypes -Wunreachable-code -Wformat=2>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wzero-as-null-pointer-constant>
+    $<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wnullability-completeness -Wcomma -Wextra-semi>
+    $<$<COMPILE_LANG_AND_ID:C,Clang,AppleClang>:-Wnullability-completeness -Wcomma>
+)
+if (PR_DEVELOP)
+    target_compile_options(pr_warnings INTERFACE $<IF:$<C_COMPILER_ID:MSVC>,/WX,-Werror>)
+    target_link_options(pr_warnings INTERFACE
+        $<$<C_COMPILER_ID:MSVC>:/WX>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<PLATFORM_ID:Darwin>>:LINKER:-fatal_warnings>
+        $<$<AND:$<NOT:$<C_COMPILER_ID:MSVC>>,$<NOT:$<PLATFORM_ID:Darwin>>>:LINKER:--fatal-warnings>
+    )
+endif()
+
+# Declares PR_<MODULE>_<BACKEND>, the option that builds a backend into its library. It is ON by default where
+# `default` is true, and in a development build or the examples' wherever `supported` is true.
+#
+#   pr_backend_option(<option> <doc> <default> <supported>)
+function(pr_backend_option option doc default supported)
+    if (default OR ((PR_DEVELOP OR PR_EXAMPLES) AND supported))
+        option(${option} "${doc}" ON)
+    else()
+        option(${option} "${doc}" OFF)
+    endif()
+endfunction()
+
+# Adds a library of the engine, `name`: the target pr_<name>, which other targets and consumers name as prax::<name>.
+# INCLUDE names the directory whose pr/ holds the library's public headers, which are installed with it and included as
+# "pr/<header>". A library without sources is an INTERFACE library. Every library of the engine is installed and
+# exported.
+#
+#   pr_library(<name> [INCLUDE <directory>] <source>...)
+function(pr_library name)
+    cmake_parse_arguments(PARSE_ARGV 1 LIBRARY "" "INCLUDE" "")
+    set(target pr_${name})
+    if (LIBRARY_UNPARSED_ARGUMENTS)
+        add_library(${target} STATIC ${LIBRARY_UNPARSED_ARGUMENTS})
+        target_link_libraries(${target} PRIVATE $<BUILD_LOCAL_INTERFACE:pr_warnings>)
+        set(scope PUBLIC)
+    else()
+        add_library(${target} INTERFACE)
+        set(scope INTERFACE)
+    endif()
+    add_library(prax::${name} ALIAS ${target})
+    set_target_properties(${target} PROPERTIES EXPORT_NAME ${name})
+    if (LIBRARY_INCLUDE)
+        pr_headers(${target} ${scope} ${LIBRARY_INCLUDE})
+    endif()
+    set_property(GLOBAL APPEND PROPERTY PR_LIBRARIES ${target})
+endfunction()
+
+# Adds the headers under `directory`'s pr/ to the target's public headers, which it installs.
+function(pr_headers target scope directory)
+    cmake_path(ABSOLUTE_PATH directory NORMALIZE)
+    file(GLOB headers CONFIGURE_DEPENDS ${directory}/pr/*)
+    target_sources(${target} ${scope} FILE_SET HEADERS BASE_DIRS ${directory} FILES ${headers})
+endfunction()
+
+# Builds third-party targets with their warnings off. Their warnings are their authors' to act on, and a compiler that
+# warns about more than theirs did would otherwise break the build.
+set(PR_NO_WARNINGS $<IF:$<C_COMPILER_ID:MSVC>,/w,-w>)
+function(pr_third_party)
+    foreach (target IN LISTS ARGN)
+        set_target_properties(${target} PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+        target_compile_options(${target} PRIVATE ${PR_NO_WARNINGS})
+    endforeach()
+endfunction()
+
+# Builds third-party sources that a target of the engine compiles beside its own.
+function(pr_third_party_sources)
+    set_source_files_properties(${ARGN} PROPERTIES COMPILE_OPTIONS ${PR_NO_WARNINGS})
+endfunction()
+
+# Builds every target of the directory `dir`, and of its subdirectories, as third-party code.
+function(pr_third_party_directory dir)
+    get_property(targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+    foreach (target IN LISTS targets)
+        get_target_property(type ${target} TYPE)
+        if (NOT type STREQUAL "INTERFACE_LIBRARY" AND NOT type STREQUAL "UTILITY")
+            pr_third_party(${target})
+        endif()
+    endforeach()
+    get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+    foreach (subdirectory IN LISTS subdirectories)
+        pr_third_party_directory(${subdirectory})
+    endforeach()
+endfunction()
+
+# Shaders: Slang, compiled at build time into a shader library for each backend that the platform builds (Metal on Apple
+# platforms, Direct3D 12 on Windows, and Vulkan where the build has it), by shader_library.cmake. `source` compiles into
+# a header that holds the library's bytes as `const unsigned char <VARIABLE>[]`, which a source includes by the path of
+# the shader's directory under lib, or under the root outside lib: "<module>/.../<VARIABLE>.h". A shader includes
+# pr/gpu.slang, and INCLUDE names other directories that it includes from, and DEPENDS the files that it includes that
+# the build generates.
+#
+#   pr_slang(<target> <source> VARIABLE <name> [INCLUDE <directory>...] [DEPENDS <file>...])
+function(pr_slang target source)
+    cmake_parse_arguments(PARSE_ARGV 2 SLANG "" "VARIABLE" "INCLUDE;DEPENDS")
+    cmake_path(ABSOLUTE_PATH source NORMALIZE)
+    cmake_path(RELATIVE_PATH source BASE_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_VARIABLE relative)
+    cmake_path(GET relative PARENT_PATH directory)
+    string(REGEX REPLACE "^lib/" "" directory "${directory}")
+    set(header ${PROJECT_BINARY_DIR}/slang/${directory}/${SLANG_VARIABLE}.h)
+    list(JOIN PR_SHADER_TARGETS "|" targets)
+    set(includes ${PROJECT_SOURCE_DIR}/lib/gpu/include ${SLANG_INCLUDE})
+    list(JOIN includes "|" includes)
+    add_custom_command(OUTPUT ${header}
+        COMMAND ${CMAKE_COMMAND} -DSLANGC=${PR_SLANGC} -DTARGETS=${targets} -DVARIABLE=${SLANG_VARIABLE}
+            -DINCLUDES=${includes} -DSOURCE=${source} -DHEADER=${header} -DDEPFILE=${header}.d
+            -DSCRATCH=${PROJECT_BINARY_DIR}/slang/${directory}/${SLANG_VARIABLE} -DROOT=${PROJECT_SOURCE_DIR}
+            -P ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
+        DEPENDS ${source} ${PROJECT_SOURCE_DIR}/cmake/shader_library.cmake
+            ${PROJECT_SOURCE_DIR}/lib/gpu/include/pr/gpu.slang ${SLANG_DEPENDS}
+        DEPFILE ${header}.d
+        COMMENT "Compiling ${relative}"
+        VERBATIM)
+    target_sources(${target} PRIVATE ${header})
+    target_include_directories(${target} PRIVATE ${PROJECT_BINARY_DIR}/slang)
+endfunction()
+
+# One test binary per module, named after it, which links the module, the toolkit and the tests' main(). The module is
+# a library of the engine, or a library of test support.
+#
+#   pr_module_tests(<module> <source>...)
+function(pr_module_tests module)
+    add_executable(${module}_tests ${ARGN})
+    if (TARGET prax::${module})
+        set(tested prax::${module})
+    else()
+        set(tested ${module})
+    endif()
+    target_link_libraries(${module}_tests PRIVATE ${tested} prax::core_cpp test_main pr_warnings)
+    doctest_discover_tests(${module}_tests)
+endfunction()
+
+# A program that a tools/ runner drives, built on the module it exercises and the harnesses' support.
+#
+#   pr_harness(<name> <module> <source>...)
+function(pr_harness name module)
+    add_executable(${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE ${module} harness pr_warnings)
+endfunction()

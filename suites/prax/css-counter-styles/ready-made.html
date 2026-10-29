@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Ready-made counter styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding: 0; list-style-position: inside; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 8 Additional “Ready-made” Counter Styles</div>
+  <h1>Ready-made counter styles</h1>
+  <p class=pr-lede><q>The Internationalization Working Group maintains a collection of additional @counter-style rules
+  for various world languages in Ready-made Counter Styles.</q> <q>UAs must
+  include these in their UA stylesheet (or at least act as if these rules were defined at that level).</q> (<a href="https://github.com/w3c/csswg-drafts/issues/8636">csswg-drafts#8636</a>) <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#additional-predefined">CSS Counter Styles 3 §8</a></span></p>
+</header>
+
+<section>
+  <h2>Three of them</h2>
+  <p>Each list has three items, inside markers, the items' text their values. The markers carry each style's own
+  suffix.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: circled-decimal; font-family: 'PR Noto Sans JP'"><li>1<li>2<li>3</ol></div>
+    <figcaption><code>circled-decimal</code>: ①, ②, ③. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not included: "1.", "2.", "3.".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: fullwidth-decimal; font-family: 'PR Noto Sans JP'"><li>1<li>2<li>3</ol></div>
+    <figcaption><code>fullwidth-decimal</code>: １, ２, ３, each a full em wide. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not included: "1.", "2.", "3.".</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: thai-alphabetic; font-family: 'PR Noto Sans Thai'"><li>1<li>2<li>3</ol></div>
+    <figcaption><code>thai-alphabetic</code>: ก, ข, ค. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not included: "1.", "2.", "3.".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

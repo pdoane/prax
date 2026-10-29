@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pattern: clipped to the tile, and its coordinates</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <pattern id="clipped" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="0" cy="20" r="15" fill="#4f81bd" /></pattern>
+  <pattern id="origin" x="10" y="10" width="20" height="20" patternUnits="userSpaceOnUse"><rect x="5" y="5" width="10" height="10" fill="#d68a3c" /></pattern>
+  <pattern id="viewbox" width="40" height="20" patternUnits="userSpaceOnUse" viewBox="0 0 10 10"><rect width="10" height="10" fill="#6aa36a" /></pattern>
+  <pattern id="viewbox-none" width="40" height="20" patternUnits="userSpaceOnUse" viewBox="0 0 10 10" preserveAspectRatio="none"><rect width="10" height="10" fill="#6aa36a" /></pattern>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.3.2 Notes on patterns</div>
+  <h1>pattern: clipped to the tile, and its coordinates</h1>
+  <p class=pr-lede><q>SVG's user agent style sheet sets the overflow property for ‘pattern’ elements to hidden, which
+  causes a rectangular clipping path to be created at the bounds of the pattern tile.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#PatternNotes">SVG 2 §14.3.2</a></span>
+  Each stage is an SVG 160 by 60 with a rect 160 by 60 at 0, 0; the patterns are in user space.</p>
+</header>
+
+<section>
+  <h2>Clipped to the tile</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="url(#clipped)" /></svg></div>
+    <figcaption>Tiles 40 by 40 with a blue circle of radius 15 on their left edge, at 0, 20: half circles, flat
+    on the left, from x 0, 40, 80 and 120.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The contents' coordinates</h2>
+  <p><q>If there is no ‘viewBox’ attribute, then the new coordinate system has its origin at (x, y)</q>. <q>If there
+  is a ‘viewBox’ attribute, then the new coordinate system is fitted into the region defined by the ‘x’, ‘y’,
+  ‘width’, ‘height’ and ‘patternUnits’ attributes on the ‘pattern’ element using the standard rules for ‘viewBox’
+  and ‘preserveAspectRatio’.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="url(#origin)" /></svg></div>
+    <figcaption><code>x="10" y="10"</code>, tiles 20 by 20, an orange rect 10 by 10 at 5, 5 in it: squares from
+    15, 15 every 20, and at −5 too.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="url(#viewbox)" /></svg></div>
+    <figcaption>Tiles 40 by 20 with <code>viewBox="0 0 10 10"</code> filled green: a square 20 by 20 centered in
+    each, from x 10, 50, 90 and 130.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="url(#viewbox-none)" /></svg></div>
+    <figcaption>The same with <code>preserveAspectRatio="none"</code>: the green fills each tile, all
+    green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

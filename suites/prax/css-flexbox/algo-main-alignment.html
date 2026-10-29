@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 12: distribute the remaining free space</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 40px; flex-shrink: 0; }
+  .n > div { width: 70px; }
+  figure.o { margin-left: 44px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.5 Main-Axis Alignment</div>
+  <h1>Step 12: distribute the remaining free space</h1>
+  <p class=pr-lede><q>If the remaining free space is positive and at least one main-axis margin on this line is auto,
+  distribute the free space equally among these margins. Otherwise, set all auto margins to zero.</q> <q>Align the items
+  along the main-axis per justify-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#main-alignment">CSS Flexible Box Layout 2 §9.5</a></span></p>
+</header>
+
+<section>
+  <h2>Equally among the auto margins</h2>
+  <p>Three items 40px wide leave 80px in the 200px stage.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="margin-right: auto">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit" style="margin-left: auto">C</div></div>
+    <figcaption>A's <code>margin-right</code> and C's <code>margin-left</code> are <code>auto</code>: 40px each, so
+    B is at 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="margin-right: auto">A</div><div class="pr-b pr-fit" style="margin: 0 auto">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>Three <code>auto</code> margins, A's right and both of B's: 80px in three, about 26.7px each; B
+    starts at about 93px and C at 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-content: flex-end"><div class="pr-a pr-fit" style="margin-right: auto">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption><code>justify-content: flex-end</code> comes after, and has nothing left: A stays at 0 and its margin
+    pushes B and C to 120 to 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="flex-direction: row-reverse"><div class="pr-a pr-fit" style="margin-right: auto">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>row-reverse</code>: A's <code>margin-right</code> is between A and the main-start edge, the
+    right; it takes all 120px, so A is at 40 to 80px and B at 0 to 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No free space: the auto margins are zero</h2>
+  <p>A 100px stage holds two items 70px wide that do not shrink: −40px of free space.</p>
+  <figure class=o>
+    <div class="pr-stage pr-narrow n" style="justify-content: center"><div class="pr-a pr-fit" style="margin-left: auto">A</div><div class="pr-b pr-fit" style="margin-right: auto">B</div></div>
+    <figcaption>A's <code>margin-left</code> and B's <code>margin-right</code> are <code>auto</code>, and set to zero;
+    then <code>justify-content: center</code> applies: A from −20px, B to 120px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

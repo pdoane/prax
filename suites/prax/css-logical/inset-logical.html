@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative offsets</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .pr-stage.w { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.3 Flow-Relative Offsets</div>
+  <h1>Flow-relative offsets</h1>
+  <p class=pr-lede><q>These properties correspond to the 'top', 'bottom', 'left', and 'right' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#position-properties">CSS Logical Properties and Values 1 §4.3</a></span> Each stage is 160 by 100px and the containing block of A, which is absolutely positioned and 40 by 20px.</p>
+</header>
+
+<section>
+  <h2>inset-block-start and inset-inline-start</h2>
+  <p>Each A has <code>inset-block-start: 10px; inset-inline-start: 20px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-start: 10px; inset-inline-start: 20px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px from the top, 20px from the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl; position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-start: 10px; inset-inline-start: 20px">A</div></div>
+    <figcaption><code>rtl</code>: 10px from the top, 20px from the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-start: 10px; inset-inline-start: 20px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 10px from the right, 20px from the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inset-block-end and inset-inline-end</h2>
+  <p>Each A has <code>inset-block-end: 10px; inset-inline-end: 20px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w" style="position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-end: 10px; inset-inline-end: 20px">A</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px from the bottom, 20px from the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl; position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-end: 10px; inset-inline-end: 20px">A</div></div>
+    <figcaption><code>rtl</code>: 10px from the bottom, 20px from the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl; position: relative"><div class="pr-a pr-fit" style="position: absolute; width: 40px; height: 20px; inset-block-end: 10px; inset-inline-end: 20px">A</div></div>
+    <figcaption><code>vertical-rl</code>: 10px from the left, 20px from the bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Forced breaks through nested contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.3 Forced Breaks</div>
+  <h1>Forced breaks through nested contexts</h1>
+  <p class=pr-lede><q>When a forced break occurs, it forces ensuing content into the next fragmentainer of the type associated with the break, breaking through as many fragmentation contexts as necessary until the specified break types are all satisfied. If the forced break is not contained within a matching type of fragmentation context, then the forced break has no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#forced-breaks">CSS Fragmentation 4 §4.3</a></span> In each frame, a multi-column container of two columns, filled in order, holds A, B and C.</p>
+</header>
+
+<section>
+  <h2>Combined types</h2>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto }</style><body class=pr-measure><div class=m><div class=pr-a style='break-after: column'>A</div><div class=pr-b style='break-before: page'>B</div><div class=pr-c>C</div></div>"></iframe>
+    <figcaption>A, <code>break-after: column</code>; B, <code>break-before: page</code>: both honored, so B leaves the columns of the first page. A on the first page; B and C in the first column of the second. <span class=pr-flag>Chrome</span> No break at all: one page, A, B and C in the first column. <span class=pr-flag>Safari</span> Prints only A, across the page. <span class=pr-flag>Firefox</span> A column break only: B and C in the second column of the first page.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .m { columns: 2; column-gap: 20px; column-rule: 1px dashed #6b7381; column-fill: auto }</style><body class=pr-measure><div class=m><div class=pr-a style='break-after: left'>A</div><div class=pr-b style='break-before: right'>B</div><div class=pr-c>C</div></div>"></iframe>
+    <figcaption><q>When left, right, recto, and/or verso are combined, the value specified on the latest element in the flow wins.</q> A, <code>left</code>; B, <code>right</code>: the second page, a left page, is left blank; B and C on the third. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> No break: one page; Safari prints no columns. <span class=pr-flag>Firefox</span> No blank page: B and C on the second page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

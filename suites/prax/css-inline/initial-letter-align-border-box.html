@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>initial-letter-align: border-box and synthesis</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 14px/24px "PR Baseline Diagnostic"; margin: 0; }
+  .p::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .bb::first-letter { border: 2px solid; padding: 2px; }
+  .pr-stage { width: 130px; }
+  figcaption { max-width: 130px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.4 Alignment of Initial Letters: the initial-letter-align property, border-box</div>
+  <h1>initial-letter-align: border-box and synthesis</h1>
+  <p class=pr-lede><q>This property specifies the alignment points used to size and position an initial letter.</q>
+  <q>the over and under alignment points of the initial letter are matched to corresponding over and under points of
+  the root inline box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#aligning-initial-letter">CSS Inline Layout 3 §7.4</a></span>
+  Each paragraph is 14px PR Baseline Diagnostic on 24px lines, whose glyphs each fill the band between two of its
+  baselines; its first letter, a B with <code>initial-letter: 2</code>, is Latin, so its own alignment points are its
+  cap height and alphabetic baseline, the band B fills.</p>
+</header>
+
+
+<section>
+  <h2>border-box, and synthesized baselines</h2>
+  <p><code>border-box</code>: <q>Use the initial letter box’s line-under and line-over border edges as the over and
+  under alignment points</q>. Where the font lacks a baseline, it is synthesized, as Devanagari's hanging baseline in
+  PR Noto Sans Devanagari, from <q>The top edge of the center of the letter Ka</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-synthesis-fonts">§A.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p bb" style="initial-letter-align: border-box">BBBB BBB BBB BBB BBB BBB BBB BBB</p></div>
+    <figcaption><code>border-box</code>: the B's border box, not its glyph, spans from the first line's cap height to
+    the second's baseline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p lang=hi style="font: 15px/24px 'PR Noto Sans Devanagari'; initial-letter-align: hanging">कमल का फूल पानी में खिलता है और सुंदर दिखता है।</p></div>
+    <figcaption><code>hanging</code>: क hangs from the first line's hanging baseline, which a UA may take from
+    the headstroke, and stands on the second line's baseline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Not supported.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

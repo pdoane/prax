@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where an &lt;image&gt; goes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 140px; height: 20px; margin: 10px; }
+  .gradient { background-image: linear-gradient(to right, #4f81bd, #d68a3c); }
+  ul.list { margin: 10px 0; font-size: 20px; line-height: 20px; list-style-image: linear-gradient(to right, #4f81bd, #d68a3c); }
+  .replaced { width: 60px; height: 20px; margin: 10px; content: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 1.1 Module Interactions</div>
+  <h1>Where an &lt;image&gt; goes</h1>
+  <p class=pr-lede><q>It also replaces the &lt;url&gt; type with &lt;image&gt; in the background-image, cursor, and
+  list-style-image definitions in CSS1 and CSS2 and adds &lt;image&gt; as an alternative to &lt;url&gt; in the
+  content property’s value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#placement">CSS Images 3 §1.1</a></span></p>
+</header>
+
+<section>
+  <h2>A gradient where CSS 2 took a URL</h2>
+  <p>Each figure uses the same gradient, blue at the left to orange at the right. A gradient has no natural
+  dimensions, so each context gives it its size. <code>cursor</code> takes one too, which a still cannot show.</p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost gradient"></div></div>
+    <figcaption><code>background-image</code>: the gradient fills the dashed 140 by 20 box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><ul class=list><li>&nbsp;</li></ul></div>
+    <figcaption><code>list-style-image</code> at <code>font-size: 20px</code>: a gradient marker left of the item, in
+    a 1em square, 20 by 20, by CSS Lists. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> draw
+    about 9 by 9, <span class=pr-flag>Firefox</span> 8 by 8.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An alternative to a URL in content</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=replaced></div></div>
+    <figcaption><code>content</code> on an element 60 by 20: the element is replaced by the gradient, drawn 60 by 20 at
+    the top left. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

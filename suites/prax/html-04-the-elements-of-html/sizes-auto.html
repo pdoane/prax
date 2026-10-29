@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>sizes=auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.2.2 Sizes attributes</div>
+  <h1>sizes=auto</h1>
+  <p class=pr-lede><q>The keyword auto is a width that is computed in parse a sizes attribute.</q> An img <q>allows
+  auto-sizes</q> if <q>its loading attribute is in the Lazy state</q> and its sizes is <code>auto</code> or starts with
+  <code>auto,</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#sizes-attributes">HTML §4.8.4.2.2</a></span>
+  Each img has one candidate, an orange image 160 by 80 described as <code>160w</code>.</p>
+</header>
+
+<section>
+  <h2>auto: the width it is drawn at</h2>
+  <p><q>If the img element that initiated the image loading … allows auto-sizes and is being rendered, then auto is
+  the concrete object size width.</q> Without dimensions it <q>will likely render with 300x150 dimensions because
+  sizes="auto" implies contain-intrinsic-size: 300px 150px</q>.</p>
+  <figure>
+    <div class="pr-stage pr-wide pr-row"><img loading="lazy" sizes="auto" srcset="support/orange-160x80.png 160w" alt=""></div>
+    <figcaption><code>loading=lazy sizes=auto</code>, no dimensions: orange, stretched to 300 by 150, the whole
+    stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img loading="lazy" sizes="auto" width="80" height="40" srcset="support/orange-160x80.png 160w" alt=""></div>
+    <figcaption><code>width=80 height=40</code>: auto is 80, density 2. Orange, 80 by 40.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>polyline: connected segments, open</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.6 The ‘polyline’ element</div>
+  <h1>polyline: connected segments, open</h1>
+  <p class=pr-lede><q>The ‘polyline’ element defines a set of connected straight line segments. Typically, ‘polyline’
+  elements define open shapes.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#PolylineElement">SVG 2 §10.6</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>The points</h2>
+  <p><q>The points that make up the polyline. All coordinate values are in the user coordinate system.</q> <q>The
+  initial value, (none), indicates that the polyline element is valid but does not render.</q> Stroked dark blue, 4
+  wide, and not filled.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 20,30 60,30 60,10 100,10 100,30 140,30" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>points="20,50 20,30 60,30 60,10 100,10 100,30 140,30"</code>: up and down in steps of 20 and
+    40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20 50 80 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>points="20 50 80 10 140 50"</code>, spaces only: up from 20, 50 to 80, 10 and down to 140, 50;
+    the bottom left open.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption>No <code>points</code>, filled blue and stroked orange: nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its path: a moveto, then a lineto to each point</h2>
+  <p><q>perform an absolute moveto operation to the first coordinate pair in the list of points</q> <q>for each
+  subsequent coordinate pair, perform an absolute lineto operation to that coordinate pair.</q> No closepath: the
+  path stays open.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 80,10 140,50" fill="none" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>One orange dash of 40: it starts at the first point, 20, 50, and climbs towards 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 80,10 140,50 20,50" fill="none" stroke="#2c5a8f" stroke-width="10" /></svg></div>
+    <figcaption>Back to the first point, stroked 10 wide: the ends meet at 20, 50 without a join, so a notch is cut
+    out of the corner there, where the other two corners are mitered to points.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><polyline points="20,50 80,10 140,50" fill="#4f81bd" /></svg></div>
+    <figcaption>Filled, without a stroke: <q>as if an additional "closepath" command were added</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#FillProperties">§13.4</a></span>,
+    so a triangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

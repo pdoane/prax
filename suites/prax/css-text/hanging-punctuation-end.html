@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hanging-punctuation: force-end and allow-end</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ja { width: 160px; font: 20px/30px "PR Noto Sans JP"; text-align: justify; }
+  figure { margin-right: 10px; }
+  figure.pr-narrow figcaption { max-width: 170px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 9.2.1 Hanging Punctuation: the hanging-punctuation property</div>
+  <h1>hanging-punctuation: force-end and allow-end</h1>
+  <p class=pr-lede><code>force-end</code>: <q>A stop or comma at the end of a line hangs.</q> <code>allow-end</code>:
+  <q>A stop or comma at the end of a line conditionally hangs.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hanging-punctuation-property">CSS Text 4 §9.2.1</a></span>
+  The specification's example: <code>text-align: justify</code>, Japanese at 20px, eight to a 160px line. The text is
+  highlighted.</p>
+</header>
+
+<section>
+  <h2>A stop that fits</h2>
+  <p>The first line is seven characters and "。", which fits. <q>The punctuation at the end of the first line for
+  'allow-end' does not hang, because it fits without hanging. However, if 'force-end' is used, it is forced to hang.
+  The justification measures the line without the hanging punctuation. Therefore when the line is expanded, the
+  punctuation is pushed outside the line.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja style="hanging-punctuation: allow-end"><span class=t>あいうえおかき。くけこ</span></div>
+    <figcaption><code>allow-end</code>: "。" inside, the line as it is.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="hanging-punctuation: force-end"><span class=t>あいうえおかき。くけこ</span></div>
+    <figcaption><code>force-end</code>: "。" hangs past the edge; the seven characters spread across the 160px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs. <span class=pr-flag>Safari</span> Does not force it: as <code>allow-end</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stop that fits only hanging</h2>
+  <p>Eight characters and "。": the stop goes on the first line only if it hangs.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja><span class=t>あいうえおかきく。けこ</span></div>
+    <figcaption><code>none</code>: "。" may not start a line, so "く。" go down together.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja style="hanging-punctuation: allow-end"><span class=t>あいうえおかきく。けこ</span></div>
+    <figcaption><code>allow-end</code>: "。" hangs on the first line, past the edge. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Nothing hangs.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

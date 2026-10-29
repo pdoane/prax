@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The deprecated xlink:href</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <rect id="blue" width="40" height="40" fill="#4f81bd" />
+  <rect id="orange" width="40" height="40" fill="#d68a3c" />
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.6 Deprecated XLink URL reference attributes</div>
+  <h1>The deprecated xlink:href</h1>
+  <p class=pr-lede><q>For backwards compatibility, elements with an ‘href’ attribute also recognize an ‘href’ attribute
+  in the XLink namespace</q>. <q>When the ‘href’ attribute is present in both the XLink namespace and without a
+  namespace, the value of the attribute without a namespace shall be used.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#XLinkRefAttrs">SVG 2 §16.1.6</a></span>
+  Each stage is an SVG 160 by 60 with a <code>use</code> at 60, 10 of a blue or an orange square.</p>
+</header>
+
+<section>
+  <h2>Recognized, and outranked</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use xlink:href="#blue" x="60" y="10" /></svg></div>
+    <figcaption><code>xlink:href="#blue"</code> alone: the blue square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#blue" xlink:href="#orange" x="60" y="10" /></svg></div>
+    <figcaption><code>href="#blue"</code> and <code>xlink:href="#orange"</code>: blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use xlink:href="#orange" href="#blue" x="60" y="10" /></svg></div>
+    <figcaption>The same, <code>xlink:href</code> first: still blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

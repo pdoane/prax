@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track sizes: min-content and max-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; }
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+  .t3 { background: #cfe3c8; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, min-content and max-content</div>
+  <h1>Track sizes: min-content and max-content</h1>
+  <p class=pr-lede><code>max-content</code> <q>Represents the largest max-content contribution of the grid items
+  occupying the grid track.</q> <code>min-content</code> <q>Represents the largest min-content contribution of the
+  grid items occupying the grid track.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>One item</h2>
+  <p>The first column holds "abc def"; the second is <code>1fr</code> and holds "x".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: min-content 1fr"><div class=t1>abc def</div><div class=t2>x</div></div></div>
+    <figcaption><code>min-content</code>: 30px, its longest word, the text on two lines; "x" from 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: max-content 1fr"><div class=t1>abc def</div><div class=t2>x</div></div></div>
+    <figcaption><code>max-content</code>: 70px, the text on one line; "x" from 70px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The largest of the items in the track</h2>
+  <p>The first column holds "ab" and, under it, "abcd efghij".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: min-content 1fr"><div class=t1>ab</div><div class=t2>x</div><div class=t3>abcd efghij</div></div></div>
+    <figcaption><code>min-content</code>: 60px, the largest min-content contribution, "efghij"; "x" from 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: max-content 1fr"><div class=t1>ab</div><div class=t2>x</div><div class=t3>abcd efghij</div></div></div>
+    <figcaption><code>max-content</code>: 110px, the second item on one line; "x" from 110px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

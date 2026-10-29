@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font style</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.4 Font styling: the 'font-style' property</div>
+  <h1>Font style</h1>
+  <p class=pr-lede><code>font-style</code> takes <code>normal | italic | oblique</code>. Initial <code>normal</code>, it
+  applies to all elements, is inherited, and computes to the value as specified.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-style.html">font-style: italic and oblique</a>.</p>
+</header>
+
+<section>
+  <h2>normal, italic and oblique</h2>
+  <p><q>A value of 'normal' selects a font that is classified as 'normal' in the UA's font database, while 'oblique'
+  selects a font that is labeled 'oblique'. A value of 'italic' selects a font that is labeled 'italic', or, if that is
+  not available, one labeled 'oblique'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-styling">CSS 2 §15.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-style: normal">Handgloves</div>
+    <figcaption>Georgia <code>normal</code>: upright, sometimes called roman.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-style: italic">Handgloves</div>
+    <figcaption>Georgia <code>italic</code>: slanted shapes of its own, a one-storey "a".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Helvetica; font-style: normal">Handgloves</div>
+    <figcaption>Helvetica <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Helvetica; font-style: oblique">Handgloves</div>
+    <figcaption>Helvetica <code>oblique</code>: its oblique face, the same letters slanted.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#font-style-prop">CSS Fonts 4 §2.4</a></div>
+  <h2>oblique is no longer an exact match</h2>
+  <p>CSS 2's <code>oblique</code> selected only a face labeled oblique. Now <q>If no oblique faces exist, and
+  font-synthesis-style has the value auto, a synthetic oblique face will be generated.</q> <q>For the purposes of font
+  matching, User agents may treat italic as a synonym for oblique.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-prop">CSS Fonts 4 §2.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-style: oblique">Handgloves</div>
+    <figcaption>Georgia <code>oblique</code>: Georgia has no oblique face. Its italic face stands in, as a user agent
+    may treat italic as oblique: the "a" has one storey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery'; font-style: oblique">Handgloves</div>
+    <figcaption><code>"Apple Chancery"</code> <code>oblique</code>: no slanted face at all, so its upright face,
+    sheared, more slanted than its own hand.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

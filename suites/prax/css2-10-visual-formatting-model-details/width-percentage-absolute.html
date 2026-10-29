@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The width property: percentages of a padding box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .holder { position: relative; height: 60px; padding: 20px; background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.2 Content width: the 'width' property</div>
+  <h1>The width property: percentages of a padding box</h1>
+  <p class=pr-lede>A percentage width is of the containing block, and an absolutely positioned box's containing block is
+  its positioned ancestor's padding box. Each green box is relative, with a 120px content box and 20px of padding.</p>
+</header>
+
+<section>
+  <h2>Absolutely positioned: the padding box</h2>
+  <p><q>Note: For absolutely positioned elements whose containing block is based on a block container element, the
+  percentage is calculated with respect to the width of the padding box of that element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-width-property">CSS 2
+  §10.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=holder style="width: 120px"><div class="pr-a pr-fit" style="width: 50%">50%</div></div></div>
+    <figcaption>In flow, <code>width: 50%</code> is half the 120px content box: 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=holder style="width: 120px"><div class="pr-b pr-fit" style="position: absolute; top: 0; left: 0; width: 50%">50%</div></div></div>
+    <figcaption>Absolutely positioned, <code>width: 50%</code> is half the 160px padding box: 80px, from its
+    corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

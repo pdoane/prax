@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: max violations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { flex: 1 1 0; min-width: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, max violations</div>
+  <h1>Resolving flexible lengths: max violations</h1>
+  <p class=pr-lede><q>Fix min/max violations. Clamp each non-frozen item's target main size by its used min and max
+  main sizes and floor its content-box size at zero. If the item's target main size was made smaller by this, it's a
+  max violation.</q> <q>Freeze over-flexed items. The total violation is the sum of the adjustments from the previous
+  step ∑(clamped size - unclamped size).</q> If it is <q>Negative: Freeze all the items with max violations.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>A max violation frees space for the others</h2>
+  <p>Each stage is 200px; every item has <code>flex: 1 1 0</code> and <code>min-width: 0</code>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 40px">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption>A with <code>max-width: 40px</code>: 100px each, then A clamped to 40px, −60px, and frozen. Again:
+    200 − 40 = 160px for B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 40px">A</div><div class="pr-b pr-fit" style="max-width: 50px">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>A at most 40px, B at most 50px: 66⅔px each, both clamped and frozen; C takes the 110px left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 40px">A</div><div class="pr-b pr-fit" style="max-width: 50px">B</div></div>
+    <figcaption>Only A and B: 40px and 50px, and 110px of the stage is left empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The sign of the total picks which to freeze</h2>
+  <p>A has <code>max-width: 30px</code>, B <code>min-width: 120px</code>, C neither. <q>Positive: Freeze all the
+  items with min violations.</q></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 30px">A</div><div class="pr-b pr-fit" style="min-width: 120px">B</div><div class="pr-c pr-fit">C</div></div>
+    <figcaption>66⅔px each: A −36⅔, B +53⅓, total positive, so only B is frozen, at 120px. 80px for A and C, 40px
+    each: A −10, so A is frozen at 30px. C gets 50px. A 0–30, B 30–150, C 150–200.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

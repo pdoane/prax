@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-collapse: half of each shared border</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; border: 10px solid #4f81bd; }
+  td + td { border-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.5.2 The Border-Collapse property</div>
+  <h1>border-collapse: half of each shared border</h1>
+  <p class=pr-lede><q>When the 'border-collapse' property has collapse as its value, the borders of adjacent cells are
+  merged together such that each cell draws only half of the shared border.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#border-collapse-property">CSS Table 3 §3.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Separate borders, and merged ones</h2>
+  <p>Two cells, each 40px wide inside a 10px border, blue on the left and orange on the right, with no spacing.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>separate</code>: each cell keeps both its borders, 60px a cell, and the table is 120px; blue
+    and orange meet in the middle, 20px of border between the grey boxes.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="border-collapse: collapse"><tr><td></td><td></td></tr></table></div>
+    <figcaption><code>collapse</code>: the two inner borders merge into one 10px border, half in each cell, and the
+    table is 110px; the borders tie, and the first cell's, blue, wins (<a href="https://drafts.csswg.org/css-tables-3/#border-style-harmonization-algorithm">§3.7.1.2</a>).</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

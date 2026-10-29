@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Left and right pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.2.2 Page selectors: selecting left, right, and first pages</div>
+  <h1>Left and right pages</h1>
+  <p class=pr-lede><q>All pages are automatically classified by user agents into either the :left or :right pseudo-class.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#page-selectors">CSS 2 §13.2.2</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>:left and :right</h2>
+  <p>The specification's example, <code>4cm</code> and <code>3cm</code> at the scale of these pages. <q>the user agent must honor these declarations even if the user agent does not transfer the page boxes to left and right sheets</q>. But <q>user agents may use a single page area width on left, right, and first pages. In this case, the page area width of the first page should be used.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 40px; margin-right: 30px } @page :right { margin-left: 30px; margin-right: 40px } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption>Pages 1 and 3, right pages: 30px from the left, 40px from the right. Page 2, a left page: 40px from the left. Safari gives every page page 1's margins, the single width allowed. <span class=pr-flag>Firefox</span> Margins of 10px: neither selector matches.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page :left { margin-left: 40px; margin-right: 30px } @page :right { margin-left: 30px; margin-right: 40px } html { background: #8cb6c0 } html { direction: rtl }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div>"></iframe>
+    <figcaption><q>the first page of a document with a right-to-left major writing direction would be a :left page</q>: page 1 is 40px from the left, page 2 30px. Safari keeps page 1's margins. <span class=pr-flag>Firefox</span> Margins of 10px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

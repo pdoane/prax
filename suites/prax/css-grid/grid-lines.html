@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid lines, by number and by name</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 100px; }
+  .pr-stage > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 3.1 Grid Lines</div>
+  <h1>Grid lines, by number and by name</h1>
+  <p class=pr-lede><q>Grid lines are the horizontal and vertical dividing lines of the grid. A grid line exists on
+  either side of a column or row. They can be referred to by numerical index, or by an author-specified name.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-line-concept">CSS Grid Layout 2 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The same item, placed two ways</h2>
+  <p>The specification's two examples, scaled: <q>both create three column grid lines and four row grid lines.</q>
+  Each stage, 100px tall, has columns <code>60px 1fr</code> and rows <code>20px 1fr 20px</code>. Item A is placed
+  between column lines 2 and 3 and row lines 1 and 4.</p>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template-columns: 60px 1fr; grid-template-rows: 20px 1fr 20px"><div class=pr-a style="grid-column: 2; grid-row-start: 1; grid-row-end: 4">A</div></div>
+    <figcaption>By number: <code>grid-column: 2</code>, <code>grid-row-start: 1; grid-row-end: 4</code>. A fills
+    the second column, from 60 to 200px, the full 100px height.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template-columns: 60px [item1-start] 1fr [item1-end]; grid-template-rows: [item1-start] 20px 1fr 20px [item1-end]"><div class=pr-a style="grid-column: item1-start / item1-end; grid-row: item1-start / item1-end">A</div></div>
+    <figcaption>By name: the lines are named <code>item1-start</code> and <code>item1-end</code> in each axis, and A
+    placed between them: the same, from 60 to 200px, the full height.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A line on either side of each track</h2>
+  <p>Three columns make four column lines. Each item is placed between two lines given by number.</p>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template-columns: 50px 50px 50px; grid-template-rows: 20px 20px 20px"><div class=pr-a style="grid-column: 1 / 2">1–2</div><div class=pr-b style="grid-column: 2 / 4">2–4</div><div class=pr-c style="grid-column: 1 / 4">1–4</div><div class=pr-d style="grid-column: 4 / 3">4–3</div></div>
+    <figcaption><code>1 / 2</code> covers 0 to 50px, <code>2 / 4</code> 50 to 150px, <code>1 / 4</code> 0 to 150px:
+    line 4 is at 150px, the grid's end. <code>4 / 3</code>, its lines swapped, covers 100 to 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

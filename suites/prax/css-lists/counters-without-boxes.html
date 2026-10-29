@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters in elements without boxes: display: contents</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .inc { counter-increment: x; }
+  .reset6 { counter-reset: x 6; }
+  .reset666 { counter-reset: x 666; }
+  .set666 { counter-set: x 666; }
+  .contents { display: contents; }
+  .result::before { content: counter(x); color: #2c5a8f; }
+  .gone { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.5 Counters in elements that do not generate boxes</div>
+  <h1>Counters in elements without boxes: display: contents</h1>
+  <p class=pr-lede><q>An element that does not generate a box (for example, an element with 'display' set to 'none', or a
+  pseudo-element with 'content' set to 'none') cannot set, reset, or increment a counter. The counter properties are
+  still valid on such an element, but they must have no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#counters-without-boxes">CSS Lists and Counters 3 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>display: contents generates no box</h2>
+  <p>Each stage resets <code>x</code> to 6 on an empty <code>span</code>, then has elements between it and a last
+  <code>span</code> that shows <code>x</code> in blue. An element with <code>display: contents</code> generates no box
+  of its own, but its children do.</p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=reset6></span><span class=contents><span class=inc></span></span><span class=result></span></div>
+    <figcaption>A child of a <code>display: contents</code> element increments: 7.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=reset6></span><span class="contents reset666 inc"></span><span class="contents set666"></span><span class="inc result"></span></div>
+    <figcaption><code>display: contents</code> elements that reset to 666, increment, and set to 666: no effect. The
+    last increments to 7.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=reset6></span><span class="gone inc"></span><span class="gone set666"></span><span class="inc result"></span></div>
+    <figcaption>The same with <code>display: none</code>: 7.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Cases in which the engine is right and the corpus is wrong. An entry lists its cases, a key per line, as
+# <file>:<index>, or a file for every case of the file, followed by the indented reason: what the sources say and why
+# the corpus loses.
+
+domjs:0
+    html/#tag-open-state sends a U+003F QUESTION MARK to the processing instruction open state. The suite predates
+    processing instructions: it expects a bogus comment and an unexpected-question-mark-instead-of-tag-name parse error,
+    which 13.2.2 no longer names. WPT's html/syntax/parsing corpus expects the instruction.
+
+domjs:1
+domjs:2
+test2:31
+test2:32
+test3:1158
+test3:1159
+test3:1160
+test3:1161
+test3:1162
+test3:1163
+test3:1164
+test3:1165
+test3:1166
+test3:1167
+test3:1168
+test3:1169
+test3:1170
+test3:1171
+test3:1172
+test3:1173
+test3:1174
+test3:1175
+test3:1176
+test3:1177
+test3:1178
+test3:1179
+test3:1180
+test3:1181
+test3:1182
+test3:1183
+test3:1184
+test3:1185
+test3:1186
+test3:1187
+test3:1188
+test3:1189
+test3:1190
+    A processing instruction, as domjs:0.

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The visibility property: the dynamic example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .suspects { height: 110px; }
+  .container1, .container2 { position: absolute; top: 10px; left: 10px; width: 180px; }
+  .container2 { visibility: hidden; }
+  .photo { float: left; width: 50px; height: 50px; margin-right: 10px; }
+  .suspects p { margin: 0; }
+  .choose { margin: 0; padding: 6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.2 Visibility: the 'visibility' property</div>
+  <h1>The visibility property: the dynamic example</h1>
+  <p class=pr-lede><q>This property may be used in conjunction with scripts to create dynamic effects.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#visibility">CSS 2 §11.2</a></span></p>
+</header>
+
+<section>
+  <h2>The source</h2>
+  <pre class=pr-source>#container1 { position: absolute;
+              top: 2in; left: 2in; width: 2in }
+#container2 { position: absolute;
+              top: 2in; left: 2in; width: 2in;
+              visibility: hidden; }</pre>
+  <p>The containers hold a photograph, a name and a residence; the buttons call <code>show()</code> on one and
+  <code>hide()</code> on the other. Here, the containers are at 10, 10 and 180px wide, and a colored square stands in
+  for each photograph.</p>
+</section>
+
+<section>
+  <h2>One replaces the other</h2>
+  <p><q>Pressing either form button invokes an author-defined script function that causes the corresponding box to
+  become visible and the other to be hidden. Since these boxes have the same size and position, the effect is that one
+  replaces the other.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#visibility">CSS 2 §11.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text suspects" style="height: 80px"><div id=container1 class=container1><div class="photo pr-a"></div><p>Name: Al Capone</p><p>Residence: Chicago</p></div><div id=container2 class=container2><div class="photo pr-b"></div><p>Name: Lucky Luciano</p><p>Residence: New York</p></div></div>
+    <p class=choose><button onclick='show("container1"); hide("container2")'>Capone</button> <button onclick='show("container2"); hide("container1")'>Luciano</button></p>
+    <figcaption>Al Capone, with a blue square, is shown; Lucky Luciano, with an orange square, is hidden in the same
+    place. Luciano swaps them, and Capone swaps them back.</figcaption>
+  </figure>
+</section>
+
+<script>
+  function show(id) { document.getElementById(id).style.visibility = "visible"; }
+  function hide(id) { document.getElementById(id).style.visibility = "hidden"; }
+</script>
+</body>
+</html>

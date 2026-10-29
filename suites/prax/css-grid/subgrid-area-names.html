@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: the parent's named areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; grid-template-areas: "aa bb bb"; }
+  .s { display: grid; grid-template-columns: subgrid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, named areas</div>
+  <h1>Subgrids: the parent's named areas</h1>
+  <p class=pr-lede><q>When a subgrid overlaps a named grid area in its parent that was created by a
+  grid-template-areas property declaration, implicitly-assigned line names are assigned to represent the parent’s
+  named grid area within the subgrid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px and <code>grid-template-areas: "aa bb bb"</code>, so
+  <code>bb</code> is its last two columns, from 40 to 180px. The tinted, outlined box is a subgrid of its columns,
+  and A is at <code>grid-column: bb</code>.</p>
+</header>
+
+<section>
+  <h2>Whole or in part</h2>
+  <p><q>If a named grid area only partially overlaps the subgrid, its implicitly-assigned line names will be assigned
+  to the first and/or last line of the subgrid such that a named grid area exists representing that partially
+  overlapped area of the subgrid</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 1 / 4"><div class=pr-a style="grid-column: bb">A</div></div></div></div>
+    <figcaption>The subgrid spans all three columns: A covers <code>bb</code>, 140px from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 1 / 3"><div class=pr-a style="grid-column: bb">A</div></div></div></div>
+    <figcaption>The subgrid spans the first two: <code>bb-end</code> falls on its last line, so A covers the part
+    of <code>bb</code> inside it, 60px from 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Through two levels</h2>
+  <p><q>all the explicitly-assigned line names inherit straight through to .inner, but the implicitly-assigned line
+  names are calculated based on each subgrid's overlap of the original named grid area.</q> The parent's lines are
+  also named <code>[x] [y] [z] [w]</code>. An outer subgrid spans its columns 2 to 4; an inner subgrid, in the outer
+  one's second column, spans the parent's third.</p>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-columns: [x] 40px [y] 60px [z] 80px [w]"><div class="s pr-parent" style="grid-column: 2 / 4"><div class="s pr-parent" style="grid-column: 2 / 3"><div class=pr-a style="grid-column: bb">A</div></div></div></div></div>
+    <figcaption>In the inner subgrid, <code>bb</code> is its one column: A is 80px from 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p style="grid-template-columns: [x] 40px [y] 60px [z] 80px [w]"><div class="s pr-parent" style="grid-column: 2 / 4"><div class="s pr-parent" style="grid-column: 1 / 3"><div class=pr-a style="grid-column: z / w">A</div></div></div></div></div>
+    <figcaption>An inner subgrid of both the outer one's columns: A at <code>z / w</code>, names from the parent, is
+    80px from 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

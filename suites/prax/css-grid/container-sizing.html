@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing grid containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: auto auto; column-gap: 10px; }
+  .g > :first-child { background: #b9cde6; }
+  .g > :nth-child(2) { background: #f6d7b4; }
+  .pr-frame { border-color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 5.2 Sizing Grid Containers</div>
+  <h1>Sizing grid containers</h1>
+  <p class=pr-lede><q>A grid container is sized using the rules of the formatting context in which it participates</q>.
+  <q>The max-content size (min-content size) of a grid container is the sum of the grid container’s track sizes
+  (including gutters) in the appropriate axis, when the grid is sized under a max-content constraint (min-content
+  constraint).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#intrinsic-sizes">CSS Grid Layout 2 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>In block and inline formatting contexts, and intrinsically</h2>
+  <p>Each dashed grid has <code>auto auto</code> columns, a 10px gap, and the items "ab cd" and "efg hij", whose
+  max-content widths are 50 and 70px and min-content widths 20 and 30px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame"><div>ab cd</div><div>efg hij</div></div></div>
+    <figcaption><code>grid</code>: <q>sized like a block box</q>, as wide as the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="display: inline-grid"><div>ab cd</div><div>efg hij</div></div></div>
+    <figcaption><code>inline-grid</code>: <q>sized as an atomic inline-level box</q>, fit to its content: 50 + 10
+    + 70 = 130px inside its border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="width: max-content"><div>ab cd</div><div>efg hij</div></div></div>
+    <figcaption><code>width: max-content</code>: the columns under a max-content constraint, 50 and 70px, and the
+    gap: 130px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="width: min-content"><div>ab cd</div><div>efg hij</div></div></div>
+    <figcaption><code>width: min-content</code>: the columns under a min-content constraint, 20 and 30px, and the
+    gap: 60px, each item on two lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The auto block size</h2>
+  <p><q>In both inline and block formatting contexts, the grid container’s auto block size is its max-content
+  size.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame" style="display: grid; grid-template-rows: 20px 30px; row-gap: 10px"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>Rows of 20 and 30px with a 10px gap: the grid is 60px tall inside its border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pr-vertical" style="height: 80px"><div class="pr-frame" style="display: grid; grid-template-rows: 20px 30px; row-gap: 10px"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>The same in <code>vertical-rl</code>: its block size is its width, 60px, the rows right to left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

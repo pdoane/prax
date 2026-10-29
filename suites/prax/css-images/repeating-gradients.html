@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Repeating gradients</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 160px; height: 40px; margin: 10px; }
+  .square { width: 80px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.3 Repeating Gradients: the repeating-linear-gradient() and repeating-radial-gradient() notations</div>
+  <h1>Repeating gradients</h1>
+  <p class=pr-lede><q>When rendered, however, the color-stops are repeated infinitely in both directions, with their
+  positions shifted by multiples of the difference between the last specified color-stop's position and the first
+  specified color-stop's position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#repeating-gradients">CSS Images 3 §3.3</a></span>
+  Each dashed box is 160 by 40.</p>
+</header>
+
+<section>
+  <h2>A period from the first stop to the last</h2>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-linear-gradient(to right, #4f81bd 10px 20px, #d68a3c 20px 30px)"></div></div>
+    <figcaption>Stops from 10px to 30px: a 20px period, repeated before 10px as well, so orange 0 to 10px, blue 10
+    to 20px, orange 20 to 30px, and on: 10px stripes, starting orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-linear-gradient(to right, #4f81bd, #d68a3c 40px)"></div></div>
+    <figcaption>From blue at 0 to orange at 40px: <q>the last color-stop and first color-stop will always coincide
+    at the boundaries of each group, which will produce sharp transitions</q>, at 40, 80 and 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Radial, outward from the center</h2>
+  <figure>
+    <div class=pr-stage><div class="box square pr-ghost" style="background: repeating-radial-gradient(circle, #4f81bd 0 10px, #d68a3c 10px 20px)"></div></div>
+    <figcaption>80 by 80, <code>circle</code>, blue to 10px and orange to 20px: rings 10px wide around the center,
+    a blue disc at the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-radial-gradient(circle at left, #4f81bd 0 10px, #d68a3c 10px 20px)"></div></div>
+    <figcaption>The same rings centered on the left side: half rings, 10px wide, out to the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

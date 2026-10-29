@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where the offset starts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 10px 6px; font: 30px/40px "PR Arimo"; }
+  .u { text-decoration: underline rgb(192 57 43 / 0.7) 6px; text-decoration-skip-ink: none; text-underline-offset: 0; }
+  .g { padding: 10px 6px; font: 50px/60px "PR Underline Test Far"; }
+  .pr-stage.v { padding: 6px 10px; font: 20px/40px "PR Noto Sans JP"; height: 70px; }
+  .em { outline: 1px dashed #2c5a8f; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.8.1 Underline Offset Origin (Zero Position)</div>
+  <h1>Where the offset starts</h1>
+  <p class=pr-lede><q>The zero position of the underline depends on the value of 'text-underline-position'</q>. <q>The
+  underline is aligned to the outside of the specified position (extending its thickness in the positive direction
+  only).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#line-offset-zero">CSS Text Decoration 4 §2.8.1</a></span>
+  Every underline here has <code>text-underline-offset: 0</code> and is 6px thick, translucent red; red dashes mark
+  the baseline.</p>
+</header>
+
+<section>
+  <h2>Horizontal: the baseline, the font's position, the text-under edge</h2>
+  <figure class=s>
+    <div class="pr-stage pr-narrow t" style="width: 120px"><span class=pr-baseline style="width: 120px; margin-right: -120px"></span><span class=u>gyp</span></div>
+    <figcaption><code>auto</code>: the alphabetic baseline. The line's top is on the dashes, through the
+    descenders.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-narrow g" style="width: 120px"><span class=pr-baseline style="width: 120px; margin-right: -120px"></span><span class=u style="text-underline-position: from-font">Gag</span></div>
+    <figcaption><code>from-font</code> in PR Underline Test Far: the line's top is 300/2048 em, 7px, below the
+    dashes.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-narrow t" style="width: 120px"><span class=pr-baseline style="width: 120px; margin-right: -120px"></span><span class="u em" style="text-underline-position: under">gyp</span></div>
+    <figcaption><code>under</code>: the text-under edge. The line's top is on the bottom of the dashed content
+    area.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical: the left edge grows left, the right edge grows right</h2>
+  <p><code>left</code>: <q>text-under (left) edge</q>, positive <q>under</q>; <code>right</code>: <q>text-over (right)
+  edge</q>, positive <q>over</q>. Their edges are the edges of the em box.</p>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: left"><span class=u>日本語</span></div>
+    <figcaption><code>left</code>: the 6px line just left of the glyphs, not over them.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: right"><span class=u>日本語</span></div>
+    <figcaption><code>right</code>: the 6px line just right of the glyphs, not over them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

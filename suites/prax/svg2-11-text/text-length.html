@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>textLength</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .pre { white-space: pre; }
+  .wrap { inline-size: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.1 Attributes</div>
+  <h1>textLength</h1>
+  <p class=pr-lede><q>The user agent is required to achieve correct start and end positions
+  for the text strings</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanAttributes">SVG 2 §11.2.1</a></span>
+  The text is PR Noto Sans Mono, 10 a letter, at <code>x="20"</code>; red ticks mark the length to fill.</p>
+</header>
+
+<section>
+  <h2>Spread and squeezed</h2>
+  <p><q>spacing: Indicates that only the advance values are adjusted. The glyphs themselves are not stretched or
+  compressed.</q> It is the initial value of <code>lengthAdjust</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 25V45 M120 25V45" class=pr-baseline /><text class=pr-measure x="20" y="35" textLength="100">abcd</text></svg></div>
+    <figcaption><code>textLength="100"</code> on "abcd", 40 long: the letters as drawn, spread so that a starts at
+    20 and d ends at 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 25V45 M80 25V45" class=pr-baseline /><text class=pr-measure x="20" y="35" textLength="60">abcdefghi</text></svg></div>
+    <figcaption><code>textLength="60"</code> on "abcdefghi", 90 long: squeezed from 20 to 80, the letters
+    overlapping.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 25V45 M40 25V45 M100 25V45" class=pr-baseline /><text class=pr-measure x="20" y="35">ab<tspan textLength="60">cdef</tspan></text></svg></div>
+    <figcaption><code>textLength="60"</code> on a <code>tspan</code> of "cdef": "ab" from 20 to 40, "cdef"
+    spread from 40 to 100. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> "abcdef" as set, from 20 to 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where it does not apply</h2>
+  <p><q>The ‘textLength’ attribute is only applied when the wrapping area is not defined by the inline-size property.
+  It is also not applied for any ‘text’ or ‘tspan’ element that has forced line breaks (due to a white-space value of
+  pre or pre-line).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 25V45 M140 25V45" class=pr-baseline /><text class="pr-measure wrap" x="20" y="35" textLength="120">abcd</text></svg></div>
+    <figcaption><code>inline-size: 120px</code> and <code>textLength="120"</code>: "abcd" as set, 20 to
+    60. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Spread from 20 to 140.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 25H160 M0 45H160 M20 15V55 M140 15V55" class=pr-baseline /><text class="pr-measure pre" x="20" y="25" textLength="120" style="line-height: 20px">ab
+cd</text></svg></div>
+    <figcaption><code>white-space: pre</code>, "ab", a line feed, "cd", and <code>textLength="120"</code>: two
+    lines as set, each from 20 to 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> One line, spread to 140. <span class=pr-flag>Firefox</span> "cd" spread to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

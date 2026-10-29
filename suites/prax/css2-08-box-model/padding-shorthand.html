@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.4 Padding properties</div>
+  <h1>Padding: the shorthand</h1>
+  <p class=pr-lede><code>padding-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>padding</code> take <code>&lt;length&gt; | &lt;percentage&gt;</code>, never negative.</p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>The shorthand</h2>
+  <p><q>If there is only one component value, it applies to all sides. If there are two values, the top and bottom
+  paddings are set to the first value and the right and left paddings are set to the second. If there are three values,
+  the top is set to the first value, the left and right are set to the second, and the bottom is set to the third. If
+  there are four values, they apply to the top, right, bottom, and left, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#padding-properties">CSS 2
+  §8.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px</code>: 10 on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px 40px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px 40px</code>: 10 top and bottom, 40 right and left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px 40px 30px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px 40px 30px</code>: 10 top, 40 right and left, 30 bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-box style="padding: 10px 20px 30px 40px"><div class=pr-content-area></div></div></div>
+    <figcaption><code>padding: 10px 20px 30px 40px</code>: top, right, bottom, left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

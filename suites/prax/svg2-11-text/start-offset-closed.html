@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>startOffset on a closed path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="ring" d="M 110 45 A 30 30 0 0 1 50 45 A 30 30 0 0 1 110 45 Z" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>startOffset on a closed path</h1>
+  <p class=pr-lede><q>For paths consisting of a single closed subpath (including an equivalent path for a basic
+  shape), typographic characters are rendered along one complete circuit of the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  Each stage is an SVG 160 by 90 holding a closed path, a circle of radius 30 at 80, 45, 188.5 around, dashed in
+  red, that starts at its right and goes clockwise. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>,
+  10 a letter, with <code>startOffset="75%"</code>: at the top, marked solid red.</p>
+</header>
+
+<section>
+  <h2>Round past the path's start</h2>
+  <p><q>For the start (end) value, the text is rendered from the start (end) of the line until the initial position
+  along the path is reached again.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><path d="M80 5V20" stroke="#c0392b" /><text class=pr-measure><textPath href="#ring" startOffset="75%">abcdefghijklmnop</textPath></text></svg></div>
+    <figcaption>"abcdefghijklmnop", 160 long: a at the top, the rest clockwise round, past
+    the path's start, p short of the top. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> "abcde" only, to the right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><path d="M80 5V20" stroke="#c0392b" /><text class=pr-measure><textPath href="#ring" startOffset="75%">abcdefghijklmnopqrstuvwxyz</textPath></text></svg></div>
+    <figcaption>The alphabet, 260 long: a from the top, one circuit, to s, whose middle, 185 on, is the last
+    within 188.5; the rest not drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> "abcde" only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

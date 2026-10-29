@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: ranges</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage ol { padding-left: 6px; list-style-position: inside; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-type property: ranges</h1>
+  <p class=pr-lede><q>This specification does not define how alphabetic systems wrap at the end of the alphabet.
+  For instance, after 26 list items, 'lower-latin' rendering is undefined.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span>
+  A later specification defines it. Markers here are <code>inside</code>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-counter-styles-3/#counter-styles">CSS Counter Styles 3 §2</a>, <a href="https://drafts.csswg.org/css-counter-styles-3/#alphabetic-system">§3.1.4</a></div>
+  <h2>Past the alphabet, and outside a style's range</h2>
+  <p>The alphabetic system <q>wraps from "a", "b", "c", to "aa", "ab", "ac".</q> It <q>is defined only over strictly
+  positive counter values.</q> <q>If the counter value is outside the range of the counter style, exit this algorithm
+  and instead generate a counter representation using the counter style’s fallback style and the same counter
+  value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-styles">CSS Counter Styles 3 §2</a>, <a href="https://drafts.csswg.org/css-counter-styles-3/#alphabetic-system">§3.1.4</a></span> The roman styles are defined with <code>range:
+  1 3999</code>, <code>armenian</code> with <code>range: 1 9999</code>, and the fallback is <code>decimal</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol start=25 style="list-style-type: lower-latin"><li>25<li>26<li>27<li>28</ol></div>
+    <figcaption><code>lower-latin</code> from 25: y, z, then aa, ab.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol start=-1 style="list-style-type: lower-latin"><li>-1<li>0<li>1</ol></div>
+    <figcaption>From -1: -1 and 0 fall back to decimal, then a.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol start=3999 style="list-style-type: upper-roman"><li>3999<li>4000</ol></div>
+    <figcaption><code>upper-roman</code>: MMMCMXCIX for 3999, then 4000 in decimal.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol start=9999 style="list-style-type: armenian"><li>9999<li>10000</ol></div>
+    <figcaption><code>armenian</code>: ՔՋՂԹ for 9999, then 10000 in decimal. <span class=pr-flag>Chrome</span> goes on
+    past 9999 with a sign of its own for 10000.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

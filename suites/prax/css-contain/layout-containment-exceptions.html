@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where layout containment has no effect</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage.pr-cb { height: 70px; }
+  .k { contain: layout; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .sq { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; background: #d68a3c; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; padding-top: 14px; }
+  rt { font-size: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.3 Layout Containment, where it does not apply</div>
+  <h1>Where layout containment has no effect</h1>
+  <p class=pr-lede><q>However, giving an element layout containment has no effect if any of the following are
+  true</q>: no principal box; <q>an internal table box other than table-cell</q>; <q>an internal ruby box or a
+  non-atomic inline-level box</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-layout">CSS Containment 2 §3.3</a></span>
+  Each stage is positioned; its orange square, <code>position: absolute; right: 0; bottom: 0</code>, is in the box
+  with <code>contain: layout</code>, blue. Where containment applies, the square is at that box's corner; where not, at
+  the stage's.</p>
+</header>
+
+<section>
+  <h2>Table parts, and no principal box</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure"><div class=pr-table><div class="pr-table-row k"><div class="pr-table-cell b">row<i class=sq></i></div></div></div></div>
+    <figcaption>On a row: no effect; the square is at the stage's corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure"><div class=pr-table><div class=pr-table-row><div class="pr-table-cell b k">cell<i class=sq></i></div></div></div></div>
+    <figcaption>On a cell, the exception's exception: the square is at the cell's corner, over its last
+    10px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure"><div class="pr-table k"><div class=pr-table-row><div class="pr-table-cell b">table<i class=sq></i></div></div></div></div>
+    <figcaption>On the table itself: it applies; the square is at the table's corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure"><div class=b style="width: 80px; height: 40px"><div class=k style="display: contents"><i class=sq></i></div></div></div>
+    <figcaption>On a <code>display: contents</code> element inside a box 80 by 40: no effect; the square is at the
+    stage's corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inline boxes and ruby</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure">an <span class="b k">inline<i class=sq></i></span> box</div>
+    <figcaption>On a <code>span</code>: no effect; the square is at the stage's corner.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb pr-measure">an <span class="b k" style="display: inline-block">atomic<i class=sq></i></span></div>
+    <figcaption>On an inline-block: it applies; the square is over the end of "atomic".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-cb ja"><ruby>漢字<rt class="b k">kanji<i class=sq></i></rt></ruby></div>
+    <figcaption>On a ruby annotation: no effect; the square is at the stage's corner.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

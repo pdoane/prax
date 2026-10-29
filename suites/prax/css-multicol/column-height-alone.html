@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-height alone</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; column-fill: auto; gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.6 The Pseudo-algorithm</div>
+  <h1>column-height alone</h1>
+  <p class=pr-lede>Level 2 adds column-height to the pseudo-algorithm's first line: <q>if ((column-width = auto) and
+  (column-count = auto) and (column-height = auto)) then exit; /* not a multicol container */</q>, so column-height
+  alone makes a multicol container. <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#pseudo-algorithm">CSS Multi-column Layout 2 §4.6</a></span>
+  The stage has <code>column-height: 40px</code>, <code>gap: 10px</code>, <code>column-fill: auto</code> and red
+  rules.</p>
+</header>
+
+<section>
+  <h2>column-height alone makes a multicol container</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-height: 40px"><div>one</div><div>two</div><div>six</div><div>ten</div><div>red</div></div>
+    <figcaption><code>column-height: 40px</code> only: one 200px column to a row, two lines in each row, three
+    rows, 10px apart. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Not a multicol
+    container: five lines in a block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

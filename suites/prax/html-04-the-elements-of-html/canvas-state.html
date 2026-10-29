@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas state</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.3 The canvas state</div>
+  <h1>The canvas state</h1>
+  <p class=pr-lede><q>Objects that implement the CanvasState interface maintain a stack of drawing states.</q> A
+  drawing state holds the transformation, the clipping region, the styles and the line and text settings. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-state">HTML §4.12.5.1.3</a></span></p>
+</header>
+<section>
+  <h2>save() and restore()</h2>
+  <p><q>The save() method steps are to push a copy of the current drawing state onto the drawing state stack.</q>
+  <q>The restore() method steps are to pop the top entry in the drawing state stack, and reset the drawing state it
+  describes. If there is no saved state, then the method must do nothing.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=stack></canvas></div>
+    <figcaption>Squares at y 10: blue; saved, orange, translated 20 down to y 30; restored, blue at y 10; restored with
+    nothing saved: still blue at y 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=clip></canvas></div>
+    <figcaption>Saved and clipped to the left half: the orange bar, x 10 to 190, stops at 100. Restored: the blue bar
+    below it reaches 190.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>reset()</h2>
+  <p><q>To reset the rendering context to its default state: Clear canvas's bitmap to transparent black. Empty the list of
+  subpaths in the context's current default path. Clear the context's drawing state stack. Reset everything that drawing
+  state consists of to their initial values.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=reset></canvas></div>
+    <figcaption>Orange everywhere, a translation and a path, then <code>reset()</code>, a square filled at (10, 10)
+    and <code>fill()</code>: only a black square at (10, 10).</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    stack(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(20, 10, 20, 20);
+      context.save();
+      context.fillStyle = "#d68a3c";
+      context.translate(0, 20);
+      context.fillRect(70, 10, 20, 20);
+      context.restore();
+      context.fillRect(120, 10, 20, 20);
+      context.restore();
+      context.fillRect(160, 10, 20, 20);
+    },
+    clip(context) {
+      context.save();
+      context.beginPath();
+      context.rect(0, 0, 100, 60);
+      context.clip();
+      context.fillStyle = "#d68a3c";
+      context.fillRect(10, 10, 180, 15);
+      context.restore();
+      context.fillStyle = "#4f81bd";
+      context.fillRect(10, 35, 180, 15);
+    },
+    reset(context) {
+      context.fillStyle = "#d68a3c";
+      context.fillRect(0, 0, 200, 60);
+      context.translate(100, 50);
+      context.beginPath();
+      context.rect(0, 0, 40, 40);
+      context.reset();
+      context.fillRect(10, 10, 20, 20);
+      context.fill();
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

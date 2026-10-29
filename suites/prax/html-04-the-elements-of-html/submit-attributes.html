@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Form submission attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0 0 10px; font-size: 12px; vertical-align: top; }
+  .pad textarea { resize: none; }
+  .frames { display: flex; border-top: 1px solid var(--pr-stage-border); }
+  .frames iframe.pr-result { width: 50%; border-top: 0; }
+  .frames iframe.pr-result + iframe.pr-result { border-left: 1px solid var(--pr-stage-border); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.6 Form submission attributes</div>
+  <h1>Form submission attributes</h1>
+  <p class=pr-lede><q>The corresponding attributes for form submission that may be specified on submit buttons are
+  formaction, formenctype, formmethod, formnovalidate, and formtarget. When omitted, they default to the values given on
+  the corresponding attributes on the form element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-attributes">HTML §4.10.19.6</a></span></p>
+</header>
+
+<section>
+  <h2>formaction and formtarget</h2>
+  <p><q>The action of an element is the value of the element's formaction attribute, if the element is a submit button
+  and has such an attribute, or the value of its form owner's action attribute</q>. The form's target is the left
+  frame. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-attributes">§4.10.19.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=left-result>
+        <textarea name=q cols=6 rows=1>hi</textarea>
+        <button>Submit</button>
+        <button formaction=support/form-echo-other.html>formaction</button>
+        <button formtarget=right-result>formtarget</button>
+      </form>
+      <div class=frames><iframe class=pr-result name=left-result src=support/form-echo.html></iframe><iframe class=pr-result name=right-result src=support/form-echo.html></iframe></div>
+    </div>
+    <figcaption>Submit: <code>q=hi</code> on green, left. formaction: the left frame turns blue, "other action:". formtarget:
+    <code>q=hi</code> on green in the right frame.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>formnovalidate</h2>
+  <p><q>The no-validate state of an element is true if the element is a submit button and the element's formnovalidate
+  attribute is present, or if the element's form owner's novalidate attribute is present, and false otherwise.</q> The
+  textarea is <code>required</code> and empty. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#form-submission-attributes">§4.10.19.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=save-result>
+        <textarea name=letter cols=10 rows=1 required></textarea>
+        <button>Send</button>
+        <button formnovalidate>Save draft</button>
+      </form>
+      <iframe class=pr-result name=save-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Send: the browser reports the empty field, and nothing is submitted. Click Save draft:
+    <code>letter=</code> is submitted.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

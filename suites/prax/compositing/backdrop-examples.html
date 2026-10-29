@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Examples of backdrop calculation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 70px; }
+  .group { position: absolute; left: 10px; top: 10px; width: 90px; height: 50px; isolation: isolate; }
+  .b, .s { position: absolute; width: 50px; height: 30px; }
+  .b { left: 0; top: 0; }
+  .s { left: 30px; top: 20px; background: #0000ff; mix-blend-mode: multiply; }
+  .area { position: absolute; left: 40px; top: 30px; width: 50px; height: 30px; outline: 1px dashed black; }
+  .sw { position: absolute; left: 120px; top: 30px; width: 20px; height: 10px; outline: 1px solid var(--pr-line); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 7.1 Examples of backdrop calculation</div>
+  <h1>Examples of backdrop calculation</h1>
+  <p class=pr-lede>The section's two examples, in isolated groups: a red shape 50 by 30 at (10, 10), then a blue one
+  at (40, 30) with <code>mix-blend-mode: multiply</code>, so that its backdrop shows in its color. The dashed outline
+  is <q>the area that is examined during compositing of the blue shape</q>; the outlined swatch at x 120 is the overlap's
+  color. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#backdropexamples">Compositing and Blending 2 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>The backdrop's corner, and its alpha</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s></div></div><div class=area></div><div class=sw style="background: black"></div></div>
+    <figcaption><q>The backdrop for the blue shape includes the bottom right corner of the red shape</q>: blue times red,
+    black, in that corner, x 40 to 60 and y 30 to 40; blue over the empty rest.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(255 0 0 / 0.5)"></div><div class=s></div></div><div class=area></div><div class=sw style="background: rgb(0% 0% 50%)"></div></div>
+    <figcaption><q>The alpha value of the backdrop shape is preserved when the backdrop is calculated</q>: red at 0.5,
+    so the corner is half blend, half blue, <code>rgb(0% 0% 50%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

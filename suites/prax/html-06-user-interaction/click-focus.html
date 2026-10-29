@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus by a click</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Focus by a click</h1>
+  <p class=pr-lede><q>When a user activates a click focusable focusable area, the user agent must run the focusing steps on the
+  focusable area with focus trigger set to "click".</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>A click focuses what it clicks</h2>
+  <p><q>User agents should consider focusable areas with non-null tabindex values to be click focusable.</q>
+  <q>For example, in some user agents, clicking on a non-editable form control does not focus it</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <a class=pr-target id=link href="#data-model">a link</a>
+        <button class=pr-target id=button>a button</button>
+        <div class=pr-target id=div tabindex=0>a div, tabindex=0</div>
+        <div class="pr-target" id=plain style="border-style: dashed">plain text</div>
+      </div>
+      <ol class=pr-log data-log="focus blur" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click the link, the button and the div in turn: each takes the focus. Click the plain text:
+    blur at what had the focus, and nothing focused. Safari, following macOS, focuses neither the link
+    nor the button on a click.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

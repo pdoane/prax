@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The multiple attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+  .pad input[type=email]:valid { outline: 2px solid #6aa36a; outline-offset: 1px; }
+  .pad input[type=email]:invalid { outline: 2px solid #c0392b; outline-offset: 1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.3.5 The multiple attribute</div>
+  <h1>The multiple attribute</h1>
+  <p class=pr-lede><q>The multiple attribute is a boolean attribute that indicates whether the user is to be allowed to
+  specify more than one value.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-multiple-attribute">HTML §4.10.5.3.5</a></span></p>
+</header>
+
+<section>
+  <h2>Several addresses, several files</h2>
+  <p>It applies to email and file controls. <q>The following extract shows how an email client's "To" field could accept
+  multiple email addresses.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-multiple-attribute">§4.10.5.3.5</a></span>
+  Each email field is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input type=email multiple placeholder="To, with multiple" size=30></div>
+        <div><input type=email placeholder="To, without" size=30></div>
+      </div>
+    </div>
+    <figcaption>Type "a@example.com, b@example.com" into each: the first stays green, the second turns red. Type a
+    second comma, so that one address is empty: both red.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=file multiple></div>
+        <div><input type=file></div>
+      </div>
+      <ol class=pr-log data-log="change" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>In the first's picker, several files can be chosen at once, and it names how many; the second's takes
+    one.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

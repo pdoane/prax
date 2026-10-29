@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: room for scroll bars</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; height: 60px; margin: 10px 40px; }
+  .tall { height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: room for scroll bars</h1>
+  <p class=pr-lede>A scroll bar takes its room from inside the box's border. Each dashed box is 120 by 60, and each caption
+  reads a width back from the tinted child.</p>
+</header>
+
+<section>
+  <h2>Between the border and the padding</h2>
+  <p><q>In the case of a scrollbar being placed on an edge of the element's box, it should be inserted between the
+  inner border edge and the outer padding edge. Any space taken up by the scrollbars should be taken out of (subtracted
+  from the dimensions of) the containing block formed by the element with the scrollbars.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2
+  §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: hidden"><div id=w1 class="pr-parent tall"></div></div></div>
+    <figcaption><code>hidden</code>: no scroll bar, and the child with <code>width: auto</code> is <code class=pr-computed
+    data-of=w1 data-property=width></code> wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: scroll"><div id=w2 class="pr-parent tall"></div></div></div>
+    <figcaption><code>scroll</code>: the child is 120px less the vertical scroll bar's width: <code class=pr-computed
+    data-of=w2 data-property=width></code>. <span class="pr-flag pr-since">Since CSS 2</span> Overlay scroll bars take
+    no room.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages and offsets</h2>
+  <p>The smaller containing block is what percentages and offsets of the box's children resolve against. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a>, <a href="https://drafts.csswg.org/css2/#containing-block-details">§10.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: scroll"><div id=w3 class="pr-parent tall" style="width: 50%"></div></div></div>
+    <figcaption><code>width: 50%</code>: half of the 120px less the scroll bar, <code class=pr-computed data-of=w3
+    data-property=width></code>. <span class="pr-flag pr-since">Since CSS 2</span> Overlay scroll bars take no
+    room.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-frame box1" style="overflow: scroll; position: relative"><div class=tall></div><div id=w4 class="pr-parent" style="position: absolute; top: 0; left: 0; right: 0; height: 20px"></div></div></div>
+    <figcaption>An absolutely positioned child with <code>left: 0; right: 0</code> fills the box up to the scroll bar:
+    <code class=pr-computed data-of=w4 data-property=width></code>. <span class="pr-flag pr-since">Since CSS 2</span>
+    Overlay scroll bars take no room.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

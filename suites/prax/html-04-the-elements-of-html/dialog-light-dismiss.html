@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dialog light dismiss</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  .act > .pr-target { display: inline-block; width: 120px; margin: 0 10px 10px 0; }
+  dialog { font-size: 12px; }
+  #a, #b { position: absolute; margin: 0; box-sizing: border-box; padding: 6px; }
+  #a { left: 10px; top: 50px; width: 120px; height: 40px; }
+  #a button { font-size: 12px; }
+  #b { left: 150px; top: 50px; width: 120px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.5 Dialog light dismiss</div>
+  <h1>Dialog light dismiss</h1>
+  <p class=pr-lede><q>"Light dismiss" means that clicking outside of a dialog element whose closedby attribute is in
+  the Any state will close the dialog element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-light-dismiss">HTML §4.11.5</a></span></p>
+</header>
+<section>
+  <h2>Down and up outside the same dialog</h2>
+  <p>The nearest clicked dialog at <code>pointerdown</code> is kept; at <code>pointerup</code>, <q>If sameTarget is
+  false, then return.</q> A press on the backdrop is outside the dialog: <q>clientX and clientY are outside the bounds
+  of target</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-light-dismiss">§4.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=open-any>showModal()</button>
+        <dialog id=any closedby=any>closedby=any. Press here, release outside.</dialog>
+      </div>
+      <ol class=pr-log data-log="close" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Open it. Press in the dialog, drag out and release on the backdrop: it stays open. Press on the backdrop
+    and release in the dialog: it stays open. Click the backdrop: it closes, and <code>close</code> is
+    logged.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only the topmost dialog closes</h2>
+  <p><q>Let topmostDialog be the last element of document's open dialogs list.</q> <q>If ancestor is topmostDialog,
+  then return.</q> A click anywhere else, even in another open dialog, requests to close the topmost one. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-light-dismiss">§4.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-stacking">
+      <div class=act style="height: 100px">
+        <button class=pr-target id=open-a>show() A</button>
+        <dialog id=a closedby=any>A <button id=open-b>show() B</button></dialog>
+        <dialog id=b closedby=any>B</dialog>
+      </div>
+      <ol class=pr-log data-log="close" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>show() A</code>, then A's <code>show() B</code>: both open, not modal, B the topmost.
+    Click in A: B closes, A stays open. Click in A again: nothing closes. Click the stage outside A: A closes.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons open the dialogs.
+  const ids = {"open-any": ["any", "showModal"], "open-a": ["a", "show"], "open-b": ["b", "show"]};
+  for (const [button, [dialog, method]] of Object.entries(ids))
+    document.getElementById(button).addEventListener("click", () => document.getElementById(dialog)[method]());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

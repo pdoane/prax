@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paragraph breaks inside embeddings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.4 Paragraph Breaks Within Embeddings and Isolates</div>
+  <h1>Paragraph breaks inside embeddings</h1>
+  <p class=pr-lede><q>If an inline box is broken around a bidi paragraph boundary (e.g. if split by a block or forced
+  paragraph break), then the HL3 bidi control codes assigned to the end of the box are also added before the
+  interruption and the codes assigned to the start of the box are also added after it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-embedding-breaks">CSS Writing Modes 4 §2.4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Reopened after the break</h2>
+  <p><q>In other words, any embedding levels, isolates, or overrides started by the box are closed at the paragraph
+  break and reopened on the other side of it.</q> Each highlighted span is <code>rtl</code>.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl; unicode-bidi: bidi-override">abc<br>def</span></div>
+    <figcaption><code>bidi-override</code> across a <code>br</code>: both lines reversed, "cba" and "fed".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="white-space: pre"><span class=pr-hl style="direction: rtl; unicode-bidi: bidi-override">abc
+def</span></div>
+    <figcaption>Across a preserved newline: the same, "cba" and "fed".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl; unicode-bidi: embed">one!<br>two!</span></div>
+    <figcaption><code>embed</code>: each line a right-to-left embedding, "!one" and "!two".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl; unicode-bidi: isolate">one!<div>two!</div>three!</span></div>
+    <figcaption><code>isolate</code> split by a block: each of its three pieces is isolated, "!one", "!two" in the
+    block, "!three".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not for control codes in the text</h2>
+  <p><q>it does not apply to Unicode's bidi formatting controls, which are defined to terminate their effect at the
+  end of the bidi paragraph.</q></p>
+  <figure>
+    <div class=pr-stage>&#x202E;abc<br>def</div>
+    <figcaption>An RLO in the text, before a <code>br</code>: "cba", then "def" as it is.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

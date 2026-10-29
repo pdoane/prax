@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pending pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .row { margin: 10px 20px; touch-action: none; }
+  .row .pr-target { display: inline-block; width: 76px; margin: 0 8px 0 0; }
+  .row .pr-target.captured { background: #6aa36a; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.3.2 Process pending pointer capture</div>
+  <h1>Pending pointer capture</h1>
+  <p class=pr-lede><q>The user agent MUST run the following steps when implicitly releasing pointer capture as well as
+  when firing Pointer Events that are not gotpointercapture or lostpointercapture.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#process-pending-pointer-capture">Pointer Events §3.1.3.2</a></span></p>
+</header>
+<section>
+  <h2>Capture takes effect at the next event</h2>
+  <p><q>If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture
+  target override, then fire a pointer event named gotpointercapture at the pending pointer capture target
+  override.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#process-pending-pointer-capture">§3.1.3.2</a></span>
+  A <code>pointerdown</code> listener on A sets capture to B.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>A, press</div><div class=pr-target id=b>B</div></div>
+      <ol class=pr-log data-log="pointerdown pointerup gotpointercapture lostpointercapture" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>A box turns green while it has capture. Press A and hold still: <code>pointerdown</code> at A, and B
+    is not green yet. Move: <code>gotpointercapture</code> at B, which turns
+    green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The last call wins</h2>
+  <p><q>If a call to set or release a pointer capture is made while a previous set or release call is in a pending state
+  (see process pending pointer capture), the second call overrides the first call if the second call is successful,
+  otherwise the first call remains effective.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#setting-pointer-capture">§8.2</a></span>
+  A <code>pointerdown</code> listener on D sets capture to E, then to F.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=d>D, press</div><div class=pr-target id=e>E</div><div class=pr-target id=f>F</div></div>
+      <ol class=pr-log data-log="pointerdown gotpointercapture lostpointercapture" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Press D and move: <code>gotpointercapture</code> at F alone; E never has capture, and never
+    turns green.</figcaption>
+  </figure>
+</section>
+<script>
+  // Captures the pointer for B, or for E then F, when A or D is pressed, and turns a box green while it has capture.
+  const box = id => document.getElementById(id);
+  box("a").addEventListener("pointerdown", event => box("b").setPointerCapture(event.pointerId));
+  box("d").addEventListener("pointerdown", event => {
+    box("e").setPointerCapture(event.pointerId);
+    box("f").setPointerCapture(event.pointerId);
+  });
+  for (const element of document.querySelectorAll(".row .pr-target")) {
+    element.addEventListener("gotpointercapture", () => element.classList.add("captured"));
+    element.addEventListener("lostpointercapture", () => element.classList.remove("captured"));
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

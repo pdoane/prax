@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>caption-side: top and bottom</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; background: #b9cde6; }
+  caption { background: #f6d7b4; }
+  caption + caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.5.3 The Caption-Side property</div>
+  <h1>caption-side: top and bottom</h1>
+  <p class=pr-lede><q>This property specifies the position of the caption box with respect to the table grid
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#caption-side-property">CSS Table 3 §3.5.3</a></span>
+  The grid box is blue and outlined; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Above or below the grid box</h2>
+  <p><q>top: Positions the caption box above the table grid box.</q> <q>bottom: Positions the caption box below the
+  table grid box.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><caption>cap</caption><tr><td>table</td></tr></table></div>
+    <figcaption><code>top</code>, the initial value: the orange caption above.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="caption-side: bottom"><caption>cap</caption><tr><td>table</td></tr></table></div>
+    <figcaption><code>bottom</code>: below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each caption on its own side</h2>
+  <p>The property applies to <q>table-caption boxes</q>, so each caption of a table takes its own value.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><caption>one</caption><caption style="caption-side: bottom">two</caption><tr><td>table</td></tr></table></div>
+    <figcaption>Two captions, the green one <code>bottom</code>: orange above, green below. <span
+    class=pr-flag>Firefox</span> draws only the first caption.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><caption>one</caption><caption>two</caption><tr><td>table</td></tr></table></div>
+    <figcaption>Two captions on top: orange, then green, then the table. <span class=pr-flag>Firefox</span> draws
+    only the first caption.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Dimension attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .pic iframe { border: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.17 Dimension attributes</div>
+  <h1>Dimension attributes</h1>
+  <p class=pr-lede>The width and height attributes <q>give the dimensions of the visual content of the element</q>.
+  <q>User agents are expected to use these attributes as hints for the rendering.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content-other.html#dimension-attributes">HTML §4.8.17</a></span>
+  They <q>map to the dimension properties 'width' and 'height'</q>, and on img and video <q>map to the aspect-ratio
+  property (using dimension rules)</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#attributes-for-embedded-content-and-images">§15.4.3</a></span>
+  Blue is an image 80 by 40; <code>no-size.svg</code> is blue with a white dot, with no natural size or ratio.</p>
+</header>
+
+<section>
+  <h2>Width and height</h2>
+  <figure>
+    <div class="pr-stage pr-medium pic"><img src="support/blue-80x40.png" width="120" height="30" alt=""></div>
+    <figcaption><code>width=120 height=30</code>: blue stretched to 120 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><img src="support/blue-80x40.png" width="120" alt=""></div>
+    <figcaption><code>width=120</code> alone: 120 by 60, the image's own ratio.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><img src="support/blue-80x40.png" width="50%" alt=""></div>
+    <figcaption><code>width="50%"</code>: half the 140 inside the stage, 70 by 35.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An aspect ratio, where the content has none</h2>
+  <p>Each element below has <code>width: 140px</code> from CSS, and its height is auto.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><img src="support/no-size.svg" width="80" height="40" style="width: 140px" alt=""></div>
+    <figcaption>An img of no-size.svg, <code>width=80 height=40</code>: the ratio 2:1, so 140 by 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><video width="80" height="40" style="width: 140px; background: #4f81bd"></video></div>
+    <figcaption>A video with no source, blue behind, <code>width=80 height=40</code>: 140 by 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe width="80" height="40" style="width: 140px; background: #4f81bd"></iframe></div>
+    <figcaption>An iframe, blue behind, <code>width=80 height=40</code>: no ratio for an iframe, so 140 by 40.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

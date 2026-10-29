@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout within line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .ib { display: inline-block; width: 30px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 2.2 Layout Within Line Boxes</div>
+  <h1>Layout within line boxes</h1>
+  <p class=pr-lede>Within each line box: <q>All in-flow inline-level boxes in the line box are aligned to each other
+  in the block axis</q>; then <q>The layout bounds (i.e. the size contributions) of each inline-level box in the line
+  box are calculated</q>; then <q>The line box’s logical height is sized to exactly include the aligned layout bounds
+  of all its inline-level boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#line-layout">CSS Inline Layout 3 §2.2</a></span>
+  Each stage's text is 13px on 20px lines.</p>
+</header>
+
+<section>
+  <h2>Layout bounds</h2>
+  <p><q>For atomic inlines such as replaced elements and inline blocks: this is their margin box.</q> <q>For the root
+  inline box, and for inline boxes with line-fit-edge: leading: this derived from their used line-height, ignoring any
+  margin/border/padding</q>.</p>
+  <figure>
+    <div class=pr-stage>one <span class="ib pr-a pr-fit" style="margin: 10px 0 20px; vertical-align: top"></span> two three four five six seven eight nine</div>
+    <figcaption>A 20px box with margins of 10px above and 20px below, at the line's top: its margin box makes the
+    first line 50px tall, so the second starts 50px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one <span class=pr-chip style="padding: 10px 0; margin: 10px 0">two</span> three four five six seven eight</div>
+    <figcaption>A span with 10px padding and margins above and below: its line is still 20px, and its border and
+    padding cross into the next line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The line box sized to the aligned bounds</h2>
+  <p>The line box exactly includes the layout bounds once they are aligned. <q>Empty inline boxes still have
+  margins, padding, borders, and a line-height, and thus influence these calculations just like boxes with
+  content.</q></p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>one <span class=pr-hl style="vertical-align: 15px">raised</span> two three four five six</div>
+    <figcaption>A span raised 15px: its 20px bounds go 15px above the line's, so the first line is 35px tall, its
+    baseline 15px lower than without it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>one <span style="line-height: 60px"></span>two three four five six seven</div>
+    <figcaption>An empty span with <code>line-height: 60px</code>: the line is 60px tall, its baseline 20px lower
+    than in a 20px line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Characters that layout discards</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.5 Text layout – Algorithm</div>
+  <h1>Characters that layout discards</h1>
+  <p class=pr-lede>A character is not addressable if it was <q>discarded during layout due to being a collapsed white
+  space character, a soft hyphen character, or a bidi control character</q>, <q>discarded during layout due to being a
+  collapsed segment break</q>, or <q>trimmed from the start or end of a line.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutAlgorithm">SVG 2 §11.5</a></span>
+  Each stage is an SVG 160 by 60 holding a <code>text</code> with <code>x="20 60 100"</code>, its baseline at y 35
+  dashed in red and red ticks at 20, 60 and 100. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>, each
+  letter 10 wide.</p>
+</header>
+
+<section>
+  <h2>White space</h2>
+  <p><q>Since there is collapsible white space not addressable by glyph positioning attributes in the following
+  ‘text’ element (with a standard font), the "B" glyph will be placed at x=300.</q> Here at 100.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">
+      A
+      B
+      </text></svg></div>
+    <figcaption>"A" and "B" on lines of their own, indented: the white space before A trimmed, all but one
+    character between A and B collapsed; A at 20, B at 100.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A soft hyphen and a bidi control</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">a&#xAD;bc</text></svg></div>
+    <figcaption>"a", U+00AD SOFT HYPHEN, "bc": a at 20, b at 60, c at 100, and no hyphen. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Count it: b at 100.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M20 40V48 M60 40V48 M100 40V48" class=pr-baseline /><text class=pr-measure x="20 60 100" y="35">a&#x200E;bc</text></svg></div>
+    <figcaption>"a", U+200E LEFT-TO-RIGHT MARK, "bc": a at 20, b at 60, c at 100. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Count it: b at 100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

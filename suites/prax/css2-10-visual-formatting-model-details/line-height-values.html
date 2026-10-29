@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The line-height property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .chip { background: rgba(214, 138, 60, 0.5); }
+  .ex { font-size: 10px; }
+  .big { font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The line-height property: values</h1>
+  <p class=pr-lede><code>line-height</code> takes <code>normal | &lt;number&gt; | &lt;length&gt; | &lt;percentage&gt;</code>.
+  Initial <code>normal</code>, inherited, and it applies to all elements.</p>
+</header>
+
+<section>
+  <h2>&lt;number&gt;, &lt;length&gt; and &lt;percentage&gt;</h2>
+  <p><q>The used value of the property is this number multiplied by the element's font size.</q> <q>The specified
+  length is used in the calculation of the line box height.</q> <q>The computed value of the property is this
+  percentage multiplied by the element's computed font size.</q> Each stage is 10px text, and holds a block of 20px
+  text: its own font size counts, not the stage's. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage ex"><div class=big style="line-height: 1.2"><span class=chip>line-height: 1.2</span><br><span class=chip>font-size: 20px</span></div></div>
+    <figcaption><code>line-height: 1.2</code> is used as 1.2 × 20px: the lines are 24px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ex"><div class=big style="line-height: 1.2em"><span class=chip>line-height: 1.2em</span><br><span class=chip>font-size: 20px</span></div></div>
+    <figcaption><code>line-height: 1.2em</code> is 1.2 × the block's 20px, not the stage's 10px: the lines are 24px
+    apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ex"><div class=big style="line-height: 120%"><span class=chip>line-height: 120%</span><br><span class=chip>font-size: 20px</span></div></div>
+    <figcaption><code>line-height: 120%</code> of the block's 20px: 24px lines again, each pair of lines
+    48px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-values-4/#functional-numeric">CSS Values and Units 4 §9.1</a></div>
+  <h2>A calculation, clamped</h2>
+  <p><q>numeric functions returning out-of-range values never cause a declaration to become invalid. Instead, the
+  value of a numeric function is clamped to the range allowed in the context it is used at computed value time if
+  possible</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#functional-numeric">CSS Values and Units 4 §9.1</a></span></p>
+  <figure>
+    <div class="pr-stage ex"><div class=big style="line-height: calc(10px - 1em)"><span class=chip>calc(10px - 1em)</span><br><span class=chip>font-size: 20px</span></div></div>
+    <figcaption><code>calc(10px - 1em)</code> is −10px, clamped to 0: the two lines lie on each other.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

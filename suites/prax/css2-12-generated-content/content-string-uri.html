@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content property: strings and URIs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s1::before { content: "Note: "; }
+  .s2::before { content: "\"quoted\" "; }
+  .s3::before { content: "Note" ": " "— "; }
+  .u1::before { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='%234f81bd'/></svg>"); }
+  .u2::before { content: url(missing-image.png); }
+  .u3::before { content: "[" url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='%23d68a3c'/></svg>") "] "; }
+  .u4::before { content: "[" url(missing-image.png) "] "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.2 The 'content' property</div>
+  <h1>The content property: strings and URIs</h1>
+  <p class=pr-lede>Each figure is an element whose source text is "text"; everything before it is its
+  <code>:before</code>.</p>
+</header>
+
+<section>
+  <h2>&lt;string&gt;</h2>
+  <p><q>&lt;string&gt;: Text content</q>. The value is a list, and its parts are inserted one after another. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=s1>text</div></div>
+    <figcaption><code>"Note: "</code>: "Note: text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=s2>text</div></div>
+    <figcaption><code>"\"quoted\" "</code>: an escaped quote is a character of the string: "quoted" text, with the
+    straight double quotes shown.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=s3>text</div></div>
+    <figcaption>Three strings, <code>"Note" ": " "— "</code>: "Note: — text".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>&lt;uri&gt;</h2>
+  <p><q>The value is a URI that designates an external resource (such as an image). If the user agent cannot display
+  the resource it must either leave it out as if it were not specified or display some indication that the resource
+  cannot be displayed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#content①">CSS 2 §12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=u1>text</div></div>
+    <figcaption>A 16 by 16 blue square image, then "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=u2>text</div></div>
+    <figcaption>An image that does not exist: left out, or an indication that it cannot be shown, before
+    "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=u3>text</div></div>
+    <figcaption><code>"[" url(...) "] "</code>: an orange square between the brackets.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=u4>text</div></div>
+    <figcaption>The same with a missing image: the brackets are still inserted, "[] text" if it is left
+    out.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

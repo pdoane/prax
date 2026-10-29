@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Punctuation key codes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 7.3.4 Optionally fixed virtual key codes</div>
+  <h1>Punctuation key codes</h1>
+  <p class=pr-lede><q>The following punctuation characters MAY change virtual codes between keyboard layouts, but
+  reporting these values will likely be more compatible with legacy content expecting US-English keyboard
+  layout</q>. The section is informative. <span class=pr-cite><a href="https://w3c.github.io/uievents/#optionally-fixed-virtual-key-codes">UI Events §7.3.4</a></span></p>
+</header>
+<section>
+  <h2>The US layout's codes</h2>
+  <p><code>;</code> 186, <code>=</code> 187, <code>,</code> 188, <code>-</code> 189, <code>.</code> 190,
+  <code>/</code> 191, <code>`</code> 192, <code>[</code> 219, <code>\</code> 220, <code>]</code> 221,
+  <code>'</code> 222, and their shifted characters the same. <span class=pr-cite><a href="https://w3c.github.io/uievents/#optionally-fixed-virtual-key-codes">§7.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key keyCode" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>On a US layout, click the box and press <code>;</code> <code>=</code> <code>-</code> <code>[</code>
+    <code>'</code> and <code>/</code>: <code>keyCode</code> 186, 187, 189, 219, 222, 191. Chrome and Safari give these;
+    Firefox gives 59 for <code>;</code>, 61 for <code>=</code> and 173 for <code>-</code>, which the section
+    allows.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

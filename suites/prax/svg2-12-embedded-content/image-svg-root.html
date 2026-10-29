@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: the SVG's own root</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: the SVG's own root</h1>
+  <p class=pr-lede><q>This ensures that the ‘preserveAspectRatio’ attribute on the referencing ‘image’ has its
+  intended effect, even if it is none.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code>, outlined dashed grey, of an SVG flag in quarters.</p>
+</header>
+
+<section>
+  <h2>The root's preserveAspectRatio is ignored</h2>
+  <p><q>For ‘image’ elements embedding an SVG image, the ‘preserveAspectRatio’ attribute on the root element in the
+  referenced SVG image must be ignored, and instead treated as if it had a value of none.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The flag SVG, its root's <code>xMidYMid meet</code> initial, by an <code>image</code> with
+    <code>none</code>: stretched over 120 by 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 20' preserveAspectRatio='xMinYMin meet'><rect width='20' height='10' fill='%234f81bd'/><rect x='20' width='20' height='10' fill='%23d68a3c'/><rect y='10' width='20' height='10' fill='%236aa36a'/><rect x='20' y='10' width='20' height='10' fill='%238e44ad'/></svg>" x="60" y="10" width="40" height="40" /><rect x="60.5" y="10.5" width="39" height="39" class=pr-ghost /></svg></div>
+    <figcaption>An SVG 40 by 40, the flag's <code>viewBox</code>, <code>xMinYMin meet</code>, by an
+    <code>image</code> 40 by 40: stretched. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 40 by 20 at the
+    top. <span class=pr-flag>Firefox</span> 40 by 20, centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No viewBox, but a size</h2>
+  <p>The text does not say how such an SVG scales; the working group resolved to <q>synthesize a viewBox from width
+  and height</q> (<a href="https://github.com/w3c/svgwg/issues/249">svgwg#249</a>).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='20' height='10' fill='%234f81bd'/><rect x='20' width='20' height='10' fill='%23d68a3c'/><rect y='10' width='20' height='10' fill='%236aa36a'/><rect x='20' y='10' width='20' height='10' fill='%238e44ad'/></svg>" x="20" y="10" width="120" height="40" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The flag as an SVG 40 by 20 without a <code>viewBox</code>: its ratio 2 to 1 from that size, so
+    scaled to 80 by 40, centered, from 40 to 120. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Stretched over 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='20' height='10' fill='%234f81bd'/><rect x='20' width='20' height='10' fill='%23d68a3c'/><rect y='10' width='20' height='10' fill='%236aa36a'/><rect x='20' y='10' width='20' height='10' fill='%238e44ad'/></svg>" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>The same with <code>none</code>: stretched over 120 by 40, the seam at x 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

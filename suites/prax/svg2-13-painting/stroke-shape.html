@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The stroke shape: dashes, caps and joins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.7 Computing the shape of the stroke</div>
+  <h1>The stroke shape: dashes, caps and joins</h1>
+  <p class=pr-lede><q>The stroke shape of an element is the shape that is filled by the 'stroke' property.</q> It is
+  built dash by dash, each from its <q>dash positions</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeShape">SVG 2 §13.5.7</a></span>
+  Each stage is an SVG 160 by 60; the strokes are blue, and a white line 1 wide over each is the path itself.</p>
+</header>
+
+<section>
+  <h2>Caps on every dash</h2>
+  <p><q>Set dash to be the union of dash and the starting cap shape for the subpath at position start.</q> And the
+  ending cap at <i>end</i>, even where a dash has no length.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#4f81bd" stroke-width="10" stroke-dasharray="20 20" stroke-linecap="round" /><path d="M 20 30 H 140" stroke="white" /></svg></div>
+    <figcaption><code>20 20</code>, <code>round</code>, 10 wide: dashes 20 to 40, 60 to 80 and 100 to 120,
+    each with round ends 5 beyond.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 130" stroke="#4f81bd" stroke-width="10" stroke-dasharray="0 20" stroke-linecap="round" /><path d="M 20 30 H 130" stroke="white" /></svg></div>
+    <figcaption><code>0 20</code>, <code>round</code>, on a line from x 20 to 130: dashes of no length, each its
+    two caps, a dot 10 across at x 20, 40, 60, 80, 100 and 120.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" fill="none" stroke="#4f81bd" stroke-width="8" stroke-dasharray="0 15.71" stroke-linecap="square" /><circle cx="80" cy="30" r="20" fill="none" stroke="white" /></svg></div>
+    <figcaption><code>0 15.71</code>, an eighth of the circle, <code>square</code>: eight squares 8 across, each
+    squared to the circle, those between the axes turned 45°. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span>
+    Those between the axes upright, not turned.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Joins inside a dash, and a dash past the end</h2>
+  <p><q>While index &lt; last: Set dash to be the union of dash and the line join shape for the subpath at segment
+  index index.</q> <q>Let dashlength be min(sum(dashes<sub>i</sub>, 0 ≤ i ≤ index) − offset, pathlength).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 L 80 10 L 120 50" fill="none" stroke="#4f81bd" stroke-width="10" stroke-dasharray="20 16.57 40 100" /><path d="M 40 50 L 80 10 L 120 50" fill="none" stroke="white" /></svg></div>
+    <figcaption>A right angle at 80, 10, dashes of 20 and 40: the second runs 20 to each side of the corner and
+    has its miter, a point at y 2.9.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 H 140" stroke="#4f81bd" stroke-width="10" stroke-dasharray="200 10" stroke-linecap="square" /><path d="M 20 30 H 140" stroke="white" /></svg></div>
+    <figcaption><code>200 10</code> on a line 120 long, <code>square</code>: one dash, cut to the line, with caps
+    only at its ends, x 15 and 145.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

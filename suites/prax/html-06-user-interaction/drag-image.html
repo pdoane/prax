@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The drag feedback</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .card { margin: 0 0 10px; padding: 0 6px; background: #f6d7b4; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.3 The DataTransfer interface</div>
+  <h1>The drag feedback</h1>
+  <p class=pr-lede><code>dataTransfer.setDragImage(element, x, y)</code> <q>Uses the given element to update the drag feedback,
+  replacing any previously specified feedback.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#the-datatransfer-interface">HTML §6.11.3</a></span></p>
+</header>
+<section>
+  <h2>An image, and where the cursor holds it</h2>
+  <p><q>If image is an img element, then set the drag data store bitmap to the element's image (at its natural
+  size)</q>. <q>Set the drag data store hot spot coordinate to the given x, y coordinate.</q> The feedback uses it as
+  <q>hints for where to put the cursor relative to the resulting image</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#the-datatransfer-interface">§6.11.3</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#drag-and-drop-processing-model">§6.11.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=card id=plain draggable=true>drag me: the default feedback</div>
+        <div class=card id=flagged draggable=true>drag me: the flag, held by its corner</div>
+        <div class=card id=centered draggable=true>drag me: the flag, held at its middle</div>
+        <img id=flag src=../shared/resources/flag-40x20.png alt="" width=80 height=40 style="display: block; margin: 0 0 10px">
+      </div>
+    </div>
+    <figcaption>Drag the first card: an image of the card itself follows the pointer. Drag the second: the flag, 40 by
+    20, its natural size though drawn here at 80 by 40, with the pointer at its top left corner. Drag the third: the
+    same flag with the pointer at its center, 20px from its left and 10px from its top.</figcaption>
+  </figure>
+</section>
+<script>
+  // The second and third cards set the flag as their drag image, with hot spots (0, 0) and (20, 10).
+  const flag = document.getElementById("flag");
+  for (const [id, x, y] of [["flagged", 0, 0], ["centered", 20, 10]]) {
+      document.getElementById(id).addEventListener("dragstart", event => {
+          event.dataTransfer.setData("text/plain", id);
+          event.dataTransfer.setDragImage(flag, x, y);
+      });
+  }
+  document.getElementById("plain").addEventListener("dragstart", event => event.dataTransfer.setData("text/plain", "plain"));
+</script>
+</body>
+</html>

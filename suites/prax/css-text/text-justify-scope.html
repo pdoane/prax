@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Whose text-justify</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; }
+  .u { background: #b9cde6; }
+  .m figcaption { max-width: 150px; }
+  .m { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5 Justification Method: the text-justify property</div>
+  <h1>Whose text-justify</h1>
+  <p class=pr-lede><q>whether a typographic character unit provides a justification opportunity is controlled by the
+  'text-justify' value of its parent; similarly, whether a justification opportunity exists between two consecutive
+  typographic character units is determined by the 'text-justify' value of their nearest common ancestor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#expanding-text">CSS Text 4 §7.5.1</a></span>
+  Each stage is 200px wide, <code>text-align: justify</code>; its first line is justified, its second holds
+  "seventeens". Letters are 10px wide; spans of <code>text-justify: none</code> are blue.</p>
+</header>
+
+<section>
+  <h2>A word separator: its parent's value</h2>
+  <p>"one two six", 90px to share between the two spaces.</p>
+  <figure>
+    <div class="pr-stage pr-measure j">one two six seventeens</div>
+    <figcaption>Both spaces stretch, 45px each: "two" at 85px, "six" at 170.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j">one two<span class=u style="text-justify: none"> </span>six seventeens</div>
+    <figcaption>The second space in a <code>none</code> span: it does not stretch, and the first takes all 90px:
+    "two" at 130px. <span class=pr-flag>Safari</span> stretches both.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Between characters: their nearest common ancestor</h2>
+  <p>Each stage is <code>text-justify: inter-character</code>, and its first line "abcd ef", 130px wide, of
+  70px of letters.</p>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure j" style="width: 130px; text-justify: inter-character">abcd ef seventeens</div>
+    <figcaption>Six gaps, 10px each: the letters every 20px, "f" at 120px. <span class=pr-flag>Safari</span> stretches only the space.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure j" style="width: 130px; text-justify: inter-character">a<span>b</span><span><span>c</span></span>d ef seventeens</div>
+    <figcaption>The letters in spans and nested spans: the same. <span class=pr-flag>Safari</span> stretches only the space.</figcaption>
+  </figure>
+  <figure class="m pr-erratum">
+    <div class="pr-stage pr-measure j" style="width: 130px; text-justify: inter-character">a<span class=u style="text-justify: none">bc</span>d ef seventeens</div>
+    <figcaption>"bc" in a <code>none</code> span: only b|c is the span's, and has none; a|b and c|d are the stage's.
+    Five gaps, 12px each. <span class=pr-flag>Safari</span> ignores the
+    property.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

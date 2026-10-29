@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Case mapping rules</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { padding: 0 6px; font: 20px/32px "PR Noto Sans"; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 2.1.1 Mapping Rules</div>
+  <h1>Case mapping rules</h1>
+  <p class=pr-lede><q>The UA must use the full case mappings for Unicode characters, including any conditional casing
+  rules, as defined in the Default Case Algorithms section of The Unicode Standard.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-mapping">CSS Text 4 §2.1.1</a></span>
+  CSS 2's page shows titlecase and "ß" to "SS"; this one the conditional rules and Turkish's.</p>
+</header>
+
+<section>
+  <h2>Conditional mappings</h2>
+  <figure>
+    <div class="pr-stage s" style="text-transform: lowercase">ΟΔΟΣ ΣΑΣ</div>
+    <figcaption><code>lowercase</code> of "ΟΔΟΣ ΣΑΣ": "οδος σας". A sigma at a word's end becomes final "ς", any
+    other "σ".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" style="text-transform: uppercase">&#xFB01;ne &#x149;</div>
+    <figcaption><code>uppercase</code> of the "ﬁ" ligature and "ŉ": "FINE ʼN", each a full mapping to two
+    characters.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Language-specific rules, where the language is known</h2>
+  <p><q>If (and only if) the content language of the element is, according to the rules of the document language,
+  known, then any appropriate language-specific rules must be applied as well. These minimally include, but are not
+  limited to, the language-specific rules in Unicode’s SpecialCasing.txt.</q></p>
+  <figure>
+    <div class="pr-stage s" lang=tr style="text-transform: lowercase">ISIK İZ</div>
+    <figcaption><code>lang=tr</code>, <code>lowercase</code>: "ısık iz", dotless "ı" from "I", and "i" from
+    "İ".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s" lang="" style="text-transform: lowercase">ISIK İZ</div>
+    <figcaption>Untagged, the same: the usual mappings, "isik i̇z", "İ" keeping its dot as U+0307 over the
+    "i".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

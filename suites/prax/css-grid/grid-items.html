@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 60px 60px 60px; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .tc { background: #c3d08b; }
+  q.blk { display: block; color: inherit; font-style: normal; background: #8cb6c0; }
+  q.blk::before, q.blk::after { content: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6 Grid Items</div>
+  <h1>Grid items</h1>
+  <p class=pr-lede><q>Each in-flow child of a grid container becomes a grid item, and each child text sequence is
+  wrapped in an anonymous block container grid item.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-items">CSS Grid Layout 2 §6</a></span></p>
+</header>
+
+<section>
+  <h2>Children and text sequences</h2>
+  <p>Each stage is a grid of three 60px columns, filled in order. <q>if the text sequence contains only white space
+  […] it is instead not rendered</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta>abc</div>de<span class=tb>fg</span></div></div>
+    <figcaption>A block, the text "de" and a span: three items, "abc" at 0, "de" at 60px in an anonymous item, the
+    tinted "fg" at 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g>
+      <div class=ta>ab</div>
+      <div class=tb>cd</div>
+    </div></div>
+    <figcaption>Two blocks with white space around and between them: two items, "ab" at 0 and "cd" at 60px; the
+    white space is no item.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><div class=ta style="float: right">ab</div><div class=tb>cd</div></div></div>
+    <figcaption>A <code>float: right</code> child: <q>floating is ignored</q>, it is the first item, "ab" filling the
+    first column, and "cd" at 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An inline child is one item</h2>
+  <p><q>grid items do not split around blocks</q>. A span holds "ab", a block <code>q</code> of "cd", and "ef"; a block
+  "gh" follows it.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g><span class=tb>ab<q class=blk>cd</q>ef</span><div class=tc>gh</div></div></div>
+    <figcaption>The span is one item in the first column, three lines tall: "ab", the blue "cd", "ef". "gh" is the
+    second item, at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div><span class=tb>ab<q class=blk>cd</q>ef</span><div class=tc>gh</div></div></div>
+    <figcaption>For comparison, the same in a block: the span splits around the block, and "gh" is a fourth line,
+    across the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

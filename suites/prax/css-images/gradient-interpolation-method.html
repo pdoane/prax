@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient(): the color interpolation method</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .bar { height: 20px; margin: 0 10px; }
+  .bar + .bar { margin-top: 10px; }
+  .sw { display: inline-block; vertical-align: top; width: 30px; height: 30px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.1 Linear Gradients: the linear-gradient() notation</div>
+  <h1>linear-gradient(): the color interpolation method</h1>
+  <p class=pr-lede><q>This level adds a &lt;color-interpolation-method&gt; argument to linear-gradient() and
+  repeating-linear-gradient(), indicating the color space and path to use when interpolating colors on the gradient
+  line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a></span>
+  Each gradient runs from <code>red</code> at the left to <code>blue</code> at the right. A square cut from a
+  gradient's middle is followed by the color expected there.</p>
+</header>
+
+<section>
+  <h2>The space decides the colors between the stops</h2>
+  <p>In HSL, red's hue is 0deg and blue's 240deg: the default <code>shorter</code> path goes down through magenta,
+  <code>longer</code> up through yellow, lime and cyan. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-interpolation">CSS Color 4 §13.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in srgb to right, red, blue)"></div><div class=sw style="background: rgb(50% 0% 50%)"></div><div class="sw mid" style="background-image: linear-gradient(in oklab to right, red, blue)"></div><div class=sw style="background: rgb(55% 32.6% 63.7%)"></div></div>
+    <figcaption>The middle <code>in srgb</code>, then <code>rgb(50% 0% 50%)</code>, a dark purple; <code>in
+    oklab</code>, then <code>rgb(55% 32.6% 63.7%)</code>, a lighter lavender.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in hsl to right, red, blue)"></div><div class=bar style="background: linear-gradient(in hsl longer hue to right, red, blue)"></div></div>
+    <figcaption>Above, <code>in hsl</code>: red, magenta, blue. Below, <code>in hsl longer hue</code>: red, yellow,
+    lime, cyan, blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Before or after the direction</h2>
+  <p>The direction and the method may come in either order: <code>[ &lt;angle&gt; | to &lt;side-or-corner&gt; ] ||
+  &lt;color-interpolation-method&gt;</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(in hsl longer hue to right, red, blue)"></div><div class=bar style="background: linear-gradient(to right in hsl longer hue, red, blue)"></div></div>
+    <figcaption><code>in hsl longer hue to right</code> above, <code>to right in hsl longer hue</code> below: the same
+    rainbow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

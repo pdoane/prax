@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The margin shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 3.2 Margin Shorthand: the margin property</div>
+  <h1>The margin shorthand</h1>
+  <p class=pr-lede><q>The 'margin' property is a shorthand property for setting 'margin-top', 'margin-right',
+  'margin-bottom', and 'margin-left' in a single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#margin-shorthand">CSS Box Model 4 §3.2</a></span></p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin</p>
+
+<section>
+  <h2>One to four values</h2>
+  <p><q>If there is only one component value, it applies to all sides. If there are two values, the top and bottom
+  margins are set to the first value and the right and left margins are set to the second. If there are three values,
+  the top is set to the first value, the left and right are set to the second, and the bottom is set to the third. If
+  there are four values they apply to the top, right, bottom, and left, respectively.</q></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px">A</div></div></div>
+    <figcaption><code>margin: 10px</code>: 10px on every side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 10px 40px">A</div></div></div>
+    <figcaption><code>margin: 10px 40px</code>: 10px above and below, 40px at the left and right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 0 40px 20px">A</div></div></div>
+    <figcaption><code>margin: 0 40px 20px</code>: none above, 40px at the left and right, 20px below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 0 60px 20px 10px">A</div></div></div>
+    <figcaption><code>margin: 0 60px 20px 10px</code>: none above, 60px at the right, 20px below, 10px at the
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The spec's example</h2>
+  <p><q>body { margin: 1em 2em 3em } /* top=1em, right=2em, bottom=3em, left=2em */</q> Here at 10px to the em.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="font-size: 10px; margin: 1em 2em 3em">A</div></div></div>
+    <figcaption><code>margin: 1em 2em 3em</code>: 10px above, 20px at the right and left, 30px below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="font-size: 10px; margin-top: 1em; margin-right: 2em; margin-bottom: 3em; margin-left: 2em">A</div></div></div>
+    <figcaption>Its four longhands, the same margins.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

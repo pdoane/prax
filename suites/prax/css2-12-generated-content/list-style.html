@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  ul.ex1 { list-style: upper-roman inside }
+  .ex1 > li > ul { list-style: circle outside }
+  ul.reordered { list-style: inside upper-roman }
+  ul.img-ok { list-style: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='%23d68a3c'/></svg>") square }
+  ul.img-missing { list-style: url(missing-marker.png) square }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style shorthand</h1>
+  <p class=pr-lede><code>list-style</code> takes <code>[ &lt;'list-style-type'&gt; || &lt;'list-style-position'&gt; ||
+  &lt;'list-style-image'&gt; ]</code>. Initial: see the individual properties; inherited, applies to elements with
+  <code>display: list-item</code>. Each item's principal box is tinted blue.</p>
+</header>
+
+<section>
+  <h2>Three properties at once</h2>
+  <p><q>The 'list-style' property is a shorthand notation for setting the three properties 'list-style-type',
+  'list-style-image', and 'list-style-position' at the same place in the style sheet.</q> The specification's example:
+  <code>ul { list-style: upper-roman inside }</code> and <code>ul &gt; li &gt; ul { list-style: circle outside
+  }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=ex1><li>one<li>two<ul><li>nested</ul></ul></div>
+    <figcaption>"I." and "II." inside the tinted boxes; the nested list's item has a hollow circle outside its
+    box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=reordered><li>one<li>two</ul></div>
+    <figcaption>The values in any order, <code>inside upper-roman</code>: the same "I." and "II." inside the
+    tinted boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image and a type</h2>
+  <p><q>A URI value may be combined with any other value</q>: with <code>ul { list-style:
+  url("http://png.com/ellipse.png") disc }</code>, <q>the 'disc' will be used when the image is unavailable.</q> Here
+  the type is <code>square</code>, which is easier to tell from the default. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=img-ok><li>available</ul></div>
+    <figcaption>The image is available: an orange 10 by 10 marker.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=img-missing><li>unavailable</ul></div>
+    <figcaption>The image does not exist: a dark <code>square</code> marker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

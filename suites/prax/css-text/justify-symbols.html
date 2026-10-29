@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Justifying symbols and punctuation</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { text-align: justify; text-align-last: justify; text-justify: inter-character; }
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.5.2 Handling Symbols and Punctuation</div>
+  <h1>Justifying symbols and punctuation</h1>
+  <p class=pr-lede><q>When determining justification opportunities, a typographic character unit from the Unicode
+  Symbols (S*) and Punctuation (P*) classes is generally treated the same as a typographic letter unit of the same
+  script (or, if the character’s extended script property is Common, then as a typographic letter unit of the dominant
+  script).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#justify-symbols">CSS Text 4 §7.5.2</a></span>
+  Each stage is 200px wide, <code>inter-character</code>, its one line justified.</p>
+</header>
+
+<section>
+  <h2>Punctuation as a letter</h2>
+  <figure>
+    <div class="pr-stage ja j" lang=ja><span class=t>漢字、かな。</span></div>
+    <figcaption>"、" and "。" are spaced as the kana and ideographs are: six units, five equal gaps.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure j"><span class=t>a+b=c!</span></div>
+    <figcaption>"+", "=" and "!", Common, as Latin letters: six units, five equal gaps. <span
+    class=pr-flag>Safari</span>, which ignores <code>text-justify</code>, finds no opportunity: at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Traditions a UA may follow</h2>
+  <p><q>the UA may reassign specific characters or introduce additional levels of prioritization to handle
+  justification opportunities involving symbols and punctuation.</q> The specification's examples: <q>there are
+  traditionally no justification opportunities between consecutive U+2014 — EM DASH, U+2015 ― HORIZONTAL BAR, U+2026 …
+  HORIZONTAL ELLIPSIS, or U+2025 ‥ TWO DOT LEADER characters</q>. What each browser does here is its own choice.</p>
+  <figure>
+    <div class="pr-stage ja j" lang=ja><span class=t>あ……い——う</span></div>
+    <figcaption>"……" and "——" between kana: kept together, with the gaps elsewhere, or spaced as the
+    kana.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ja j" lang=ja><span class=t>あ〚い〛う</span></div>
+    <figcaption>〚 and 〛, which <q>are considered to contain a justification opportunity in Japanese</q>: a UA may
+    expand them first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

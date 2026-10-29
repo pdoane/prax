@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.1 Processing Model for Relative Colors</div>
+  <h1>Relative colors</h1>
+  <p class=pr-lede><q>if an origin color is specified, then each color component (and the alpha component, if specified) can
+  <em>either</em> be directly specified, or taken from the origin color (and possibly modified with math
+  functions).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#rcs-intro">CSS Color 5
+  §4.1</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Alpha from the origin</h2>
+  <p><q>If the alpha value of the relative color is omitted, it defaults to that of the
+  origin color (rather than defaulting to 100%, as it does in the absolute syntax).</q> <q>alpha component values [...]
+  are clamped to the reference range.</q> On a checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: oklch(from oklch(0.6 0.15 30 / 0.5) l c h)"></div><div class=sw style="background: oklch(0.6 0.15 30 / 0.5)"></div></div>
+    <figcaption><code>oklch(from oklch(0.6 0.15 30 / 0.5) l c h)</code>, no alpha given: half transparent, as the origin.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: oklch(from oklch(78% 0.06 75 / 0.7) l c h / calc(alpha * 2))"></div><div class=sw style="background: oklch(78% 0.06 75)"></div></div>
+    <figcaption><q>attempting to double an alpha of 0.7 [...] results in an alpha in the result of 1, not 1.4</q>: opaque tan.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Components not clamped</h2>
+  <p><q>color component values, whether directly specified or arising from color space
+  conversion, are <em>not clamped</em></q>. <code>color(display-p3 1 1 0)</code> in sRGB <q>is rgb(100% 100% -34.63%)
+  and the negative blue component is not clamped. The result of the RCS calculation is rgb(100% 100% 15.37%)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(from color(display-p3 1 1 0) srgb r g calc(b + 0.5))"></div><div class=sw style="background: rgb(100% 100% 15.37%)"></div><div class=sw style="background: rgb(100% 100% 50%)"></div></div>
+    <figcaption><code>color(from color(display-p3 1 1 0) srgb r g calc(b + 0.5))</code>: a yellow, as <code>rgb(100% 100% 15.37%)</code>, not the paler third, as if blue had been clamped to 0 first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

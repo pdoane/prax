@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The line-height property: inheritance and the strut</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .chip { background: rgba(214, 138, 60, 0.5); }
+  .big { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The line-height property: inheritance and the strut</h1>
+  <p class=pr-lede>A number is inherited as a number and scales with each element's font; a length or percentage is
+  inherited as the length it computed to. Each stage is 10px text, with a 26px child block.</p>
+</header>
+
+<section>
+  <h2>What is inherited</h2>
+  <p>For a number, <q>The computed value is the same as the specified value.</q> For a percentage, <q>The computed
+  value of the property is this percentage multiplied by the element's computed font size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2
+  §10.8.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="font-size: 10px; line-height: 1.5"><div class="big"><span class=chip>26px text,</span><br><span class=chip>two lines</span></div></div>
+    <figcaption>The stage has <code>line-height: 1.5</code>; the child inherits 1.5, so its lines are 1.5 × 26 =
+    39px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 10px; line-height: 150%"><div class="big"><span class=chip>26px text,</span><br><span class=chip>two lines</span></div></div>
+    <figcaption>With <code>line-height: 150%</code>, the child inherits 15px, 150% of the stage's own 10px: its 26px
+    lines are 15px apart and overlap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The strut</h2>
+  <p><q>On a block container element whose content is composed of inline-level elements, 'line-height' specifies the
+  minimal height of line boxes within the element.</q> <q>exactly as if each line box starts with a zero-width inline
+  box with the element's font and line height properties. We call that imaginary box a "strut."</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="font-size: 13px; line-height: 30px"><span class=chip style="font-size: 8px; line-height: 8px">8px text on 8px lines</span><br><span class=chip style="font-size: 8px; line-height: 8px">8px text on 8px lines</span></div>
+    <figcaption>The block's <code>line-height: 30px</code> holds each line at 30px, though its spans ask for
+    8px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 13px; line-height: 30px">one font, one line height<br>baselines exactly<br>30px apart</div>
+    <figcaption><q>baselines of successive lines are exactly 'line-height' apart</q>: here 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The vertical-align property: lengths and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .va { font-size: 20px; line-height: 60px; white-space: nowrap; }
+  .sq { display: inline-block; width: 16px; height: 16px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>The vertical-align property: lengths and percentages</h1>
+  <p class=pr-lede>20px text on 60px lines, baseline dashed red; blue squares are empty 16px inline-blocks,
+  with their baseline at their bottom.</p>
+</header>
+
+<section>
+  <h2>Raise or lower by a distance</h2>
+  <p><q>Raise (positive value) or lower (negative value) the box by this distance.</q> For a percentage, <q>by this
+  distance (a percentage of the 'line-height' value).</q> Percentages <q>refer to the 'line-height' of the element
+  itself</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: 20px"></span></div>
+    <figcaption><code>vertical-align: 20px</code>: its bottom 20px above the baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: -10px"></span></div>
+    <figcaption><code>vertical-align: -10px</code>: 10px below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: 50%; line-height: 40px"></span></div>
+    <figcaption><code>vertical-align: 50%</code> of the square's own <code>line-height: 40px</code>: raised 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage va"><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: -25%"></span></div>
+    <figcaption><code>vertical-align: -25%</code> of the inherited 60px line height: lowered 15px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

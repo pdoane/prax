@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-autospace</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 6px; font: 40px/60px "PR Noto Sans JP"; white-space: nowrap; }
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 220px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.4 Automatic Contextual Spacing: the text-autospace property</div>
+  <h1>text-autospace</h1>
+  <p class=pr-lede><q>Controls spacing between adjacent characters on the same line within the same inline formatting
+  context using a set of character-class-based rules, allowing for automatic control over inter-script spacing and for
+  spacing around punctuation.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-autospace-property">CSS Text 4 §8.4</a></span>
+  Text is 40px PR Noto Sans JP, so the space, 1/8 of an ideograph, is 5px.</p>
+</header>
+
+<section>
+  <h2>normal: ideograph-alpha and ideograph-numeric</h2>
+  <figure>
+    <div class="pr-stage ja" lang=ja style="text-autospace: no-autospace">漢A字1語</div>
+    <figcaption><code>no-autospace</code>: <q>No automatic space is inserted.</q></figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja>漢A字1語</div>
+    <figcaption><code>normal</code>, the initial value: 5px either side of "A" and of "1", 20px wider in
+    all. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    space.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One class or the other</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: ideograph-alpha">漢A字1語</div>
+    <figcaption><code>ideograph-alpha</code>: 5px around "A" only. <span class=pr-flag>Chrome</span> None.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=ja style="text-autospace: ideograph-numeric">漢A字1語</div>
+    <figcaption><code>ideograph-numeric</code>: 5px around "1" only. <span class=pr-flag>Chrome</span> None.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

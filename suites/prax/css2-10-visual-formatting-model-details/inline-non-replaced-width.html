@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Widths: inline, non-replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.1 Inline, non-replaced elements</div>
+  <h1>Widths: inline, non-replaced elements</h1>
+  <p class=pr-lede>An inline, non-replaced element is one such as <code>span</code>, whose content is laid out in lines.
+  Each orange span sits between the letters a and b.</p>
+</header>
+
+<section>
+  <h2>No width, and auto margins are 0</h2>
+  <p><q>The 'width' property does not apply. A computed value of 'auto' for 'margin-left' or 'margin-right' becomes a
+  used value of '0'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-width">CSS 2 §10.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip>span</span> b</div>
+    <figcaption>A span with no margins, for comparison.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="width: 150px">span</span> b</div>
+    <figcaption><code>width: 150px</code> does not apply: the same as the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="margin: 0 auto">span</span> b</div>
+    <figcaption><code>margin: 0 auto</code> is 0 on each side: the same again, and not centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="margin: 0 20px">span</span> b</div>
+    <figcaption><code>margin: 0 20px</code>, by contrast, keeps a and b 20px further away.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

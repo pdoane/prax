@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: rules 4 to 6, and rule 2 in rtl</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: rules 4 to 6, and rule 2 in rtl</h1>
+  <p class=pr-lede>Each stage is the 200px containing block of the absolutely positioned box in it. Auto margins are 0 in
+  all six rules.</p>
+</header>
+
+<section>
+  <h2>Solving for the one auto</h2>
+  <p><q>4. 'left' is 'auto', 'width' and 'right' are not 'auto', then solve for 'left'</q> <q>5. 'width' is 'auto',
+  'left' and 'right' are not 'auto', then solve for 'width'</q> <q>6. 'right' is 'auto', 'left' and 'width' are not
+  'auto', then solve for 'right'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="width: 100px; right: 20px">rule 4</div></div>
+    <figcaption>4. <code>width: 100px; right: 20px</code>: <code>left</code> is 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="left: 30px; right: 50px">rule 5</div></div>
+    <figcaption>5. <code>left: 30px; right: 50px</code>: the width is 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs pr-fit" style="left: 30px; width: 100px; margin-right: auto">rule 6</div></div>
+    <figcaption>6. <code>left: 30px; width: 100px; margin-right: auto</code>: the margin is 0 and
+    <code>right</code> is 70px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rule 2 in rtl</h2>
+  <p><q>otherwise set 'right' to the static position. Then solve for 'left' (if 'direction is 'rtl') or 'right' (if
+  'direction' is 'ltr').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class=pr-parent style="margin: 10px 40px 0 0; height: 20px; direction: rtl"><div class="pr-b abs pr-fit" style="width: 100px; top: auto">rule 2</div></div></div>
+    <figcaption><code>width: 100px</code> in an <code>rtl</code> dashed block 40px from the right: <code>right</code>
+    is the static position, 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

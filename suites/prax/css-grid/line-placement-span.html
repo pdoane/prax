@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line-based placement: spans</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-auto-columns: 40px; grid-auto-rows: 20px; }
+  .abc { display: grid; grid-auto-rows: 20px;
+         grid-template-columns: [A] 20px [B] 20px [C] 20px [A] 20px [B] 20px [C] 20px [A] 20px [B] 20px [C]; }
+  .abc > div { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.3 Line-based Placement, spans</div>
+  <h1>Line-based placement: spans</h1>
+  <p class=pr-lede><code>span</code> <q>Contributes a grid span to the grid item’s placement such that the
+  corresponding edge of the grid item’s grid area is N lines from its opposite edge in the corresponding
+  direction.</q> <q>If the &lt;integer&gt; is omitted, it defaults to 1.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#line-placement">CSS Grid Layout 2 §8.3</a></span></p>
+</header>
+
+<section>
+  <h2>A span of lines, or of named lines</h2>
+  <p><q>If a name is given as a &lt;custom-ident&gt;, only lines with that name are counted.</q> Eight 20px columns
+  whose lines are named, in turn, A, B, C, A, B, C, A, B, C.</p>
+  <figure>
+    <div class=pr-stage><div class=abc><div class=pr-a style="grid-column: 2 / span 3">1</div><div class=pr-b style="grid-column: C / span C">2</div><div class=pr-c style="grid-column: span C / C -1">3</div><div class=pr-d style="grid-column: 5 / span C">4</div><div class=pr-a style="grid-column: span 2 / 4">5</div></div></div>
+    <figcaption>1: <code>2 / span 3</code>, lines 2 to 5, 20 to 80px. 2: <code>C / span C</code>, the next C, lines
+    3 to 6, 40 to 100px. 3: <code>span C / C -1</code>, back from line 9 to the C before it, line 6: 100 to 160px.
+    4: <code>5 / span C</code>, lines 5 to 6, 80 to 100px. 5: <code>span 2 / 4</code>, 20 to 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Implicit lines on the side searched</h2>
+  <p><q>If not enough lines with that name exist, all implicit grid lines on the side of the explicit grid
+  corresponding to the search direction are assumed to have that name for the purpose of counting this span.</q> Added columns are 40px.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px"><div class=pr-a style="grid-column: span foo / 4">A</div><div class=pr-b style="grid-row: 2; grid-column: 1">B</div></div></div>
+    <figcaption>One 40px column; A is <code>span foo / 4</code>: no line is "foo", and line 3 is on the end side, so the grid adds a
+    line before line 1. A spans four columns, 0 to 160px; B, in column 1, from 40 to 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px"><div class=pr-a style="grid-column: 2 / span foo 2">A</div><div class=pr-b style="grid-row: 2; grid-column: 1">B</div></div></div>
+    <figcaption>Two columns; A is <code>2 / span foo 2</code>, searching endward: the implicit lines 4 and 5 count as
+    "foo", so A spans lines 2 to 5, 40 to 160px; B at 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

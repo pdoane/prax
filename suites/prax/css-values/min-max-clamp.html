@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min(), max() and clamp()</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.2 Comparison Functions</div>
+  <h1>min(), max() and clamp()</h1>
+  <p class=pr-lede><q>The min() or max() functions contain one or more comma-separated calculations, and represent the
+  smallest (most negative) or largest (most positive) of them, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#comp-func">CSS Values and Units 4 §10.2</a></span>
+  Each bar's <code>width</code> is the function under it, in a 200px stage.</p>
+</header>
+
+<section>
+  <h2>min() and max()</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(50%, 120px)">A</div></div>
+    <figcaption><code>min(50%, 120px)</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: max(50%, 120px)">A</div></div>
+    <figcaption><code>max(50%, 120px)</code>: 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(180px, 40% + 60px, 9em)">A</div></div>
+    <figcaption><code>min(180px, 40% + 60px, 9em)</code> in 14px text: 126px, the 9em.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clamp()</h2>
+  <p><q>given clamp(MIN, VAL, MAX), it represents exactly the same value as max(MIN, min(VAL, MAX))</q>.
+  <q>Either the min or max calculations (or even both) can instead be the keyword none</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: clamp(50px, 80%, 120px)">A</div></div>
+    <figcaption><code>clamp(50px, 80%, 120px)</code>: 160px held to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: clamp(50px, 10%, 120px)">A</div></div>
+    <figcaption><code>clamp(50px, 10%, 120px)</code>: 20px raised to 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: clamp(120px, 50%, 50px)">A</div></div>
+    <figcaption><code>clamp(120px, 50%, 50px)</code>: the minimum wins over the maximum, 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: clamp(none, 90%, 140px)">A</div></div>
+    <figcaption><code>clamp(none, 90%, 140px)</code>: 140px, held only from above.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

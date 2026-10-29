@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: an inline that forms a stacking context</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { position: relative; }
+  .big { font-size: 20px; line-height: 40px; }
+  .f { float: left; width: 50px; height: 40px; margin-right: -10px; box-sizing: border-box; }
+  .neg { position: relative; z-index: -1; display: inline-block; vertical-align: top; width: 30px; height: 30px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: an inline that forms a stacking context</h1>
+  <p class=pr-lede>Each stage forms a stacking context, and holds a relative span that forms one too, with a
+  <code>z-index</code>. The span's own background and border are painted only on its lines.</p>
+</header>
+
+<section>
+  <h2>Its steps in order</h2>
+  <p>For the span, step 2 paints nothing: it is not a block. Then step 3, <q>Stacking contexts formed by positioned
+  descendants with negative z-indices</q>; step 4, its <q>in-flow, non-positioned, block-level descendants</q>; step
+  5, <q>All non-positioned floating descendants</q>; and step 7: <q>If the element is an inline element that generates
+  a stacking context, then: For each line box that the element is in</q>, its own background, border and content. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking big"><span class=sc style="z-index: 1">xxxxxx<div class=pr-a style="height: 30px; margin-top: -30px; box-sizing: border-box"></div>y</span></div>
+    <figcaption>At <code>z-index: 1</code>, the span holds a blue block pulled up 30px over its first line: the
+    block, step 4, is under the line's "xxxxxx". <span class=pr-flag>Firefox</span> The block covers the
+    line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking big"><span class="sc pr-chip" style="z-index: 0; border-width: 10px">x<span class="pr-a f"></span></span></div>
+    <figcaption>At <code>z-index: 0</code>, with a 10px border, the span holds a blue float that reaches under its left
+    border: the border, step 7, covers the float, step 5. <span class=pr-flag>Firefox</span> The float covers the
+    border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking big"><span class="sc pr-hl" style="z-index: 0">ab<i class="pr-a neg"></i>cd</span></div>
+    <figcaption>At <code>z-index: 0</code>, the span's background covers its blue inline block at −1, step 3, which
+    shows only above the background's top. <span class=pr-flag>Firefox</span> The inline block covers the
+    background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

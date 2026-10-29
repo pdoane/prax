@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-fill</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 4; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .h80 { height: 80px; }
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 7.1 Column Balancing: the column-fill property</div>
+  <h1>column-fill</h1>
+  <p class=pr-lede><code>balance</code>: <q>Balance content equally between columns, as far as possible. In fragmented
+  contexts, only the last fragment is balanced.</q> <code>auto</code>: <q>fill columns sequentially</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cf">CSS Multi-column Layout 1 §7.1</a></span>
+  <code>balance-all</code>: <q>Balance content equally between columns, as far as possible. In fragmented contexts, all
+  fragments are balanced.</q> Each stage is 150px wide, with four columns of 30px; each word is on a line of its own.</p>
+</header>
+
+<section>
+  <h2>With no height</h2>
+  <p><q>In this example, an article only has one short paragraph which fits on three lines. The three lines are
+  displayed in three different columns due to column balancing.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure">one two six</div>
+    <figcaption><code>balance</code>, the initial value: a line in each of the first three columns; the stage
+    20px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-fill: auto">one two six</div>
+    <figcaption><code>auto</code>: filled in order, with no height to stop the first column, so all three lines in
+    it; the stage 60px tall. <span class=pr-flag>Safari</span> Balances, as <code>balance</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With a height</h2>
+  <p><q>In this example, column balancing is turned off, and the article has a height</q>: <q>As a result, the first
+  column is filled with all content</q>. The stages are 80px tall.</p>
+  <figure>
+    <div class="pr-stage pr-measure h80" style="column-fill: auto">one two six</div>
+    <figcaption><code>auto</code>: the three lines in the first column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure h80">one two six</div>
+    <figcaption><code>balance</code>: a line in each of three columns, at the top; the columns' content 20px tall
+    in the 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure h80" style="column-fill: balance-all">one two six</div>
+    <figcaption><code>balance-all</code>, which differs only in a fragment before the last, as on a page that is
+    not the last: as <code>balance</code>.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

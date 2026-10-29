@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shaping across a break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ar { padding: 0 6px; font: 28px/48px "PR Noto Sans Arabic"; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.5 Line Breaking Details</div>
+  <h1>Shaping across a break</h1>
+  <p class=pr-lede><q>When shaping scripts such as Arabic wrap at unforced soft wrap opportunities within words (such as
+  when breaking due to 'word-break: break-all', 'line-break: anywhere', 'overflow-wrap: break-word', 'overflow-wrap:
+  anywhere', or when hyphenating) the characters must still be shaped (their joining forms chosen) as if the word were
+  still whole.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-details">CSS Text 4 §6.5</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>For example, if the word “نوشتن” is broken between the “ش” and “ت”, the “ش” still takes its initial form
+  (“ﺷ”), and the “ت” its medial form (“ﺘ”)—forming as in “ﻧﻮﺷ | ﺘﻦ”, not as in “نوش | تن”.</q> Each stage is 64px wide, too narrow for the word.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ar" dir=rtl style="width: 64px">نوشتن</div>
+    <figcaption>Whole, no break: <code>normal</code> leaves it one line past the edge.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ar" dir=rtl style="width: 64px; word-break: break-all">نوشتن</div>
+    <figcaption><code>word-break: break-all</code>: broken, and the letters each side of the break still in
+    their joined forms. <span class=pr-flag>Safari</span> "نوش", "تن", unjoined.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ar" dir=rtl style="width: 64px; line-break: anywhere">نوشتن</div>
+    <figcaption><code>line-break: anywhere</code>: the same. <span class=pr-flag>Safari</span> Unjoined.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ar" dir=rtl style="width: 64px; overflow-wrap: anywhere">نوشتن</div>
+    <figcaption><code>overflow-wrap: anywhere</code>: the same. <span class=pr-flag>Safari</span> Unjoined.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

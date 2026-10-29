@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Float widths: auto margins and the preferred width</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.5 Floating, non-replaced elements</div>
+  <h1>Float widths: auto margins and the preferred width</h1>
+  <p class=pr-lede>A float's auto margins are 0, and its auto width shrinks to fit its content. Orange boxes are floats
+  with text in them.</p>
+</header>
+
+<section>
+  <h2>Auto margins are 0</h2>
+  <p><q>If 'margin-left', or 'margin-right' are computed as 'auto', their used value is '0'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2
+  §10.3.5</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 20px"><div class="pr-a pr-fit" style="float: left; width: 100px; margin: 0 auto">box</div></div>
+    <figcaption>A 100px float with <code>margin: 0 auto</code> is not centered: it is at the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 20px"><div class="pr-b pr-fit" style="float: right; width: 100px; margin: 0 auto">box</div></div>
+    <figcaption>Floated right, it is at the right edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Shrink-to-fit: the preferred width</h2>
+  <p><q>If 'width' is computed as 'auto', the used value is the "shrink-to-fit" width.</q> <q>Roughly: calculate the
+  preferred width by formatting the content without breaking lines other than where explicit line breaks occur</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2 §10.3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-chip style="float: left">two words</div></div>
+    <figcaption>Content narrower than the stage: the float is as wide as its one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-chip style="float: left">one<br>the longer line<br>two</div></div>
+    <figcaption>With explicit breaks, the preferred width is that of the longest line, the middle one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-chip style="float: left">two words <br>one </div></div>
+    <figcaption>A space ends each line: <q>a space (U+0020) at the end of a line ... is also removed</q> (<a href="https://drafts.csswg.org/css2/#white-space-model">§16.6.1</a>), so
+    it adds nothing, and the float ends at "words".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

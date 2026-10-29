@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 5: zero, negative and flexing items</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; align-items: flex-start; }
+  .w50 > div { width: 50px; flex-shrink: 0; }
+  .zero { width: 0 !important; height: 40px; padding: 0; border: 0; outline: 2px solid #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.3 Main Size Determination, step 5, edge cases</div>
+  <h1>Step 5: zero, negative and flexing items</h1>
+  <p class=pr-lede><q>For this step, the size of a flex item is its outer hypothetical main size. (Note: This can be
+  negative.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#main-sizing">CSS Flexible Box Layout 2 §9.3</a></span>
+  Each stage is a 200px <code>flex-wrap: wrap</code> container.</p>
+</header>
+
+<section>
+  <h2>Zero-sized items join the full line</h2>
+  <p><q>Note that the "collect as many" line will collect zero-sized flex items onto the end of the previous line even
+  if the last non-zero item exactly "filled up" the line.</q> The red line is an item 0px wide and 40px tall.</p>
+  <figure>
+    <div class="pr-stage w50"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div><div class=zero></div><div class="pr-a pr-fit">E</div></div>
+    <figcaption>A to D fill 200px; the empty item still fits, at the right edge of the first line, which it makes
+    40px tall: E starts the second line at 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A negative outer size</h2>
+  <figure>
+    <div class="pr-stage w50"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-light pr-fit" style="margin-right: -60px">C</div><div class="pr-d pr-fit">D</div><div class="pr-a pr-fit">E</div></div>
+    <figcaption>C, 50px with <code>margin-right: -60px</code>, is −10px outside: A to E make 190px, one line, D
+    over C.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage w50"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-light pr-fit" style="margin-right: -50px">C</div><div class="pr-d pr-fit">D</div><div class="pr-a pr-fit">E</div><div class="pr-b pr-fit">F</div></div>
+    <figcaption><code>margin-right: -50px</code>: C is 0 outside, so A to E make 200px and fit; F wraps.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lines are collected before flexing</h2>
+  <figure>
+    <div class="pr-stage"><div class="pr-a pr-fit" style="flex: 1 1 120px">A</div><div class="pr-b pr-fit" style="flex: 1 1 120px">B</div></div>
+    <figcaption>Two items of <code>flex: 1 1 120px</code>: 240px will not fit, so each has a line, and grows to
+    200px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage" style="flex-wrap: nowrap"><div class="pr-a pr-fit" style="flex: 1 1 120px">A</div><div class="pr-b pr-fit" style="flex: 1 1 120px">B</div></div>
+    <figcaption>The same, <code>nowrap</code>: one line, so both shrink to 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

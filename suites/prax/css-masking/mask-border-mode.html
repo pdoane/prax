@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-mode: alpha or luminance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; mask-border-slice: 10 fill; }
+  .a { mask-border-source: url(support/frame-alpha.svg); }
+  .l { mask-border-source: url(support/frame-luminance.svg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.2 Mask Border Image Interpretation: the mask-border-mode property</div>
+  <h1>mask-border-mode: alpha or luminance</h1>
+  <p class=pr-lede><q>The mask-border-mode property indicates whether the &lt;image&gt; value for mask-border-source is
+  treated as luminance mask or alpha mask.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-mode">CSS Masking 1 §8.2</a></span>
+  Each box is 140 by 60 and blue, with <code>mask-border-slice: 10 fill</code>. One image is the frame of discs, bars
+  and a square opaque on transparency; the other draws the same shapes white on opaque black.</p>
+</header>
+
+<section>
+  <h2>alpha, the initial value</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box a"></div></div>
+    <figcaption>The shapes on transparency: the frame, where they are opaque. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box l"></div></div>
+    <figcaption>White on black: every pixel opaque, so the whole box, 140 by 60, as if unmasked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>luminance</h2>
+  <p><q>A value of luminance indicates that the luminance values of the mask border image should be used as the mask
+  values.</q> <q>The mask-mode and mask-type properties must have no affect on the mask border image type.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box l" style="mask-border-mode: luminance"></div></div>
+    <figcaption>White on black, <code>luminance</code>: the frame again, where the image is white.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The box
+    unmasked.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box l" style="mask-mode: luminance"></div></div>
+    <figcaption><code>mask-mode: luminance</code> instead: it does not reach the mask border, still alpha, so the whole
+    box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

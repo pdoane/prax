@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Highlighted text, redrawn</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 20px/40px "PR Arimo"; color: #1f2430; }
+  .white ::highlight(h) { background-color: #4f81bd; color: white; }
+  .layers ::highlight(low) { background-color: #f6d7b4; color: #c0392b; }
+  .layers ::highlight(high) { background-color: #b9cde6; color: currentColor; }
+  .first .t::first-line { color: #6aa36a; }
+  .first ::highlight(h) { background-color: #f6d7b4; color: currentColor; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.6.3 Text and Text Decorations</div>
+  <h1>Highlighted text, redrawn</h1>
+  <p class=pr-lede><q>A highlight pseudo-element suppresses the normal drawing of any associated text, and the text
+  decorations (other than shadows) that had been applied to that text. Instead the topmost active highlight overlay
+  redraws that text (and those decorations) over all the highlight overlay backgrounds using that highlight’s own
+  color.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-text">CSS Pseudo-Elements 4 §3.6.3</a></span>
+  Each stage holds dark grey text, all or part of it in custom highlights.</p>
+</header>
+
+<section>
+  <h2>In the topmost highlight's color</h2>
+  <figure>
+    <div class="pr-stage white"><div class=t><span data-highlight=h>Redrawn</span> text</div></div>
+    <figcaption>“Redrawn” in the highlight's white, on blue; “text” dark grey.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>currentColor is the color of the layer below</h2>
+  <p><q>For this purpose, currentColor on a highlight pseudo-element’s color property represents the color of the next
+  active highlight pseudo-element layer below, falling back finally to the colors that would otherwise have been used
+  (those applied by the originating element or an intervening pseudo-element such as ::first-line or
+  ::first-letter).</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage layers"><div class=t><span data-highlight=low>Lower <span data-highlight=high data-priority=1>upper</span></span></div></div>
+    <figcaption><code>low</code>, red on peach; <code>high</code>, over “upper”, light blue with <code>color:
+    currentColor</code>: “upper” red, <code>low</code>'s color, on light blue. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> “upper” dark grey.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage first"><div class=t><span data-highlight=h>First line</span></div></div>
+    <figcaption><code>::first-line</code> green, and a highlight with <code>color: currentColor</code> on peach: the
+    text green, the first line's color. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Dark grey.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

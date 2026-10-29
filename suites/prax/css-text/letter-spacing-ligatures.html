@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>letter-spacing and ligatures</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .lig { padding: 0 6px; font: 32px/48px "PR Literata"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.2 Tracking: the letter-spacing property</div>
+  <h1>letter-spacing and ligatures</h1>
+  <p class=pr-lede><q>When the effective spacing between two characters is not zero (due to either justification or a
+  non-zero value of 'letter-spacing'), user agents should not apply optional ligatures, i.e. those that are not
+  defined as required for fundamentally correct glyph shaping. However, ligatures and other font features specified
+  via the low-level 'font-feature-settings' property take precedence over this rule.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#letter-spacing-property">CSS Text 4 §8.2</a></span>
+  The text is the specification's "filial", in PR Literata, which has an "fi" ligature.</p>
+</header>
+
+<section>
+  <h2>Optional ligatures off</h2>
+  <figure>
+    <div class="pr-stage lig">filial</div>
+    <figcaption>No spacing: the "fi" ligature, the dot of the i merged into the f.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lig" style="letter-spacing: 0.25em">filial</div>
+    <figcaption><code>0.25em</code>: an "f" and an "i", evenly spaced like the rest.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>font-feature-settings wins</h2>
+  <figure>
+    <div class="pr-stage lig" style="letter-spacing: 0.25em; font-feature-settings: 'liga' 1">filial</div>
+    <figcaption><code>0.25em</code> with <code>font-feature-settings: "liga"</code>: the ligature kept, and the
+    spacing around it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lig" style="letter-spacing: 0.25em; font-variant-ligatures: common-ligatures">filial</div>
+    <figcaption><code>font-variant-ligatures: common-ligatures</code> is not the low-level property: no
+    ligature.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

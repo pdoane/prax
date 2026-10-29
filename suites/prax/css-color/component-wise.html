@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Component-wise linear interpolation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .at30 { background-position: 30% 0; background-size: 4000px 100%; }
+  .p30 { animation: oklab-pair 10s linear -3s paused both; }
+  @keyframes oklab-pair { from { background-color: oklab(0.4 0.1 0.05); } to { background-color: oklab(0.8 -0.1 0.1); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.1 Component-wise Linear Interpolation</div>
+  <h1>Component-wise linear interpolation</h1>
+  <p class=pr-lede><q>Given a percentage progress P and the starting and ending component values Cs and Ce, the
+  interpolated result is (Cs × (1 - P) + Ce × P).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#component-wise-linear-interpolation">CSS Color 4 §13.1</a></span></p>
+</header>
+
+<section>
+  <h2>Each component on its own</h2>
+  <p>From <code>oklab(0.4 0.1 0.05)</code>, a brick red, to <code>oklab(0.8 -0.1 0.1)</code>, a light green, at 30%:
+  L = 0.4 × 0.7 + 0.8 × 0.3 = 0.52, a = 0.04, b = 0.065.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklab(0.4 0.1 0.05)"></div><div class=sw style="background: oklab(0.8 -0.1 0.1)"></div></div>
+    <figcaption>The two colors.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class="sw p30"></div><div class=sw style="background: oklab(0.52 0.04 0.065)"></div></div>
+    <figcaption>An animation of <code>background-color</code> paused at 30%, beside <code>oklab(0.52 0.04
+    0.065)</code>: one brown. <span class=pr-flag>Firefox</span> Animates in sRGB: the first brown is duller,
+    <code>rgb(129 92 60)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Quantities</h2>
+  <p><q>Given a pair of percentage quantities Qa and Qb, which have been normalized to add to 100%, [...] the
+  interpolated result is (Ca × Qa) + ( Cb × Qb).</q> <q>the progress is the amount of the <em>second</em>
+  color.</q> The swatch shows 30% along <code>linear-gradient(to right, oklab(0.4 0.1 0.05), oklab(0.8 -0.1
+  0.1))</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>): 70% of the
+  first, 30% of the second.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw at30" style="background-image: linear-gradient(to right, oklab(0.4 0.1 0.05), oklab(0.8 -0.1 0.1))"></div><div class=sw style="background: oklab(0.52 0.04 0.065)"></div></div>
+    <figcaption>30% along the gradient, beside <code>oklab(0.52 0.04 0.065)</code>: the same brown.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

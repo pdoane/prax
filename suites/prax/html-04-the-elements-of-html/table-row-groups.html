@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Row groups</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td, .t th { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; }
+  .groups { border-collapse: collapse; }
+  .groups tbody, .groups thead { border: 3px solid #d68a3c; }
+  .tall td:first-child { height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.5 The tbody element</div>
+  <h1>Row groups</h1>
+  <p class=pr-lede><q>The tbody element represents a block of rows that consist of a body of data for the parent table
+  element, if the tbody element has a parent and it is a table.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#the-tbody-element">HTML §4.9.5</a></span></p>
+</header>
+<section>
+  <h2>Blocks of rows</h2>
+  <p><q>Row groups correspond to tbody, thead, and tfoot elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#table-processing-model">§4.9.12</a></span>
+  <code>thead { display: table-header-group }</code>, <code>tbody { display: table-row-group }</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span>
+  These tables collapse their borders, and each group has a 3px orange border.</p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t groups"><tbody><tr><td>A<td>B<tr><td>C<td>D</tbody><tbody><tr><td>E<td>F</tbody></table>
+    </div>
+    <figcaption>Two <code>tbody</code> elements: A to D inside one orange frame, E and F inside a second one below
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t groups"><thead><tr><th>Name<th>Legs</thead><tbody><tr><td>Cat<td>4<tr><td>Bird<td>2</tbody></table>
+    </div>
+    <figcaption>A <code>thead</code>, then a <code>tbody</code>: the header row in its own frame, the two body rows in
+    the frame below.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Cells in the middle of their rows</h2>
+  <p><code>thead, tbody, tfoot, table &gt; tr { vertical-align: middle; }</code>, <code>tr, td, th { vertical-align:
+  inherit; }</code> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#tables-2">§15.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t tall"><tr><td>tall<td>x</table>
+    </div>
+    <figcaption>The first cell makes the row 60px tall: "x" in the second cell sits halfway down
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class="t tall"><tbody style="vertical-align: top"><tr><td>tall<td>x</tbody></table>
+    </div>
+    <figcaption><code>vertical-align: top</code> on the <code>tbody</code>, which its row and cells inherit: "x" at the
+    top of its cell.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

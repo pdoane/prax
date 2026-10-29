@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/40px "PR Arimo"; }
+  .j { padding: 6px 0; font: 20px/40px "PR Noto Sans JP"; }
+  .pr-stage span { text-decoration-color: #c0392b; text-decoration-thickness: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.1 Text Decoration Lines: the text-decoration-line property</div>
+  <h1>text-decoration-line</h1>
+  <p class=pr-lede><q>Values other than none cause the element to originate the indicated text decorations, and to
+  apply and propagate it as described above.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-line-property">CSS Text Decoration 4 §2.1</a></span>
+  The lines here are red and 2px thick.</p>
+</header>
+
+<section>
+  <h2>Under, over, through</h2>
+  <p><q>Each line of text is underlined.</q> <q>Each line of text has a line over it (i.e. on the opposite side from an
+  underline).</q> <q>Each line of text has a line through the middle.</q></p>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: underline">under</span> <span style="text-decoration-line: overline">over</span> <span style="text-decoration-line: line-through">through</span><br><span style="text-decoration-line: underline overline line-through">all three at once</span></div>
+    <figcaption>A line below "under", above "over" and through the middle of "through"; "all three at once" has
+    all three.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical j"><span style="text-decoration-line: underline">下線</span>、<span style="text-decoration-line: overline">上線</span>、<span style="text-decoration-line: line-through">取消線</span></div>
+    <figcaption>Vertical: the underline on the left of 下線, the overline on the right of 上線, the opposite side, and
+    a line down the middle of 取消線.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>blink</h2>
+  <p><q>The text blinks (alternates between visible and invisible). Conforming user agents may simply not blink the
+  text.</q> <q>This value is deprecated in favor of Animations</q>.</p>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-line: blink">blink</span> <span style="text-decoration-line: blink underline">and under</span></div>
+    <figcaption>"blink" may blink or stay still, with no line; "and under" has an underline, and may
+    blink.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

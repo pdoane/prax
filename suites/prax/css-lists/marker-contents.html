@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What fills the marker</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .img { list-style-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='%23d68a3c'/></svg>"); list-style-type: upper-roman; }
+  .c li::marker { content: "(" counter(list-item, lower-roman) ") "; }
+  .m { font: calc(50px / 3)/20px "PR Noto Sans Mono"; }
+  .m li { list-style-position: inside; }
+  .none li { list-style-type: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 3.2 Generating Marker Contents</div>
+  <h1>What fills the marker</h1>
+  <p class=pr-lede><q>The contents of a marker box are determined by the first of these conditions that is true:</q>
+  <code>content</code> on the <code>::marker</code>, then <code>list-style-image</code>, then
+  <code>list-style-type</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#content-property">CSS Lists and Counters 3 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>content first, then the image, then the type</h2>
+  <p>Each list has <code>list-style-type: upper-roman</code> and an orange 10 by 10 <code>list-style-image</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text img c"><ol><li>one<li>two</ol></div>
+    <figcaption><code>::marker { content: "(" counter(list-item, lower-roman) ") " }</code>: "(i)" and "(ii)", no
+    image and no "I.". <span class=pr-flag>Safari</span> Ignores <code>content</code> on <code>::marker</code>: the image.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text img"><ol><li>one<li>two</ol></div>
+    <figcaption><code>content: normal</code>: the image, not "I." and "II.".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image and a space; nothing at all</h2>
+  <p>An image marker holds <q>an anonymous inline replaced element representing the specified marker image, followed by
+  a text sequence consisting of a single space (U+0020 SPACE).</q> <q>Otherwise The marker box has no contents and
+  ::marker does not generate a box.</q> Inside markers, in <code>.pr-measure</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage m img"><ol><li>item</ol></div>
+    <figcaption>The 10px image and a 10px space: "item" starts 20px into the tint. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> A narrower gap than the font's space: "item" starts about 17px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage m none"><ol><li>item</ol></div>
+    <figcaption><code>list-style-type: none</code> and no image: "item" at the tint's left edge, with no
+    space before it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

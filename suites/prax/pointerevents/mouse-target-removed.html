@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A target removed mid-click</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .holder { height: 60px; margin: 10px 20px; padding: 10px; box-sizing: border-box;
+            background: rgba(79, 129, 189, 0.16); outline: 1px dashed var(--pr-line); font-size: 12px; }
+  .holder .pr-target { height: 40px; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.3 Mouse Event Order</div>
+  <h1>A target removed mid-click</h1>
+  <p class=pr-lede><q>If the target (e.g. the target element) is removed from the DOM during the mouse events sequence,
+  the remaining events of the sequence MUST NOT be fired on that element.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">Pointer Events §11.3</a></span></p>
+</header>
+<section>
+  <h2>Removed by its mousedown</h2>
+  <p><q>If the target element is removed from the DOM as the result of a mousedown event, no events for that element
+  will be dispatched for mouseup, click, or dblclick, nor any default activation events. However, the mouseup event will
+  still be dispatched on the element that is exposed to the mouse after the removal of the initial target element.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">§11.3</a></span>
+  A <code>mousedown</code> listener removes the box, and puts it back two seconds later.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=holder id=holder><button class=pr-target id=down>removed on mousedown</button></div>
+      <ol class=pr-log data-log="mousedown mouseup click" data-fields="target" data-on="#holder" data-lines=3></ol>
+    </div>
+    <figcaption>Click the button: <code>mousedown</code> at <code>down</code>, which disappears;
+    <code>mouseup</code> at <code>holder</code>, now under the mouse; and no <code>click</code> at
+    <code>down</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Removed by its mouseup</h2>
+  <p><q>Similarly, if the target element is removed from the DOM during the dispatch of a mouseup event, the click and
+  subsequent events will not be dispatched.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">§11.3</a></span>
+  A <code>mouseup</code> listener removes the box, and puts it back two seconds later.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=holder id=holder2><button class=pr-target id=up>removed on mouseup</button></div>
+      <ol class=pr-log data-log="mousedown mouseup click" data-fields="target" data-on="#holder2" data-lines=3></ol>
+    </div>
+    <figcaption>Click the button: <code>mousedown</code> and <code>mouseup</code> at <code>up</code>, which
+    disappears, and no <code>click</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Removes each button on its mousedown or mouseup, and puts it back two seconds later.
+  for (const [id, type] of [["down", "mousedown"], ["up", "mouseup"]]) {
+    const button = document.getElementById(id), holder = button.parentElement;
+    button.addEventListener(type, () => {
+      button.remove();
+      setTimeout(() => holder.append(button), 2000);
+    });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The filter region</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 20px 0; }
+  .box { width: 100px; height: 40px; margin: 0 50px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <filter id="blur"><feGaussianBlur stdDeviation="10" /></filter>
+  <filter id="wide" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10" /></filter>
+  <filter id="user" filterUnits="userSpaceOnUse" x="0" y="0" width="50" height="20"><feFlood flood-color="#d68a3c" /></filter>
+  <filter id="half" x="0" y="0" width="0.5" height="1"><feFlood flood-color="#d68a3c" /></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 8 Filter Region</div>
+  <h1>The filter region</h1>
+  <p class=pr-lede><q>The bounds of this rectangle act as a hard clipping region for each filter primitive included
+  with a given filter element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterEffectsRegion">Filter Effects 1 §8</a></span>
+  Each box is 100 by 40, 50px in from the stage's edge, with an SVG filter.</p>
+</header>
+
+<section>
+  <h2>The default region, and a wider one</h2>
+  <p><q>The initial value for x and y is -10%.</q> <q>The initial value for width and height is 120%.</q> The filter is
+  an <code>feGaussianBlur</code> of <code>stdDeviation="10"</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#blur)"></div></div>
+    <figcaption>The default region: the blur cut sharply 10px left and right of the box, at x 40 and 160, and 4px
+    above and below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#wide)"></div></div>
+    <figcaption><code>x="-50%" width="200%"</code>: the blur fading out before the region's edges.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>filterUnits</h2>
+  <p><q>The initial value for filterUnits is objectBoundingBox.</q> Each filter floods its region orange.</p>
+  <figure>
+    <div class=pr-stage><div class=box style="filter: url(#half)"></div></div>
+    <figcaption><code>width="0.5"</code>, of the box: orange over the left 50px, nothing at the right.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=box style="filter: url(#user)"></div></div>
+    <figcaption><code>userSpaceOnUse</code>, <code>width="50" height="20"</code>: orange 50 by 20 at the box's top
+    left, the origin of its local coordinate system. <span class=pr-flag>Safari</span> Nothing here; the orange at
+    the page's top left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-width: hairline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.3 Line Thickness: the border-width properties</div>
+  <h1>border-width: hairline</h1>
+  <p class=pr-lede><q>The hairline keyword is a UA-defined length, less than or equal to 1px and equal to an integer number of device pixels at the default page zoom, which represents a "just visible" line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A just visible line</h2>
+  <p>Each box is 100 by 40.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border: hairline solid #2c5a8f"></div></div>
+    <figcaption><code>hairline</code>: a line one device pixel wide, or up to 1px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box" style="border: thin solid #2c5a8f"></div></div>
+    <figcaption><code>thin</code>, 1px, to compare.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

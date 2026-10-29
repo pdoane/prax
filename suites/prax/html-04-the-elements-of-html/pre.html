@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The pre element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .clip { overflow: hidden; }
+  .t pre { margin: 10px 0; background: rgba(79, 129, 189, 0.16); }
+  .bidi pre { font: 13px/20px "PR Noto Sans Mono", "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.3 The pre element</div>
+  <h1>The pre element</h1>
+  <p class=pr-lede><q>The pre element represents a block of preformatted text, in which structure is represented by typographic conventions rather than by elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element">HTML §4.4.3</a></span></p>
+</header>
+<section>
+  <h2>Monospace, spaces kept, no wrapping</h2>
+  <p><q>listing, plaintext, pre, xmp { font-family: monospace; white-space: pre; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span> As a presentational hint,
+  <q>pre[wrap] { white-space: pre-wrap; }</q> Each pre holds <code>a&nbsp;&nbsp;b&nbsp;&nbsp;&nbsp;c</code> and a
+  longer line.</p>
+  <figure>
+    <div class="pr-stage t clip"><pre>a  b   c
+a line longer than the stage is wide</pre></div>
+    <figcaption>In a monospace font: two spaces, then three, between the letters, and the second line runs past the
+    stage's right edge, cut off.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t clip"><pre wrap>a  b   c
+a line longer than the stage is wide</pre></div>
+    <figcaption><code>wrap</code>: the same spaces, and the second line wraps within the stage.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Each line its own direction</h2>
+  <p><q>This element has rendering requirements involving the bidirectional algorithm.</q> <q>pre[dir=auto i] {
+  unicode-bidi: plaintext; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#bidi-rendering">§15.3.5</a></span> Each line is a paragraph, which, aligned to its start, takes the direction of its
+  first strong letter. Each pre holds a line of Hebrew, then a line of English.</p>
+  <figure>
+    <div class="pr-stage t bidi"><pre dir=auto>שלום עולם
+hello world</pre></div>
+    <figcaption><code>dir=auto</code>: the Hebrew at the right edge, the English at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t bidi"><pre>שלום עולם
+hello world</pre></div>
+    <figcaption>No dir: both lines at the left.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

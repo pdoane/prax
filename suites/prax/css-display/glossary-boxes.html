@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Kinds of boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .float { float: left; width: 30px; height: 30px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · A Glossary, kinds of boxes</div>
+  <h1>Kinds of boxes</h1>
+  <p class=pr-lede>The glossary names the boxes the module speaks of. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#glossary">CSS Display 4 §A</a></span></p>
+</header>
+
+<section>
+  <h2>Inline box and atomic inline; floats inhibited</h2>
+  <p>An atomic inline <q>cannot split across lines (as inline boxes and ruby containers can).</q> <q>Some formatting
+  contexts inhibit floating, so that an element with float: left is not necessarily out-of-flow.</q></p>
+  <figure>
+    <div class=pr-stage style="width: 120px">Some words <span class=pr-chip>in an inline box</span> here.</div>
+    <figcaption>In a 120px stage, an inline box: the chip breaks across the two lines, in two pieces.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 120px">Some words <span class=pr-chip style="display: inline-block">in an inline-block</span> here.</div>
+    <figcaption>An inline-block: one piece, moved whole to the second line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: flex"><div class=pr-a>A</div><div class=pr-b style="float: right">B float</div><div class=pr-c>C</div></div></div>
+    <figcaption>B, <code>float: right</code>, as a flex item: in flow, between A and C at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block container and block box</h2>
+  <p><q>non-replaced inline blocks and non-replaced table cells, for example, are block containers but not block-level
+  boxes.</q> <q>flex containers (display: flex), for example, are not block containers.</q></p>
+  <figure>
+    <div class=pr-stage>x <span class=pr-chip style="display: inline-block; width: 60px">lines in an inline-block</span> x</div>
+    <figcaption>An inline-block is a block container: its text is on three lines of its own, while the box sits on
+    the outer line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-chip style="display: flex">text <span class=pr-a>A</span> text</div></div>
+    <figcaption>A flex container is block-level but not a block container: its text and A are three flex items, laid
+    side by side with no spaces.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

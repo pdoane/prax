@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-content and max-content constraints, and the preferred aspect ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; }
+  img { vertical-align: top; background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 2.3 Intrinsic Size Constraints</div>
+  <h1>Min-content and max-content constraints, and the preferred aspect ratio</h1>
+  <p class=pr-lede>A min-content constraint is <q>A sizing constraint imposed by the box's containing block that
+  causes it to produce its min-content contribution.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#constraints">CSS Box Sizing 3 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>Laid out under a constraint</h2>
+  <p>A dashed parent sizes itself to its content and lays out the orange block of "abc def ehg" in it, under the
+  constraint its width names. Text is PR Cousine, 9px a character.</p>
+  <figure>
+    <div class="pr-stage t"><div class=pr-parent style="width: min-content"><div class=box>abc def ehg</div></div></div>
+    <figcaption><code>width: min-content</code>: the block takes every wrap, three lines 27px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="width: 60px"><div class=pr-parent style="width: max-content"><div class=box>abc def ehg</div></div></div>
+    <figcaption>In a stage 60px wide, <code>width: max-content</code>: one line 99px wide, out of the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A preferred aspect ratio applies to the content box</h2>
+  <p><q>Unless otherwise specified, a box’s preferred aspect ratio is its natural aspect ratio if it has one and is
+  applied to its content box.</q> Each image has a 2:1 ratio and no natural size, and 10px of green padding.</p>
+  <figure>
+    <div class=pr-stage><img alt="" style="width: 100px; padding: 10px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: 100px</code>: the content box is 100 by 50, the padding box 120 by 70.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="box-sizing: border-box; width: 120px; padding: 10px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>box-sizing: border-box; width: 120px</code>: the content box is again 100 by 50, so the box
+    is 120 by 70, not 120 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

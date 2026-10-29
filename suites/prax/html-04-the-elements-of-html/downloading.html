@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Downloading resources</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.6.6 Downloading resources</div>
+  <h1>Downloading resources</h1>
+  <p class=pr-lede><q>To indicate that a resource is intended to be downloaded for use later, rather than immediately used, the download attribute can be specified on the a or area element that creates the hyperlink to that resource.</q> <q>The attribute can furthermore be given a value, to specify the filename that user agents are to use when storing the resource in a file system.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#downloading-resources">HTML §4.6.6</a></span></p>
+</header>
+<section>
+  <h2>Saved, not shown</h2>
+  <p>The activation behavior downloads the hyperlink when the element has a download attribute. The file is of this
+  page's origin, so the filename is the attribute's: <q>If trusted operation is true, let filename have the value of
+  proposed filename</q>. Each frame links <code>support/report.txt</code>, a line of text.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif }</style><a href=support/report.txt download=saved-report.txt>Download</a>"></iframe></div>
+    <figcaption><code>download=saved-report.txt</code>. Click the link: the frame stays as it is, and the browser saves
+    the file as saved-report.txt, or asks where to, offering that name.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif }</style><a href=support/report.txt>Open</a>"></iframe></div>
+    <figcaption>No download attribute. Click the link: the frame shows the file's line of text.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

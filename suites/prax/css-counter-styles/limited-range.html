@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Limited range: -9999 to 9999</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.1.1 Limited-range Implementation (required)</div>
+  <h1>Limited range: -9999 to 9999</h1>
+  <p class=pr-lede><q>The Korean and Japanese variants of these counter styles can, if limited to the range of -9999 to 9999, be expressed as @counter-style rules.</q> <q>Outside the implementation-supported range, the fallback is 'cjk-decimal'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#complex-cjk">CSS Counter Styles 3 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>9999, then 10000 in cjk-decimal</h2>
+  <p>A browser that implements the optional extended range (7.1.2) goes on past 9999 instead, as Chrome does for the Chinese and Korean styles (壹萬) and Firefox for all three here, its <code>japanese-formal</code> giving 壱萬.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: japanese-formal; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=9999>9999<li>10000</ol></div>
+    <figcaption><code>japanese-formal</code>: <bdi dir=ltr>"九阡九百九拾九、"</bdi>, <bdi dir=ltr>"一〇〇〇〇、"</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style='list-style-type: korean-hanja-formal; font-family: "PR Noto Sans KR", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=9999>9999<li>10000</ol></div>
+    <figcaption><code>korean-hanja-formal</code>: <bdi dir=ltr>"九仟九百九拾九,"</bdi>, <bdi dir=ltr>"一〇〇〇〇,"</bdi>. <span class=pr-flag>Safari</span> Falls back to <code>decimal</code>, not <code>cjk-decimal</code> (<a href="https://github.com/w3c/csswg-drafts/issues/8870">csswg-drafts#8870</a>): "10000,".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: trad-chinese-formal; font-family: "PR Noto Sans TC", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=9999>9999<li>10000</ol></div>
+    <figcaption><code>trad-chinese-formal</code>: <bdi dir=ltr>"玖仟玖佰玖拾玖、"</bdi>, <bdi dir=ltr>"一〇〇〇〇、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

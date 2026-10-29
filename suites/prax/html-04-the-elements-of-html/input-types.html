@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The input element's types</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.half { width: 240px; padding: 10px 0 0; }
+  .row { height: 30px; padding: 0 0 0 6px; font-size: 13px; line-height: 20px; white-space: nowrap; }
+  .row code { display: inline-block; width: 96px; font-size: 11px; vertical-align: middle; }
+  .half + figcaption { max-width: 240px; }
+  .row input { max-width: 132px; margin: 0; font-size: 12px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5 The input element</div>
+  <h1>The input element's types</h1>
+  <p class=pr-lede><q>The input element represents a typed data field, usually with a form control to allow the user to
+  edit the data.</q> <q>The type attribute controls the data type (and associated control) of the element.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">HTML §4.10.5</a></span></p>
+</header>
+
+<section>
+  <h2>A control for each type</h2>
+  <p>Each row is <code>&lt;input type=…&gt;</code> with no other attribute but a value where the type shows one. The
+  control types are the standard's table's; how each looks is the browser's.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage half">
+      <div class=row><code>hidden</code><input type=hidden value=secret>(n/a: nothing)</div>
+      <div class=row><code>text</code><input type=text value="text"></div>
+      <div class=row><code>search</code><input type=search value="search"></div>
+      <div class=row><code>tel</code><input type=tel value="+1 555 0100"></div>
+      <div class=row><code>url</code><input type=url value="https://example.com/"></div>
+      <div class=row><code>email</code><input type=email value="a@example.com"></div>
+      <div class=row><code>password</code><input type=password value="secret"></div>
+      <div class=row><code>date</code><input type=date value="2026-10-25"></div>
+      <div class=row><code>month</code><input type=month value="2026-10"></div>
+      <div class=row><code>week</code><input type=week value="2026-W43"></div>
+      <div class=row><code>time</code><input type=time value="09:30"></div>
+    </div>
+    <figcaption>Text controls; one that obscures what it holds (password); date, month, week and time controls.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> month and week are plain text fields.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage half">
+      <div class=row><code>datetime-local</code><input type=datetime-local value="2026-10-25T09:30"></div>
+      <div class=row><code>number</code><input type=number value=42></div>
+      <div class=row><code>range</code><input type=range value=25></div>
+      <div class=row><code>color</code><input type=color value="#4f81bd"></div>
+      <div class=row><code>checkbox</code><input type=checkbox checked></div>
+      <div class=row><code>radio</code><input type=radio checked></div>
+      <div class=row><code>file</code><input type=file></div>
+      <div class=row><code>submit</code><input type=submit></div>
+      <div class=row><code>image</code><input type=image src=../shared/resources/flag-40x20.png alt=image></div>
+      <div class=row><code>reset</code><input type=reset></div>
+      <div class=row><code>button</code><input type=button value="button"></div>
+    </div>
+    <figcaption>A date and time control; a text control or spinner; a slider; a color well; a checkbox; a radio
+    button; a label and a button; three buttons, and an image to click.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

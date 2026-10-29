@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feSpecularLighting</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <filter id="front" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feSpecularLighting><feDistantLight elevation="90"/></feSpecularLighting>
+  </filter>
+  <filter id="point" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feSpecularLighting><fePointLight x="80" y="30" z="40"/></feSpecularLighting>
+  </filter>
+  <filter id="shiny" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feSpecularLighting specularExponent="20"><fePointLight x="80" y="30" z="40"/></feSpecularLighting>
+  </filter>
+  <filter id="half" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feSpecularLighting specularConstant="0.5"><fePointLight x="80" y="30" z="40"/></feSpecularLighting>
+  </filter>
+  <filter id="none" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+    <feSpecularLighting specularExponent="128"><feDistantLight elevation="30"/></feSpecularLighting>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.19 Filter primitive feSpecularLighting</div>
+  <h1>feSpecularLighting</h1>
+  <p class=pr-lede><q>S<sub>r</sub> = k<sub>s</sub> * pow(N.H, specularExponent) * L<sub>r</sub></q>, and the same for
+  green and blue; <q>S<sub>a</sub> = max(S<sub>r,</sub> S<sub>g,</sub> S<sub>b</sub>)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feSpecularLightingElement">Filter Effects 1 §9.19</a></span>
+  Each stage is an SVG 160 by 60 with an opaque rectangle filling it, so the surface is flat and its normal N points
+  at the viewer, (0, 0, 1); its filter region is the rectangle, in sRGB. The light is white.</p>
+</header>
+
+<section>
+  <h2>Where the halfway vector meets the normal</h2>
+  <p><q>H = (L + E) / Norm(L+E)</q>, with the eye E at (0, 0, 1). A point light at (80, 30), 40 above the surface,
+  makes H the normal straight under it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#point)"/></svg></div>
+    <figcaption>Nearly white everywhere: 40 from the light's foot, N.H is still 0.92, so only the ends dim a
+    little.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#shiny)"/></svg></div>
+    <figcaption><code>specularExponent="20"</code>, <q>larger is more "shiny"</q>: a small spot at (80, 30).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#half)"/></svg></div>
+    <figcaption><code>specularConstant="0.5"</code>: the spot of the first figure, half as bright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not opaque</h2>
+  <p><q>The alpha channel of the result is the max of the color components, so that where the specular light is zero,
+  no additional coverage is added to the image and a fully white highlight will add opacity.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#front)"/></svg></div>
+    <figcaption>A distant light from straight in front, <code>elevation="90"</code>: H is N everywhere, so opaque
+    white.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#none)"/></svg></div>
+    <figcaption>From 30° up, exponent 128: N.H is 0.866, and 0.866<sup>128</sup> is all but 0, so nothing; the
+    guides show through.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

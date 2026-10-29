@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Popover light dismiss</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  [popover] { width: 200px; padding: 10px 20px 0; font-size: 12px; line-height: 20px }
+  #auto { margin: 60px auto auto 40px }
+  #manual { margin: 60px 40px auto auto }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.12.2 Popover light dismiss</div>
+  <h1>Popover light dismiss</h1>
+  <p class=pr-lede><q>"Light dismiss" means that clicking outside of a popover whose popover attribute is in the Auto or Hint state
+  will close the popover. This is in addition to how such popovers respond to close requests.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#popover-light-dismiss">HTML §6.12.2</a></span></p>
+</header>
+<section>
+  <h2>Outside, inside, and the button that showed it</h2>
+  <p>On pointerup, the popovers closed are those above <q>the topmost clicked popover</q>, which counts the popover
+  that a clicked button targets. Nothing closes when the pointerdown found another: <q>If sameTarget is false, then
+  return.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#popover-light-dismiss">§6.12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target popovertarget=auto>toggle the auto popover</button>
+        <button class=pr-target popovertarget=manual>toggle the manual popover</button>
+      </div>
+      <ol class=pr-log data-log="toggle" data-fields="target newState" data-lines=3 data-on=document></ol>
+    </div>
+    <figcaption>Show the auto popover, top left, and click inside it: it stays. Click the page outside it: it closes.
+    Show it and click its button again: it closes once, toggled, not dismissed and shown again. Show it, press the
+    mouse inside it, drag outside and release: it stays. Show the manual popover, top right: clicks outside leave it
+    open; its button closes it.</figcaption>
+  </figure>
+</section>
+<div popover id=auto>auto: click inside, or outside</div>
+<div popover=manual id=manual>manual: clicks outside leave it</div>
+<script src=../shared/events.js></script>
+</body>
+</html>

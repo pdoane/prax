@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Arcs: radii made positive, or scaled up</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.5.1 Out-of-range elliptical arc parameters</div>
+  <h1>Arcs: radii made positive, or scaled up</h1>
+  <p class=pr-lede><q>Arbitrary numerical values are permitted for all elliptical arc parameters (other than the
+  boolean flags)</q>, with adjustments <q>for invalid values</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#ArcOutOfRangeParameters">SVG 2 §9.5.1</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; each path is stroked dark blue, 4 wide, and not filled.</p>
+</header>
+
+<section>
+  <h2>Negative radii, and radii too small</h2>
+  <p><q>If either <b>rx</b> or <b>ry</b> have negative signs, these are dropped; the absolute value is used
+  instead.</q> If there is no solution, <q>the ellipse is scaled up uniformly until there is exactly one solution
+  (until the ellipse is just big enough).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 40 A -50 -30 0 0 1 130 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 30 40 A -50 -30 0 0 1 130 40</code>: radii 50 and 30, the top half of the ellipse about
+    80, 40, up to 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 40 A 20 12 0 0 1 130 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>A 20 12 …</code> from 30, 40 to 130, 40: scaled 2.5 times to 50 by 30, the same half
+    ellipse.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 A 10 10 0 1 1 120 50" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 40 50 A 10 10 0 1 1 120 50</code>: scaled to radius 40, one half circle, up to 80, 10;
+    the large-arc flag has no other to choose.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

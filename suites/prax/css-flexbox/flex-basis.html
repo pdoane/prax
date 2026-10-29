@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-basis: auto, content and lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { flex-grow: 0; flex-shrink: 0; min-width: 0; padding: 0; border: 0; color: white; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7.2.3 The flex-basis property</div>
+  <h1>flex-basis: auto, content and lengths</h1>
+  <p class=pr-lede><q>The flex-basis property sets the flex basis. It accepts the same values as the width and height
+  property, plus content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-basis-property">CSS Flexible Box Layout 2 §7.2.3</a></span>
+  Each item here neither grows nor shrinks and has <code>min-width: 0</code>, so its width is its basis; its word "abcd" is 40px.</p>
+</header>
+
+<section>
+  <h2>auto and content</h2>
+  <p><code>auto</code> <q>retrieves the value of the main size property as the used flex-basis. If that value is
+  itself auto, then the used value is content.</q> <code>content</code> <q>Indicates an automatic size based on the
+  flex item’s content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-property">§7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: auto; width: 80px">abcd</div></div>
+    <figcaption><code>auto</code> with <code>width: 80px</code>: 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: auto">abcd</div></div>
+    <figcaption><code>auto</code> with <code>width: auto</code>: content, the word's 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: content; width: 120px">abcd</div></div>
+    <figcaption><code>content</code> with <code>width: 120px</code>: the width is set aside, 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths, and the box they size</h2>
+  <p>Lengths resolve <q>the same way as width in horizontal writing modes</q>. <q>As another corollary, flex-basis determines the size of the content box, unless
+  otherwise specified such as by box-sizing</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: 60px; width: 120px">abcd</div></div>
+    <figcaption><code>flex-basis: 60px</code> with <code>width: 120px</code>: 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: 60px; padding: 0 10px; background-clip: content-box; border: 10px solid #2c5a8f; border-width: 0 10px">abcd</div></div>
+    <figcaption>60px with 10px of padding and of border each side: the bright content box is 60px, the border box 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="flex-basis: 60px; box-sizing: border-box; padding: 0 10px; background-clip: content-box; border: 10px solid #2c5a8f; border-width: 0 10px">abcd</div></div>
+    <figcaption>The same with <code>box-sizing: border-box</code>: the border box is 60px, the content box 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

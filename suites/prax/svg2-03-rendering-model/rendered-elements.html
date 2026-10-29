@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendered and non-rendered elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: calc(50px / 3) "PR Noto Sans Mono"; fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <clipPath id="two"><rect x="20" y="10" width="40" height="40" /><rect x="100" y="10" width="40" height="40" display="none" /></clipPath>
+  <filter id="bbox" x="0" y="0" width="1" height="1"><feFlood flood-color="#d68a3c" flood-opacity="0.5" /></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.2.2 Rendered versus non-rendered elements</div>
+  <h1>Rendered and non-rendered elements</h1>
+  <p class=pr-lede><q>Whether an element is currently rendered or not affects not only its visual display but also
+  interactivity and geometric calculations.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#Rendered-vs-NonRendered">SVG 2 §3.2.2</a></span>
+  Each stage is an SVG 160 by 60; each non-rendered element here has <code>display="none"</code>.</p>
+</header>
+
+<section>
+  <h2>No effect on clip paths, bounding boxes or text</h2>
+  <p>Non-rendered elements <q>do not contribute to the net geometry of clipping paths or masks when they are descendants
+  of a ‘clipPath’ or ‘mask’</q>, <q>do not contribute to bounding box calculations</q>, and <q>are not considered when
+  performing text layout</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" fill="#4f81bd" clip-path="url(#two)" /></svg></div>
+    <figcaption>A clip of two squares, the right one not rendered: only the left, from 20 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g filter="url(#bbox)"><rect x="20" y="10" width="40" height="40" /><rect x="100" y="10" width="40" height="40" display="none" /></g><rect x="20" y="10" width="40" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>A group's box, flooded orange: only the rendered square's, the hidden one at 100 left out.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="35">ab<tspan display="none">cd</tspan>ef</text></svg></div>
+    <figcaption><q>ab</q>, a <code>tspan</code> <q>cd</q> not rendered, <q>ef</q>: <q>abef</q>, each 10 wide, from
+    20 to 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not sensitive to pointer events</h2>
+  <p>They <q>are not sensitive to pointer events</q>. A blue rect, and over it a non-rendered one with a listener
+  logged below.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><rect id=under x="100" y="5" width="100" height="40" fill="#4f81bd" /><rect id=over x="100" y="5" width="100" height="40" fill="#d68a3c" display="none" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click the blue rect: <code>target=under</code>, never <code>over</code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

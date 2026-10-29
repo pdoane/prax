@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>flex-flow: direction and wrap together</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .h > div { width: 40px; }
+  .j { flex-flow: row wrap; width: 100px; height: 100px; align-content: flex-start; font: 16px/20px "PR Noto Sans JP"; }
+  .j > div { width: 40px; height: 20px; flex: none; background: #b9cde6; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+  .j.v { writing-mode: vertical-rl; }
+  .j.v > div { width: 20px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 5.3 Flex Direction and Wrap: the flex-flow shorthand</div>
+  <h1>flex-flow: direction and wrap together</h1>
+  <p class=pr-lede><q>The flex-flow property is a shorthand for setting the flex-direction and flex-wrap properties,
+  which together define the flex container's main and cross axes.</q> Its value is <code>&lt;'flex-direction'&gt; ||
+  &lt;'flex-wrap'&gt;</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-flow-property">CSS Flexible Box Layout 2 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's examples</h2>
+  <p>Each stage holds A, B, C and D, 40px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h" id=f1 style="flex-flow: row"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>row</code>: no wrapping; the four shrink to 25px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h" id=f2 style="flex-flow: column wrap; height: 60px; align-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>column wrap</code>, 60px tall: D's column from 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h" id=f3 style="flex-flow: row-reverse wrap-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption><code>row-reverse wrap-reverse</code>: A, B from the right at the bottom; C, D above.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow h" id=f4 style="flex-flow: wrap column-reverse; height: 60px; align-content: flex-start"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div>
+    <figcaption>Either order, <code>wrap column-reverse</code>: A, B, C up; D to their right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Writing-mode sensitive</h2>
+  <p><q>Note that the flex-flow directions are writing mode sensitive. In vertical Japanese, for example, a row flex
+  container lays out its contents from top to bottom</q>. Each container is <code>flex-flow: row wrap</code>, 100px
+  square, and holds five city names.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow j" lang=ja><div>東京</div><div>大阪</div><div>京都</div><div>奈良</div><div>神戸</div></div>
+    <figcaption><code>horizontal-tb</code>: two names to a line, left to right; lines stack downward.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow j v" lang=ja><div>東京</div><div>大阪</div><div>京都</div><div>奈良</div><div>神戸</div></div>
+    <figcaption><code>vertical-rl</code>: two names to a line, top to bottom; lines stack leftward.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

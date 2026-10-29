@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clip-path: a clipPath by URL</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <clipPath id="local" clipPathUnits="objectBoundingBox"><polygon points="0,0 1,0 1,1" /></clipPath>
+  <mask id="not-a-clip"><rect width="100" height="100" fill="white" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 5.1 Clipping Shape: the clip-path property</div>
+  <h1>clip-path: a clipPath by URL</h1>
+  <p class=pr-lede><q>Specifies a basic shape or references a clipPath element to create a clipping path.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-clip-path">CSS Masking 1 §5.1</a></span>
+  Each box is 100 by 70 at 10, 10: an orange 10px border, light blue padding and blue content.</p>
+</header>
+
+<section>
+  <h2>A clipPath in this document, and in another</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: url(#local)"></div></div>
+    <figcaption><code>url(#local)</code>, a triangle in <code>objectBoundingBox</code> units: the half above the
+    diagonal from 10, 10 to 110, 80.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: url(support/sources.svg#triangle)"></div></div>
+    <figcaption><code>url(support/sources.svg#triangle)</code>: the triangle with corners at 10, 10, at 60, 80 and at
+    10, 80. <span class=pr-flag>Safari</span> The whole box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A reference that is not a clipPath</h2>
+  <p><q>If the URI reference is not valid (e.g it points to an object that doesn't exist or the object is not a
+  clipPath element), no clipping is applied.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: url(#nothing)"></div></div>
+    <figcaption><code>url(#nothing)</code>, which no element has: the whole box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-path: url(#not-a-clip)"></div></div>
+    <figcaption><code>url(#not-a-clip)</code>, a <code>mask</code>: the whole box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

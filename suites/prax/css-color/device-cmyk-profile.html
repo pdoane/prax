@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>device-cmyk() with a profile</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  @color-profile device-cmyk { src: url(../../../third_party/icc/Coated_Fogra39L_VIGC_300.icc); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 6 Uncalibrated CMYK Colors: the device-cmyk() Function, with @color-profile</div>
+  <h1>device-cmyk() with a profile</h1>
+  <p class=pr-lede><q>If the user, author, or user-agent stylesheet has an @color-profile definition for device-cmyk, and the
+  resource specified by the src descriptor can be retrieved, and the resource is a valid CMYK ICC profile, and the user
+  agent can process ICC profiles, the computed value of the device-cmyk() function must be the Lab value of the CMYK
+  color.</q> This page's <code>@color-profile device-cmyk</code> is the FOGRA39 profile. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#device-cmyk">CSS Color 5
+  §6</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>The profile's color</h2>
+  <p><q>With the @color-profile specified as in the example stylesheet, the following
+  colors are equivalent, using colorimetric conversion</q>: <code>device-cmyk(0 81% 81% 30%)</code>, <code>lab(45.060%
+  45.477 35.459)</code>, <code>rgb(70.690% 26.851% 19.724%)</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0 81% 81% 30%)"></div><div class=sw style="background: lab(45.060% 45.477 35.459)"></div><div class=sw style="background: rgb(70.690% 26.851% 19.724%)"></div></div>
+    <figcaption>The three: one brick red, duller than the naive firebrick. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: device-cmyk(0 0 0 1)"></div><div class=sw style="background: device-cmyk(0 0 0 0)"></div></div>
+    <figcaption>Full black ink: a near-black. No ink: white. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>device-cmyk()</code>: it draws nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

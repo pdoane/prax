@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines and the visible focus</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f:focus-visible { outline: thick solid black }
+  .f:active { outline: thick solid red }
+  .f { display: block; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px; box-sizing: border-box;
+       font-size: 12px; text-align: left; background: #f4f5f7; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4.1 Outlines and the focus</div>
+  <h1>Outlines and the visible focus</h1>
+  <p class=pr-lede>A focus outline is now drawn when the user agent judges the focus should be seen, not whenever an
+  element has it. The page's script gives the focus to the text field in the first figure when it loads.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a>, <a href="https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo">Selectors 4 §9.4</a></div>
+  <h2>:focus-visible in place of :focus</h2>
+  <p><q>For example, to draw a thick black line around elements in the :focus-visible state, and a thick red line when
+  it is in the :active state, the following rules can be used:</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a></span> <q>The
+  :focus-visible pseudo-class matches a focused element (or pseudo-element) in these situations only, allowing authors
+  to change the appearance of the focus indicator without changing when a focus indicator appears.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo">Selectors 4 §9.4</a></span></p>
+  <pre class=pr-source>:focus-visible { outline: thick solid black }
+:active        { outline: thick solid red }</pre>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <input class=f id=focused value="a text field, focused"><button class=f>a button</button>
+    </div>
+    <figcaption>The text field takes keyboard input, so its focus is shown even though a script gave it: a thick
+    black outline. Tab to the button and it gets the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=f>one</button><button class=f>two</button>
+    </div>
+    <figcaption>Clicking a button focuses it but does not show the focus: red while it is pressed, then no outline,
+    where <code>:focus</code> would have left a black one.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.getElementById("focused").focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: the relevant side</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.6 Determining the Relevant Side</div>
+  <h1>border-shape: the relevant side</h1>
+  <p class=pr-lede><q>An element's relevant side for border shape is the first side (in the order block-start, inline-start, block-end, and inline-end) that has a non-none border style, or block-start if they're all none.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-relevant-side">CSS Borders and Box Decorations 4 §7.6</a></span></p>
+</header>
+
+<section>
+  <h2>The first side with a style</h2>
+  <p>Each box is shaped as a circle.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-style: solid; border-width: 2px 10px; border-color: #2c5a8f #d68a3c; border-shape: circle(50%)"></div></div>
+    <figcaption>Top 2px blue, sides 10px orange: a 2px blue circle, from the block-start side. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-style: none solid; border-width: 2px 10px; border-color: #2c5a8f #d68a3c; border-shape: circle(50%)"></div></div>
+    <figcaption>No top or bottom: a 10px orange circle, from the inline-start side. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

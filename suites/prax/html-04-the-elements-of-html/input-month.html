@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Month controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.8 Month state (type=month)</div>
+  <h1>Month controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing
+  a specific month.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#month-state-(type=month)">HTML §4.10.5.1.8</a></span></p>
+</header>
+
+<section>
+  <h2>A month control</h2>
+  <p><q>An input element whose type attribute is in the Month state is a devolvable widget expected to render as an
+  'inline-block' box depicting a month control.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-domain-specific-widgets">§15.5.7</a></span>
+  <q>User agents must not allow the user to set the value to a non-empty string that is not a valid month string.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#month-state-(type=month)">§4.10.5.1.8</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=month value="2026-10"></div>
+        <div><input type=month></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Month controls, the first showing October 2026, both green. Choose a month in the second's picker:
+    <code>input</code> and <code>change</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    plain text fields, "2026-10", in which any text can be typed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=month value="2026-10"></div>
+      </div>
+    </div>
+    <figcaption>Click into the year and press Backspace: the control describes no month it can convert, so it is red,
+    suffering from bad input. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> a text field, in
+    which "2026-1" is accepted, green.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

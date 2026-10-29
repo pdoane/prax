@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Off the end, and vertical, on a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+  .jp { font: 20px "PR Noto Sans JP"; writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="line" d="M 20 40 H 140" /><path id="down" d="M 80 10 V 90" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.3 Text on a path layout rules</div>
+  <h1>Off the end, and vertical, on a path</h1>
+  <p class=pr-lede><q>Conceptually, for text on a path the target path is stretched out into either a horizontal or
+  vertical straight line segment.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextpathLayoutRules">SVG 2 §11.8.3</a></span>
+  Paths are dashed in red.</p>
+</header>
+
+<section>
+  <h2>Off the end, and vertical text</h2>
+  <p><q>Glyphs whose midpoint-on-the-path are off the path are not rendered.</q> <q>For vertical text layout flows,
+  the default orientation for a given glyph is along the vector that starts at the intersection point on the path to
+  which the glyph is attached and which points in the direction 180 degrees from the angle of the curve at the
+  intersection point.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><use href="#line" class=pr-baseline /><path d="M140 30V50" stroke="#c0392b" /><text class=big><textPath href="#line">LLLLLLLL</textPath></text></svg></div>
+    <figcaption>Eight L's on a line 120 long: six fit, the seventh's midpoint at 117 is on it, so seven drawn, to
+    146; the eighth not.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><use href="#down" class=pr-baseline /><text class=jp><textPath href="#down">縦書き</textPath></text></svg></div>
+    <figcaption>Vertical 20px PR Noto Sans JP on a path down x 80 from y 10: upright, each centered on the line,
+    from 10 to 70. <span class=pr-flag>Safari</span> Upright, but about 30
+    apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

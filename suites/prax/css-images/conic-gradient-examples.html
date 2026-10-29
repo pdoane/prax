@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Conic gradient examples</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { display: inline-block; vertical-align: top; width: 60px; height: 40px; margin: 10px 0 10px 10px; }
+  .round { width: 60px; height: 60px; border-radius: 50%; }
+  .pr-stage.pr-row { padding-right: 10px; width: auto; display: inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.3.3 Conic Gradient Examples</div>
+  <h1>Conic gradient examples</h1>
+  <p class=pr-lede>The section's examples, on boxes 60 by 40 where it presumes 300 by 200. <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#conic-gradient-examples">CSS Images 4 §3.3.3</a></span></p>
+</header>
+
+<section>
+  <h2>One gradient, spelled six ways</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: conic-gradient(#f06, gold)"></div><div class=box style="background: conic-gradient(at 50% 50%, #f06, gold)"></div><div class=box style="background: conic-gradient(from 0deg, #f06, gold)"></div><div class=box style="background: conic-gradient(from 0deg at center, #f06, gold)"></div><div class=box style="background: conic-gradient(#f06 0%, gold 100%)"></div><div class=box style="background: conic-gradient(#f06 0deg, gold 1turn)"></div></div>
+    <figcaption>Pink at the top turning clockwise to gold, six times alike.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stops outside the turn, and rotation</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: conic-gradient(white -50%, black 150%)"></div><div class=box style="background: conic-gradient(white -180deg, black 540deg)"></div><div class=box style="background: conic-gradient(hsl(0,0%,75%), hsl(0,0%,25%))"></div></div>
+    <figcaption>Three alike: light grey to dark grey.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="background: conic-gradient(from 45deg, white, black, white)"></div><div class=box style="background: conic-gradient(hsl(0,0%,75%), white 45deg, black 225deg, hsl(0,0%,75%))"></div><div class=box style="background: conic-gradient(white 45deg, black 225deg, white 405deg)"></div></div>
+    <figcaption>The first two alike, white at 45deg and black at 225deg. <q>offsetting every color stop by the
+    rotation angle instead would not work</q>: the third is white from the top to 45deg.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A wheel and a pie</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box round" style="background: radial-gradient(closest-side, gray, transparent), conic-gradient(red, magenta, blue, aqua, lime, yellow, red)"></div><div class="box round" style="background: radial-gradient(closest-side, gray, transparent), conic-gradient(in hsl longer hue, red 0 100%); transform: scaleX(-1)"></div></div>
+    <figcaption>A hue wheel, grey at its center, twice: red at the top, then magenta, blue, aqua, lime and yellow
+    clockwise.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="box round" style="background: conic-gradient(yellowgreen 40%, gold 0deg 75%, #f06 0deg)"></div></div>
+    <figcaption>A pie: yellowgreen to 144deg, gold to 270deg, pink to the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>When the focus is indicated</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ring:focus { outline: none }
+  .ring:focus-visible { outline: 3px solid #c0392b }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.6 Focus management APIs</div>
+  <h1>When the focus is indicated</h1>
+  <p class=pr-lede><q>By default, user agents use implementation-defined heuristics to determine whether to indicate focus via a
+  focus ring.</q> Selectors suggests some, in an example: they are not required, and no browser is flagged here.
+  <code>:focus-visible</code> draws a 3px red outline. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#focus-management-apis">HTML §6.6.6</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo">Selectors 4 §9.4</a></span></p>
+</header>
+<section>
+  <h2>Keyboard, pointer, and keyboard input</h2>
+  <p><q>If the user interacts with the page via keyboard or some other non-pointing device, indicate focus.</q> <q>If
+  the user interacts with the page via a pointing device (mouse, touchscreen, etc.) and the focused element does not
+  support keyboard input, don't indicate focus.</q> <q>If the element supports keyboard input (such as an input
+  element, or any other element that would triggers a virtual keyboard to be shown on focus if a physical keyboard
+  were not present), indicate focus.</q> <span class=pr-cite><a href="https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo">Selectors 4 §9.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class="pr-target ring" tabindex=0>a box, tabindex=0</div>
+        <input class="pr-target ring" value="a text field">
+      </div>
+    </div>
+    <figcaption>Click the box: no ring. Press Tab, then Shift+Tab: the field, then the box, each with the ring. Click
+    the field: the ring, since it takes keyboard input.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A script that moves the focus</h2>
+  <p><q>If the previously-focused element indicated focus, and a script causes focus to move elsewhere, indicate focus
+  on the newly focused element.</q> <q>Conversely, if the previously-focused element did not indicate focus, and a
+  script causes focus to move elsewhere, don't indicate focus on the newly focused element.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/selectors-4/#the-focus-visible-pseudo">Selectors 4 §9.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class="pr-target ring" id=mover tabindex=0>press Enter or click: moves the focus</div>
+        <div class="pr-target ring" id=moved tabindex=-1>where the focus goes</div>
+      </div>
+    </div>
+    <figcaption>Click the first box: the script focuses the second, with no ring. Press Shift+Tab until the first box has
+    the ring, and press Enter: the second takes the focus with the ring.</figcaption>
+  </figure>
+</section>
+<script>
+  // The first box moves the focus to the second on a click or on Enter.
+  const mover = document.getElementById("mover"), moved = document.getElementById("moved");
+  mover.addEventListener("click", () => moved.focus());
+  mover.addEventListener("keydown", event => {
+      if (event.key === "Enter")
+          moved.focus();
+  });
+</script>
+</body>
+</html>

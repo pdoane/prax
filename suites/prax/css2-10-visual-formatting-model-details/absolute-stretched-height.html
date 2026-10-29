@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute heights: a stretched height as a base</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; left: 20px; width: 100px; }
+  .half { height: 50%; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.4 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute heights: a stretched height as a base</h1>
+  <p class=pr-lede>Each stage is the containing block of the dashed box in it, whose height is
+  <code>auto</code>. In the dashed box, blue A has <code>height: 50%</code>.</p>
+</header>
+
+<section>
+  <h2>Rule 5, and percentages inside</h2>
+  <p><q>5. 'height' is 'auto', 'top' and 'bottom' are not 'auto', then 'auto' values for 'margin-top' and
+  'margin-bottom' are set to 0 and solve for 'height'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-height">CSS 2 §10.6.4</a></span> A
+  percentage height <q>is calculated with respect to the height of the generated box's containing block. If the height
+  of the containing block is not specified explicitly (i.e., it depends on content height), and this element is not
+  absolutely positioned, the value computes to 'auto'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2 §10.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class="pr-frame abs" style="top: 10px"><div class="pr-a half">A: 50%</div></div></div>
+    <figcaption>With <code>top: 10px</code> alone, the dashed box's height is its content's: A's 50% is as
+    <code>auto</code>, and A is its line, 20px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#abspos-layout">CSS Positioned Layout 3 §4</a></div>
+  <h2>A stretched height is definite</h2>
+  <p><q>Because an absolutely positioned box does not affect the size of its containing block, its available space is
+  always definite.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-layout">CSS Positioned Layout 3 §4</a></span> With neither
+  inset auto, <q>Its automatic size is its stretch-fit size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-auto-size">CSS Positioned Layout 3 §4.1</a></span>
+  CSS 2 left open whether a height solved by rule 5 is specified explicitly.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-frame abs" style="top: 10px; bottom: 10px"><div class="pr-a half">A: 50%</div></div></div>
+    <figcaption><code>top: 10px; bottom: 10px</code>: the dashed box stretches to 60px, and A is half of it,
+    30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

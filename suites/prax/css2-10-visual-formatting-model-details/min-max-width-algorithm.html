@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-width and max-width: the algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.4 Minimum and maximum widths: 'min-width' and 'max-width'</div>
+  <h1>Min-width and max-width: the algorithm</h1>
+  <p class=pr-lede>The width rules run once, then again with 'max-width' or 'min-width' standing in for 'width', so the
+  margins follow the new width. Each blue box has no padding.</p>
+</header>
+
+<section>
+  <h2>max-width, then min-width</h2>
+  <p><q>If the tentative used width is greater than 'max-width', the rules above are applied again, but this time using
+  the computed value of 'max-width' as the computed value for 'width'.</q> <q>If the resulting width is smaller than
+  'min-width', the rules above are applied again, but this time using the value of 'min-width' as the computed value
+  for 'width'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 150px; max-width: 100px">box</div></div>
+    <figcaption><code>width: 150px; max-width: 100px</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 50px; min-width: 100px">box</div></div>
+    <figcaption><code>width: 50px; min-width: 100px</code>: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 80px; min-width: 120px">box</div></div>
+    <figcaption><code>max-width: 80px; min-width: 120px</code>: min-width is applied last, so it wins: 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The rules applied again</h2>
+  <p>The width rules decide the margins as well, so with 'max-width' as 'width' the margins change too. <q>These steps
+  do not affect the real computed values of the above properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="max-width: 100px; margin: 0 auto">box</div></div>
+    <figcaption><code>width: auto; max-width: 100px; margin: 0 auto</code>: with 100px as the width, the auto margins
+    are 50px each, and the box is centered.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 20px"><div class="pr-a pr-fit" style="position: absolute; left: 0; right: 0; max-width: 60px; margin: 0 auto">box</div></div>
+    <figcaption>Absolutely positioned, <code>left: 0; right: 0; max-width: 60px; margin: 0 auto</code>: none of the
+    three is auto now, so the margins are 70px each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

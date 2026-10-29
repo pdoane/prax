@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The default sizing algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .png { background-image: url(../shared/resources/flag-40x20.png); }
+  .ratio { background-image: url(../shared/resources/flag-ratio.svg); }
+  .width { background-image: url(support/flag-width.svg); }
+  .grad { background-image: linear-gradient(to right, #4f81bd, #d68a3c); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.3.1 Default Sizing Algorithm</div>
+  <h1>The default sizing algorithm</h1>
+  <p class=pr-lede><q>It resolves the simultaneous constraints presented by the object’s natural dimensions and either
+  an unconstrained specified size or one consisting of only a definite width and/or height.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#default-sizing">CSS Images 3 §4.3.1</a></span>
+  Each dashed box is 140 by 60, a background drawn once at its top left; the box is the default object size. The
+  flags are a PNG 40 by 20, an SVG with only a 2:1 ratio, and an SVG with only a width of 40.</p>
+</header>
+
+<section>
+  <h2>Only a width or a height given</h2>
+  <p><q>If the object has a natural aspect ratio, the missing dimension of the concrete object size is calculated using
+  that aspect ratio and the present dimension.</q> <q>Otherwise, if the missing dimension is present in the object's
+  natural dimensions, the missing dimension is taken from the object’s natural dimensions.</q> <q>Otherwise, the
+  missing dimension of the concrete object size is taken from the default object size.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost png" style="background-size: 60px auto"></div></div>
+    <figcaption>PNG, <code>60px auto</code>: by its ratio, 60 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost width" style="background-size: auto 40px"></div></div>
+    <figcaption>Width-only SVG, <code>auto 40px</code>: its natural width, 40 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost grad" style="background-size: 60px auto"></div></div>
+    <figcaption>A gradient, <code>60px auto</code>: the box's height, 60 by 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No size given</h2>
+  <p><q>If the object has a natural height or width, its size is resolved as if its natural dimensions were given as
+  the specified size.</q> <q>Otherwise, its size is resolved as a contain constraint against the default object
+  size.</q> Each is <code>background-size: auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost png"></div></div>
+    <figcaption>PNG: its natural 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost width"></div></div>
+    <figcaption>Width-only SVG: 40 wide, and the box's 60 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost ratio"></div></div>
+    <figcaption>Ratio-only SVG: the largest 2:1 that fits 140 by 60, 120 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

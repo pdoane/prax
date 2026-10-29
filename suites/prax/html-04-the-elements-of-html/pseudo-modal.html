@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:modal</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; font-size: 12px; }
+  .act > .pr-target { display: inline-block; width: 120px; margin: 0 6px 10px 0; }
+  dialog { font-size: 12px; border: 4px solid #d68a3c; }
+  dialog .pr-target { width: 140px; margin: 6px 0 0; }
+  #screen { margin: 0 0 10px; padding: 6px; background: var(--pr-plain); border: 4px solid #d68a3c; }
+  #screen .pr-target { margin: 6px 0 0; width: 160px; }
+  .act :modal { border-color: #3f9a3f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:modal</h1>
+  <p class=pr-lede><q>The :modal pseudo-class must match any element falling into one of the following
+  categories</q>: <q>dialog elements whose is modal is true</q>, and <q>elements whose fullscreen flag is true</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>A modal dialog, not one shown</h2>
+  <p>A border is orange, and green while its element matches <code>:modal</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act style="height: 100px">
+        <button class=pr-target id=show>show()</button><button class=pr-target id=modal>showModal()</button>
+        <dialog id=box>open <button class=pr-target id=done>close()</button></dialog>
+      </div>
+    </div>
+    <figcaption>Click <code>show()</code>: the dialog appears below the buttons, orange. Close it and click
+    <code>showModal()</code>: it appears in the middle of the window, green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A fullscreen element</h2>
+  <p>An element whose fullscreen flag is true matches it too. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <div id=screen>a div <button class=pr-target id=full>requestFullscreen()</button></div>
+      </div>
+    </div>
+    <figcaption>Click <code>requestFullscreen()</code>: the box fills the screen with a green border. Press Escape:
+    it returns, orange.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons call the methods.
+  const box = document.getElementById("box");
+  document.getElementById("show").addEventListener("click", () => box.show());
+  document.getElementById("modal").addEventListener("click", () => box.showModal());
+  document.getElementById("done").addEventListener("click", () => box.close());
+  const area = document.getElementById("screen");
+  document.getElementById("full").addEventListener("click", () => area.requestFullscreen());
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Radio</title>
+<link rel=stylesheet href=support/gallery.css>
+</head>
+<body>
+<header>
+  <h1>Radio</h1>
+  <p>Each cell is one group, so checking a radio unchecks the other in its cell. Focus a radio and the arrow keys move through its group.</p>
+</header>
+
+<section>
+  <h2>States</h2>
+<table class=grid>
+  <tr><th></th><th>auto</th><th>none</th><th>base</th><th>author-styled</th></tr>
+  <tr><th scope=row>none checked</th><td><input type=radio name=a0> <input type=radio name=a0></td><td class=none><input type=radio name=a1> <input type=radio name=a1></td><td class=base><input type=radio name=a2> <input type=radio name=a2></td><td class=styled><input type=radio name=a3> <input type=radio name=a3></td></tr>
+  <tr><th scope=row>one checked</th><td><input type=radio name=b0 checked> <input type=radio name=b0></td><td class=none><input type=radio name=b1 checked> <input type=radio name=b1></td><td class=base><input type=radio name=b2 checked> <input type=radio name=b2></td><td class=styled><input type=radio name=b3 checked> <input type=radio name=b3></td></tr>
+  <tr><th scope=row>disabled</th><td><input type=radio name=d0 disabled checked> <input type=radio name=d0 disabled></td><td class=none><input type=radio name=d1 disabled checked> <input type=radio name=d1 disabled></td><td class=base><input type=radio name=d2 disabled checked> <input type=radio name=d2 disabled></td><td class=styled><input type=radio name=d3 disabled checked> <input type=radio name=d3 disabled></td></tr>
+</table>
+</section>
+
+<section>
+  <h2>A group with labels</h2>
+<div class=strip>
+  <label class=inline><input type=radio name=size> Small</label>
+  <label class=inline><input type=radio name=size checked> Medium</label>
+  <label class=inline><input type=radio name=size> Large</label>
+  <label class=inline><input type=radio name=size disabled> Huge (sold out)</label>
+</div>
+</section>
+
+<section>
+  <h2>In context</h2>
+<div class=panels>
+  <div class="panel light"><span class=cap>light</span><div class=strip><input type=radio checked> <input type=radio></div></div>
+  <div class="panel dark"><span class=cap>dark</span><div class=strip><input type=radio checked> <input type=radio></div></div>
+  <div class="panel accent"><span class=cap>accent-color</span><div class=strip><input type=radio checked> <input type=radio></div></div>
+  <div class="panel large"><span class=cap>font-size: 24px</span><div class=strip><input type=radio checked> <input type=radio></div></div>
+  <div class=panel dir=rtl><span class=cap>rtl</span><div class=strip><label class=inline><input type=radio checked> نعم</label></div></div>
+  <div class="panel vertical"><span class=cap>vertical-lr</span><label class=inline><input type=radio checked> 縦書き</label></div>
+</div>
+</section>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A document 160 by 60 that shows which features its processing mode enables, a square 30 by 30 for each, from the
+     left: script execution, a script turning an orange square blue; declarative animation, a set turning an orange
+     square blue from 0s; an external reference, the suite's flag; and a data URL, a blue square. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60">
+  <rect x="5" y="15" width="30" height="30" fill="#f4f5f7" stroke="#6b7381" stroke-dasharray="3 2" />
+  <rect x="45" y="15" width="30" height="30" fill="#f4f5f7" stroke="#6b7381" stroke-dasharray="3 2" />
+  <rect x="85" y="15" width="30" height="30" fill="#f4f5f7" stroke="#6b7381" stroke-dasharray="3 2" />
+  <rect x="125" y="15" width="30" height="30" fill="#f4f5f7" stroke="#6b7381" stroke-dasharray="3 2" />
+  <rect id="scripted" x="5" y="15" width="30" height="30" fill="#d68a3c" />
+  <script>document.getElementById("scripted").setAttribute("fill", "#4f81bd");</script>
+  <rect x="45" y="15" width="30" height="30" fill="#d68a3c"><set attributeName="fill" to="#4f81bd" begin="0s" /></rect>
+  <image href="../../shared/resources/flag-40x20.png" x="85" y="15" width="30" height="30" preserveAspectRatio="none" />
+  <image href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Crect width='30' height='30' fill='%234f81bd'/%3E%3C/svg%3E" x="125" y="15" width="30" height="30" />
+</svg>

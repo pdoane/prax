@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Repeating rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+  .g > div { padding: 0 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.3 Repeating Rows and Columns: the repeat() notation</div>
+  <h1>Repeating rows and columns</h1>
+  <p class=pr-lede><q>The repeat() notation represents a repeated fragment of the track list, allowing a large number
+  of columns or rows that exhibit a recurring pattern to be written in a more compact form.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#repeat-notation">CSS Grid Layout 2 §7.2.3</a></span></p>
+</header>
+
+<section>
+  <h2>The same grid, written twice</h2>
+  <p>The spec's example, made narrow: four 30px "main" columns, each between <code>col-start</code> and
+  <code>col-end</code>, with 10px "gutter" columns around them. The items are at <code>col-start 1</code> to
+  <code>col-start 4</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 10px [col-start] 30px [col-end] 10px [col-start] 30px [col-end] 10px [col-start] 30px [col-end] 10px [col-start] 30px [col-end] 10px"><div class="pr-a pr-fit" style="grid-column: col-start 1">1</div><div class="pr-b pr-fit" style="grid-column: col-start 2">2</div><div class="pr-c pr-fit" style="grid-column: col-start 3">3</div><div class="pr-d pr-fit" style="grid-column: col-start 4">4</div></div></div>
+    <figcaption>Written out: the items at 10, 50, 90 and 130px, each 30px wide; the grid ends at 170px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(4, 10px [col-start] 30px [col-end]) 10px"><div class="pr-a pr-fit" style="grid-column: col-start 1">1</div><div class="pr-b pr-fit" style="grid-column: col-start 2">2</div><div class="pr-c pr-fit" style="grid-column: col-start 3">3</div><div class="pr-d pr-fit" style="grid-column: col-start 4">4</div></div></div>
+    <figcaption><code>repeat(4, 10px [col-start] 30px [col-end]) 10px</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows too, and with other tracks</h2>
+  <p>A repetition is one part of a track list, in either property.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px repeat(2, 20px 30px) 1fr"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div><div class="pr-a pr-fit">E</div><div class="pr-b pr-fit">F</div></div></div>
+    <figcaption><code>40px repeat(2, 20px 30px) 1fr</code>: six columns, 40, 20, 30, 20, 30 and 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: repeat(3, 10px 20px); grid-template-columns: 40px"><div class="pr-a pr-fit" style="grid-row: 2">A</div><div class="pr-b pr-fit" style="grid-row: 4">B</div><div class="pr-c pr-fit" style="grid-row: 6">C</div></div></div>
+    <figcaption><code>grid-template-rows: repeat(3, 10px 20px)</code>: A, B and C in rows 2, 4 and 6, at 10, 40 and
+    70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

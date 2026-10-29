@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The base element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  iframe.pr-view.tall { height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.3 The base element</div>
+  <h1>The base element</h1>
+  <p class=pr-lede><q>The base element allows authors to specify the document base URL for the purposes of parsing
+  URLs, and the name of the default navigable for the purposes of following hyperlinks.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-base-element">HTML §4.2.3</a></span></p>
+</header>
+<section>
+  <h2>The base URL</h2>
+  <p>The first base element with an href sets the document's base URL, parsed <q>with document's fallback base
+  URL</q>: for a frame's <code>srcdoc</code>, this page's URL. <q>If there are multiple base elements with href
+  attributes, all but the first are ignored.</q> Each frame holds <code>&lt;img src=flag-40x20.png&gt;</code>, a file
+  only in <code>../shared/resources/</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<base href='../shared/resources/'><style>body { margin: 10px }</style><img src=flag-40x20.png alt='' style='display: block'>"></iframe></div>
+    <figcaption><code>&lt;base href="../shared/resources/"&gt;</code>: the flag, 40 by 20, in four colored
+    quarters, at the frame's top left, 10px in.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<base href='../shared/resources/'><base href='nowhere/'><style>body { margin: 10px }</style><img src=flag-40x20.png alt='' style='display: block'>"></iframe></div>
+    <figcaption>A second base, <code>href="nowhere/"</code>, after the first: ignored, so the same flag.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The default target</h2>
+  <p>When a link has no target attribute, <q>if element's node document contains a base element with a target
+  attribute, set target to the value of the target attribute of the first such base element.</q> Each frame holds a
+  link to <code>support/target.html</code> and, below it, a frame named <code>inner</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class="pr-view tall" srcdoc="<base target=inner><style>body { margin: 0 10px; font: 13px/20px sans-serif } iframe { display: block; width: 176px; height: 40px; border: 1px dashed #6b7381 }</style><a href=support/target.html>Follow this link</a><iframe name=inner></iframe>"></iframe></div>
+    <figcaption><code>&lt;base target=inner&gt;</code>. Click the link: "target.html" on green in the dashed frame,
+    below the link, which stays.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class="pr-view tall" srcdoc="<base target=inner><base target=_self><style>body { margin: 0 10px; font: 13px/20px sans-serif } iframe { display: block; width: 176px; height: 40px; border: 1px dashed #6b7381 }</style><a href=support/target.html>Follow this link</a><iframe name=inner></iframe>"></iframe></div>
+    <figcaption>A second base, <code>target=_self</code>, is ignored. Click the link: the same, in the dashed
+    frame.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

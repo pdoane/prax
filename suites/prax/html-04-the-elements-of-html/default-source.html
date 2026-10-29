@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>src beside srcset</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.3.8 Creating a source set from attributes</div>
+  <h1>src beside srcset</h1>
+  <p class=pr-lede><q>If default source is not the empty string and source set does not contain an image source
+  with a pixel density descriptor value of 1, and no image source with a width descriptor, append default source to
+  source set.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#creating-a-source-set-from-attributes">HTML §4.8.4.3.8</a></span>
+  The default source is the img's <code>src</code>, here a blue image 80 by 40; orange is 160 by 80.</p>
+</header>
+
+<section>
+  <h2>src is left out</h2>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/blue-80x40.png" srcset="support/orange-160x80.png 1x" alt=""></div>
+    <figcaption>srcset has a <code>1x</code> candidate: orange, 160 by 80. Blue is not a candidate.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/blue-80x40.png" srcset="support/orange-160x80.png 160w" sizes="80px" alt=""></div>
+    <figcaption>srcset has a width descriptor: orange, 80 by 40. Blue is not a candidate.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>src is a 1x candidate</h2>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/blue-80x40.png" srcset="support/orange-160x80.png 4x" alt=""></div>
+    <figcaption>srcset has only <code>4x</code>: blue at 1x, 80 by 40, or orange at 4x, 40 by 20, as the user agent
+    chooses.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/blue-80x40.png" srcset="" alt=""></div>
+    <figcaption>An empty srcset: blue, the only candidate, 80 by 40.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

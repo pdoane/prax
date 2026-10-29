@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scrollable overflow: past the padding edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2.2 Scrollable Overflow</div>
+  <h1>Scrollable overflow: past the padding edge</h1>
+  <p class=pr-lede><q>The scrollable overflow of a box is the set of things extending outside of that box's padding
+  edge for which a scrolling mechanism needs to be provided.</q> <q>the scrollable overflow rectangle is the minimal
+  rectangle whose axes are aligned to the box's axes and that contains the scrollable overflow area.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable">CSS Overflow 3 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>What extends past the padding edge</h2>
+  <p>Each dashed box is 120 by 40 with <code>overflow: auto</code>; captions read its <code>scrollWidth</code> and
+  <code>scrollHeight</code>, the scrollable overflow rectangle's size.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=o1 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 160px">A, 160px wide</div></div></div>
+    <figcaption>A is 160px wide: <code class=pr-computed data-of=o1 data-dom=scrollWidth></code> by
+    <code class=pr-computed data-of=o1 data-dom=scrollHeight></code>, and the box scrolls across.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=o2 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 60px">A</div><div class="pr-b pr-fit" style="width: 60px; margin-left: 30px">B</div><div class="pr-c pr-fit" style="width: 60px; margin-left: 60px">C</div></div></div>
+    <figcaption>A, B and C one under the other, 60px: <code class=pr-computed data-of=o2 data-dom=scrollWidth></code>
+    by <code class=pr-computed data-of=o2 data-dom=scrollHeight></code>, and the box scrolls down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its own padding box is not overflow</h2>
+  <p>The scrollable overflow rectangle contains the box's padding box, so content that stays inside it gives nothing
+  to scroll.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=o3 class="pr-frame sc" style="width: 80px; height: 20px; padding: 10px 20px"><div class="pr-a pr-fit" style="width: 80px; box-shadow: 0 0 0 10px #b9cde6">A</div></div></div>
+    <figcaption>A box 80 by 20 with 10px and 20px of padding, filled by A, whose shadow reaches into the padding: <code class=pr-computed data-of=o3 data-dom=scrollWidth></code> by <code class=pr-computed data-of=o3
+    data-dom=scrollHeight></code>, the padding box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=o4 class="pr-frame sc"><div class="pr-a pr-fit" style="width: 60px; height: 0; border-width: 0; position: relative; left: 200px"></div></div></div>
+    <figcaption>A box of zero area at 200px: <q>Border boxes with zero area do not affect the scrollable overflow
+    area.</q> <code class=pr-computed data-of=o4 data-dom=scrollWidth></code> by <code class=pr-computed data-of=o4
+    data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

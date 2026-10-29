@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>round(), mod() and rem()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.3 Stepped Value Functions</div>
+  <h1>round(), mod() and rem()</h1>
+  <p class=pr-lede><q>The round(&lt;rounding-strategy&gt;?, A, B?) function contains an optional rounding strategy,
+  and two calculations A and B, and returns the value of A, rounded according to the rounding strategy, to the nearest
+  integer multiple of B either above or below A.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#round-func">CSS Values and Units 4 §10.3</a></span>
+  Each bar's <code>width</code> is under it.</p>
+</header>
+
+<section>
+  <h2>Rounding 117px to a multiple of 50px</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: round(117px, 50px)">A</div></div>
+    <figcaption><code>round(117px, 50px)</code>, nearest: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: round(up, 117px, 50px)">A</div></div>
+    <figcaption><code>up</code>: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(200px + round(down, -117px, 50px))">A</div></div>
+    <figcaption><code>200px + round(down, -117px, 50px)</code>: −150px, so 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(200px + round(to-zero, -117px, 50px))">A</div></div>
+    <figcaption>The same <code>to-zero</code>: −100px, so 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: round(125px, 50px)">A</div></div>
+    <figcaption><code>round(125px, 50px)</code>, halfway: <q>choose upper B</q>, 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>mod() and rem() of −18px by 5px</h2>
+  <p><q>mod(-18px, 5px) resolves to the value 2px</q>, <q>rem(-18px, 5px) resolves to the value -3px</q>. Each width is
+  100px plus ten of them.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + mod(-18px, 5px) * 10)">A</div></div>
+    <figcaption><code>mod()</code>: 100px + 20px, 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + rem(-18px, 5px) * 10)">A</div></div>
+    <figcaption><code>rem()</code>: 100px − 30px, 70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

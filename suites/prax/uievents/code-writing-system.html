@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Writing system keys</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/keyboard.css>
+<style>
+  /* A stage as wide as a card, for a keyboard. */
+  .pr-stage.pr-map { width: 530px; }
+  .pr-map + figcaption { max-width: 530px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent code Values · 3.1.1 Writing System Keys</div>
+  <h1>Writing system keys</h1>
+  <p class=pr-lede><q>The writing system keys are those that change meaning (i.e., they produce different key values) based on the current locale and keyboard layout.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-alphanumeric-writing-system">UI Events KeyboardEvent code Values §3.1.1</a></span></p>
+</header>
+<section>
+  <h2>Named for the US key in that place</h2>
+  <p><q>Wherever possible, the code names are based on the name for the US key in that position (i.e., they are based on the US keyboard layout)</q>. <q>The "Digit2" and "KeyQ" keys are writing system keys that generate "2" and "q" when the US locale is active and "é" and "a" when the French locale is active.</q> The page's script draws the keys and cancels each keydown in the map, so that Tab, Space and the arrows stay in it; a pressed key turns blue, and stays tinted. <span class=pr-cite><a href="https://w3c.github.io/uievents-code/#key-alphanumeric-writing-system">§3.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-map">
+      <div class=kb-map id=map data-layout="alphanumeric" data-mark="writing" data-unit=34></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code location" data-on="#map" data-lines=3></ol>
+    </div>
+    <figcaption>Click the keyboard and press keys of its letters, digits and punctuation: the key pressed lights at its place, and its <code>code</code> is the US key's name there, <code>"KeyQ"</code> for the key right of Tab. On a French layout the same key gives <code>key="a"</code> and still <code>code="KeyQ"</code>. A UK keyboard's key left of Z lights <code>IntlBackslash</code>; a Japanese one's ¥ and ろ light <code>IntlYen</code> and <code>IntlRo</code>.</figcaption>
+  </figure>
+</section>
+<script src=support/keyboard.js></script>
+<script src=../shared/events.js></script>
+</body>
+</html>

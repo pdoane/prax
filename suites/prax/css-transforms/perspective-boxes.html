@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Boxes behind the viewer, and at infinity</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .clip { overflow: hidden; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 40px; }
+  .rad { background: radial-gradient(#d68a3c, #4f81bd); }
+  .bord { position: absolute; left: 0; top: 0; width: 50px; height: 50px; background: #6aa36a; border: 25px solid #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 4.2 Processing of Perspective-Transformed Boxes</div>
+  <h1>Boxes behind the viewer, and at infinity</h1>
+  <p class=pr-lede><q>To transform each corner (a, b) of a box, the matrix must first be applied to (a, b, 0, 1), which
+  will result in a four-dimensional point (x, y, z, w).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#processing-of-perspective-transformed-boxes">CSS Transforms 2 §4.2</a></span>
+  Each stage clips; the examples are the section's.</p>
+</header>
+
+<section>
+  <h2>Behind the viewer, at the eye, partly behind</h2>
+  <p><q>If w &lt; 0 for all four corners of the transformed box, the box is not rendered.</q> <q>If w = 0, (x′, y′, z′)
+  = (x ⋅ n, y ⋅ n, z ⋅ n)</q>, far away. <q>If w &lt; 0 for one to three corners of the transformed box, the box must be
+  replaced by a polygon that has any parts with w &lt; 0 cut out.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb clip"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: perspective(50px) translateZ(100px)"></div></div>
+    <figcaption>A 40px square, <code>perspective(50px) translateZ(100px)</code>: behind the viewer, not drawn, nor
+    drawn mirrored.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb clip"><div class="pr-ghost g"></div><div class="p rad" style="transform: perspective(50px) translateZ(50px)"></div></div>
+    <figcaption>Orange at its center, blue at its edges, <code>perspective(50px) translateZ(50px)</code>: it fills the
+    view; orange throughout. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> draw nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb clip"><div class=bord style="transform-origin: left; transform: perspective(50px) rotateY(-45deg)"></div></div>
+    <figcaption>A green square in a 25px blue border, <code>transform-origin: left; perspective(50px)
+    rotateY(-45deg)</code>: its right part is cut away; the border shows left, top and bottom, and the rest stretches
+    off to the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthographic breaking</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ban { font: 20px/40px "PR Noto Sans Balinese"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1.1.2 Orthographic Breaking</div>
+  <h1>Orthographic breaking</h1>
+  <p class=pr-lede><q>For scripts (such as Balinese) that use line breaking based on orthographic syllables, the UA
+  must analyze the content to find the correct points to insert soft wrap opportunities.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#orthographic-breaking">CSS Text 4 §6.1.1.2</a></span>
+  <q>At the time of writing, Unicode does not define how to perform this analysis, and treats all characters in these
+  writing systems as having line breaking class AL.</q></p>
+</header>
+
+<section>
+  <h2>Balinese</h2>
+  <p>A run of Balinese, ᬅᬓ᭄ᬱᬭᬩᬮᬶ, "Balinese script", with no spaces: aksara (a, ksa, ra) and bali (ba, li). Each
+  orthographic syllable, a consonant with any vowel sign or subjoined consonant, is a place a line may break.</p>
+  <figure>
+    <div class="pr-stage ban" lang=ban style="width: 60px"><span class=t>ᬅᬓ᭄ᬱᬭᬩᬮᬶ</span></div>
+    <figcaption>60px wide: the run breaks between syllables, as many to a line as fit, never inside one: "ᬓ᭄ᬱ",
+    ka with its subjoined ssa, stays whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ban" lang=ban><span class=t>ᬅᬓ᭄ᬱᬭᬩᬮᬶ</span></div>
+    <figcaption>200px wide, as it is on one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

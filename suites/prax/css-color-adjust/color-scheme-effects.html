@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Effects of the color scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .controls { padding: 10px; font: 13px/20px "PR Arimo"; }
+  .controls > * { vertical-align: middle; margin: 0 6px 0 0; font: inherit; }
+  .pr-stage.pr-medium { width: 150px; }
+  .pr-medium + figcaption { max-width: 150px; }
+  iframe.pr-view { width: 150px; height: 50px; }
+  img.svg { display: block; width: 150px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color Adjustment 1 · 2.4 Effects of the Used Color Scheme</div>
+  <h1>Effects of the color scheme</h1>
+  <p class=pr-lede><q>For all elements, the user agent must match the following to the element color scheme</q>: the
+  colors of form controls and of the system colors, and <code>light-dark()</code>. <span class=pr-cite>
+  <a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-effect">CSS Color Adjustment 1 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>Form controls</h2>
+  <p><q>the default colors of form controls and other "specially-rendered" elements</q>.</p>
+  <figure>
+    <div class="pr-stage controls" style="color-scheme: light; background: Canvas"><button>Button</button><input value=Text size=5><input type=checkbox checked></div>
+    <figcaption><code>color-scheme: light</code>: light controls.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage controls" style="color-scheme: dark; background: Canvas"><button>Button</button><input value=Text size=5><input type=checkbox checked></div>
+    <figcaption><code>color-scheme: dark</code>: dark controls, with light text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The canvas</h2>
+  <p><q>On the root element, the element color scheme additionally must affect the surface color of the canvas</q>.
+  <q>if the element color scheme of the element and the element color scheme of the embedded document’s root element
+  do not match, then the UA must use an opaque canvas of the Canvas color appropriate to the embedded document’s root
+  element's element color scheme instead of a transparent canvas.</q> Each document's root has <code>color-scheme:
+  dark</code> and no background.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: dark } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text"></iframe></div>
+    <figcaption>In a light frame: the schemes differ, so the canvas is an opaque dark <code>Canvas</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium" style="color-scheme: dark"><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: dark } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>Text"></iframe></div>
+    <figcaption>In a dark frame: they match, so the canvas is transparent over the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img class=svg alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='50' style='color-scheme: dark'%3E%3Ccircle cx='25' cy='25' r='18' fill='%234f81bd'/%3E%3C/svg%3E"></div>
+    <figcaption>An SVG image whose root is dark: <q>their canvases remain the default transparent
+    regardless</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

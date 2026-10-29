@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content writing system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { width: 100px; font: 20px/30px "PR Noto Sans JP"; line-break: normal; }
+  .k { background: #b9cde6; }
+  figure { margin-right: 6px; }
+  figure.pr-narrow figcaption { max-width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · F Identifying the Content Writing System</div>
+  <h1>The content writing system</h1>
+  <p class=pr-lede><q>When no writing system is explicitly indicated, UAs should assume the most common writing system of
+  the declared content language for language-sensitive typographic behaviors such as line-breaking or justification.
+  However, UAs must not assume that writing system if the author has explicitly declared a different one.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#script-tagging">CSS Text 4 §F</a></span>
+  The test: under <code>line-break: normal</code>, a break before 〜 is allowed only if the writing system is Chinese
+  or Japanese. Each stage is 100px wide, five 20px characters, then 〜, in blue.</p>
+</header>
+
+<section>
+  <h2>Chinese and Japanese, by language or by script</h2>
+  <p>The writing system is Japanese <q>If the content language is Japanese and the writing system is unspecified, or
+  for any content language if the writing system to specified to be one of the 'Jpan', 'Hrkt', 'Hira', or 'Kana' ISO
+  script codes</q>; Chinese likewise for Chinese, or <q>'Hant', 'Hans', 'Hani', 'Hanb', or 'Bopo'</q>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>ja</code>: break before 〜.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=zh>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>zh</code>: Chinese, break.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ko-Hani>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>ko-Hani</code>: Chinese by its script, break. <span class=pr-flag>Firefox</span> No break.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=en-Hira>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>en-Hira</code>: Japanese by its script, break. <span class=pr-flag>Firefox</span> No break.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not when another is declared</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja-Latn>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>ja-Latn</code>, Japanese in Latin: no break, お goes down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Break, as for Japanese.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ko>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>ko</code>: Korean, no break. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Break.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=en>あいうえお<span class=k>〜</span>か</div>
+    <figcaption><code>en</code>: no break.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

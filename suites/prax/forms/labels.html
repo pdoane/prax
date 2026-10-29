@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Labels and fieldsets</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+fieldset { margin: 0 0 8px; }
+fieldset input[type=range] { width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Labels and fieldsets</h1>
+  <p>A label activates its control, and a disabled fieldset disables what it holds, but for its first legend.</p>
+</header>
+
+<section>
+  <h2>Labels</h2>
+  <p class=note>Clicking a label's text activates its control. A link inside a label is followed, and does not activate the control.</p>
+<div class=strip>
+  <label class=inline><input type=checkbox> Wrapped around its control</label>
+  <span><label for=byid>Named by its for attribute</label> <input type=checkbox id=byid></span>
+  <label class=inline><input type=radio name=lb> One</label>
+  <label class=inline><input type=radio name=lb> Two</label>
+  <label>Presses <button type=button onclick="this.textContent = 'pressed'">this button</button></label>
+  <label class=inline><input type=checkbox> Has <a href="#labels">a link</a> inside</label>
+</div>
+</section>
+
+<section>
+  <h2>Fieldsets</h2>
+<form>
+  <fieldset>
+    <legend>Enabled</legend>
+    <div class=strip><label class=inline><input type=checkbox checked> Email</label>
+      <label class=inline><input type=checkbox> Text message</label> <input type=range value=40>
+      <button type=button>Test</button></div>
+  </fieldset>
+  <fieldset disabled>
+    <legend>Disabled, with everything in it</legend>
+    <div class=strip><label class=inline><input type=checkbox checked> Email</label>
+      <label class=inline><input type=checkbox> Text message</label> <input type=range value=40>
+      <button type=button>Test</button></div>
+  </fieldset>
+  <fieldset disabled>
+    <legend><label class=inline><input type=checkbox> The first legend's controls stay enabled</label></legend>
+    <div class=strip><input type=checkbox checked> <button type=button>Disabled</button></div>
+  </fieldset>
+</form>
+</section>
+</body>
+</html>

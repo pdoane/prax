@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>filter(): a filtered image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 80px; height: 40px; margin: 0 10px; background-color: #f9cc9d; background-repeat: no-repeat; background-position: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 12 Filter CSS &lt;image&gt; values</div>
+  <h1>filter(): a filtered image</h1>
+  <p class=pr-lede><q>The filter() function takes two arguments. The first argument is an &lt;image&gt;. The second is a
+  filter function list as specified for the CSS filter property. The function takes the &lt;image&gt; parameter and
+  applies the filter rules, returning a processing image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterCSSImageValue">Filter Effects 1 §12</a></span>
+  Each box is 80 by 40, light orange, its background the flag 40 by 20 in four colors, once, in the middle.</p>
+</header>
+
+<section>
+  <h2>The image filtered, the box not</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="background-image: url(../shared/resources/flag-40x20.png)"></div></div>
+    <figcaption>The flag as it is.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="background-image: filter(url(../shared/resources/flag-40x20.png), grayscale(1))"></div></div>
+    <figcaption><code>grayscale(1)</code>: a gray flag on the light orange. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> No flag.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="background-image: filter('../shared/resources/flag-40x20.png', hue-rotate(180deg))"></div></div>
+    <figcaption>A string for the URL, <code>hue-rotate(180deg)</code>: the four colors turned. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    flag.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its regions are the image's size</h2>
+  <p><q>Filter- and filter effect regions are sized according to the concrete object size of the input
+  &lt;image&gt;.</q> <q>For the blur() function the edgeMode attribute on the feGaussianBlur element is set to
+  duplicate.</q></p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="background-image: filter(url(../shared/resources/flag-40x20.png), blur(3px))"></div></div>
+    <figcaption><code>blur(3px)</code>: blurred only inside its 40 by 20, the edges as solid as the colors beside them, no
+    fade into the orange. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No flag.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class=box style="background-image: filter(url(../shared/resources/flag-40x20.png), drop-shadow(10px 10px #2c3e50))"></div></div>
+    <figcaption><code>drop-shadow(10px 10px)</code>: no shadow, as the Note says, as the opaque image fills its own
+    region. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> No flag.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

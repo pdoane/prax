@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-item counter in nested lists</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .tier ol { padding-left: 16px; }
+  .tier > ol { padding-left: 40px; }
+  .tier ol > li::marker { content: counters(list-item, '.') '. '; }
+  .off li { counter-increment: list-item 0; }
+  .divs div { display: list-item; margin-left: 30px; list-style-type: decimal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.6 The Implicit list-item Counter</div>
+  <h1>The list-item counter in nested lists</h1>
+  <p class=pr-lede><q>unless the 'counter-increment' property explicitly specifies a different increment for the
+  'list-item' counter, it must be incremented by 1 on every list item, or if the counter is reversed, it must be
+  incremented by -1 on every list item instead</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-item-counter">CSS Lists and Counters 3 §4.6</a></span></p>
+</header>
+
+<section>
+  <h2>Tiered numbering from the HTML attributes</h2>
+  <p>The example: <code>ol &gt; li::marker { content: counters(list-item,'.') '.'; }</code>, with
+  <code>value=5</code>, <code>start=3</code> and <code>reversed</code> on the lists and items.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide pr-text tier"><ol><li>First<li value=5>Second<ol start=3><li>First<li>Second<ol reversed><li>First<li>Second<li>Third<li>Fourth</ol><li>Third</ol><li>Third</ol></div>
+    <figcaption>"1.", "5."; "5.3.", "5.4."; "5.4.4.", "5.4.3.", "5.4.2.", "5.4.1."; "5.5."; "6.". <span class=pr-flag>Chrome</span> "1.", then an outer "1." before the rest: "1.5.", "1.5.3.", …, "1.5.5.", and "2." last. <span class=pr-flag>Safari</span> Plain numbers.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Turned off; on any list item</h2>
+  <p><q>This also allows to turn off the automatic list-item counter increment, by overriding it explicitly, e.g.
+  'counter-increment: list-item 0;'.</q></p>
+  <figure>
+    <div class="pr-stage pr-text off"><ol><li>one<li>two</ol></div>
+    <figcaption><code>counter-increment: list-item 0</code>: "0.", "0.".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text divs"><div>one</div><p style="margin: 0">a paragraph</p><div>two</div></div>
+    <figcaption><code>div</code> list items with no list around them: "1.", then "2." after the paragraph, which does
+    not count.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

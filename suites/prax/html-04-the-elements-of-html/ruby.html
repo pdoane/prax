@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ruby element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 10px; font: 20px/40px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.10 The ruby element</div>
+  <h1>The ruby element</h1>
+  <p class=pr-lede><q>The ruby element allows one or more spans of phrasing content to be marked with ruby annotations. Ruby annotations are short runs of text presented alongside base text</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-ruby-element">HTML §4.5.10</a></span></p>
+</header>
+<section>
+  <h2>Annotations over their bases</h2>
+  <p><q>ruby { display: ruby; }</q> <q>rt { display: ruby-text; }</q> <q>For the purposes of the CSS ruby model, runs
+  of children of ruby elements that are not rt or rp elements are expected to be wrapped in anonymous boxes whose
+  'display' property has the value 'ruby-base'.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span> An rt element pairs with the base text before it.</p>
+  <figure>
+    <div class="pr-stage t"><ruby>漢<rt>かん</rt>字<rt>じ</rt></ruby></div>
+    <figcaption>Two bases, each with its reading above it, smaller: かん over 漢, じ over 字.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><ruby>東京<rt>とうきょう</rt></ruby></div>
+    <figcaption>One base of two characters, with one reading centered over both.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Two annotations for one base</h2>
+  <p><q>When a particular part of a ruby has more than one annotation, the annotations should be distributed on both
+  sides of the base text so as to minimize the stacking of ruby annotations on one side.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#phrasing-content-3">§15.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage t"><ruby>東京<rt>とうきょう</rt><rt>Tōkyō</rt></ruby></div>
+    <figcaption>As recommended, とうきょう over the base and Tōkyō under it; a browser that stacks both over it, or
+    sets the second after, does not follow the recommendation.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

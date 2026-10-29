@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>outline-color: auto and stripes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 15px 20px; }
+  .box { width: 120px; height: 40px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.4 Outline Colors: the outline-color property</div>
+  <h1>outline-color: auto and stripes</h1>
+  <p class=pr-lede><q>When outline-style is auto, outline-color: auto computes to auto and represents the
+  accent color. Otherwise, outline-color: auto computes to currentColor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-color">CSS Basic User Interface 4 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>auto, the initial value</h2>
+  <p>Each box has <code>color: #2c5a8f</code>, dark blue, and <code>accent-color: #27ae60</code>, green, and no
+  <code>outline-color</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="color: #2c5a8f; accent-color: #27ae60; outline: 6px dashed"></div></div>
+    <figcaption><code>outline: 6px dashed</code>: <code>currentColor</code>, a dark blue dashed outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="color: #2c5a8f; accent-color: #27ae60; outline-style: auto"></div></div>
+    <figcaption><code>outline-style: auto</code>: the color is the accent color, but how an <code>auto</code>
+    outline uses it is the browser's. Firefox draws it green, Chrome dark blue, Safari its blue ring.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stripes, as in borders</h2>
+  <p>The outline-color property <q>accepts all values of &lt;'border-top-color'&gt;</q>. A <code>stripes()</code> color of <code>border-top-color</code> draws bands, whose <q>stripes defined by &lt;image-1D&gt; follow the shape of the border</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-color">CSS Borders and Box Decorations 4 §2.1</a></span>.
+  The box has <code>outline: 9px solid; outline-color: stripes(#4f81bd, #d68a3c, #6aa36a)</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=box style="outline: 9px solid; outline-color: stripes(#4f81bd, #d68a3c, #6aa36a)"></div></div>
+    <figcaption>Three 3px bands,
+    blue, orange and green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> have no <code>stripes()</code>: one band, the text color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Combining characters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl::first-letter { color: #c0392b; font-size: 36px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.3 Control and combining characters' details</div>
+  <h1>Combining characters</h1>
+  <p class=pr-lede>Characters that combine with the one before them into a single glyph.</p>
+</header>
+
+<section>
+  <h2>Combining characters</h2>
+  <p><q>Combining characters should be treated as part of the character with which they are supposed to combine. For
+  example, :first-letter styles the entire glyph if you have content like "o&lt;span&gt;&amp;#x308;&lt;/span&gt;"; it
+  does not just match the base character.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#ctrlchars">CSS 2 §16.6.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-sample fl">o<span>&#x308;</span>ther</div></div>
+    <figcaption>A large red <code>::first-letter</code> on "o" and a combining diaeresis in a span: the whole "ö" is
+    large and red, diaeresis included. <span class=pr-flag>Chrome</span> makes only the "o" large and red; the
+    diaeresis stays small and black.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-sample fl">o&#x308;ther</div></div>
+    <figcaption>Without the span: the same large red "ö".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

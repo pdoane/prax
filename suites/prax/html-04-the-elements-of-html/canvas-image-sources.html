@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Image sources for a canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas, .source { display: block; }
+  .pair { display: flex; gap: 20px; align-items: flex-start; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.9 Image sources for 2D rendering contexts</div>
+  <h1>Image sources for a canvas</h1>
+  <p class=pr-lede><q>This union type allows objects implementing any of the following interfaces to be used as image
+  sources</q>: img and SVG image elements, video, canvas, OffscreenCanvas, ImageBitmap and VideoFrame. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#image-sources-for-2d-rendering-contexts">HTML §4.12.5.1.9</a></span>
+  In each figure the source is at the left and the canvas, outlined in red, at the right; the page calls
+  <code>drawImage(source, 0, 0)</code>. The flag is 40 by 20, in quarters.</p>
+</header>
+<section>
+  <h2>The source's own image data</h2>
+  <p><q>When a CanvasImageSource object represents an element that is being rendered and that element has been resized,
+  the original image data of the source image must be used, not the image as it is rendered</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=pair><img class=source id=big src=../shared/resources/flag-40x20.png width=80 height=40 alt=""><canvas width=80 height=40 data-draw=image data-source=big style="outline: 1px dashed #c0392b"></canvas></div></div>
+    <figcaption>An img drawn at 80 by 40: the canvas shows it 40 by 20, its natural size, in the canvas's top left
+    quarter.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pair><canvas class=source id=from width=40 height=20 data-draw=flag></canvas><canvas width=80 height=40 data-draw=image data-source=from style="outline: 1px dashed #c0392b"></canvas></div></div>
+    <figcaption>A canvas as the source: <q>the element's bitmap must be used</q>, the flag at 40 by 20.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>SVG image elements, and animated images</h2>
+  <p><q>when a CanvasImageSource object represents an animated image in an HTMLOrSVGImageElement, the user agent must
+  use the default image of the animation (the one that the format defines is to be used when animation is not supported
+  or is disabled), or, if there is no such image, the first frame of the animation</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=pair><svg class=source width=40 height=20><image id=svgimage href=../shared/resources/flag-40x20.png width=40 height=20 /></svg><canvas width=80 height=40 data-draw=image data-source=svgimage style="outline: 1px dashed #c0392b"></canvas></div></div>
+    <figcaption>An SVG <code>image</code> element: the flag, 40 by 20.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pair><img class=source id=animated src=support/canvas-animated.gif alt=""><canvas width=80 height=40 data-draw=animated style="outline: 1px dashed #c0392b"></canvas></div></div>
+    <figcaption>A GIF of two frames, blue then orange, each 0.6s: the img alternates, and the canvas, drawn from it every
+    0.1s, stays blue, the first frame. <span class=pr-flag>Safari</span> Nothing drawn.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    flag(context) {
+      context.fillStyle = "#4f81bd"; context.fillRect(0, 0, 20, 10);
+      context.fillStyle = "#d68a3c"; context.fillRect(20, 0, 20, 10);
+      context.fillStyle = "#6aa36a"; context.fillRect(0, 10, 20, 10);
+      context.fillStyle = "#8e44ad"; context.fillRect(20, 10, 20, 10);
+    },
+    image(context, canvas) {
+      context.drawImage(document.getElementById(canvas.dataset.source), 0, 0);
+    },
+    animated(context, canvas) {
+      const image = document.getElementById("animated");
+      setInterval(() => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0);
+      }, 100);
+    },
+  };
+  window.addEventListener("load", () => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

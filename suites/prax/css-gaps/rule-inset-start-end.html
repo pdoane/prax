@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Start and end insets</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+  .pr-stage.pr-vertical { height: 100px; }
+  .pr-vertical .g { grid-auto-rows: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.3.1 -start and -end shorthands</div>
+  <h1>Start and end insets</h1>
+  <p class=pr-lede><q>These shorthands allow authors to achieve uniform asymmetric decorations.</q> <q>These shorthand
+  properties set the corresponding '-cap-' and '-junction-' properties to the same value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#insets-start-end">CSS Gaps 1 §3.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Every start, every end</h2>
+  <p>Each grid has <code>rule-break: intersection</code>; column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset-start: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset-start: 8px</code>: each red piece starts 8px down, at the edge and
+    below the junction alike. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-inset-start: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-inset-start: 8px</code> sets the column and row starts: the red pieces start 8px down, the
+    black ones 8px in from the left. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Start and end follow the writing mode</h2>
+  <p>A row gap runs in the inline axis. Each grid has <code>row-rule-inset-end: 15px</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="row-rule-inset-end: 15px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption>Left to right: each black piece stops 15px short on its right. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" dir=rtl style="row-rule-inset-end: 15px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>direction: rtl</code>: A is on the right, and each black piece stops 15px short on its left.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-vertical"><div class="g rules" style="row-rule-inset-end: 15px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>vertical-rl</code>: each black piece stops 15px short at its bottom.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Repeating gradients too fine to draw</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 160px; height: 40px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.3 Repeating Gradients: the repeating-linear-gradient() and repeating-radial-gradient() notations</div>
+  <h1>Repeating gradients too fine to draw</h1>
+  <p class=pr-lede><q>If the distance between the first and last color-stops is zero (or rounds to zero due to
+  implementation limitations), the implementation must find the average color of a gradient with the same number and
+  color of color-stops, but with the first and last color-stop an arbitrary non-zero distance apart, and the
+  remaining color-stops equally spaced between them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#repeating-gradients">CSS Images 3 §3.3</a></span>
+  Each dashed box is 160 by 40.</p>
+</header>
+
+<section>
+  <h2>The average color</h2>
+  <p>To average, each pair of adjacent stops adds half its share of the line to each of its two colors, in
+  premultiplied sRGB.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-linear-gradient(red 0px, white 0px, blue 0px)"></div></div>
+    <figcaption>Red, white and blue all at 0px: red ¼, white ½, blue ¼, a solid light purple,
+    <code>rgb(75% 50% 75%)</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Solid blue, the last stop's color.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-linear-gradient(red 0px, white .1px, blue .2px)"></div></div>
+    <figcaption>The same stops 0.1px apart, finer than a device pixel: <q>the implementation must find the average
+    color of the gradient</q>, the same light purple. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> Nothing. <span class=pr-flag>Safari</span> Aliased stripes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A radial gradient with no height</h2>
+  <p><q>If the width of the ending shape of a repeating radial gradient is non-zero and the height is zero</q>, it
+  is drawn in the average color.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box pr-ghost" style="background: repeating-radial-gradient(40px 0px, red 0 10px, blue 10px 20px)"></div></div>
+    <figcaption>An ellipse 40px wide and 0 tall, red then blue: a solid <code>rgb(50% 0% 50%)</code> purple.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Solid blue. <span
+    class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

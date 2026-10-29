@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A Japanese concert poster set vertically, with ruby, combined digits, and a horizontal caption. Leans on: writing-mode vertical-rl on a fixed-height block, columns that fill from the right, ruby annotations, text-combine-upright for two-digit numbers, a nested vertical seal, and a horizontal caption outside the poster. -->
+<title>Vertical text poster</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.poster { writing-mode:vertical-rl; height:560px; background:#f7f3e8; border:1px solid #cdbfa4; border-radius:4px; padding:22px 24px; color:#2b2620; font-family:serif; font-size:15px; line-height:1.9; position:relative; overflow:hidden }
+.poster .band { position:absolute; top:0; right:0; bottom:0; width:10px; background:#8c2f24 }
+.title { font-size:38px; line-height:1.25; font-weight:bold; letter-spacing:.06em; margin:0 0 0 18px; text-align:start }
+.sub { font-size:17px; color:#6b5f4d; letter-spacing:.2em; margin-left:20px }
+.meta { font-size:15px; line-height:2.1; margin-left:18px; color:#3a332a }
+.meta dt { color:#8c2f24; font-weight:bold }
+.meta dd { margin-bottom:10px }
+.prog { font-size:13px; line-height:2; color:#4a4237; margin-left:18px }
+.prog li { list-style:none }
+.prog .num { color:#8c2f24; font-weight:bold }
+.note { font-size:12px; height:360px; color:#6b5f4d; line-height:2; margin-left:14px; border-right:1px solid #cdbfa4; padding-right:12px }
+.tcy { text-combine-upright:all }
+ruby rt { font-size:.5em; color:#6b5f4d }
+.seal { position:absolute; left:26px; bottom:24px; width:54px; height:54px; background:#8c2f24; color:#f7f3e8; writing-mode:vertical-rl; font-size:15px; line-height:1.2; text-align:center; padding:6px 4px; letter-spacing:.1em }
+.cap { display:flex; justify-content:space-between; align-items:baseline; font-family:sans-serif; font-size:10.5px; color:#5d6673; margin-top:8px; white-space:normal }
+.cap b { color:#22282f }
+</style>
+</head>
+<body>
+<div class="poster" lang="ja">
+  <div class="band"></div>
+  <h2 class="title">秋の<ruby>夜長<rt>よなが</rt></ruby>の<ruby>弦楽<rt>げんがく</rt></ruby>四重奏</h2>
+  <div class="sub">白樺ホール　第<span class="tcy">42</span>回定期演奏会</div>
+
+  <dl class="meta">
+    <dt>日時</dt>
+    <dd><span class="tcy">2026</span>年<span class="tcy">11</span>月<span class="tcy">14</span>日（土）　開場 <span class="tcy">18</span>時<span class="tcy">30</span>分　開演 <span class="tcy">19</span>時</dd>
+    <dt>会場</dt>
+    <dd>白樺ホール　大ホール（長野市<ruby>信更町<rt>しんこうまち</rt></ruby>三ノ二）</dd>
+    <dt>料金</dt>
+    <dd>一般 <span class="tcy">3500</span>円　学生 <span class="tcy">2000</span>円　全席自由</dd>
+  </dl>
+
+  <ul class="prog">
+    <li><span class="num">一</span>　ハイドン　弦楽四重奏曲 第<span class="tcy">77</span>番「皇帝」</li>
+    <li><span class="num">二</span>　武満徹　ランドスケープ<span class="tcy">1</span></li>
+    <li><span class="num">三</span>　ベートーヴェン　弦楽四重奏曲 第<span class="tcy">14</span>番 嬰ハ短調</li>
+  </ul>
+
+  <div class="note">四重奏団は<ruby>結成<rt>けっせい</rt></ruby>から<span class="tcy">12</span>年、白樺ホールでの演奏は今回で五度目になります。休憩は一回、およそ<span class="tcy">15</span>分です。就学前のお子様のご入場はご遠慮ください。</div>
+
+  <div class="seal">白樺</div>
+</div>
+
+<div class="cap"><span><b>白樺弦楽四重奏団</b> 定期演奏会 &#183; 主催 白樺音楽協会 &#183; 後援 長野市</span><span>問い合わせ 026-224-1801</span></div>
+</body>
+</html>

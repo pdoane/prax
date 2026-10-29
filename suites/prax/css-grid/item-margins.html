@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid item margins and paddings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .v { display: grid; writing-mode: vertical-rl; grid-template-columns: 100px; grid-template-rows: 60px; width: 60px; height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.4 Grid Item Margins and Paddings</div>
+  <h1>Grid item margins and paddings</h1>
+  <p class=pr-lede><q>As adjacent grid items are independently contained within the containing block formed by their
+  grid areas, the margins of adjacent grid items do not collapse.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#item-margins">CSS Grid Layout 2 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>No collapsing; auto margins</h2>
+  <p><q>Auto margins expand to absorb extra space in the corresponding dimension</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid"><div class=ta style="margin-bottom: 20px">ab</div><div class=tb style="margin-top: 20px">cd</div></div></div>
+    <figcaption>Two rows: "ab" with <code>margin-bottom: 20px</code> above "cd" with <code>margin-top: 20px</code>:
+    40px between them, "cd" from 60 to 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template: 60px / 120px"><div class=ta style="margin: auto">ab</div></div></div>
+    <figcaption>In an area 120 by 60px, <code>margin: auto</code>: "ab", 20 by 20px, centered, at 50px across and
+    20px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages of the grid area's inline size</h2>
+  <p><q>Percentage margins and paddings on grid items, like those on block boxes, are resolved against the inline size
+  of their containing block, e.g. left/right/top/bottom percentages all resolve against their containing block’s
+  width in horizontal writing modes.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class=ta style="margin-top: 10%; padding-top: 20%">ab</div></div></div>
+    <figcaption>In a 100px column of a 200px grid, <code>margin-top: 10%; padding-top: 20%</code>: of 100px, the area,
+    so the item starts 10px down and "ab" sits from 30 to 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="v pr-ghost"><div class=tb style="margin-right: 20%">ab</div></div></div>
+    <figcaption>A <code>vertical-rl</code> grid area, dashed, 60px wide and 100px tall, its inline size:
+    <code>margin-right: 20%</code> is 20px, and the item is 40px wide, from 0 to 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

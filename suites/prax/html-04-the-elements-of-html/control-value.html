@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The dirty value flag</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.18.1 A form control's value</div>
+  <h1>The dirty value flag</h1>
+  <p class=pr-lede><q>input and textarea elements have a dirty value flag. This is used to track the interaction
+  between the value and default value. If it is false, value mirrors the default value. If it is true, the default value
+  is ignored.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#a-form-control's-value">HTML §4.10.18.1</a></span></p>
+</header>
+
+<section>
+  <h2>Until the user edits it</h2>
+  <p>A textarea's contents are its default value, and <q>The children changed steps for textarea elements must, if the
+  element's dirty value flag is false, set the element's raw value to its child text content.</q> The flag <q>must be set
+  to true whenever the user interacts with the control in a way that changes the raw value.</q> The button sets the
+  textarea's text content. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-textarea-element">§4.10.11</a></span></p>
+  <figure>
+    <form class="pr-stage pr-wide pad">
+      <textarea id=mirrored cols=14 rows=2>Default 1</textarea>
+      <button type=button onclick="mirrored.textContent = 'Default ' + ++defaults">New default</button>
+      <button type=reset>Reset</button>
+    </form>
+    <figcaption>Click New default: the textarea says "Default 2", then "Default 3". Type in it, and click New default
+    again: the text stays as typed. Click Reset: the flag is false again, and the textarea shows the latest
+    default.</figcaption>
+  </figure>
+</section>
+<script>
+  // Counts the defaults that the button sets.
+  let defaults = 1;
+</script>
+</body>
+</html>

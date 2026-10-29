@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex containers across columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .cols { column-count: 2; column-gap: 20px; column-fill: auto; height: 40px; }
+  .col { display: flex; flex-direction: column; }
+  .wrap { display: flex; flex-wrap: wrap; }
+  .wrap > div { width: 40px; }
+  .before { height: 20px; background: #c9ced6; }
+  figure { margin-right: 10px; }
+  .pr-stage.n { width: 116px; column-gap: 10px; }
+  figure.pr-narrow { margin-right: 6px; }
+  .wrap.n > div { width: 25px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 10 Fragmenting Flex Layout</div>
+  <h1>Flex containers across columns</h1>
+  <p class=pr-lede><q>Flex containers can break across pages between items, between lines of items (in multi-line
+  mode), and inside items.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#pagination">CSS Flexible Box Layout 2 §10</a></span>
+  Pages cannot be shown here, but <q>The same rules apply in any other fragmentation context</q>:
+  each stage is two columns 90px wide and 40px tall <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cc">CSS Multi-column Layout 1 §3.2</a></span>.</p>
+</header>
+
+<section>
+  <h2>Between items, between lines</h2>
+  <p>In a column flex container, <q>Class A break opportunities occur between sibling flex items</q>; in a row one,
+  <q>between sibling flex lines</q>.</p>
+  <figure>
+    <div class="pr-stage cols"><div class=col><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div><div class="pr-d pr-fit">D</div></div></div>
+    <figcaption>A <code>column</code> container of four 20px items: A and B in the first column, C and D in the
+    second.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage cols"><div class=wrap><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div><div class="pr-b pr-fit">6</div></div></div>
+    <figcaption><code>row wrap</code>, items 40px wide, two to a line: lines 1–2 and 3–4 in the first
+    column, 5–6 in the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks</h2>
+  <p>In a column container, <q>the break-before values on the first item</q> <q>are propagated to the flex
+  container. Forced breaks on other items are applied to the item itself.</q> In a row container, <q>the
+  break-before and break-after values on flex items are propagated to the flex line. The break-before values on the
+  first line</q> <q>are propagated to the flex container.</q> The narrow stages are two columns 53px wide; starred
+  items are <code>break-before: column</code>, and grey blocks 20px tall.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage cols n"><div class=col><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit" style="break-before: column">B*</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption>A column: A alone in the first column, B and C in the second. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> A and B in the first.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage cols n"><div class=before></div><div class=col><div class="pr-a pr-fit" style="break-before: column">A*</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption>A column, its first item starred: the container starts the second column.
+    <span class=pr-flag>Firefox</span> A under the grey block.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage cols n"><div class="wrap n"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit" style="break-before: column">4*</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption>A row, 4 starred: its line, 3–4, starts the second column. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 3–4 in the first.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage cols n"><div class=before></div><div class="wrap n"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit" style="break-before: column">2*</div><div class="pr-c pr-fit">3</div></div></div>
+    <figcaption>A row, 2 starred: the first line breaks, so the container starts the second column.
+    <span class=pr-flag>Firefox</span> 1–2 under the grey block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

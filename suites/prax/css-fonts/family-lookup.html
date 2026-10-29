@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Finding the family</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: Courier; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: Helvetica; src: url(no-such-font.ttf); }
+  @font-face { font-family: "Half Failed"; src: url(no-such-font.ttf); font-weight: bold; }
+  @font-face { font-family: "Half Failed"; src: url(../../../third_party/fonts/Cousine.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, steps 1 to 3</div>
+  <h1>Finding the family</h1>
+  <p class=pr-lede><q>For other family names, the user agent attempts to find the family name among fonts defined via
+  @font-face rules and then among available installed fonts</q>. <q>If no faces are present for a family defined via
+  @font-face rules, the family should be treated as missing; matching a platform font with the same name must not
+  occur in this case.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>@font-face before installed fonts</h2>
+  <p>Each stage names a family, then <code>serif</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Courier, serif">Handgloves</div>
+    <figcaption><code>Courier</code>, defined here as Literata: Literata, a proportional book serif, not the
+    installed typewriter face.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: Helvetica, serif">Handgloves</div>
+    <figcaption><code>Helvetica</code>, defined here with a source that fails: missing, so serif, not the installed
+    Helvetica. <span class=pr-flag>Safari</span> draws the installed Helvetica.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A face that fails sends the text to the next family</h2>
+  <p>"Half Failed" has a bold face that fails and a regular face of Cousine. Bold text matches the bold face by its
+  descriptors, which then fails to load. <q>If no matching face exists or the matched face does not contain a glyph for
+  the character to be rendered, the next family name is selected</q>. <q>Glyphs from other faces in the family are not
+  considered.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Half Failed', serif; font-weight: bold">Handgloves</div>
+    <figcaption>Bold: serif, not Cousine emboldened. A family whose regular face loads is still present, but its
+    regular face does not stand in for the bold one that failed.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

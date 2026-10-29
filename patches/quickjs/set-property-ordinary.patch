@@ -1,0 +1,37 @@
+diff --git a/quickjs.c b/quickjs.c
+--- a/quickjs.c
++++ b/quickjs.c
+@@ -8828,8 +8828,10 @@
+                         ret = em->set_property(ctx, obj1, prop,
+                                                val, this_obj, flags);
+                         JS_FreeValue(ctx, obj1);
+-                        JS_FreeValue(ctx, val);
+-                        return ret;
++                        if (ret != JS_SET_PROPERTY_ORDINARY) {
++                            JS_FreeValue(ctx, val);
++                            return ret;
++                        }
+                     }
+                     if (em->get_own_property) {
+                         /* get_own_property can free the prototype */
+diff --git a/quickjs.h b/quickjs.h
+--- a/quickjs.h
++++ b/quickjs.h
+@@ -571,11 +571,16 @@
+     int (*has_property)(JSContext *ctx, JSValueConst obj, JSAtom atom);
+     JSValue (*get_property)(JSContext *ctx, JSValueConst obj, JSAtom atom,
+                             JSValueConst receiver);
+-    /* return < 0 if exception or true/false */
++    /* return < 0 if exception or true/false, or JS_SET_PROPERTY_ORDINARY
++       to continue with the ordinary [[Set]], which reads obj's own
++       property through get_own_property. A hook that continues must not
++       have run script. */
+     int (*set_property)(JSContext *ctx, JSValueConst obj, JSAtom atom,
+                         JSValueConst value, JSValueConst receiver, int flags);
+ } JSClassExoticMethods;
+ 
++#define JS_SET_PROPERTY_ORDINARY 2
++
+ typedef void JSClassFinalizer(JSRuntime *rt, JSValueConst val);
+ typedef void JSClassGCMark(JSRuntime *rt, JSValueConst val,
+                            JS_MarkFunc *mark_func);

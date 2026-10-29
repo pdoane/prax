@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The principal writing mode on the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.s figcaption { max-width: 200px; }
+  iframe.pr-view { border: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 8.1 Propagation to the Initial Containing Block</div>
+  <h1>The principal writing mode on the viewport</h1>
+  <p class=pr-lede><q>The principal writing mode is propagated to the initial containing block and to the viewport,
+  thereby affecting the layout of the root element and the scrolling direction of the viewport.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#icb">CSS Writing Modes 4 §8.1</a></span></p>
+</header>
+
+<section>
+  <h2>The viewport scrolls from the start</h2>
+  <p>Each frame's document is 500px wide, a bar whose start is dark blue and whose end is orange, wider than the 200px frame. The
+  frame opens scrolled to where the document's writing mode starts.</p>
+  <figure class=s>
+    <iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><style>body{margin:0;font:14px/20px 'PR Arimo'}div{display:flex;justify-content:space-between;width:500px;height:40px;background:#b9cde6}</style><body><div><span style='width:40px;background:#2c5a8f'></span><span style='width:40px;background:#d68a3c'></span></div></body>"></iframe>
+    <figcaption><code>ltr</code>: the frame at the bar's left end, its dark blue start.</figcaption>
+  </figure>
+  <figure class=s>
+    <iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><style>body{margin:0;font:14px/20px 'PR Arimo'}div{display:flex;justify-content:space-between;width:500px;height:40px;background:#b9cde6}</style><body style='direction:rtl'><div><span style='width:40px;background:#2c5a8f'></span><span style='width:40px;background:#d68a3c'></span></div></body>"></iframe>
+    <figcaption>The body is <code>rtl</code>: the viewport scrolls from the right, and opens there: the dark blue start at the
+    right.</figcaption>
+  </figure>
+  <figure class=s>
+    <iframe class=pr-view srcdoc="<!doctype html><link rel=stylesheet href=../shared/fonts.css><style>body{margin:0;font:14px/20px 'PR Arimo'}div{display:flex;flex-direction:column;justify-content:space-between;width:500px;height:80px;background:#b9cde6}</style><body style='writing-mode:vertical-rl'><div><span style='width:40px;background:#2c5a8f'></span><span style='width:40px;background:#d68a3c'></span></div></body>"></iframe>
+    <figcaption>The body is <code>vertical-rl</code>: the 500px wide block starts at the right, and the frame opens
+    there: the dark blue start at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

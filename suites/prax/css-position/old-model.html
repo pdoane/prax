@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The old model and the new</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ab { position: absolute; background: rgba(214, 138, 60, 0.8); }
+  .imcb { position: absolute; outline: 1px dashed #6b7381; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 80px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 5 Old Absolute Positioning Layout Model</div>
+  <h1>The old model and the new</h1>
+  <p class=pr-lede>The old model is CSS 2's constraint equations, <q>preserved here for comparison: both models should
+  yield the same result in horizontal writing modes when the box’s self-alignment is normal.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-old">CSS Positioned Layout 3 §5</a></span>
+  CSS 2's pages walk each of its rules. Each stage is relative, 160 by 80; the dashed rectangle is an empty box with
+  the orange box's insets.</p>
+</header>
+
+<section>
+  <h2>The same answer</h2>
+  <p>Horizontal, and <code>normal</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class=ab style="top: 10px; left: 20px">abc def</div></div>
+    <figcaption><code>left: 20px</code>, width <code>auto</code>: shrink-to-fit in the old model, fit-content in the
+    new; 70 wide either way.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; width: 60px"></div></div>
+    <figcaption><code>inset: 10px 20px</code>, 60 wide, height <code>auto</code>: over-constrained across, so at the
+    left, 20; stretched down, 60 tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Where only the new model has an answer</h2>
+  <p>The old model has no alignment: an over-constrained box goes to its containing block's start. The new one aligns
+  it in the inset-modified containing block.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; width: 60px; height: 20px; justify-self: end"></div></div>
+    <figcaption><code>justify-self: end</code>: at the right of the room, from 80 to 140, where the old model put it
+    at 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 10px 20px"></div><div class=ab style="inset: 10px 20px; width: 60px; height: 20px; align-self: center"></div></div>
+    <figcaption><code>align-self: center</code>: centered down the room, from 30 to 50, where the old model put it at
+    the top, 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column measures: cells of one column</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.3 Computing Column Measures, cells of span 1</div>
+  <h1>Column measures: cells of one column</h1>
+  <p class=pr-lede>Each column has a min-content width, <q>the smallest possible width attributed to this column</q>,
+  and a max-content width, <q>the width that would be attributed to the column if no other constraint applied</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a></span>
+  Cells hold <code>.pr-measure</code> text, with no padding, border or spacing.</p>
+</header>
+
+<section>
+  <h2>The largest of the cells</h2>
+  <p>The min-content width of a column is the largest of <q>the outer min-content width of each cell that spans the
+  column whose colSpan is 1</q>, and its max-content width the largest of their outer max-content widths.</p>
+  <figure>
+    <div class=pr-stage><table class=pr-measure><tr><td>aaa bbb<td>cc<tr><td>a<td>dddd</table></div>
+    <figcaption>Room to spare: each column gets its max-content width, the widest cell's, 70px for "aaa bbb" and 40px
+    for "dddd".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=pr-measure style="width: 10px"><tr><td>aaa bbb<td>cc<tr><td>a<td>dddd</table></div>
+    <figcaption><code>width: 10px</code>, less than the columns' min-content widths: the table is 70px, "aaa" and
+    "bbb" on two lines, 30px, and "dddd", 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A column's width is a minimum, a cell's is not</h2>
+  <p>A column's own measure counts too: <q>the outer min-content width of its corresponding table-column</q>, which
+  is <q>max('min-width', 'width')</q>. A cell's outer min-content width is <q>max('min-width', min-content
+  width)</q>: its 'width' is left out. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-cell-measures">CSS Table 3 §3.8.2</a></span>
+  Each table is <code>width: 10px</code>, so it shrinks to its columns' min-content widths.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table class=pr-measure style="width: 10px"><col style="width: 80px"><tr><td>aaa bbb<td>cc</table></div>
+    <figcaption>A <code>col</code> of <code>width: 80px</code>: the column is 80px, the table 100px.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> take the
+    cell's 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table class=pr-measure style="width: 10px"><tr><td style="width: 80px">aaa bbb<td>cc</table></div>
+    <figcaption>The cell has <code>width: 80px</code> instead: its min-content width is still 30px, and the table
+    is 50px, "aaa bbb" on two lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

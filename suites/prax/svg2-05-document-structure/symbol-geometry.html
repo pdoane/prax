@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>symbol: x, y, width and height</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #styled { x: 80px; y: 20px; width: 60px; height: 30px; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <symbol id="placed" x="80" y="20" width="60" height="30" viewBox="0 0 20 10"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+  <symbol id="styled" viewBox="0 0 20 10"><rect width="20" height="10" fill="#4f81bd" /><circle cx="10" cy="5" r="3" fill="#d68a3c" /></symbol>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.4 The ‘symbol’ element</div>
+  <h1>symbol: x, y, width and height</h1>
+  <p class=pr-lede><q>A ‘symbol’ establishes a nested coordinate system for the graphics it contains.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SymbolElement">SVG 2 §5.4</a></span>
+  Each stage is an SVG 160 by 60. Each symbol has <code>viewBox="0 0 20 10"</code> filled blue with an orange dot
+  in its middle.</p>
+</header>
+
+<section>
+  <h2>Geometry on the symbol</h2>
+  <p><q>The ‘x’, ‘y’, width, and height geometry properties have the same effect as on an ‘svg’ element, when the
+  ‘symbol’ is instantiated by a ‘use’ element.</q> The working group since resolved that <q>The CSS width/height
+  properties are honored as presentation attributes for rect, image, foreignObject and outer-SVG elements and ignored
+  by all other elements with the width/height attributes</q>
+  (<a href="https://github.com/w3c/svgwg/issues/1057">svgwg#1057</a>, which the text does not yet follow); it leaves
+  x and y as the text gives them. Dashed: 60 by 30 at 80, 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="20" width="60" height="30" /><use href="#placed" /></svg></div>
+    <figcaption>Attributes <code>x="80" y="20" width="60" height="30"</code>: in the dashed outline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="80" y="20" width="60" height="30" /><use href="#styled" /></svg></div>
+    <figcaption>The same from a style sheet, by the resolution: x and y apply and width and height do not, so the
+    viewport is the use's 100%, 160 by 60 at 80, 20, and the symbol scaled 6 fills it from x 100 and y 20, cut by the
+    stage. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    At 0, 0, 120 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

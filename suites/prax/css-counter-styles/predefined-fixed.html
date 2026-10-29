@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed styles: earthly branches and heavenly stems</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.4 Fixed</div>
+  <h1>Fixed styles: earthly branches and heavenly stems</h1>
+  <p class=pr-lede><q>Han "Earthly Branch" ordinals (e.g., 子, 丑, 寅, ..., 亥).</q> <q>Han "Heavenly Stem" ordinals (e.g., 甲, 乙, 丙, ..., 癸)</q> Both have <q>fallback: cjk-decimal;</q> (<a href="https://github.com/w3c/csswg-drafts/issues/8975">csswg-drafts#8975</a>). <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-fixed">CSS Counter Styles 3 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>Twelve and ten symbols, then cjk-decimal</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: cjk-earthly-branch; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li>3<li value=12>12<li>13</ol></div>
+    <figcaption><code>cjk-earthly-branch</code>: <bdi dir=ltr>"子、"</bdi>, <bdi dir=ltr>"丑、"</bdi>, <bdi dir=ltr>"寅、"</bdi>, <bdi dir=ltr>"亥、"</bdi>, <bdi dir=ltr>"一三、"</bdi>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style='list-style-type: cjk-heavenly-stem; font-family: "PR Noto Sans JP", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li>3<li value=10>10<li>11</ol></div>
+    <figcaption><code>cjk-heavenly-stem</code>: <bdi dir=ltr>"甲、"</bdi>, <bdi dir=ltr>"乙、"</bdi>, <bdi dir=ltr>"丙、"</bdi>, <bdi dir=ltr>"癸、"</bdi>, <bdi dir=ltr>"一一、"</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

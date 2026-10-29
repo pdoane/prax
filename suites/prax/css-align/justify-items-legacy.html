@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-items: legacy</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 7.1 Inline-Axis (or Main-Axis) Default Alignment, legacy</div>
+  <h1>justify-items: legacy</h1>
+  <p class=pr-lede><q>legacy</q> <q>This keyword causes the value to effectively inherit into descendants.</q> <q>It
+  exists to implement the legacy alignment behavior of HTML's &lt;center&gt; element and align attribute.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-items-property">CSS Box Alignment 3 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>Inherited through the descendants</h2>
+  <p><q>if the inherited value of justify-items includes the legacy keyword, this value computes to the inherited
+  value; otherwise it computes to normal.</q> In each stage the outer box sets <code>justify-items</code>; a block
+  inside it keeps the initial <code>legacy</code>, and holds a grid, also <code>legacy</code>, of A; both are
+  <code>justify-self: stretch</code>.</p>
+  <figure>
+    <div class=pr-stage style="justify-items: legacy right"><div style="justify-self: stretch"><div class=g style="justify-self: stretch"><div class=pr-a>A</div></div></div></div>
+    <figcaption>Outer <code>legacy right</code>: the block and the grid take it in turn: A at the
+    right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-items: right"><div style="justify-self: stretch"><div class=g style="justify-self: stretch"><div class=pr-a>A</div></div></div></div>
+    <figcaption>Outer <code>right</code>, not <code>legacy</code>: the block and the grid are
+    <code>normal</code>: A stretched.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="justify-items: legacy center"><div style="justify-items: start; justify-self: stretch"><div class=g style="justify-self: stretch"><div class=pr-a>A</div></div></div></div>
+    <figcaption>Outer <code>legacy center</code>, the block <code>start</code>: the chain stops, the grid
+    <code>normal</code>: A stretched.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the alignment reaches justify-self</h2>
+  <p><q>When justify-self:auto references the value of 'justify-items', only the alignment keyword, not the legacy
+  keyword, is referenced by it.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-items: legacy center"><div class=pr-a id=j1>A</div></div></div>
+    <figcaption>A grid <code>legacy center</code>: A, <code>auto</code>, centered.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

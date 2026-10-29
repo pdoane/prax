@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>table-layout: fixed mode and auto mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { table-layout: fixed; border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; height: 20px; vertical-align: top; }
+  td:first-child { width: 50px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .wide { width: 100px; color: #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.5.1 The Table-Layout property</div>
+  <h1>table-layout: fixed mode and auto mode</h1>
+  <p class=pr-lede><q>A table-root is said to be laid out in fixed mode whenever the computed value of the
+  'table-layout' property is equal to fixed, and the specified width of the table root is not auto or
+  max-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-layout-property">CSS Table 3 §3.5.1</a></span>
+  Every table here is <code>table-layout: fixed</code> and outlined: a blue cell of <code>width: 50px</code>, and an
+  orange one holding a 100px block of <code>.pr-measure</code> text.</p>
+</header>
+
+<section>
+  <h2>auto and max-content: auto mode</h2>
+  <p><q>When the specified width is one of those values, or if the computed value of the 'table-layout' property is
+  auto, then the table-root is said to be laid out in auto mode.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><table><tr><td></td><td><div class=wide>aaaaaaaaaa</div></td></tr></table></div>
+    <figcaption><code>width: auto</code>: the content counts, and the table is 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><table style="width: max-content"><tr><td></td><td><div class=wide>aaaaaaaaaa</div></td></tr></table></div>
+    <figcaption><code>width: max-content</code>: the same, 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Any other width: fixed mode</h2>
+  <p><q>When a table-root is laid out in fixed mode, the content of its table-cells is ignored for the purpose of width
+  computation</q>. The orange column has no width, and its content does not count, so it gets 0px where nothing is
+  left, and the text overflows. The latest draft extends fixed mode to every width but the two above (<a href="https://github.com/w3c/csswg-drafts/issues/10937">csswg-drafts#10937</a>).</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><table style="width: min-content"><tr><td></td><td><div class=wide>aaaaaaaaaa</div></td></tr></table></div>
+    <figcaption><code>width: min-content</code>: fixed, so the table is 50px, the blue column alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-measure"><table style="width: fit-content"><tr><td></td><td><div class=wide>aaaaaaaaaa</div></td></tr></table></div>
+    <figcaption><code>width: fit-content</code>: fixed, 50px. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> lay it out in auto mode, 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><table style="width: 80px"><tr><td></td><td><div class=wide>aaaaaaaaaa</div></td></tr></table></div>
+    <figcaption><code>width: 80px</code>: blue 50px, orange the other 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

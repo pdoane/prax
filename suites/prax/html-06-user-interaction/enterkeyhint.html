@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The enterkeyhint attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px;
+        background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px }
+  .row { display: inline-block; width: 120px; margin-right: 10px; vertical-align: top }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.10 Input modalities: the enterkeyhint attribute</div>
+  <h1>The enterkeyhint attribute</h1>
+  <p class=pr-lede><q>The enterkeyhint content attribute is an enumerated attribute that specifies what action label (or icon) to
+  present for the enter key on virtual keyboards.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-enterkeyhint-attribute">HTML §6.8.10</a></span></p>
+</header>
+<section>
+  <h2>A cue for each operation</h2>
+  <p>For each keyword, <q>The user agent should present a cue for the operation</q> it names: <code>enter</code>,
+  <code>done</code>, <code>go</code>, <code>next</code>, <code>previous</code>, <code>search</code> or
+  <code>send</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-enterkeyhint-attribute">§6.8.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 300px; padding: 10px 20px 0; box-sizing: border-box">
+      <div class=row>
+        <input class=ed enterkeyhint=enter placeholder=enter>
+        <input class=ed enterkeyhint=done placeholder=done>
+        <input class=ed enterkeyhint=go placeholder=go>
+        <input class=ed enterkeyhint=next placeholder=next>
+      </div><div class=row>
+        <input class=ed enterkeyhint=previous placeholder=previous>
+        <input class=ed enterkeyhint=search placeholder=search>
+        <input class=ed enterkeyhint=send placeholder=send>
+        <div class=ed contenteditable enterkeyhint=send>editing host, send</div>
+      </div>
+    </div>
+    <figcaption>On a phone or tablet, tap each: the virtual keyboard's enter key is labeled, or drawn with an icon,
+    for the field's keyword: a return arrow, Done, Go, Next, Previous, a magnifier or Search, Send.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

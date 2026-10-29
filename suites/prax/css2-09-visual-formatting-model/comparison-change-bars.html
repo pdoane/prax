@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Comparing positioning schemes: change bars</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { font-size: 12px; line-height: 200%; }
+  .doc p { margin: 0; }
+  .inner { position: absolute; top: 100px; left: -50px; width: 65px; height: 65px; color: blue; outline: 1px dashed blue; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.8 Comparison of normal flow, floats, and absolute positioning</div>
+  <h1>Comparing positioning schemes: change bars</h1>
+  <p class=pr-lede>The specification's last examples of absolute positioning, on 24px lines.</p>
+</header>
+
+<section>
+  <h2>No positioned ancestor</h2>
+  <p><q>If we do not position the outer box ... the containing block for inner becomes the initial containing
+  block.</q> Here the stage, 300 by 180, stands for it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-abspos">CSS 2 §9.8.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-cb doc" style="height: 180px"><p>Beginning of body contents. <span style="color: red"> Start of outer contents. <span class=inner> Inner contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#inner { position: absolute; top: 100px; left: -50px }</code>: from the stage's corner, half
+    of it past the left edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Change bars</h2>
+  <p><q>The two hyphens acting as change bars are taken out of the flow and positioned at the current line (due to
+  'top: auto'), '-1em' from the left edge of its containing block (established by the P in its final position).</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-abspos">CSS 2 §9.8.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide doc" style="padding: 0 0 0 20px; box-sizing: border-box"><p style="position: relative; margin-right: 10px; left: 10px">I used two red hyphens to serve as a change bar. They will "float" to the left of the line containing THIS <span style="position: absolute; top: auto; left: -1em; color: red">--</span> word.</p></div>
+    <figcaption>The red <code>--</code> sits left of the line with "THIS", 1em left of the paragraph.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

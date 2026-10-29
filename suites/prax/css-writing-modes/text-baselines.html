@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text baselines: alphabetic and central</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/50px "PR Noto Sans JP"; writing-mode: vertical-rl; width: 60px; height: 180px; padding: 6px 0; }
+  .lat { font-family: "PR Arimo"; }
+  .big { font-size: 32px; }
+  .vguide { display: inline-block; width: 0; height: 168px; margin-bottom: -168px; border-left: 1px dashed #c0392b; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 4.2 Text Baselines</div>
+  <h1>Text baselines: alphabetic and central</h1>
+  <p class=pr-lede><q>In vertical typographic mode, the central baseline is used as the dominant baseline when
+  text-orientation is mixed or upright. Otherwise the alphabetic baseline is used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-baselines">CSS Writing Modes 4 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Central in mixed and upright, alphabetic otherwise</h2>
+  <p>The <q>central baseline, which typically crosses the center of the em box</q>; the <q>alphabetic baseline,
+  which typically aligns with the bottom of uppercase Latin glyphs</q>. Each stage holds "Ap" in 16px and 32px Latin
+  and "日本" in Japanese, on 50px lines; the dashed line is aligned to the line's dominant baseline.</p>
+  <figure class=s>
+    <div class=pr-stage><span class=vguide></span><span class=lat>Ap<span class=big>Ap</span></span>日本</div>
+    <figcaption><code>mixed</code>: the sideways Latin of both sizes and the upright Japanese centered on the
+    dashed line.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: upright"><span class=vguide></span><span class=lat>Ap<span class=big>Ap</span></span>日本</div>
+    <figcaption><code>upright</code>: every letter upright, centered on the dashed line.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-orientation: sideways"><span class=vguide></span><span class=lat>Ap<span class=big>Ap</span></span>日本</div>
+    <figcaption><code>sideways</code>: alphabetic; both sizes of Latin stand on the dashed line, their feet to the
+    left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-rl"><span class=vguide></span><span class=lat>Ap<span class=big>Ap</span></span>日本</div>
+    <figcaption><code>sideways-rl</code>, a horizontal typographic mode: alphabetic, the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

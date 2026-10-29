@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-content: one line, and lines that overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; flex-wrap: wrap; }
+  .pr-stage > div { width: 80px; }
+  .o { height: 30px; margin-bottom: 10px; }
+  .o > div { width: 120px; }
+  figure.f { margin-top: 10px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.4 Packing Flex Lines: the align-content property, edge cases</div>
+  <h1>align-content: one line, and lines that overflow</h1>
+  <p class=pr-lede><q>Note, this property has no effect on a single-line flex container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-content-property">CSS Flexible Box Layout 2 §8.4</a></span></p>
+</header>
+
+<section>
+  <h2>Single-line, or multi-line with one line</h2>
+  <p><q>In a multi-line flex container (even one with only a single line), the cross size of each line is the minimum
+  size necessary to contain the flex items on the line</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-lines">§6</a></span>. Each stage
+  is 60px tall, <code>align-content: center</code>, and holds A, 20px tall, with no <code>height</code> of its own.</p>
+  <figure>
+    <div class=pr-stage style="flex-wrap: nowrap; height: 60px; align-content: center"><div class="pr-a pr-fit">A</div></div>
+    <figcaption><code>nowrap</code>: the line is the stage, 60px, and A is stretched to fill it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px; align-content: center"><div class="pr-a pr-fit">A</div></div>
+    <figcaption><code>wrap</code>: the one line is 20px tall and centered: A at 20 to 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Negative free space</h2>
+  <p>Each stage is 30px tall and wraps two items 120px wide into two lines of 20px: −10px of free space.
+  <code>center</code>: <q>If the leftover free-space is negative, the lines will overflow equally in both
+  directions.</q> <code>space-between</code> falls back to <code>safe flex-start</code>,
+  <code>space-around</code> to <code>safe center</code>, <code>stretch</code> to <code>flex-start</code>.</p>
+  <figure class=f>
+    <div class="pr-stage o" style="align-content: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>center</code>: A from −5px, B to 35px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage o" style="align-content: space-between"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>space-between</code>: A at 0, B from 20 to 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage o" style="align-content: space-around"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>space-around</code>: safe center, the lines overflow, so as <code>flex-start</code>: A at 0, B
+    from 20 to 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage o" style="align-content: stretch"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>stretch</code>: A at 0, B from 20 to 40px, neither stretched.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

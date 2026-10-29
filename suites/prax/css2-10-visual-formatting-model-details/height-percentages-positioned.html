@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The height property: percentages and positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .holder { position: relative; padding: 20px 0; background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.5 Content height: the 'height' property</div>
+  <h1>The height property: percentages and positioning</h1>
+  <p class=pr-lede>An absolutely positioned box's percentage height is of its containing block's padding box, which is
+  always known; the root's is of the initial containing block.</p>
+</header>
+
+<section>
+  <h2>Absolutely positioned: the padding box</h2>
+  <p><q>Note: For absolutely positioned elements whose containing block is based on a block-level element, the
+  percentage is calculated with respect to the height of the padding box of that element.</q> <q>the height of the
+  containing block of an absolutely positioned element is independent of the size of the element itself, and thus a
+  percentage height on such an element can always be resolved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2 §10.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=holder style="height: 40px"><div class="pr-a pr-fit" style="position: absolute; top: 0; height: 50%; width: 60px">50%</div></div></div>
+    <figcaption>The green box is relative, 40px tall with 20px of padding above and below: <code>height: 50%</code> is
+    half its 80px padding box, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=holder><div style="height: 40px"></div><div class="pr-b pr-fit" style="position: absolute; top: 0; height: 50%; width: 60px">50%</div></div></div>
+    <figcaption>With <code>height: auto</code>, from 40px of content: the percentage still resolves, to 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The root element</h2>
+  <p><q>A percentage height on the root element is relative to the initial containing block.</q> The frame is a
+  viewport 200 by 100. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#the-height-property">CSS 2 §10.5</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { height: 60%; width: 50%; box-sizing: border-box; border: 2px solid #2c5a8f; background: #e7eaef } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>The root has <code>height: 60%</code>: 60px, with its border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

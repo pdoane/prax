@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Invalid images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 140px; height: 20px; margin: 10px; }
+  .color { background: #d68a3c url(missing-image.png); }
+  .layers { background-image: url(missing-image.png), linear-gradient(to right, #4f81bd, #d68a3c); }
+  .border { border: 10px solid #4f81bd; border-image: url(missing-image.png) 10; }
+  ul.list { margin: 10px 0; font-size: 20px; line-height: 20px; list-style-type: square; }
+  .missing { list-style-image: url(missing-image.png); }
+  .text { list-style-image: url("data:text/plain,Handgloves"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 2 Image Values: the &lt;image&gt; type</div>
+  <h1>Invalid images</h1>
+  <p class=pr-lede><q>An invalid image is rendered as a solid-color transparent image with no natural dimensions.
+  However, invalid images can trigger error-handling clauses in some contexts.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#image-values">CSS Images 3 §2</a></span>
+  An image is invalid if it <q>is not a valid image format or that has failed to load</q>.</p>
+</header>
+
+<section>
+  <h2>Transparent</h2>
+  <p>Each image here is a URL that fails to load.</p>
+  <figure>
+    <div class=pr-stage><div class="box color"></div></div>
+    <figcaption>Over an orange <code>background-color</code>: the box is orange, 140 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box layers"></div></div>
+    <figcaption>Over a second layer, a gradient: the gradient shows through, blue to orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Error handling where a context has it</h2>
+  <p><q>For example, an invalid image in list-style-image it is treated as none, allowing the list-style-type to
+  render in its place.</q> Each list is <code>list-style-type: square</code>.</p>
+  <figure>
+    <div class=pr-stage><ul class="list missing"><li>&nbsp;</li></ul></div>
+    <figcaption>A <code>list-style-image</code> that fails to load: a square marker.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><ul class="list text"><li>&nbsp;</li></ul></div>
+    <figcaption>A <code>list-style-image</code> that is a text file, not an image: a square marker.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box border"></div></div>
+    <figcaption>A <code>border-image</code> that fails to load: its border style draws instead, a blue 10px solid
+    border around a 140 by 20 box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

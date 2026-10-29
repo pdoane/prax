@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default shapes and dead areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 0 0; font-size: 0; line-height: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.13 The area element</div>
+  <h1>Default shapes and dead areas</h1>
+  <p class=pr-lede>The <code>shape</code> attribute is an enumerated attribute whose states are circle, default, polygon and rectangle. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#the-area-element">HTML §4.8.13</a></span> Each image is 200 by 100: a blue rectangle from 10, 10 to 60, 90, an orange circle at 100, 50 of radius 30, and a green triangle. Each log lists the target of the clicks in its stage.</p>
+</header>
+
+<section>
+  <h2>The whole image, and the shape left out</h2>
+  <p>Default: <q>This area is the whole image.</q> <q>The attribute's missing value default and invalid value default
+  are both the rectangle state.</q></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=whole src="support/map-shapes.svg" usemap="#whole-map" alt="Shapes"><map name=whole-map>
+        <area id=no-shape coords="10,10,60,90" href="#no-shape-link" alt="Rectangle">
+        <area id=everything shape=default href="#default-link" alt="Everything">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>No shape, then <code>default</code>: the blue rectangle, <code>target=no-shape</code>; anywhere else,
+    <code>target=everything</code>, never the img.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=dead-image src="support/map-shapes.svg" usemap="#dead-map" alt="Shapes"><map name=dead-map>
+        <area id=dead shape=circle coords="100,50,30">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>A circle without <code>href</code>, <q>a dead area</q>: a click on it reaches <code>dead</code>,
+    and follows no link.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

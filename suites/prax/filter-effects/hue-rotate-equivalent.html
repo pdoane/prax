@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>hue-rotate() as feColorMatrix</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .row { margin: 0 0 0 5px; font-size: 0; line-height: 0; }
+  .src, .sw { display: inline-block; vertical-align: top; margin-right: 5px; }
+  .src { width: 60px; height: 40px; background: linear-gradient(to right, #4f81bd 50%, #d68a3c 50%) top / 100% 50% no-repeat,
+                                              linear-gradient(to right, #6aa36a 50%, #8e44ad 50%) bottom / 100% 50% no-repeat; }
+  .sw { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<svg width=0 height=0 style="position: absolute">
+  <filter id="hue-rotate-equivalent-0" color-interpolation-filters="sRGB">
+    <feColorMatrix type="hueRotate" values="90"/>
+  </filter>
+  <filter id="hue-rotate-equivalent-1" color-interpolation-filters="sRGB">
+    <feColorMatrix type="hueRotate" values="180"/>
+  </filter>
+  <filter id="hue-rotate-equivalent-2" color-interpolation-filters="sRGB">
+    <feColorMatrix type="hueRotate" values="-90"/>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 13.1.4 hue-rotate</div>
+  <h1>hue-rotate() as feColorMatrix</h1>
+  <p class=pr-lede>The function is <code>&lt;feColorMatrix type="hueRotate" values="[angle]"/&gt;</code>, the angle in degrees. <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#huerotateEquivalent">Filter Effects 1 §13.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>Three angles</h2>
+  <p>In each stage, at the left, a box 60 by 40 of four colored quarters with the filter function; beside it the same box with <code>filter: url()</code> to the equivalent, which sets <code>color-interpolation-filters: sRGB</code>, as <q>Filter Functions must operate in the sRGB color space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: hue-rotate(90deg)"></div><div class=src style="filter: url(#hue-rotate-equivalent-0)"></div><div class=sw style="background: #3cb653"></div></div></div>
+    <figcaption><code>hue-rotate(90deg)</code> and its equivalent alike; orange becomes <code>#3cb653</code>, the swatch at the
+    right. </figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: hue-rotate(0.5turn)"></div><div class=src style="filter: url(#hue-rotate-equivalent-1)"></div><div class=sw style="background: #539fed"></div></div></div>
+    <figcaption><code>hue-rotate(0.5turn)</code> and its equivalent alike; orange becomes <code>#539fed</code>, the swatch at the
+    right. A half turn is 180 degrees.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=row><div class=src style="filter: hue-rotate(-90deg)"></div><div class=src style="filter: url(#hue-rotate-equivalent-2)"></div><div class=sw style="background: #ed74d6"></div></div></div>
+    <figcaption><code>hue-rotate(-90deg)</code> and its equivalent alike; orange becomes <code>#ed74d6</code>, the swatch at the
+    right. Negative turns the other way.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mousemove</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; user-select: none; }
+  .meter { margin: 0 20px 10px; font: 12px/20px ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.4.8 mousemove</div>
+  <h1>mousemove</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a pointing device is moved while it is over an
+  element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousemove">Pointer Events §11.4.8</a></span></p>
+</header>
+<section>
+  <h2>Many, for one movement</h2>
+  <p><q>multiple consecutive mousemove events SHOULD be fired for sustained pointer-device movement, rather than a
+  single event for each instance of mouse movement.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousemove">§11.4.8</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Sweep across here.</div>
+      <div class=meter>mousemove events: <span id=count>0</span></div>
+      <ol class=pr-log data-log="mousemove" data-fields="clientX cancelable" data-on="#pad" data-lines=2></ol>
+    </div>
+    <figcaption>Sweep the mouse across the box in one movement: the count goes up by many, each
+    <code>mousemove</code> at a new <code>clientX</code>, and each <code>cancelable</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Outside the window, while dragging</h2>
+  <p><q>In some implementation environments, such as a browser, mousemove events can continue to fire if the user began
+  a drag operation (e.g., a mouse button is pressed) and the pointing device has left the boundary of the user
+  agent.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousemove">§11.4.8</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=away>Press here, drag out of the window.</div>
+      <ol class=pr-log data-log="mousemove mouseup" data-fields="clientX clientY" data-on="document" data-lines=3></ol>
+    </div>
+    <figcaption>Press the box and drag the mouse out past the window's edge, still holding: <code>mousemove</code>s
+    keep coming, with <code>clientX</code> or <code>clientY</code> beyond the viewport, or negative. Release there:
+    <code>mouseup</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Counts the mousemove events over the first box.
+  const count = document.getElementById("count");
+  document.getElementById("pad").addEventListener("mousemove", () => count.textContent = +count.textContent + 1);
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 30px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.5 Subscript and superscript forms: the 'font-variant-position' property</div>
+  <h1>font-variant-position</h1>
+  <p class=pr-lede><code>sub</code> and <code>super</code> enable the font's subscript and superscript glyphs. <q>if a
+  variant glyph is not available for all the characters in the run</q>, reduced forms of the usual glyphs are used for
+  all of them, <q>to avoid a mixture of variant glyphs and synthesized ones that would not align correctly.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-position-prop">CSS Fonts 4 §6.5</a></span></p>
+</header>
+
+<section>
+  <h2>The font's own forms</h2>
+  <p>PR Literata has superior and inferior figures and parentheses, and no letters.</p>
+  <figure>
+    <div class="pr-stage pr-sample">H<span style="font-variant-position: sub">2</span>O x<span style="font-variant-position: super">(2)</span></div>
+    <figcaption>Literata's inferior 2 and superior (2): drawn for their size, on the line's own
+    baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample">H<span style="vertical-align: sub; font-size: smaller">2</span>O x<span style="vertical-align: super; font-size: smaller">(2)</span></div>
+    <figcaption>For comparison, 'vertical-align' and a smaller size: thinner figures, and taller lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A run the font cannot cover</h2>
+  <figure>
+    <div class="pr-stage pr-sample">2<span style="font-variant-position: super">nd</span> x<span style="font-variant-position: super">2n</span></div>
+    <figcaption>"nd" and "2n" have letters, which Literata has no superior forms for: both runs synthesized, the 2
+    as small as the n.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample"><span style="font-variant-position: super">2<span style="font-variant-position: super">2</span></span></div>
+    <figcaption><q>This property is not cumulative.</q> A superscript inside a superscript is no higher. <span class=pr-flag>Safari</span> draws neither 2 as a superior.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters and floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .fl { float: left; width: 30px; height: 30px; background: #4f81bd; }
+  .fr { float: right; width: 30px; height: 30px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.9.3 Interaction with floats</div>
+  <h1>Initial letters and floats</h1>
+  <p class=pr-lede><q>Initial letters are not floats: they are in-flow inline-level content that belongs to a line
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-floats">CSS Inline Layout 3 §7.9.3</a></span>
+  Each paragraph is 13px PR Literata on 20px lines, its first letter blue with <code>initial-letter: 3</code>; the
+  blue squares are 30px floats. <span class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code>
+  and <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>Beside floats, never over them</h2>
+  <p><q>initial letter boxes must not overlap the margin boxes of any floats participating in the same block formatting
+  context.</q> <q>If an inline-start float originates in the first line of content adjacent to an initial letter, then
+  it moves past the initial letter towards the containing block edge</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=fl></div><p class=p>After a float: the letter and its lines start past it.</p></div>
+    <figcaption>A float before the paragraph: the A starts right of the float, and the lines beside it after the
+    A.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>Inline, <span class=fl></span>a float in the first line goes left of the letter.</p></div>
+    <figcaption>A float in the first line: at the left edge, the I moved past it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Floats in later lines clear it</h2>
+  <p><q>if such a float originates in subsequent lines of content adjacent to a (sunk) initial letter, then that float
+  must clear the initial letter.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>Second line here, then a float <span class=fl></span>that goes below the letter.</p></div>
+    <figcaption>A float in the second line: below the S, not beside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

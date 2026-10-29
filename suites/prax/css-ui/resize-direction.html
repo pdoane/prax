@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>resize: block, inline, and the direction of resizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; }
+  .r { width: 80px; height: 60px; padding: 0 6px; overflow: auto; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f;
+       font-size: 12px; line-height: 20px; }
+  .v { writing-mode: vertical-rl; }
+  img { display: block; width: 94px; height: 60px; overflow: auto; resize: both; }
+  textarea { display: block; width: 94px; height: 60px; box-sizing: border-box; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 4.1 Resizing Boxes, block and inline</div>
+  <h1>resize: block, inline, and the direction of resizing</h1>
+  <p class=pr-lede><q>The UA should consider the direction of resizing (as determined by CSS layout), as well as
+  platform conventions and constraints, when deciding how to convey the resizing mechanism to the user.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#resize">CSS Basic User Interface 4 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Flow-relative values</h2>
+  <p><code>block</code> resizes <q>only the block size</q> and <code>inline</code> <q>only the inline size</q>. In
+  <code>vertical-rl</code>, the block end is on the left, and the inline end at the bottom.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class="r v" style="resize: block">block</div></div>
+    <figcaption><code>resize: block</code>: a grip that resizes the width. Safari and Firefox put it bottom left,
+    by the block end; Chrome bottom right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class="r v" style="resize: inline">inline</div></div>
+    <figcaption><code>resize: inline</code>: a grip that resizes the height, placed as for <code>block</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><div class=r style="resize: both; direction: rtl">rtl</div></div>
+    <figcaption><code>direction: rtl</code>: the inline end is on the left. Chrome, Safari and Firefox put the grip
+    bottom left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Optionally, replaced elements</h2>
+  <p><q>UAs may also apply it, regardless of the value of the overflow property, to: Replaced elements representing
+  images or videos</q>. HTML's <code>textarea</code> is a scroll container, and resizable by default.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An <code>img</code> with <code>resize: both</code>: a grip or none. Chrome, Safari and Firefox draw
+    none.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage stage pr-narrow"><textarea></textarea></div>
+    <figcaption>A <code>textarea</code>: a grip in its bottom right corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

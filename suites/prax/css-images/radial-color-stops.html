@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): the gradient line is a ray</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 60px; }
+  .flow { display: flow-root; }
+  .mid { width: 4px; height: 4px; margin: 28px 0 0 78px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.2 Placing Color Stops</div>
+  <h1>radial-gradient(): the gradient line is a ray</h1>
+  <p class=pr-lede><q>The gradient line's starting point is at the center of the gradient, and it extends toward the
+  right, with the ending point on the point where the gradient line intersects the ending shape.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-color-stops">CSS Images 3 §3.2.2</a></span>
+  Each box is 160 by 60, its gradient centered.</p>
+</header>
+
+<section>
+  <h2>Ellipses through each point</h2>
+  <p><q>The color of the gradient at any point is determined by first finding the unique ellipse passing through
+  that point with the same center, orientation, and ratio between major and minor axises as the ending-shape.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(60px 30px, #d68a3c 50%, #b9cde6 50%, #b9cde6 100%)"></div></div>
+    <figcaption>Ending shape 60 by 30 in radius, orange to 50%: an ellipse half its size, 50 to 110 across, 15 to 45
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(80px 20px, #d68a3c 40px, #b9cde6 40px, #b9cde6 80px)"></div></div>
+    <figcaption>Ending shape 80 by 20, orange to <code>40px</code> along the ray to the right, half of it: 40 to 120
+    across, 20 to 40 down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Before 0% and past 100%</h2>
+  <p><q>Locations greater than 100% simply specify a location a correspondingly greater distance from the center of
+  the gradient.</q> Before 0%, <q>color stops placed there can affect the color of non-negative locations</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 20px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%, #6aa36a 200%, #6aa36a 300%)"></div></div>
+    <figcaption><code>circle 20px</code>, stops changing at 100% and 200%: an orange disc of radius 20, light blue to
+    radius 40, green beyond.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="g flow" style="background: radial-gradient(circle 100px, rgb(79 129 189 / 0) -50px, rgb(79 129 189) 100px), white"><div class=mid style="background: rgb(79 129 189 / 0.333)"></div></div></div>
+    <figcaption>Transparent blue at <code>-50px</code> to blue at <code>100px</code>, over white: the center, a third
+    of the way, matches the 4px square there, blue a third opaque.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Document counters in page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 6.1 Page-based counters</div>
+  <h1>Document counters in page-margin boxes</h1>
+  <p class=pr-lede><q>If a counter that has not been reset or incremented within the margin context or the page context is used by counter() or counters() in the margin context, then the resultant value is exactly as if the page-margin box were an element within the document at the start of the page, inside the deepest element in the normal flow that spans the page break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-based-counters">CSS Paged Media 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>A chapter counter</h2>
+  <p>Each <code>h1</code> increments <code>chapter</code>; the header shows it. The header's value is the counter's at the start of the page, before any heading on that page.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; @top-center { content: 'Chapter ' counter(chapter) } } body { counter-reset: chapter } h1 { counter-increment: chapter; margin: 0; font: inherit; font-weight: bold } .pg { break-before: page }</style><h1>One</h1><div>line 1</div><div class=pg><div>line 2</div></div><h1 class=pg>Two</h1><div>line 3</div>"></iframe>
+    <figcaption>Page 1, before One: 'Chapter 0'. Page 2, in chapter One: 'Chapter 1'. Page 3, beginning with Two: 'Chapter 1'. <span class=pr-flag>Chrome</span> 'Chapter 0' on every page. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A counter of the page context hides the document's</h2>
+  <p><q>If a counter is reset or incremented within the page context, it is in scope for all page-margin boxes and obscures all counters of the same name within the document.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; counter-reset: chapter 1; @top-center { content: 'Chapter ' counter(chapter) } } body { counter-reset: chapter 5 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>The document's <code>chapter</code> is 5, but the page context's, reset to 1 on each page, is the one the header shows: 'Chapter 1' on both pages. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

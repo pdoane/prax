@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Float widths: floats inside</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .outer { float: left; }
+  .fl { float: left; height: 20px; }
+  .fr { float: right; height: 20px; }
+  .w { display: inline-block; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.5 Floating, non-replaced elements</div>
+  <h1>Float widths: floats inside</h1>
+  <p class=pr-lede>A float's preferred width when its content holds floats. Each dashed box is a float of auto width,
+  shrinking to fit what is inside it.</p>
+</header>
+
+<section>
+  <h2>What the browsers do where CSS 2 is silent</h2>
+  <p><q>Roughly: calculate the preferred width by formatting the content without breaking lines other than where
+  explicit line breaks occur, and also calculate the preferred minimum width, e.g., by trying all possible line
+  breaks. CSS 2 does not define the exact algorithm.</q> The browsers agree on each figure here. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2 §10.3.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit fl" style="width: 70px">70</div></div></div>
+    <figcaption>Floats side by side add: 50 + 70, 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit fr" style="width: 70px">70</div></div></div>
+    <figcaption>A left float and a right one add too: 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit fl" style="width: 70px; clear: left">70, clear</div></div></div>
+    <figcaption>The second with <code>clear: left</code> starts a new sum: 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div style="width: 0"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit fl" style="width: 70px">70</div></div></div></div>
+    <figcaption>The two floats in no room at all: the preferred minimum is the wider float, 70px, the other below
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit" style="width: 100px">block</div></div></div>
+    <figcaption>A float, then a 100px block, which may run under it: 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><div class="pr-a pr-fit fl" style="width: 50px">50</div><div class="pr-b pr-fit" style="width: 100px; overflow: hidden">hidden</div></div></div>
+    <figcaption>The block with <code>overflow: hidden</code>, which must sit beside it: 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="pr-frame outer"><span class="pr-b pr-fit w" style="width: 100px">word</span><span class="pr-a pr-fit fl" style="width: 50px">50</span></div></div>
+    <figcaption>A float in a line adds to the line: a 100px word and a 50px float, 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

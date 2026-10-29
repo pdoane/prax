@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The top layer</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 3 Top Layer</div>
+  <h1>The top layer</h1>
+  <p class=pr-lede><q>Elements in the top layer do not lay out normally based on their position in the document;
+  instead they generate boxes as if they were siblings of the root element. Top layer elements are rendered in the
+  order they appear in the top layer; the last element in the top layer is rendered on top of everything else.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#top-layer">CSS Positioned Layout 4 §3</a></span>
+  Each frame is a document; a script shows its popovers, which puts them in the top layer.</p>
+</header>
+
+<section>
+  <h2>Out of reach of its ancestors</h2>
+  <p>The dashed box clips what overflows it and has <code>opacity: 0.4</code>; the orange box inside it is 140 by 40,
+  from 30, 30.</p>
+  <figure>
+    <div class=pr-stage style="width: 200px"><iframe class=pr-view style="width: 200px; height: 100px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .clip { position: relative; margin: 10px; width: 80px; height: 40px; overflow: hidden; opacity: 0.4; outline: 1px dashed #6b7381; background: #b9cde6 } .p { position: fixed; top: 30px; left: 30px; width: 140px; height: 40px } .p { position: absolute; top: 20px; left: 20px }</style><div class=clip><div class='p b'></div></div><script></script>"></iframe></div>
+    <figcaption>Not shown as a popover: orange is clipped to the dashed box and faded with it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 200px"><iframe class=pr-view style="width: 200px; height: 100px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .clip { position: relative; margin: 10px; width: 80px; height: 40px; overflow: hidden; opacity: 0.4; outline: 1px dashed #6b7381; background: #b9cde6 } .p { position: fixed; top: 30px; left: 30px; width: 140px; height: 40px }</style><div class=clip><div popover=manual id=p class='p b'></div></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption>Shown as a popover: in the top layer, orange is drawn whole and opaque, 140 by 40, over the dashed box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Above everything, in the order shown</h2>
+  <figure>
+    <div class=pr-stage style="width: 200px"><iframe class=pr-view style="width: 200px; height: 100px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .x { position: fixed; top: 20px; left: 20px; width: 100px; height: 50px; z-index: 2147483647 } .p { position: fixed; top: 40px; left: 60px; width: 100px; height: 50px }</style><div popover=manual id=p class='p b'></div><div class='x a'></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption>Blue, fixed with <code>z-index: 2147483647</code>, comes later in the document; orange, a popover, covers it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 200px"><iframe class=pr-view style="width: 200px; height: 100px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .p { position: fixed; width: 100px; height: 50px }</style><div popover=manual id=g class='p c' style='top: 40px; left: 60px'></div><div popover=manual id=o class='p b' style='top: 20px; left: 20px; z-index: 100'></div><script>o.showPopover(); g.showPopover()</script>"></iframe></div>
+    <figcaption>Two popovers: orange, later in the document and with <code>z-index: 100</code>, is shown first, green last. Green covers orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

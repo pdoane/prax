@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Conditional processing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <clipPath id="half"><rect width="80" height="60" /><rect x="80" width="80" height="60" requiredExtensions="" /></clipPath>
+  <linearGradient id="conditional" requiredExtensions=""><stop stop-color="#6aa36a" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.6.1 Conditional processing overview</div>
+  <h1>Conditional processing</h1>
+  <p class=pr-lede><q>When an element is excluded because of conditional processing, it is treated as if it had a used
+  value of none for the display property.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#ConditionalProcessingOverview">SVG 2 §5.6.1</a></span>
+  Each stage is an SVG 160 by 60. An empty <code>requiredExtensions</code> is false, so excludes its element.</p>
+</header>
+
+<section>
+  <h2>Not displayed, but referenced</h2>
+  <p><q>conditional processing attributes only affect the direct rendering of elements and do not prevent elements
+  from being successfully referenced by other elements (such as via a ‘use’).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" requiredExtensions="" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A rect with <code>requiredExtensions=""</code>: nothing in the dashed outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g id="holder"><rect x="60" y="10" width="40" height="40" fill="#4f81bd" requiredExtensions="" /></g><use href="#holder" /><rect class=pr-ghost x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>A <code>use</code> of a group holding such a rect: the reference resolves, and the rect's copy keeps
+    its attribute, so it is excluded too; nothing in the outline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Never-rendered elements and their content</h2>
+  <p><q>conditional processing will have no effect on never-rendered elements</q>; <q>conditional processing of child
+  content of a never-rendered container element (e.g., a ‘clipPath’ or a ‘mask’) will affect whether that child
+  content contributes to the graphical effect.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#conditional)" /></svg></div>
+    <figcaption>A gradient of one green stop with <code>requiredExtensions=""</code>: no effect on it, green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" clip-path="url(#half)" /></svg></div>
+    <figcaption>A clip of the left half and, excluded, the right: only the left half, to x 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

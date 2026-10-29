@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Calibrated CMYK</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  @color-profile --fogra39 { src: url(../../../third_party/icc/Coated_Fogra39L_VIGC_300.icc); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 5.4 CSS and Print: Using Calibrated CMYK and Other Printed Color Spaces</div>
+  <h1>Calibrated CMYK</h1>
+  <p class=pr-lede><q>The @color-profile at-rule is not restricted to RGB color spaces.</q> <q>Because the actual color resulting
+  from a given CMYK combination is known, an on-screen visualization of the printed output (soft-proof) can be
+  made.</q> <code>--fogra39</code> is the specification's FOGRA39 profile, <code>Coated_Fogra39L_VIGC_300.icc</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#cal-cmyk">CSS Color 5
+  §5.4</a></span> Each pair is the color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Ink percentages to a color</h2>
+  <p><code>color(--fogra39 0% 70% 20% 0%)</code>: <q>In this profile, this resolves
+  to the color lab(63.673303% 51.576902 5.811058)</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--fogra39 0% 70% 20% 0%)"></div><div class=sw style="background: lab(63.673303% 51.576902 5.811058)"></div></div>
+    <figcaption>The CMYK color beside its <code>lab()</code>: one rose pink. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the CMYK colors draw nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--fogra39 0% 0% 0% 100%)"></div><div class=sw style="background: color(--fogra39 0% 0% 0% 0%)"></div></div>
+    <figcaption>Black ink alone: a near-black, not pure black. No ink: the paper's white. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the CMYK colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outside the sRGB gamut</h2>
+  <p><q>a bright green which is outside the sRGB gamut</q>: <code>color(--fogra39 90% 0%
+  90% 0%)</code> <q>corresponds to lab(56.596645% -58.995875 28.072154)</q>; on an sRGB display it is gamut mapped.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(--fogra39 90% 0% 90% 0%)"></div><div class=sw style="background: lab(56.596645% -58.995875 28.072154)"></div></div>
+    <figcaption>The green beside its <code>lab()</code>: one green, drawn the same way. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None supports <code>@color-profile</code>: the CMYK colors draw nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

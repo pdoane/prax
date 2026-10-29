@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>How elements and groups are rendered</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .multiply { mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.5 How elements are rendered</div>
+  <h1>How elements and groups are rendered</h1>
+  <p class=pr-lede><q>Individual graphics elements are treated as if they are a non-isolated group, the components
+  (fill, stroke, etc) that make up a graphic element (See Painting shapes and text) being members of that group.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#Elements">SVG 2 §3.5</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>An element's fill and stroke, one group</h2>
+  <p>A rect 80 by 30 at 40, 15, filled blue and stroked orange 10 wide, so its stroke covers 5 of its fill on each
+  side.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="15" width="80" height="30" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" opacity="0.5" /></svg></div>
+    <figcaption><code>opacity="0.5"</code> on the element: the group made opaque, then faded; no blue under the
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="15" width="80" height="30" fill="#4f81bd" fill-opacity="0.5" stroke="#d68a3c" stroke-width="10" stroke-opacity="0.5" /></svg></div>
+    <figcaption><code>fill-opacity</code> and <code>stroke-opacity</code> 0.5 instead: the inner half of the stroke
+    over the fill, a darker band.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Groups: isolated when an effect applies</h2>
+  <p><q>Applying any such effects to a group makes that group isolated.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#Grouping">§3.6</a></span>
+  An orange band behind a <code>g</code> holding a blue square with <code>mix-blend-mode: multiply</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect y="20" width="160" height="20" fill="#d68a3c" /><g><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></g></svg></div>
+    <figcaption>No effect on the <code>g</code>: non-isolated, the blend reaches the band, dark where they cross.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><filter id="none-filter"><feOffset /></filter><rect y="20" width="160" height="20" fill="#d68a3c" /><g filter="url(#none-filter)"><rect class=multiply x="60" y="10" width="40" height="40" fill="#4f81bd" /></g></svg></div>
+    <figcaption>A filter that changes nothing on the <code>g</code>: isolated, plain blue over the band. <span class=pr-flag>Safari</span> Dark where
+    they cross.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

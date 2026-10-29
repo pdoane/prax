@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pixel manipulation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.16 Pixel manipulation</div>
+  <h1>Pixel manipulation</h1>
+  <p class=pr-lede><q>The current path, transformation matrix, shadow attributes, global alpha, the clipping region, and
+  current compositing and blending operator must not affect the methods described in this section.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#pixel-manipulation">HTML §4.12.5.1.16</a></span>
+  Each ImageData here is 40 by 40, made by the page with <code>createImageData</code> and filled opaque orange.</p>
+</header>
+<section>
+  <h2>Pixels replaced wholesale</h2>
+  <p>putImageData: <q>pixels in the canvas are replaced wholesale, with no composition, alpha blending, no shadows,
+  etc.</q> <q>If a dirty rectangle is provided, only the pixels from that rectangle are painted.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=wholesale></canvas></div>
+    <figcaption>Blue everywhere; then a translation, <code>globalAlpha</code> 0.3, a shadow, a clip to a corner and
+    <code>destination-over</code>; then the data put at (10, 10): an opaque orange square there, 40 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=dirty></canvas></div>
+    <figcaption>Put at (10, 10) with the dirty rectangle (10, 10, 20, 20): only its middle, an orange square from (20,
+    20) to (40, 40).</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Reading back, past the edge</h2>
+  <p>getImageData: <q>Set the pixels values of imageData for areas of the source rectangle that are outside of the output
+  bitmap to transparent black.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=outside></canvas></div>
+    <figcaption>Blue from x 0 to 60. Its pixels from (−20, −20), 50 by 50, read and put at (120, 10): blue from (140,
+    30) to (170, 60), and the strips above and left of it transparent.</figcaption>
+  </figure>
+</section>
+<script>
+  function orange(context) {
+    const data = context.createImageData(40, 40);
+    for (let i = 0; i < data.data.length; i += 4)
+      data.data.set([214, 138, 60, 255], i);
+    return data;
+  }
+  const draw = {
+    wholesale(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 200, 60);
+      context.translate(50, 0);
+      context.globalAlpha = 0.3;
+      context.shadowColor = "black";
+      context.shadowBlur = 10;
+      context.beginPath();
+      context.rect(0, 0, 5, 5);
+      context.clip();
+      context.globalCompositeOperation = "destination-over";
+      context.putImageData(orange(context), 10, 10);
+    },
+    dirty(context) {
+      context.putImageData(orange(context), 10, 10, 10, 10, 20, 20);
+    },
+    outside(context) {
+      context.fillStyle = "#4f81bd";
+      context.fillRect(0, 0, 60, 60);
+      context.putImageData(context.getImageData(-20, -20, 50, 50), 120, 10);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

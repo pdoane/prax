@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A product grid that fills its track count, with badges, prices, and one wide card. Leans on: auto-fill grid tracks with a minimum width, cards as flex columns with the button pinned to the bottom, object-fit thumbnails, absolutely positioned badges, and one card spanning two columns. -->
+<title>Card grid</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.bar { display:flex; align-items:baseline; gap:10px; margin-bottom:10px }
+.bar h2 { font-size:16px; margin:0 }
+.bar .cnt { font-size:11px; color:#8a93a0; flex:1 }
+.bar .chip { font-size:10px; background:#fff; border:1px solid #d3d8de; border-radius:99px; padding:2px 9px; color:#4a5561 }
+.bar .chip.on { background:#22303f; border-color:#22303f; color:#fff }
+.grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px }
+.card { background:#fff; border:1px solid #d9dde2; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; color:#22282f; position:relative }
+.card .shot { position:relative; height:96px; background:#e7eaef }
+.card .shot img { display:block; width:100%; height:100%; object-fit:cover }
+.card .flag { position:absolute; top:6px; left:6px; font-size:8.5px; font-weight:bold; text-transform:uppercase; letter-spacing:.07em; border-radius:3px; padding:2px 6px; color:#fff; background:#c0392b }
+.card .flag.new { background:#2f7d4f }
+.card .flag.low { background:#8a6116 }
+.body { padding:8px 9px; display:flex; flex-direction:column; flex:1 }
+.body h3 { font-size:12px; margin:0 0 1px; line-height:1.25 }
+.body .who { font-size:10px; color:#8a93a0; margin-bottom:4px }
+.stars { font-size:9px; color:#e0a12e; margin-bottom:5px }
+.stars span { color:#8a93a0 }
+.grow { flex:1 }
+.price { display:flex; align-items:baseline; gap:5px }
+.price b { font-size:14px }
+.price s { font-size:10px; color:#a9b1bb }
+.buy { display:block; text-align:center; font-size:10px; font-weight:bold; border:1px solid #ccd3da; border-radius:6px; padding:4px 0; margin-top:6px; color:#3f4954 }
+.card.hot .buy { background:#3d82c4; border-color:#2f6ba6; color:#fff }
+.card.gone { opacity:.6 }
+.card.gone .buy { color:#a9b1bb; border-style:dashed }
+.wide { grid-column:span 2; display:flex; align-items:center; gap:10px; background:#22303f; color:#fff; border-radius:10px; padding:10px 12px }
+.wide h3 { font-size:13px; margin:0 0 2px }
+.wide p { font-size:10.5px; color:#a9b8c8; line-height:1.4 }
+.wide .go { font-size:10px; font-weight:bold; border:1px solid #6a7d92; border-radius:6px; padding:4px 10px; flex:none }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h2>Mill store</h2>
+  <span class="cnt">18 products</span>
+  <span class="chip on">In stock</span>
+  <span class="chip">Flour</span>
+  <span class="chip">Under &#8364;30</span>
+</div>
+
+<div class="grid">
+  <div class="card hot">
+    <div class="shot"><img src="support/landscape.jpg" alt="Wheat field above the valley" /><span class="flag new">New</span></div>
+    <div class="body">
+      <h3>Stone-ground wheat T65</h3>
+      <div class="who">Moulin de Vierset &#183; 25 kg</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9734; <span>(41)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;24.80</b><s>&#8364;27.00</s></div>
+      <span class="buy">Add to basket</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="shot"><img src="support/tile.png" alt="Rye grains" /></div>
+    <div class="body">
+      <h3>Dark rye flour</h3>
+      <div class="who">Moulin de Vierset &#183; 25 kg</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733; <span>(12)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;27.60</b></div>
+      <span class="buy">Add to basket</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="shot"><img src="support/cat.jpg" alt="The mill cat on a sack" /><span class="flag low">Low stock</span></div>
+    <div class="body">
+      <h3>Linen sack, printed</h3>
+      <div class="who">Workshop Anders &#183; 25 kg size</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9734; <span>(8)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;12.00</b></div>
+      <span class="buy">Add to basket</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="shot"><img src="support/portrait.jpg" alt="Baker holding a loaf" /></div>
+    <div class="body">
+      <h3>Spelt, whole grain</h3>
+      <div class="who">Moulin de Vierset &#183; 10 kg</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9734;&#9734; <span>(5)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;19.50</b></div>
+      <span class="buy">Add to basket</span>
+    </div>
+  </div>
+
+  <div class="card gone">
+    <div class="shot"><img src="support/border-frame.png" alt="Sieve mesh sample" /><span class="flag">Sold out</span></div>
+    <div class="body">
+      <h3>Sieve mesh, 400 micron</h3>
+      <div class="who">Atelier Namur &#183; 2 m roll</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9734; <span>(3)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;96.00</b></div>
+      <span class="buy">Notify me</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="shot"><img src="support/tile.png" alt="Coarse bran" /></div>
+    <div class="body">
+      <h3>Coarse bran</h3>
+      <div class="who">Moulin de Vierset &#183; 20 kg</div>
+      <div class="stars">&#9733;&#9733;&#9733;&#9734;&#9734; <span>(9)</span></div>
+      <div class="grow"></div>
+      <div class="price"><b>&#8364;4.60</b></div>
+      <span class="buy">Add to basket</span>
+    </div>
+  </div>
+
+  <div class="wide">
+    <div>
+      <h3>Standing orders save the drive</h3>
+      <p>Bakeries on a weekly order get a fixed price for the year and the first
+      drop of every batch. Twenty-two bakeries are on one today.</p>
+    </div>
+    <span class="go">How it works</span>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>reportValidity() and custom errors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0 0 10px; font-size: 12px; vertical-align: top; }
+  .pad textarea { resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.21.3 The constraint validation API</div>
+  <h1>reportValidity() and custom errors</h1>
+  <p class=pr-lede><q>Returns true if the element's value has no validity problems; otherwise, returns false, fires an
+  invalid event at the element, and (if the event isn't canceled) reports the problem to the user.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#the-constraint-validation-api">HTML §4.10.21.3</a></span></p>
+</header>
+
+<section>
+  <h2>Checked, or reported</h2>
+  <p><code>checkValidity()</code> fires <code>invalid</code> <q>(though canceling has no effect)</q> and reports
+  nothing; <code>reportValidity()</code>: <q>If report is true, then report the problems with the constraints of this
+  element to the user.</q> The textarea is <code>required</code> and empty. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#the-constraint-validation-api">§4.10.21.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <textarea id=needed cols=8 rows=1 required></textarea>
+        <button onclick="needed.checkValidity()">checkValidity()</button>
+        <button onclick="needed.reportValidity()">reportValidity()</button>
+      </div>
+      <ol class=pr-log data-log="invalid" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>checkValidity(): <code>invalid</code> is logged, and nothing else. reportValidity():
+    <code>invalid</code>, and the browser shows that the field is required, pointing at it. Type a letter: both log
+    nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A custom error, and its message</h2>
+  <p><q>When its value is not the empty string, the element is suffering from a custom error.</q> <q>The user agent
+  should use the custom validity error message when alerting the user to the problem with the control.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#definitions">§4.10.21.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <textarea id=custom cols=8 rows=1>fine</textarea>
+        <button onclick="custom.setCustomValidity('Not on Sundays.')">setCustomValidity('Not on Sundays.')</button>
+        <button onclick="custom.setCustomValidity('')">setCustomValidity('')</button>
+        <button onclick="custom.reportValidity()">reportValidity()</button>
+      </div>
+    </div>
+    <figcaption>reportValidity(): nothing shown. Set the message, then reportValidity(): the browser shows "Not on
+    Sundays." at the textarea. Clear it with the empty string: nothing again.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

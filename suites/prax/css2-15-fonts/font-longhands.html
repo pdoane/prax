@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font shorthand and its longhands</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .lines { padding: 0 6px; white-space: nowrap; }
+  .lines > div { background: rgba(79, 129, 189, 0.25); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.8 Shorthand font property: the 'font' property</div>
+  <h1>The font shorthand and its longhands</h1>
+  <p class=pr-lede><q>All font-related properties are first reset to their initial values, including those listed in the
+  preceding paragraph. Then, those properties that are given explicit values in the 'font' shorthand are set to those
+  values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-shorthand.html">The font shorthand</a>.</p>
+</header>
+
+<section>
+  <h2>Each longhand, separately</h2>
+  <p>A longhand after the shorthand changes only itself. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <figure>
+    <div class="pr-stage lines"><div id=after style="font: bold 20px serif; font-style: italic">bold, then italic</div></div>
+    <figcaption><code>font: bold 20px serif; font-style: italic</code>: bold and italic.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lines"><div style="font-style: italic; font: bold 20px serif">bold, no italic</div></div>
+    <figcaption><code>font-style: italic; font: bold 20px serif</code>: the shorthand resets the style to
+    <code>normal</code>: bold and upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

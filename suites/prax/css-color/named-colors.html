@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Named colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .grid { display: flow-root; padding: 10px 0 0; }
+  .pair { display: inline-block; vertical-align: top; width: 80px; margin: 0 0 8px 8px; }
+  .pair > div { display: inline-block; vertical-align: top; width: 40px; height: 40px; }
+  .pair > span { display: block; color: #4a5261; font: 11px/14px ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .pr-stage.row { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.1 Named Colors</div>
+  <h1>Named colors</h1>
+  <p class=pr-lede><q>CSS defines a large set of named colors, so that common colors can be written and read more
+  easily.</q> <q>The names resolve to colors in sRGB.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#named-colors">CSS Color 4 §6.1</a></span> The next four pages hold all
+  148.</p>
+</header>
+
+<section>
+  <h2>The sixteen from the VGA palette</h2>
+  <p><q>16 of CSS's named colors come from the VGA palette originally, and were then adopted into HTML</q>. Each pair
+  is the named color, then the hex color the table gives it (in the source): each pair one color.</p>
+  <div class="pr-stage grid" style="width: 534px">
+    <div class=pair><div style="background: aqua"></div><div style="background: #00ffff"></div><span>aqua</span></div>
+    <div class=pair><div style="background: black"></div><div style="background: #000000"></div><span>black</span></div>
+    <div class=pair><div style="background: blue"></div><div style="background: #0000ff"></div><span>blue</span></div>
+    <div class=pair><div style="background: fuchsia"></div><div style="background: #ff00ff"></div><span>fuchsia</span></div>
+    <div class=pair><div style="background: gray"></div><div style="background: #808080"></div><span>gray</span></div>
+    <div class=pair><div style="background: green"></div><div style="background: #008000"></div><span>green</span></div>
+    <div class=pair><div style="background: lime"></div><div style="background: #00ff00"></div><span>lime</span></div>
+    <div class=pair><div style="background: maroon"></div><div style="background: #800000"></div><span>maroon</span></div>
+    <div class=pair><div style="background: navy"></div><div style="background: #000080"></div><span>navy</span></div>
+    <div class=pair><div style="background: olive"></div><div style="background: #808000"></div><span>olive</span></div>
+    <div class=pair><div style="background: purple"></div><div style="background: #800080"></div><span>purple</span></div>
+    <div class=pair><div style="background: red"></div><div style="background: #ff0000"></div><span>red</span></div>
+    <div class=pair><div style="background: silver"></div><div style="background: #c0c0c0"></div><span>silver</span></div>
+    <div class=pair><div style="background: teal"></div><div style="background: #008080"></div><span>teal</span></div>
+    <div class=pair><div style="background: white"></div><div style="background: #ffffff"></div><span>white</span></div>
+    <div class=pair><div style="background: yellow"></div><div style="background: #ffff00"></div><span>yellow</span></div>
+  </div>
+  <p></p>
+</section>
+
+<section>
+  <h2>Names that mislead</h2>
+  <p>A note: <q>the names are not even internally consistent (darkgray is lighter than gray, while lightpink is
+  darker than pink)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row row"><div class=sw style="background: gray"></div><div class=sw style="background: darkgray"></div></div>
+    <figcaption><code>gray</code>, then <code>darkgray</code>: the second is the lighter.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row row"><div class=sw style="background: pink"></div><div class=sw style="background: lightpink"></div></div>
+    <figcaption><code>pink</code>, then <code>lightpink</code>: the second is the darker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-repeat</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; mask-border: url(support/frame-dots.svg) 10 fill; }
+  .thin { width: 135px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.6 Mask Border Image Tiling: the mask-border-repeat property</div>
+  <h1>mask-border-repeat</h1>
+  <p class=pr-lede><q>This property specifies how the images for the sides and the middle part of the mask border image
+  are scaled and tiled. The first keyword applies to the horizontal sides, the second to the vertical ones.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-repeat">CSS Masking 1 §8.6</a></span>
+  Each box is blue, masked by a 30 by 30 image sliced at 10: opaque 10px squares in the corners, and one dot 6px across
+  in each edge piece. Its middle is empty, and <code>fill</code> uses it, so the middle is masked away.</p>
+</header>
+
+<section>
+  <h2>stretch, repeat, round, space</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption><code>stretch</code>, the initial value, 140 by 60: one dot stretched into an ellipse 72 by 6 on the
+    top and bottom, 6 by 24 at the sides. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box
+    unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-repeat: repeat"></div></div>
+    <figcaption><code>repeat</code>: twelve dots along the top and bottom, 10px apart and centered, and four down each
+    side. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box thin" style="mask-border-repeat: round"></div></div>
+    <figcaption>135 by 60, <code>round</code>: the 115px top rounds to eleven tiles, each 10.45px wide.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box thin" style="mask-border-repeat: space repeat"></div></div>
+    <figcaption>135 by 60, <code>space repeat</code>: eleven dots 10px wide along the top with the 5px left spread
+    between them; four dots down each side. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The
+    box unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

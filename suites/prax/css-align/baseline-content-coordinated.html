@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baseline content-alignment: who takes part</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  table { width: 200px; border-collapse: collapse; }
+  td { height: 40px; padding: 0 6px; border: 1px solid #2c5a8f; background: #f4f5f7; font-size: 13px; line-height: 16px; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; height: 60px; }
+  .g > div { background: #f9cc9d; line-height: 1; padding: 0 3px; align-content: baseline; }
+  .s { font-size: 13px; }
+  .l { font-size: 32px; line-height: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 5.4 Baseline Content-Alignment, participation</div>
+  <h1>Baseline content-alignment: who takes part</h1>
+  <p class=pr-lede><q>in order to participate in baseline content-alignment it must also have a coordinated
+  self-alignment preference, to guarantee that the box lines up the relevant edge with other boxes in its
+  baseline-sharing group.</q> <q>It otherwise takes its fallback alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-align-content">CSS Box Alignment 3 §5.4</a></span></p>
+</header>
+
+<section>
+  <h2>A coordinated self-alignment preference</h2>
+  <p>For “first”, <q>the relevant self-alignment property either is or aligns identically to stretch or
+  self-start</q>. A grid row 60px tall; all items <code>align-content: baseline</code>, the third 30px tall.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=s>Ag</div><div class=l>Ag</div><div class=s style="height: 30px; align-self: start">Ag</div></div></div>
+    <figcaption>The third <code>align-self: start</code>: coordinated: all three on one baseline. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Each text at its item's top.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=s>Ag</div><div class=l>Ag</div><div class=s style="height: 30px; align-self: end">Ag</div></div></div>
+    <figcaption>The third <code>align-self: end</code>: not coordinated, its text at its top by the fallback; the
+    first two on one baseline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    The first two's text at their top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Table cells: the startmost or endmost row</h2>
+  <p><q>A (non-replaced) table cell participates in first/last baseline content-alignment in its startmost/endmost
+  row</q>. Rows are 40px; A spans both, at 32px; C, in the second row, has two lines.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td rowspan=2 class=l style="align-content: last baseline">A</td><td style="vertical-align: top">B</td></tr><tr><td style="align-content: last baseline">C<br>C</td></tr></table></div>
+    <figcaption>A and C <code>last baseline</code>: A's baseline on C's second line, at the bottom of the second
+    row. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> A in the middle. <span
+    class=pr-flag>Safari</span> A at the bottom, C at the top of its row.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr><td rowspan=2 class=l style="align-content: baseline">A</td><td style="align-content: baseline">B</td></tr><tr><td>C<br>C</td></tr></table></div>
+    <figcaption>A and B <code>first baseline</code>: A's baseline on B's, in the first row. <span
+    class=pr-flag>Firefox</span> A in the middle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

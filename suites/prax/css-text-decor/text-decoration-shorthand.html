@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/40px "PR Arimo"; text-decoration-skip-ink: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.6 Text Decoration Shorthand: the text-decoration property</div>
+  <h1>The text-decoration shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for setting 'text-decoration-line', 'text-decoration-thickness',
+  'text-decoration-style', and 'text-decoration-color' in one declaration. Omitted values are set to their initial
+  values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-property">CSS Text Decoration 4 §2.6</a></span></p>
+</header>
+
+<section>
+  <h2>All four in one declaration</h2>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration: underline 4px wavy #c0392b">all four</span></div>
+    <figcaption><code>underline 4px wavy red</code>: a red wavy underline, 4px thick, under "all four".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t" style="color: #2c5a8f"><span style="text-decoration: underline">link</span> <span style="text-decoration: underline; text-decoration: #000080 dotted underline">link</span></div>
+    <figcaption>The spec's example: a solid blue underline under the first "link", a navy dotted one under the
+    second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Omitted values are reset; the position is not among them</h2>
+  <p><q>The shorthand purposefully omits the 'text-underline-position' property, which is a language/writing-system–dependent
+  setting that keys off the content, so that it can cascade and inherit independently from the (uninherited)
+  stylistic settings of the 'text-decoration' shorthand.</q></p>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-style: wavy; text-decoration-color: #c0392b; text-decoration: overline">reset</span></div>
+    <figcaption>Wavy and red, then <code>text-decoration: overline</code>: a plain black solid overline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-underline-position: under; text-decoration: underline #c0392b">gyp under</span></div>
+    <figcaption><code>under</code>, then the shorthand: the red line is still below the descenders of
+    "gyp".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

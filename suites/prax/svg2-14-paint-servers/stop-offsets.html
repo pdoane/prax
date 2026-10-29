@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gradient stops: offsets clamped and ordered</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="clamped" x1="0.25" x2="0.75"><stop offset="-1" stop-color="#4f81bd" /><stop offset="2" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="clamped-reflect" x1="0.25" x2="0.75" spreadMethod="reflect"><stop offset="-1" stop-color="#4f81bd" /><stop offset="2" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="backward"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.25" stop-color="#d68a3c" /><stop offset="1" stop-color="#6aa36a" /></linearGradient>
+  <linearGradient id="same"><stop offset="0" stop-color="white" /><stop offset="0.5" stop-color="#d68a3c" /><stop offset="0.5" stop-color="#4f81bd" /><stop offset="1" stop-color="black" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.4.3 Notes on gradient stops</div>
+  <h1>Gradient stops: offsets clamped and ordered</h1>
+  <p class=pr-lede><q>Gradient offset values less than 0 (or less than 0%) are rounded up to 0%. Gradient offset values
+  greater than 1 (or greater than 100%) are rounded down to 100%.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#StopNotes">SVG 2 §14.2.4.3</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>Clamped to 0 and 1</h2>
+  <p>Each vector runs from x 50 to 110, with stops at <code>-1</code>, blue, and <code>2</code>, orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#clamped)" /></svg></div>
+    <figcaption>At 0 and 1: blue to x 50, then to orange at 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#clamped-reflect)" /></svg></div>
+    <figcaption>With <code>reflect</code>: orange again at 20 and 140, blue at 50, orange at 110.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In order, and the latter at a tie</h2>
+  <p><q>If a given gradient stop's offset value is not equal to or greater than all previous offset values, then the
+  offset value is adjusted to be equal to the largest of all previous offset values.</q> <q>If two gradient stops
+  have the same offset value, then the latter gradient stop controls the color value at the overlap point.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#backward)" /></svg></div>
+    <figcaption>Blue at 0.5, orange at 0.25, green at 1: orange moves to 0.5, so blue to x 80, then orange
+    to green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#same)" /></svg></div>
+    <figcaption>White to orange at 0.5, blue at 0.5 to black: <q>abruptly shifts</q> from orange to blue at x
+    80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

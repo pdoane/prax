@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Grid containers: grid and inline-grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { grid-template-columns: 40px 40px; }
+  .flt { float: left; width: 40px; height: 40px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 5.1 Establishing Grid Containers: the grid and inline-grid display values</div>
+  <h1>Grid containers: grid and inline-grid</h1>
+  <p class=pr-lede><q>A grid container that is not a subgrid establishes an independent grid formatting context for its
+  contents. This is the same as establishing an independent block formatting context, except that grid layout is used
+  instead of block layout</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-containers">CSS Grid Layout 2 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Block-level and inline-level</h2>
+  <p><code>grid</code> <q>causes an element to generate a grid container box that is block-level when placed in flow
+  layout.</q> <code>inline-grid</code> generates one <q>that is inline-level</q>. Each dashed container has two 40px
+  columns holding A and B, between "one" and "two".</p>
+  <figure>
+    <div class=pr-stage>one <span class="pr-frame g" style="display: grid"><span class=pr-a>A</span><span class=pr-b>B</span></span> two</div>
+    <figcaption><code>grid</code>: a line of its own, across the whole stage, "one" above it and "two" below; A and B
+    in its first 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one <span class="pr-frame g" style="display: inline-grid"><span class=pr-a>A</span><span class=pr-b>B</span></span> two</div>
+    <figcaption><code>inline-grid</code>: on the line between "one" and "two", 80px wide, as its columns.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An independent formatting context</h2>
+  <p><q>floats do not intrude into the grid container, and the grid container's margins do not collapse with the
+  margins of its contents.</q></p>
+  <figure>
+    <div class=pr-stage><div class=flt></div><div class="pr-frame g" style="display: grid"><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>After a purple float 40px wide, the dashed grid container sits beside it, from 40px, and A at
+    40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-parent g" style="display: grid"><div class=pr-a style="margin: 20px 0">A</div></div></div>
+    <figcaption>A has <code>margin: 20px 0</code>: the tinted container is 60px tall and A from 20px to 40px; the
+    margins stay inside.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

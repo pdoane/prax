@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: how much clearance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: how much clearance</h1>
+  <p class=pr-lede>CSS 2 allows two amounts of clearance, which differ where the box's hypothetical position is past
+  the float's bottom. Every named box is 20px tall unless it says otherwise; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The greater amount, or the float's bottom</h2>
+  <p><q>Then the amount of clearance is set to the greater of: 1. The amount necessary to place the border edge of the
+  block even with the bottom outer edge of the lowest float that is to be cleared. 2. The amount necessary to place
+  the top border edge of the block at its hypothetical position.</q> <q>Alternatively, clearance is set exactly to the
+  amount necessary to place the border edge of the block even with the bottom outer edge of the lowest float that is
+  to be cleared.</q> <q>Both behaviors are allowed</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2 §9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent><div class="pr-a pr-fit f" style="height: 60px">fl</div><div class=pr-b style="margin-top: 100px; clear: left">child: mt 100</div></div></div>
+    <figcaption>Without <code>clear</code>, the child's 100px margin would escape the parent: it, the parent and the
+    float would be at 120. The first rule keeps the child at 120; the alternative puts it at the float's bottom,
+    80px, which is where it is here.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

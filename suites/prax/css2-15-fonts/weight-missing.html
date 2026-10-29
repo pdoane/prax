@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font weight: missing weights</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ladder { padding: 0 6px; font-size: 16px; line-height: 20px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.6 Font boldness: the 'font-weight' property</div>
+  <h1>Font weight: missing weights</h1>
+  <p class=pr-lede><q>Once the font family's weights are mapped onto the CSS scale, missing weights are selected as
+  follows</q>. A weight below 400 looks lighter first, one above 500 darker first. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2 §15.6</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/missing-weights.html">Missing weights</a>.</p>
+</header>
+
+<section>
+  <h2>Looking down, then up; up, then down</h2>
+  <p><q>If the desired weight is less than 400, weights below the desired weight are checked in descending order
+  followed by weights above the desired weight in ascending order until a match is found.</q> <q>If the desired weight
+  is greater than 500, weights above desired weight are checked in ascending order followed by weights below the
+  desired weight in descending order</q>. <q>If the desired weight is 400, 500 is checked first</q>; <q>if the desired
+  weight is 500, 400 is checked first and then the rule for desired weights less than 400 is used.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2 §15.6</a></span></p>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: Georgia">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 200">200 Handgloves</div>
+      <div style="font-weight: 300">300 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 800">800 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>Georgia has a regular face (400) and a bold one (700). 100 to 300 find nothing lighter and take 400;
+    500 takes 400; 600 takes 700; 800 and 900 find nothing darker and take 700.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: Helvetica">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 200">200 Handgloves</div>
+      <div style="font-weight: 300">300 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 800">800 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>Helvetica has light (300), regular (400) and bold (700) faces. 100 and 200 take the light face, 500
+    the regular one, and 600, 800 and 900 the bold one.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

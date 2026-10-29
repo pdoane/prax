@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Highlighted replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  body { user-select: none; -webkit-user-select: none; }
+  .t { padding: 0 10px; font: 20px/40px "PR Arimo"; color: #1f2430; user-select: text; -webkit-user-select: text; }
+  img { width: 40px; height: 20px; vertical-align: -3px; }
+  .wash ::selection { background-color: #4f81bd; color: white; }
+  .translucent ::highlight(h) { background-color: rgb(79 129 189 / 0.5); color: rgb(255 255 255 / 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.6.4 Replaced Elements</div>
+  <h1>Highlighted replaced elements</h1>
+  <p class=pr-lede><q>For non-replaced content, the UA must honor the color and background-color (including their alpha
+  channels) as specified. However, for replaced content, the UA should create a semi-transparent wash to coat the
+  content so that it can show through the selection.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-replaced">CSS Pseudo-Elements 4 §3.6.4</a></span></p>
+</header>
+
+<section>
+  <h2>Text: the colors as given</h2>
+  <figure>
+    <div class="pr-stage translucent"><div class=t><span data-highlight=h>Half</span> text</div></div>
+    <figcaption>A custom highlight with a half-opaque blue background and half-opaque white text: the guides show
+    through the blue, and the letters are pale.</figcaption>
+  </figure>
+</section>
+
+<section class=wash>
+  <h2>An image: a wash</h2>
+  <p><q>This wash should be of the specified background-color if that is not transparent, else of the specified
+  color; however the UA may adjust the alpha channel.</q> The line holds the 40 by 20 flag of four colors, selected
+  with the text around it, by a script, with <code>::selection</code> white on blue. Safari's stills show no
+  selection: their window is never the focused one.</p>
+  <figure>
+    <div class=pr-stage><div class=t><span data-highlight=selection>A <img src=../shared/resources/flag-40x20.png alt=""> flag</span></div></div>
+    <figcaption>The text white on blue; the flag may be coated in a translucent blue, through which its colors
+    show.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

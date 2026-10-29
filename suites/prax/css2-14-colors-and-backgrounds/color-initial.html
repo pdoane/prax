@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Foreground color: the initial value</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.1 Foreground color: the 'color' property</div>
+  <h1>Foreground color: the initial value</h1>
+  <p class=pr-lede>The color text has when nothing gives it one. Each frame is a document of its own, whose text has no
+  <code>color</code> from its style sheet.</p>
+</header>
+
+<section>
+  <h2>Up to the user agent</h2>
+  <p>Initial: <q>depends on user agent</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#colors">CSS 2 §14.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 40px" srcdoc="<style>body { margin: 0 6px; font: 24px/40px sans-serif }</style>Initial"></iframe></div>
+    <figcaption>A frame's text with no <code>color</code> given: the user agent's initial color, black in Chrome.
+    <span class="pr-flag pr-since">Since CSS 2</span> CSS Color 4 makes it <code>CanvasText</code>.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-color-4/#the-color-property">CSS Color 4 §3.2</a>, <a href="https://drafts.csswg.org/css-color-4/#css-system-colors">§6.2</a></div>
+  <h2>CanvasText</h2>
+  <p>The initial value is now a system color: <q>Initial: CanvasText</q>, <q>Text in application content or
+  documents.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#the-color-property">CSS Color 4 §3.2</a>, <a href="https://drafts.csswg.org/css-color-4/#css-system-colors">§6.2</a></span> It is no longer left to the user agent: it is the
+  color the document's color scheme gives text, as <code>Canvas</code> is the one it gives the page.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="color: #2c8a3c"><span id=c1 style="color: initial">Initial</span></div>
+    <figcaption><code>color: initial</code> in a green stage, on a page with a light scheme: <code>CanvasText</code>,
+    black.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 40px" srcdoc="<style>:root { color-scheme: dark } body { margin: 0 6px; font: 24px/40px sans-serif }</style>Initial"></iframe></div>
+    <figcaption>A frame with <code>color-scheme: dark</code> and no <code>color</code>: the dark scheme's
+    <code>CanvasText</code>, light text on its dark <code>Canvas</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

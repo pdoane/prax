@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line-relative mappings: left and right</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; writing-mode: vertical-rl; width: 80px; height: 100px; }
+  .fl { float: left; width: 20px; height: 20px; background: #4f81bd; }
+  .fr { float: right; width: 20px; height: 20px; background: #d68a3c; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.5 Line-Relative Mappings, line-left and line-right</div>
+  <h1>Line-relative mappings: left and right</h1>
+  <p class=pr-lede><q>The line-right and line-left directions are calculated with respect to the writing mode of the
+  box and used to interpret the left and right values of</q> <code>text-align</code>; <q>with respect to the writing
+  mode of the containing block of the box</q> for <code>float</code>, <code>clear</code> and
+  <code>caption-side</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#line-mappings">CSS Writing Modes 4 §7.5</a></span></p>
+</header>
+
+<section>
+  <h2>text-align: left and right</h2>
+  <p>Line-left is the top in <code>vertical-rl</code>, <code>vertical-lr</code> and <code>sideways-rl</code>, and the
+  bottom in <code>sideways-lr</code>.</p>
+  <figure class=s>
+    <div class=pr-stage style="text-align: left">ab</div>
+    <figcaption><code>vertical-rl</code>, <code>left</code>: "ab" at the top.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="text-align: right">ab</div>
+    <figcaption><code>right</code>: at the bottom.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-lr; text-align: left">ab</div>
+    <figcaption><code>sideways-lr</code>, <code>left</code>: at the bottom.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-lr; text-align: right">ab</div>
+    <figcaption><code>sideways-lr</code>, <code>right</code>: at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>float and clear</h2>
+  <p>Each stage holds a blue <code>float: left</code>, an orange <code>float: right</code>, and "ab".</p>
+  <figure class=s>
+    <div class=pr-stage><div class=fl></div><div class=fr></div>ab</div>
+    <figcaption><code>vertical-rl</code>: blue at the top right, orange at the bottom right, "ab" between them.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="direction: rtl"><div class=fl></div><div class=fr></div>ab</div>
+    <figcaption><code>rtl</code>: the same floats; "ab" now at the bottom, above the orange.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: sideways-lr"><div class=fl></div><div class=fr></div>ab</div>
+    <figcaption><code>sideways-lr</code>: blue at the bottom left, orange at the top left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage><div class=fl></div><div class=fr></div><div class=fl style="clear: right; background: #6aa36a"></div></div>
+    <figcaption><code>clear: right</code> on a green float left: it goes past the orange one, to the left of both, at
+    the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

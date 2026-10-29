@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributing extra space: up to the limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .s { grid-column: span 2; background: #b9cde6; }
+  .m1 { height: 10px; background: #d68a3c; }
+  .m2 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5.1 Distributing Extra Space Across Spanned Tracks</div>
+  <h1>Distributing extra space: up to the limits</h1>
+  <p class=pr-lede><q>Find the space to distribute: Subtract the affected size of every spanned track (not just the
+  affected tracks) from the item's size contribution, flooring it at zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#extra-space">CSS Grid Layout 2 §12.5.1</a></span>
+  Blue spans two columns; bars under it show them. A 10px grid (dashed) has no free space: its columns are their base
+  sizes.</p>
+</header>
+
+<section>
+  <h2>Equally, freezing at the limit</h2>
+  <p><q>distributing the space equally among these tracks, freezing a track’s item-incurred increase as its affected
+  size + item-incurred increase reaches its limit</q>. <q>For base sizes, the limit is its growth limit, capped by its
+  fit-content() argument if any.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto auto; width: 10px"><div class=s>abcdef</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>auto auto</code>, blue "abcdef", 60px: 30px each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: minmax(min-content, 10px) auto; width: 10px"><div class=s>abcdef</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>minmax(min-content, 10px) auto</code>: the first stops at its 10px growth limit: 10 and
+    50px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: fit-content(10px) auto; width: 10px"><div class=s>abcdef</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>fit-content(10px) auto</code>: capped by the argument, 10 and 50px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 30px each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then to the tracks not affected</h2>
+  <p><q>If extra space remains at this point, and the item spans both affected tracks and non-affected tracks,
+  distribute space as for the previous step, but into the non-affected tracks instead.</q> Columns <code>minmax(min-content, 20px) minmax(0px, auto)</code>: only the first has an
+  intrinsic minimum, so only it is affected when base sizes grow.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(min-content, 20px) minmax(0px, auto)"><div class=s>abcdef</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption>In 150px: the first stops at its 20px growth limit, and the second grows to take the other 40px of
+    blue's 60px: 20 and 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> 60 and 0px: the first past its limit.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

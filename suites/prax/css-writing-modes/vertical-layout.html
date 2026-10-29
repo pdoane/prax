@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout in vertical writing modes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; writing-mode: vertical-rl; width: 120px; height: 100px; }
+  .pr-a, .pr-b, .pr-c { font-family: "PR Arimo"; }
+  .scroller { overflow: auto; width: 100px; }
+  .long { width: 180px; height: 180px; display: flex; justify-content: space-between; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.1 Principles of Layout in Vertical Writing Modes</div>
+  <h1>Layout in vertical writing modes</h1>
+  <p class=pr-lede><q>Layout calculation rules (such as those in CSS2.1, Section 10.3) that apply to the horizontal
+  dimension in horizontal writing modes instead apply to the vertical dimension in vertical writing modes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-layout">CSS Writing Modes 4 §7.1</a></span></p>
+</header>
+
+<section>
+  <h2>Width rules use the height</h2>
+  <p><q>The margin-left property
+  still affects the lefthand margin, for example; however in a vertical-rl writing mode it takes part in margin
+  collapsing in place of margin-bottom.</q> Each stage is <code>vertical-rl</code>, 100px tall.</p>
+  <figure class=s>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b style="height: 50px; margin: auto 0">B</div></div>
+    <figcaption>A, auto height: fills the 100px. B, 50px tall, auto top and bottom margins:
+    centered.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage><div class=pr-a style="margin-left: 20px">A</div><div class=pr-b style="margin-right: 30px">B</div></div>
+    <figcaption>A's <code>margin-left</code> 20px and B's <code>margin-right</code> 30px collapse: a 30px
+    gap.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Left and right become start and end</h2>
+  <p><q>Layout rules that depend on the direction property to choose between left and right</q> <q>are abstracted to
+  the start and end sides</q>.</p>
+  <figure class=s>
+    <div class=pr-stage style="direction: rtl">ab</div>
+    <figcaption><code>rtl</code>: the initial <code>text-align</code>, <code>start</code>, puts "ab" at the
+    bottom.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage scroller"><div class="long pr-a pr-fit"><span>start</span><span>end</span></div></div>
+    <figcaption>A scroller with a 180px child: opens at the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage scroller" style="direction: rtl"><div class="long pr-a pr-fit"><span>start</span><span>end</span></div></div>
+    <figcaption>The same, <code>rtl</code>: opens at the bottom right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

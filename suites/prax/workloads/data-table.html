@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A wide inventory table with a sticky header row, zebra rows, and aligned numbers. Leans on: a sticky table header inside a scroll container, collapsed borders, zebra striping with nth-child, tabular numerals and right alignment, a totals row in tfoot, and no-wrap cells. -->
+<title>Data table</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.panel { background:#fff; border:1px solid #d3d8de; border-radius:10px; overflow:hidden; color:#22282f }
+.bar { display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid #e6e9ed }
+.bar h2 { font-size:14px; margin:0; flex:none }
+.bar .cnt { font-size:10px; color:#8a93a0; flex:1 }
+.bar .f { font-size:10px; border:1px solid #ccd3da; border-radius:5px; padding:3px 8px; color:#4a5561 }
+.bar .f.on { background:#eef4fa; border-color:#9fbfdf; color:#1c5b96; font-weight:bold }
+.scroll { max-height:520px; overflow:auto }
+table { border-collapse:collapse; width:100%; font-size:11px }
+thead th { position:sticky; top:0; background:#f4f6f8; text-align:left; font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:#6d7783; padding:6px 8px; border-bottom:1px solid #ccd3da; white-space:nowrap }
+th.n, td.n { text-align:right; font-variant-numeric:tabular-nums }
+th .s { color:#3d82c4 }
+td { padding:5px 8px; border-bottom:1px solid #eef1f4; white-space:nowrap }
+tbody tr:nth-child(even) { background:#f8fafb }
+td.name { font-weight:bold }
+td .sku { display:block; font-size:9px; color:#8a93a0; font-weight:normal }
+.up { color:#1a8f52 } .dn { color:#c0392b }
+.tick { font-size:9px; border-radius:99px; padding:1px 7px }
+.in { background:#dff2e6; color:#1a6b3d } .low { background:#fdf0d8; color:#8a6116 } .out { background:#fbe1de; color:#96271c }
+tfoot td { background:#f4f6f8; font-weight:bold; border-top:1px solid #ccd3da; border-bottom:none; padding:6px 8px }
+.foot { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-top:1px solid #e6e9ed; font-size:10px; color:#8a93a0 }
+.pages span { border:1px solid #ccd3da; border-radius:4px; padding:2px 7px; margin-left:3px; color:#4a5561 }
+.pages span.on { background:#22303f; border-color:#22303f; color:#fff }
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="bar">
+    <h2>Inventory</h2>
+    <span class="cnt">248 items, 12 warehouses</span>
+    <span class="f on">In stock</span>
+    <span class="f">Warehouse: Li&#232;ge</span>
+    <span class="f">Sort: value</span>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Category</th>
+          <th class="n">On hand</th>
+          <th class="n">Reserved</th>
+          <th class="n">Unit cost</th>
+          <th class="n">Value <span class="s">&#9662;</span></th>
+          <th class="n">30 d</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">Stone-ground wheat<span class="sku">FL-1002 &#183; 25 kg</span></td><td>Flour</td><td class="n">1,240</td><td class="n">180</td><td class="n">&#8364;24.80</td><td class="n">&#8364;30,752.00</td><td class="n up">+8.4%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Rye, dark<span class="sku">FL-1018 &#183; 25 kg</span></td><td>Flour</td><td class="n">860</td><td class="n">240</td><td class="n">&#8364;27.60</td><td class="n">&#8364;23,736.00</td><td class="n up">+2.1%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Spelt, whole<span class="sku">FL-1044 &#183; 25 kg</span></td><td>Flour</td><td class="n">312</td><td class="n">96</td><td class="n">&#8364;41.00</td><td class="n">&#8364;12,792.00</td><td class="n dn">&#8722;5.7%</td><td><span class="tick low">Low</span></td></tr>
+        <tr><td class="name">Linen sacks<span class="sku">PK-2201 &#183; 50 pc</span></td><td>Packaging</td><td class="n">4,180</td><td class="n">0</td><td class="n">&#8364;2.15</td><td class="n">&#8364;8,987.00</td><td class="n up">+1.0%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Buckwheat<span class="sku">FL-1071 &#183; 10 kg</span></td><td>Flour</td><td class="n">204</td><td class="n">120</td><td class="n">&#8364;31.50</td><td class="n">&#8364;6,426.00</td><td class="n up">+14.2%</td><td><span class="tick low">Low</span></td></tr>
+        <tr><td class="name">Millstone picks<span class="sku">TL-3310 &#183; set</span></td><td>Tools</td><td class="n">18</td><td class="n">2</td><td class="n">&#8364;188.00</td><td class="n">&#8364;3,384.00</td><td class="n">0.0%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Paper bags, 1 kg<span class="sku">PK-2260 &#183; 500 pc</span></td><td>Packaging</td><td class="n">62</td><td class="n">62</td><td class="n">&#8364;43.00</td><td class="n">&#8364;2,666.00</td><td class="n dn">&#8722;22.8%</td><td><span class="tick out">Backorder</span></td></tr>
+        <tr><td class="name">Bran, coarse<span class="sku">FL-1090 &#183; 20 kg</span></td><td>By-product</td><td class="n">540</td><td class="n">40</td><td class="n">&#8364;4.60</td><td class="n">&#8364;2,484.00</td><td class="n up">+3.3%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Sack trolley<span class="sku">TL-3402 &#183; each</span></td><td>Tools</td><td class="n">9</td><td class="n">1</td><td class="n">&#8364;214.00</td><td class="n">&#8364;1,926.00</td><td class="n">0.0%</td><td><span class="tick in">In stock</span></td></tr>
+        <tr><td class="name">Sieve mesh, 400&#181;<span class="sku">TL-3455 &#183; roll</span></td><td>Tools</td><td class="n">0</td><td class="n">6</td><td class="n">&#8364;96.00</td><td class="n">&#8364;0.00</td><td class="n dn">&#8722;100%</td><td><span class="tick out">Out</span></td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td>Totals, page 1 of 25</td><td></td><td class="n">7,425</td><td class="n">747</td><td class="n"></td><td class="n">&#8364;93,153.00</td><td class="n">&#8212;</td><td></td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="foot">
+    <span>Showing 1 to 10 of 248 items, valued at cost on 14 March.</span>
+    <span class="pages"><span>Prev</span><span class="on">1</span><span>2</span><span>3</span><span>Next</span></span>
+  </div>
+</div>
+</body>
+</html>

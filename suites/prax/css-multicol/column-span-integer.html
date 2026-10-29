@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-span: a number of columns, and auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 7.1 column-span</div>
+  <h1>column-span: a number of columns, and auto</h1>
+  <p class=pr-lede>&lt;integer&gt;: <q>The element spans the specified number of columns. Values must be greater than 0. If the
+  specified integer value is equal to, or larger than the number of columns in the multicol element, the number of
+  columns spanned will be the same as if column-span: all had been specified.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#column-span">CSS Multi-column Layout 2 §7.1</a></span>
+  Each stage has three columns of 60px; A spans, between "one two six" and "ten red big".</p>
+</header>
+
+<section>
+  <h2>A number of columns</h2>
+  <p>The section's issue leaves open <q>Which columns does it span?</q>: only a number at least the count is
+  defined.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">one two six<div class=pr-a style="column-span: 3">A</div>ten red big</div>
+    <figcaption><code>column-span: 3</code>, the count: as <code>all</code>, A 200px wide between two lines of
+    columns. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> A in a column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure">one two six<div class=pr-a style="column-span: 2">A</div>ten red big</div>
+    <figcaption><code>column-span: 2</code>: two columns, which two the draft does not yet say.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto: by the content's width</h2>
+  <p><code>auto</code>: <q>If it is smaller than the used value of column-width, this is the same as if column-span:
+  none had been specified. Otherwise, the number of columns spanned is the smallest positive integer n for which
+  n × column-width + (n - 1) × column-gap is larger than the min-content outer size.</q> A holds one word.</p>
+  <figure>
+    <div class="pr-stage pr-measure">one two six<div class="pr-a pr-fit" style="column-span: auto; padding: 0">abc</div>ten red big</div>
+    <figcaption>"abc", 30px, less than a column: as <code>none</code>, A in a column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">one two six<div class="pr-a pr-fit" style="column-span: auto; padding: 0">abcdefghijklmn</div>ten red big</div>
+    <figcaption>A word of 140px, wider than two columns, 130px: three columns, as <code>all</code>. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A in a
+    column, the word overflowing it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

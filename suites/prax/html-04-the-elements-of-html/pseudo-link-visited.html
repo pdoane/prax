@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:link and :visited</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px 20px; font-size: 13px; line-height: 20px; }
+  .rows a { display: block; margin: 0 0 4px; color: #1f2430; text-decoration: none; }
+  .rows a:link { color: #2c5a8f; }
+  .rows a:visited { color: #8e44ad; }
+  .rows a[href]::before { content: "\2192  "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:link and :visited</h1>
+  <p class=pr-lede><q>All a elements that have an href attribute, and all area elements that have an href attribute,
+  must match one of :link and :visited.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>One or the other, and neither without href</h2>
+  <p>Here <code>:link</code> is blue, <code>:visited</code> purple, and an <code>a</code> that matches neither is
+  black. Which address counts as visited is the user agent's, within the privacy rules that <q>Other specifications
+  might apply</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=rows>
+        <a href="https://example.invalid/never-visited">an address never visited</a>
+        <a href="">this page's own address</a>
+        <a>an a with no href</a>
+        <a href="#visited-by-a-click">click: a fragment of this page</a>
+      </div>
+    </div>
+    <figcaption>The first is blue, the second purple, as the reader is on that page, and the third black. The last is
+    blue until it is clicked: the address becomes this page's, with its fragment, and the link turns purple. A browser
+    keeping no history, as the stills' Safari and Firefox do, shows the second blue.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

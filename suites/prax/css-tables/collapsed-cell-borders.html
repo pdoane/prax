@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed borders: how cells draw them</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; }
+  td { padding: 0; width: 40px; height: 20px; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.3.3.1 Changes in collapsed-borders mode, cells</div>
+  <h1>Collapsed borders: how cells draw them</h1>
+  <p class=pr-lede><q>Borders of a table-cell are rendered in collapsed-borders mode as if the cell border was twice as
+  big as its used value specify, and as if that excess was rendered in the margin area of the cell, with the added
+  constraint that for each side of the border which isn’t located at one of the table edges, the border is actually
+  clipped to the border-box drawing area as its real used value define except if the 'border-image' property is
+  set.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#drawing-collapsed-borders-2">CSS Table 3 §5.3.3.1</a></span>
+  Cells are grey, 40 by 20 inside their borders.</p>
+</header>
+
+<section>
+  <h2>A shared border, drawn half by each cell</h2>
+  <p>Each cell draws the shared border at its full width, centred on the grid line, and keeps its own half.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border-right: 10px double #4f81bd"></td><td style="border-left: 10px double #4f81bd"></td></tr></table></div>
+    <figcaption>A 10px double border between the cells: its two lines and the gap between, one on each side of the
+    grid line, as one double border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td style="border-bottom: 10px solid #4f81bd"></td><td style="border-bottom: 10px solid #d68a3c"></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption>Blue and orange 10px bottom borders on the first row, over cells with none: each 10px tall, 5px in
+    the row above the line and 5px in the row below.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At the table's edge, whole</h2>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><table><tr><td style="border: 10px solid #4f81bd"></td><td style="border: 2px solid #d68a3c"></td></tr></table></div>
+    <figcaption>Blue 10px borders on the first cell, orange 2px on the second: the outer blue borders are 10px,
+    reaching 5px outside the cells' grid into the table's border area.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

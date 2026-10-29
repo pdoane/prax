@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Infinities, NaN and signed zeros</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+  .pr-a { min-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.9.2 Infinities, NaN, and Signed Zero</div>
+  <h1>Infinities, NaN and signed zeros</h1>
+  <p class=pr-lede><q>Math functions follow IEEE-754 semantics</q>. <q>However, these concepts are only retained
+  within a calculation tree; if a top-level calculation (a math function not nested directly inside of another math
+  function) would result in one of these special values, they're instead "censored" into a standard representable
+  value</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-ieee">CSS Values and Units 4 §10.9.2</a></span>
+  Each bar's <code>width</code> is under it.</p>
+</header>
+
+<section>
+  <h2>Division by zero, by sign</h2>
+  <p><q>Dividing a value by zero produces either +∞ or −∞, according to the standard sign rules.</q> <q>Negative zero
+  (0⁻) can be produced by a multiplication or division that produces zero with exactly one negative argument</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, 1px / (5 * 0))">A</div></div>
+    <figcaption><code>min(150px, 1px / (5 * 0))</code>: +∞, so 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: max(30px, 1px / (-5 * 0))">A</div></div>
+    <figcaption><code>max(30px, 1px / (-5 * 0))</code>: 1px over 0⁻ is −∞, so 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, 1px / calc(-5 * 0))"></div></div>
+    <figcaption><code>min(150px, 1px / calc(-5 * 0))</code>: the nested calc() keeps its 0⁻; −∞, clamped to 0: no
+    bar.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: min(150px, 1px / max(0 * -1, 0))">A</div></div>
+    <figcaption><code>max(0⁻, 0⁺)</code> <q>must produce 0⁺</q>: +∞, so 150px. <span class=pr-flag>Safari</span> keeps 0⁻: −∞, no bar.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>NaN</h2>
+  <p><q>Dividing zero by zero, dividing ±∞ by ±∞, multiplying 0 by ±∞, adding +∞ to −∞, or subtracting two infinities of
+  the same sign produces NaN.</q> <q>it's censored into a zero value</q>.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + 1px * (0 / 0))"></div></div>
+    <figcaption><code>100px + 1px * (0 / 0)</code>: no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(100px + 0px * infinity)"></div></div>
+    <figcaption><code>100px + 0px * infinity</code>: no bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

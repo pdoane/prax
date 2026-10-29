@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement algorithm: the cursor, sparse</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(3, 40px); grid-auto-rows: 20px; }
+  .v { writing-mode: vertical-rl; height: 120px; grid-auto-rows: 40px; grid-template-columns: repeat(3, 40px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.5 Grid Item Placement Algorithm, step 4, sparse</div>
+  <h1>Placement algorithm: the cursor, sparse</h1>
+  <p class=pr-lede><q>Position the remaining grid items.</q> <q>Initially the auto-placement cursor is set to the start-most row and column lines in the
+  implicit grid.</q> Sparse packing <q>only ever moves “forward” in the grid when placing items, never backtracking
+  to fill holes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-placement-algo">CSS Grid Layout 2 §8.5</a></span>
+  Each grid has three 40px columns; rows are added, 20px.</p>
+</header>
+
+<section>
+  <h2>An item with a definite column</h2>
+  <p><q>Set the column position of the cursor to the grid item’s column-start line. If this is less than the previous
+  column position of the cursor, increment the row position by 1.</q> Then the row moves down until the item fits.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b style="grid-column: 3">B</div><div class=pr-c style="grid-column: 2">C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A auto, B <code>grid-column: 3</code>, C <code>grid-column: 2</code>, D auto. A and B in row 1; C's column
+    is behind the cursor, so C goes to row 2, leaving row 1's column 2 empty; D follows C.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-d style="grid-area: 1 / 2 / 3 / 3">X</div><div class=pr-a>A</div><div class=pr-b style="grid-column: 2">B</div></div></div>
+    <figcaption>X fills column 2 of rows 1 and 2. A at column 1 of row 1; B, <code>grid-column: 2</code>, goes down
+    rows until it finds column 2 free: row 3, 40px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An item with no position</h2>
+  <p>The cursor moves along the row until the item fits; if it would overflow the columns, the cursor goes to the
+  next row's <q>start-most column line in the implicit grid</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b style="grid-column: span 2">B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A and B each <code>span 2</code>: A in columns 1 and 2; B does not fit in column 3, so row 2,
+    columns 1 and 2; C at column 3 of row 2 and D in row 3. Row 1's column 3 stays empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g v"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div>
+    <figcaption><code>vertical-rl</code>, rows 40px wide: 1, 2 and 3 down the first row, at the right; 4 tops the next.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

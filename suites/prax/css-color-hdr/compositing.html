@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Compositing SDR and HDR</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 9 Compositing SDR and HDR content</div>
+  <h1>Compositing SDR and HDR</h1>
+  <p class=pr-lede><q>Compositing should take place in CIE XYZ, as it is a linear-light space without gamut limitations.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#Compositing-SDR-HDR">CSS Color HDR 1
+  §9</a></span></p>
+</header>
+
+<section>
+  <h2>One reference white</h2>
+  <q>HDR using the PQ transfer function, should map SDR HDR Reference White to 203 cd/m², the same luminance as is used
+  to display the 58% PQ value.</q>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"></div><div class=sw style="background: color(rec2100-pq 0.58 0.58 0.58)"></div><div class=sw style="background: color(rec2100-hlg 0.75 0.75 0.75)"></div><div class=sw style="background: color(rec2100-linear 1 1 1)"></div></div>
+    <figcaption><code>white</code>, then reference white in PQ, HLG and linear: four of one white. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> parse none
+    of the three spaces.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Translucent HDR over SDR</h2>
+  <p>A color four times white, at half opacity, over black: twice white in linear light, and 0.91 encoded, a light
+  gray, mixed in sRGB's encoding, since four times white encodes to 1.82.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: black"><div style="width: 40px; height: 40px; background: color(srgb-linear 4 4 4 / 0.5)"></div></div><div class=sw style="background: white"></div><div class=sw style="background: rgb(91% 91% 91%)"></div></div>
+    <figcaption><code>color(srgb-linear 4 4 4 / 0.5)</code> over black, then <code>white</code> and the encoded mix,
+    <code>rgb(91% 91% 91%)</code>. Composited in linear light, the first is like the second; in sRGB's encoding, like
+    the third. The section says <q>should</q>, so no one is flagged: Chrome draws the encoded mix, and Safari and
+    Firefox clip the color to white before mixing, a mid gray.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: black"><img alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png" style="width: 40px; height: 40px; image-rendering: pixelated; opacity: 0.5; object-fit: cover; object-position: 100% 0"></div><div class=sw style="background: white"></div></div>
+    <figcaption>The HDR image's 5,000 cd/m² step at half opacity over black, beside <code>white</code>: in linear
+    light about twelve times white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

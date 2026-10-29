@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canceling a dead key</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.3.4 Default actions and cancelable keyboard events</div>
+  <h1>Canceling a dead key</h1>
+  <p class=pr-lede><q>If the key is part of a sequence of several keystrokes, whether it is a dead key or it is contributing to an
+  Input Method Editor sequence, the keystroke MUST be ignored (not taken into account) only if the default action is
+  canceled on the keydown event.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-cancelable-keys">UI Events §4.3.4</a></span></p>
+</header>
+<section>
+  <h2>A dead key canceled</h2>
+  <p><q>Canceling a dead key on a keyup event has no effect on beforeinput or input events.</q> The page's script cancels each keydown of a dead key in the field.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#keys-cancelable-keys">§4.3.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=dead></div>
+      <ol class=pr-log data-log="keydown beforeinput keyup" data-fields="key data" data-on="#dead" data-lines=3></ol>
+    </div>
+    <figcaption>Click the field and type the circumflex dead key (Option+I on a Mac's US layout, ^ on a French one),
+    then <code>e</code>: the field holds a plain <code>e</code>, and beforeinput has <code>data="e"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels each keydown of a dead key in the field.
+  document.getElementById("dead").addEventListener("keydown", event => {
+      if (event.key === "Dead")
+          event.preventDefault();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 200px; padding: 0 6px; }
+  .h { writing-mode: horizontal-tb; width: 200px; height: auto; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1 Horizontal-in-Vertical Composition: the text-combine-upright property</div>
+  <h1>text-combine-upright</h1>
+  <p class=pr-lede><q>This property specifies the combination of multiple typographic character units into the space
+  of a single typographic character unit.</q> <q>The resulting composition is treated as a single upright glyph for the
+  purposes of layout and decoration. This property only has an effect in vertical writing modes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-upright">CSS Writing Modes 4 §9.1</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's date</h2>
+  <p>The example sets 平成20年4月16日に with <code>date { text-combine-upright: digits 2; }</code>: <q>the two digits of
+  a date set halfwidth side-by-side in a vertical column of text</q>. The highlighted spans are the boxes the property
+  is set on.</p>
+  <figure class=s>
+    <div class=pr-stage>平成20年4月16日に</div>
+    <figcaption><code>none</code>: "20" and "16" turned sideways, like Latin.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>平成<span class=pr-hl style="text-combine-upright: all">20</span>年<span class=pr-hl style="text-combine-upright: all">4</span>月<span class=pr-hl style="text-combine-upright: all">16</span>日に</div>
+    <figcaption><code>all</code> on spans around the numbers: "20" and "16" side by side in one square
+    each; "4" upright.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class=pr-stage style="text-combine-upright: digits 2">平成20年4月16日に</div>
+    <figcaption><code>digits 2</code> on the line: the same, with no spans. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> turn the numbers.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only in vertical writing modes</h2>
+  <figure>
+    <div class="pr-stage h">平成<span class=pr-hl style="text-combine-upright: all">20</span>年<span class=pr-hl style="text-combine-upright: all">4</span>月<span class=pr-hl style="text-combine-upright: all">16</span>日に</div>
+    <figcaption><code>all</code> in <code>horizontal-tb</code>: no effect, the digits as in any horizontal
+    line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

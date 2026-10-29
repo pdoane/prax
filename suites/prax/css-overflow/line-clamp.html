@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line-clamp</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px 0; background: #f4f5f7; }
+  .stage { height: 110px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.1 Limiting Visible Lines: the line-clamp shorthand property</div>
+  <h1>line-clamp</h1>
+  <p class=pr-lede><code>line-clamp: none | [&lt;'max-lines'&gt; || &lt;'block-ellipsis'&gt;] -webkit-legacy?</code>
+  <q>It allows limiting the contents of a block container to the specified number of lines; remaining content is
+  fragmented away and neither rendered nor measured. Optionally, it also allows inserting content into the last line
+  box to indicate the continuity of truncated/interrupted content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#line-clamp">CSS Overflow 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>A number of lines, and what ends the last</h2>
+  <p>A number or a string <q>Sets continue to collapse</q>, and sets <code>max-lines</code> and
+  <code>block-ellipsis</code>, <q>or to max-lines: auto and block-ellipsis: ellipsis respectively if omitted.</q>
+  Each dashed box is 100px wide and holds four lines of <code>.pr-measure</code> text.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="line-clamp: 2">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>2</code>: "line two…" last, 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style='line-clamp: 3 " →"'>line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>3 " →"</code>: "three" displaced to fit: "line →". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="line-clamp: none">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>none</code>: four lines, 80px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="line-clamp: auto; max-height: 50px">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>auto</code>, <code>max-height: 50px</code>: two lines fit, "line two…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

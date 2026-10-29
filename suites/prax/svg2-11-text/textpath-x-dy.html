@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positioning attributes on a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="bend" d="M 20 10 V 50 H 150" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.3 Text on a path layout rules</div>
+  <h1>Positioning attributes on a path</h1>
+  <p class=pr-lede><q>When the inline-base direction is horizontal, then any ‘x’ attributes on ‘text’ or ‘tspan’
+  elements represent new absolute offsets along the path, thus providing explicit new values for
+  startpoint-on-the-path. Any ‘y’ attributes on ‘text’ or ‘tspan’ elements are ignored.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextpathLayoutRules">SVG 2 §11.8.3</a></span>
+  Each stage is an SVG 160 by 80 with a path down from 20, 10 to a corner at 20, 50, 40 along, then right to 150,
+  50, dashed in red. The text is "abc" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter, in a
+  <code>tspan</code> in a <code>textPath</code>.</p>
+</header>
+
+<section>
+  <h2>x along the path, y ignored</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#bend" class=pr-baseline /><path d="M60 40V60" stroke="#c0392b" /><text class=pr-measure><textPath href="#bend"><tspan x="80">abc</tspan></textPath></text></svg></div>
+    <figcaption><code>x="80"</code>: 80 along, 40 past the corner: "abc" on the bottom from 60 to 90.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#bend" class=pr-baseline /><path d="M60 40V60" stroke="#c0392b" /><text class=pr-measure><textPath href="#bend"><tspan x="80" y="20">abc</tspan></textPath></text></svg></div>
+    <figcaption>The same with <code>y="20"</code>, ignored: the same. <span class=pr-flag>Firefox</span> "abc"
+    moved down, below the path.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>dx and dy</h2>
+  <p><q>All adjustments are calculated as distance adjustments along the path</q>; and <q>Align the glyph vertically
+  relative to the midpoint-on-the-path based on property alignment-baseline and any specified values for attribute
+  ‘dy’ on a ‘tspan’ element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#bend" class=pr-baseline /><path d="M60 40V60" stroke="#c0392b" /><text class=pr-measure><textPath href="#bend"><tspan dx="80">abc</tspan></textPath></text></svg></div>
+    <figcaption><code>dx="80"</code>: 80 along from the start, the same place, 60 to 90.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><use href="#bend" class=pr-baseline /><path d="M0 35H160" stroke="#c0392b" stroke-dasharray="1 2" /><text class=pr-measure><textPath href="#bend"><tspan x="80" dy="-15">abc</tspan></textPath></text></svg></div>
+    <figcaption><code>x="80" dy="-15"</code>: lifted off the path, standing on y 35, dotted.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

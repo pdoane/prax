@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: the static position on a line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.line { height: 40px; font-size: 20px; line-height: 40px; }
+  .abs { position: absolute; width: 20px; height: 20px; padding: 0; box-sizing: border-box; background: rgba(214, 138, 60, 0.6); border: 1px solid #9c5f22; }
+  .float { float: left; width: 50px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: the static position on a line</h1>
+  <p class=pr-lede>Each stage, of 20px text on 40px lines, is the containing block. Between "abc" and "def" is an
+  orange square, absolutely positioned with every inset <code>auto</code>, and a span unless the figure says.</p>
+</header>
+
+<section>
+  <h2>Where the hypothetical box is on its line</h2>
+  <p>The static position is that of <q>a hypothetical box that would have been the first box of the element if its
+  'position' property had been 'static' and 'float' had been 'none'.</q> In an <code>rtl</code> static-position containing block, <q>set 'right' to the
+  static position</q>, to <q>the right margin edge</q> of that box. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb line" style="text-align: center">abc<span class=abs></span>def</div>
+    <figcaption>A centered line: the square starts after "abc" where centering put it, at the line's
+    top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb line"><div class="pr-a pr-fit float"></div>abc<span class=abs></span>def</div>
+    <figcaption>Beside a 50px float: the square starts after "abc", which the float pushed right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb line" style="height: 80px">abc<div class=abs></div>def</div>
+    <figcaption>A <code>div</code>, block-level: its hypothetical box would start a new block after "abc", so the square
+    is at the start of the next line, under "abc".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb line" style="direction: rtl">abc<span class=abs></span>def</div>
+    <figcaption>An <code>rtl</code> line: the square's right edge is where "c" meets "d", and it covers "bc". <span class=pr-flag>Chrome</span>
+    Its left edge is there, over "de". <span class=pr-flag>Safari</span> Its right edge is about 4px short of it,
+    within "c".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

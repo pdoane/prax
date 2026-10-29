@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic thickness from the font</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { padding: 0 6px; font-size: 60px; line-height: 90px; text-decoration: underline #c0392b; text-decoration-skip-ink: none; }
+  .t { padding: 0 6px; font: 20px/40px "PR Arimo"; }
+  .t span { text-decoration: underline #c0392b; text-decoration-skip-ink: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.4.1 Automatic Thickness of Text Decoration Lines</div>
+  <h1>Automatic thickness from the font</h1>
+  <p class=pr-lede><q>Some font formats (such as OpenType) can offer information about the appropriate thickness of a
+  line decoration. The UA should use such font-based information when choosing auto line thicknesses wherever
+  appropriate.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-thickness">CSS Text Decoration 4 §2.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>auto follows the font's underline thickness</h2>
+  <p>"Gag" at 60px with the initial <code>text-decoration-thickness: auto</code>, in two fonts whose underline
+  thicknesses differ by twice; a red underline.</p>
+  <figure>
+    <div class="pr-stage g" style="font-family: 'PR Underline Test Thick'">Gag</div>
+    <figcaption>Thick's font asks for 200/2048 em: about 6px, as Firefox draws it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage g" style="font-family: 'PR Underline Test Far'">Gag</div>
+    <figcaption>Far's asks for 100/2048 em: about 3px, half as thick, in Firefox. Chrome and Safari draw both the same, from the font size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto scales with the font size</h2>
+  <figure>
+    <div class="pr-stage t"><span>20px</span> <span style="font-size: 40px">40px</span></div>
+    <figcaption>PR Arimo asks for 150/2048 em: about 1.5px under "20px", and about 3px under "40px".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

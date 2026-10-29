@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paired default highlight colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  body { user-select: none; -webkit-user-select: none; }
+  .t { padding: 0 10px; font: 16px/30px "PR Arimo"; color: #1f2430; user-select: text; -webkit-user-select: text; }
+  .t p { margin: 0; }
+  .pr-stage { color-scheme: light; }
+  .em-color em::selection { color: #6aa36a; }
+  .p-color p::selection { color: #6aa36a; }
+  .revert ::selection { color: revert; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.3.1 Paired Defaults</div>
+  <h1>Paired default highlight colors</h1>
+  <p class=pr-lede><q>For compatibility reasons, paired default highlight colors must only be used when neither color
+  nor background-color yield a cascaded value from the author origin (or inherit their value from the author
+  origin).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#paired-defaults">CSS Pseudo-Elements 4 §3.3.1</a></span>
+  Each stage holds <code>&lt;p&gt;Highlight this &lt;em&gt;and this&lt;/em&gt;&lt;/p&gt;</code>. A script selects
+  from the first stage to the last; only the stages' text can be selected. Safari's stills show no selection: their
+  window is never the focused one.</p>
+</header>
+
+<section>
+  <h2>A color from the author drops the default background</h2>
+  <figure>
+    <div class=pr-stage><div class=t><span data-from=selection></span><p>Highlight this <em>and this</em></p></div></div>
+    <figcaption>No author style: the default color and background throughout.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage em-color"><div class=t><p>Highlight this <em>and this</em></p></div></div>
+    <figcaption><code>em::selection { color: green }</code>: “and this” green on no background; the rest in the
+    defaults.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage p-color"><div class=t><p>Highlight this <em>and this</em></p></div></div>
+    <figcaption><code>p::selection { color: green }</code>, which the <code>em</code>'s selection inherits: all of it
+    green on no background. <span class=pr-flag>Firefox</span> “and this” on the default background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>revert rolls back to the user agent</h2>
+  <p><q>When a highlight color is revert or revert-layer, the origin after rolling back the cascade determines the
+  cascaded value’s origin.</q></p>
+  <figure>
+    <div class="pr-stage revert"><div class=t><p>Highlight this <em>and this</em></p><span data-to=selection></span></div></div>
+    <figcaption><code>::selection { color: revert }</code>: the origin is the user agent's, so the default pair, as
+    with no author style.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font weight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ladder { padding: 0 6px; font-size: 16px; line-height: 20px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.6 Font boldness: the 'font-weight' property</div>
+  <h1>Font weight</h1>
+  <p class=pr-lede><code>font-weight</code> takes <code>normal | bold | bolder | lighter | 100 | 200 | 300 | 400 | 500 |
+  600 | 700 | 800 | 900</code>. Initial <code>normal</code>, it applies to all elements and is inherited.</p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-weight.html">font-weight: numbers from 1 to 1000</a>.</p>
+</header>
+
+<section>
+  <h2>100 to 900</h2>
+  <p><q>The values '100' to '900' form an ordered sequence, where each number indicates a weight that is at least as
+  dark as its predecessor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2 §15.6</a></span></p>
+  <figure>
+    <div class="pr-stage ladder" style="font-family: 'Helvetica Neue'">
+      <div style="font-weight: 100">100 Handgloves</div>
+      <div style="font-weight: 200">200 Handgloves</div>
+      <div style="font-weight: 300">300 Handgloves</div>
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 700">700 Handgloves</div>
+      <div style="font-weight: 800">800 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>Helvetica Neue at each weight: every line at least as dark as the one above it, from a hairline 100 to
+    bold.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>normal is 400, bold is 700</h2>
+  <p><q>The keyword 'normal' is synonymous with '400', and 'bold' is synonymous with '700'.</q> The specification's
+  examples: <code>p { font-weight: normal } /* 400 */ h1 { font-weight: 700 } /* bold */</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-boldness">CSS 2
+  §15.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Helvetica Neue'"><span id=normal style="font-weight: normal">normal</span> <span style="font-weight: 400">400</span></div>
+    <figcaption><code>normal</code> and <code>400</code> are drawn in one weight.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Helvetica Neue'"><span id=bold style="font-weight: bold">bold</span> <span style="font-weight: 700">700</span></div>
+    <figcaption><code>bold</code> and <code>700</code> are drawn in one weight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

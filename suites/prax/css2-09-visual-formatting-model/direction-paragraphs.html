@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The direction property: paragraphs and neutrals</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .he { font-family: "PR Arimo", "PR Noto Sans Hebrew"; }
+  .w { display: inline-block; width: 20px; height: 14px; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.10 Text direction: the 'direction' and 'unicode-bidi' properties</div>
+  <h1>The direction property: paragraphs and neutrals</h1>
+  <p class=pr-lede>Hebrew letters are strong right-to-left characters; punctuation, spaces and boxes are neutral.</p>
+</header>
+
+<section>
+  <h2>A forced break ends a paragraph</h2>
+  <p><q>User agents that support bidirectional text must apply the Unicode bidirectional algorithm to every sequence of
+  inline-level boxes uninterrupted by a forced (bidi class B) break or block boundary. This sequence forms the
+  "paragraph" unit in the bidirectional algorithm.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text he">abc אבג! דהו</div>
+    <figcaption>One paragraph: the "!" between two Hebrew words is right-to-left, at the left of אבג.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he">abc אבג!<br>דהו</div>
+    <figcaption>A <code>&lt;br&gt;</code> after the "!" ends the paragraph: the "!" is at its end, left to right,
+    at the right of אבג.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" style="white-space: pre">abc אבג!
+דהו</div>
+    <figcaption>A preserved newline does the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Atomic inlines, numbers and mirrored glyphs</h2>
+  <p><q>All other atomic inline-level boxes are treated as neutral characters always.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#direction">CSS 2 §9.10</a></span> Numbers keep their
+  order, and brackets in right-to-left text are mirrored.</p>
+  <figure>
+    <div class="pr-stage pr-text he">abc אבג <span class="pr-a w"></span> דהו</div>
+    <figcaption>Left to right, a blue inline-block between two Hebrew words: neutral, it goes with them, and דהו is at
+    its left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" dir=rtl>אבג 123 דהו</div>
+    <figcaption>Right to left: the number between two Hebrew words still reads 1, 2, 3 from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text he" dir=rtl>(abc) [אבג] &lt;x&gt;</div>
+    <figcaption>Right to left: the brackets are mirrored, so each pair still opens toward its
+    content.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

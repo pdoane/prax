@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Processing modes for sub-resource documents</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .background { height: 60px; background: url(support/features.svg) no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 2.3 Processing modes for SVG sub-resource documents</div>
+  <h1>Processing modes for sub-resource documents</h1>
+  <p class=pr-lede><q>When an SVG document is viewed directly, it is expected to be displayed using the most comprehensive
+  processing mode supported by the user agent. However, when an SVG is processed as a sub-resource or embedded document,
+  the following restrictions must apply</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/conform.html#referencing-modes">SVG 2 §2.3</a></span>
+  Each stage shows <code>support/features.svg</code>, four squares: a script's, blue if the script runs; an
+  animation's, blue if it runs; the suite's flag, an external file; and a blue data URL.</p>
+</header>
+
+<section>
+  <h2>As an image, and by a use</h2>
+  <p>As an image, <q>such as an HTML ‘img’ element or in any CSS property that takes an &lt;image&gt; data type</q>, in
+  secure animated mode. <q>When SVG documents are loaded through ‘use’ element references or paint server element
+  cross-references they must be processed in secure static mode.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium background"></div>
+    <figcaption>A CSS <code>background-image</code>: the script's square orange, the animation's blue, no flag, the
+    data URL blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="support/features.svg" /></svg></div>
+    <figcaption>A <code>use</code> of the whole document, secure static: no script, no external file; the
+    animation's square, cloned into this document, <q>may be animated</q>, so orange or blue; the data URL blue.
+    <span class=pr-flag>Chrome</span> The flag fetched and drawn.
+    <span class=pr-flag>Firefox</span> Nothing. Safari draws a broken-image icon for the flag.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

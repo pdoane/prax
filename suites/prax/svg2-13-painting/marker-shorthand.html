@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The marker shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><circle cx="5" cy="5" r="5" fill="#d68a3c" /></marker>
+  <marker id="square" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse"><rect width="10" height="10" fill="#6aa36a" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.3 Marker shorthand: the ‘marker’ property</div>
+  <h1>The marker shorthand</h1>
+  <p class=pr-lede><q>The 'marker' property sets values for the 'marker-start', 'marker-mid' and 'marker-end'
+  properties. The value of the 'marker' is used directly for all three of the corresponding longhand
+  properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#MarkerShorthand">SVG 2 §13.7.3</a></span>
+  Each stage is an SVG 160 by 60 with a path from 20, 50 up to 80, 10 and down to 140, 50, styled as shown. The dot
+  and the square are markers 14 across.</p>
+</header>
+
+<section>
+  <h2>All three at once</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" style="marker: url(#dot)" /></svg></div>
+    <figcaption><code>marker: url(#dot)</code>: an orange dot at each of the three vertices.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" style="marker: url(#dot); marker-end: url(#square)" /></svg></div>
+    <figcaption><code>marker: url(#dot); marker-end: url(#square)</code>: dots at 20, 50 and 80, 10, a green
+    square at 140, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" style="marker-start: url(#square); marker: none" /></svg></div>
+    <figcaption><code>marker-start: url(#square); marker: none</code>: the shorthand sets the start back to
+    <code>none</code>, so no markers.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

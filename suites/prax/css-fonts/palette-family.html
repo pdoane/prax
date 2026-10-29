@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The palette's font-family</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-palette-values --both { font-family: "PR Nabla", "PR Bungee Spice"; base-palette: 1; }
+  .pr-sample { font-size: 32px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.2.1 Font family: the @font-palette-values 'font-family' descriptor</div>
+  <h1>The palette's font-family</h1>
+  <p class=pr-lede><q>This palette will only ever be applied to the fonts with these family names.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-family-2-desc">CSS Fonts 4
+  §9.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Each family in the list</h2>
+  <p><code>--both</code> is palette 1 of PR Nabla and of PR Bungee Spice.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Nabla'; font-palette: --both">Nabla</div>
+    <figcaption>PR Nabla's palette 1: pink and purple.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Bungee Spice'; font-palette: --both">Spice</div>
+    <figcaption>PR Bungee Spice's palette 1: navy and blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

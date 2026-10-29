@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Separated borders: width, rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border-spacing: 10px; background: #f2e394; border: 2px solid #2c5a8f; padding: 10px; }
+  .t .pr-table-cell { background: #4f81bd; }
+  table { border-spacing: 10px; background: #f2e394; border: 2px solid #2c5a8f; }
+  td { width: 30px; height: 20px; padding: 0; box-sizing: border-box; border: 1px solid #2c5a8f; }
+  .bar { width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.1 The separated borders model</div>
+  <h1>Separated borders: width, rows and columns</h1>
+  <p class=pr-lede>Tables are yellow with a 2px blue border and <code>border-spacing: 10px</code>. The grey bar under a
+  figure is 100px.</p>
+</header>
+
+<section>
+  <h2>The table's width</h2>
+  <p><q>The width of the table is the distance from the left inner padding edge to the right inner padding edge
+  (including the border spacing but excluding padding and border).</q> <q>However, in HTML and XHTML1, the width of the
+  &lt;table&gt; element is the distance from the left border edge to the right border edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#separated-borders">CSS 2
+  §17.6.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table t" style="width: 100px"><div class=pr-table-row><div class=pr-table-cell></div><div class=pr-table-cell></div></div></div><div class="pr-expect bar"></div></div>
+    <figcaption>A <code>div</code> table, <code>width: 100px; padding: 10px</code>: 100px between its padding's inner
+    edges, 124px in all.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 100px; padding: 10px"><tr><td style="width: auto; background: #4f81bd"><td style="width: auto; background: #4f81bd"></table><div class="pr-expect bar"></div></div>
+    <figcaption>An HTML <code>table</code>, the same: 100px from border edge to border edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows, columns and groups in the spacing</h2>
+  <p><q>In this space, the row, column, row group, and column group backgrounds are invisible, allowing the table
+  background to show through. Rows, columns, row groups, and column groups cannot have borders (i.e., user agents must
+  ignore the border properties for those elements).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#separated-borders">CSS 2 §17.6.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><col style="background: #6aa36a"><col><tr style="background: #d68a3c"><td><td><tr><td><td></table></div>
+    <figcaption>A green column and an orange row: they color their cells, and the 10px spaces stay yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><col style="border: 4px solid #c0392b"><col><tr style="border: 4px solid #c0392b"><td><td><tr><td><td></table></div>
+    <figcaption>A column and a row with 4px red borders: no red anywhere.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

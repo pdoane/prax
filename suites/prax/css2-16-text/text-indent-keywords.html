@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: each-line, hanging and intrinsic sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; text-indent: 0; }
+  .ib { display: inline-block; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: each-line, hanging and intrinsic sizes</h1>
+  <p class=pr-lede>CSS 2 indents only the first formatted line, by a length or a percentage. Each box is 30px
+  wide, and the guides are 10px apart.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></div>
+  <h2>each-line and hanging</h2>
+  <p><code>text-indent</code> takes <code>[ &lt;length-percentage&gt; ] &amp;&amp; hanging? &amp;&amp;
+  each-line?</code>. <code>each-line</code>: <q>Indentation affects the first line of each block container and each
+  line after a forced line break (but not lines after a soft wrap break).</q> <code>hanging</code>: <q>Inverts which
+  lines are affected.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></span> Each stage is 100px wide.</p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-indent: 30px each-line"><span class="pr-a w">1</span><br><span class="pr-a w">2</span> <span class="pr-b w">3</span> <span class="pr-b w">4</span></div>
+    <figcaption><code>30px each-line</code>: the first line, and the line after the <code>&lt;br&gt;</code>, start at
+    30; the line after the soft wrap, with 3 and 4, at 0.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-indent: 30px hanging"><span class="pr-b w">1</span> <span class="pr-b w">2</span> <span class="pr-a w">3</span> <span class="pr-a w">4</span></div>
+    <figcaption><code>30px hanging</code>: the first line starts at 0, and every other at 30.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></div>
+  <h2>Intrinsic sizes</h2>
+  <p>The indent is part of the first line's width, so it counts in the size of a shrink-to-fit box. But
+  <q>Percentages must be treated as '0' for the purpose of calculating intrinsic size contributions, but are always
+  resolved normally when performing layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-indent-property">CSS Text 3 §8.1</a></span> Each dashed box is an inline-block that holds one box.</p>
+  <figure>
+    <div class="pr-stage pr-text"><span class="pr-frame ib" style="text-indent: 30px"><span class="pr-a w">a</span></span></div>
+    <figcaption><code>text-indent: 30px</code>: the dashed box is 60px, the indent and the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class="pr-frame ib" style="text-indent: 50%"><span class="pr-a w">a</span></span></div>
+    <figcaption><code>text-indent: 50%</code>: sized as if 0, the dashed box is 30px; then 50% of it, 15px, indents
+    the box, which sticks out.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

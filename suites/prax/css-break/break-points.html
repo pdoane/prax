@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where breaks may occur</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.1 Possible Break Points</div>
+  <h1>Where breaks may occur</h1>
+  <p class=pr-lede><q>Fragmentation splits boxes in the block flow dimension. In block-and-inline flow, breaks may occur at the following places:</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#possible-breaks">CSS Fragmentation 4 §4.1</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Class A: between siblings</h2>
+  <p><q>Between sibling boxes of the following types:</q> <q>in-flow block-level boxes, a float and an immediately-adjacent in-flow or floated box, table row group boxes, table row boxes, multi-column column row boxes.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-a style="float: left; clear: left; width: 40px; height: 30px">A</div><div class=pr-c style="float: left; clear: left; width: 40px; height: 30px">C</div></div>
+    <figcaption>Two floats, 30px tall, one under the other, under B: the break falls between them. A in the first column, C atop the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Class B and class C</h2>
+  <p><q>Between line boxes inside a block container box.</q> <q>Between the content edge of a block container box and the outer edges of its child content (margin edges of block-level children or line box edges for inline-level children) if there is a (non-zero) gap between them.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=k>one two six ten red</div></div>
+    <figcaption>Class B: the paragraph breaks between its lines, three in the first column, two in the second. Safari breaks after two lines in each column, as a UA may: which allowed break it takes is its choice.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class="k pr-frame" style="height: 100px; box-sizing: border-box">one</div></div>
+    <figcaption>Class C: the box, 100px tall, holds one line; it breaks in the gap below that line: "one" under B, and the rest of the box, 60px, fills the second column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

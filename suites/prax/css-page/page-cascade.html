@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Specificity of page selectors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 4.4 Cascading in the page context</div>
+  <h1>Specificity of page selectors</h1>
+  <p class=pr-lede><q>Declarations in page and margin contexts cascade just like declarations in style rule for elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#cascading-and-page-context">CSS Paged Media 3 §4.4</a></span> The root's blue background marks each page area. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Names, then :first and :blank, then :left and :right</h2>
+  <p><q>Specificities are compared by comparing the three components in order (f, g, h)</q>: <var>f</var> counts page type names, <var>g</var> <code>:first</code> and <code>:blank</code>, <var>h</var> <code>:left</code> and <code>:right</code>.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page :left { margin-left: 60px } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption><code>@page :left</code>, first in the style sheet, still wins on the left page: page 2 is 60px from the left, page 1 10px. <span class=pr-flag>Safari</span> Every page has page 1's margins. <span class=pr-flag>Firefox</span> No left pages: 10px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } @page n:first { margin-left: 60px } @page :first { margin-left: 100px } @page n { margin-left: 30px } @page :right { margin-left: 80px } html { background: #8cb6c0 } .n { page: n }</style><div class=n><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div><div class=pg><div>line 5</div><div>line 6</div></div></div>"></iframe>
+    <figcaption>On type <code>n</code> pages: <code>n:first</code> (1,1,0) puts page 1 60px from the left; <code>n</code> (1,0,0) beats <code>:right</code> (0,0,1) on page 3, 30px like page 2. <span class=pr-flag>Safari</span> Page 1 is 100px from the left, and so are the rest. <span class=pr-flag>Firefox</span> Page 3 is 10px from the left, as if it were not of type <code>n</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

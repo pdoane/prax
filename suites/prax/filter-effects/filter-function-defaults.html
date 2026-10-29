@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filter functions with their values omitted</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: #4f81bd; }
+  .bar { width: 60px; height: 10px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 6.2 Computed Values of Filter Functions</div>
+  <h1>Filter functions with their values omitted</h1>
+  <p class=pr-lede><q>Omitted values are included and compute to their defaults.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#computed-values-of-filter-functions">Filter Effects 1 §6.2</a></span>
+  Each box is 60 by 30, blue before its filter; the bar under it is the color expected.</p>
+</header>
+
+<section>
+  <h2>Full effect: 1</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: grayscale()"></div><div class=bar style="background: rgb(123 123 123)"></div></div>
+    <figcaption><code>grayscale()</code>: all gray.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: sepia()"></div><div class=bar style="background: rgb(166 148 115)"></div></div>
+    <figcaption><code>sepia()</code>: all sepia.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: invert()"></div><div class=bar style="background: rgb(176 126 66)"></div></div>
+    <figcaption><code>invert()</code>: inverted, orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No effect</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: blur()"></div><div class=bar style="background: #4f81bd"></div></div>
+    <figcaption><code>blur()</code>: <code>0px</code>, sharp.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: brightness() contrast() saturate() opacity()"></div><div class=bar style="background: #4f81bd"></div></div>
+    <figcaption><code>brightness() contrast() saturate() opacity()</code>: each 1.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: hue-rotate()"></div><div class=bar style="background: #4f81bd"></div></div>
+    <figcaption><code>hue-rotate()</code>: <code>0deg</code>, blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>drop-shadow()'s color</h2>
+  <p><q>The default value for omitted values is missing length values set to 0 and the missing used color is taken from
+  the color property.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="padding-bottom: 20px"><div class=box style="color: #8e44ad; filter: drop-shadow(10px 10px)"></div></div>
+    <figcaption><code>color: #8e44ad</code>, <code>drop-shadow(10px 10px)</code>: a sharp purple shadow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

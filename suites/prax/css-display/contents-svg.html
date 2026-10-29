@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: contents on SVG elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  svg { display: block; font: 16px "PR Arimo"; }
+  .c { display: contents; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · B.2 SVG Elements, hoisting</div>
+  <h1>display: contents on SVG elements</h1>
+  <p class=pr-lede><q>The intention here is that the display: none behavior applies whenever the "rendering context"
+  inside the element is different than the context outside of it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#unbox-svg">CSS Display 4 §B.2</a></span></p>
+</header>
+
+<section>
+  <h2>Hoisted: containers, tspan, use</h2>
+  <p>For SVG container elements that render, text content child elements and <code>use</code>, <q>display: contents
+  strips the element from the formatting tree, and hoists its contents up to display in its place.</q> <q>SVG
+  presentation attributes ... continue to affect value processing and inheritance</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg width=200 height=40><g class=c fill="#6aa36a"><rect x=10 y=10 width=60 height=20/></g><g fill="#6aa36a" style="display: none"><rect x=90 y=10 width=60 height=20/></g></svg></div>
+    <figcaption>A <code>g</code> with <code>fill="#6aa36a"</code> and <code>contents</code>: its rectangle drawn, at
+    the left, green from the fill it inherits. (A second <code>g</code>, <code>none</code>, draws nothing.) <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw nothing for either.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg width=200 height=40><text x=10 y=26>one <tspan class=c fill="#c0392b">two</tspan> three</text></svg></div>
+    <figcaption>A red <code>tspan</code> with <code>contents</code>: "one two three", all of it drawn, "two" red. <span class=pr-flag>Chrome</span> draws "two" black; <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> leave "two" out.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg width=200 height=40><defs><rect id=u1 width=60 height=20/></defs><use class=c href="#u1" x=10 y=10 fill="#4f81bd"/></svg></div>
+    <figcaption>A blue <code>use</code> with <code>contents</code>: its shadow content, the rectangle, still drawn
+    blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

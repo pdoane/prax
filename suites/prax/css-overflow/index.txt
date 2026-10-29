@@ -1,0 +1,114 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-overflow-3/#intro 1 Introduction: no page; it says what the module adds to CSS 2 and CSS UI 3
+# css-overflow-3/#values 1.1 Value Definitions: no page; it defines terms
+css-overflow-3/#placement 1.2 Module Interactions
+    overflow-tables.html
+css-overflow-3/#overflow-concepts 2 Overflow Concepts and Terminology
+    overflow-extent.html
+css-overflow-3/#ink 2.1 Ink Overflow
+    ink-overflow.html
+css-overflow-3/#scrollable 2.2 Scrollable Overflow
+    scrollable-overflow.html
+css-overflow-3/#scrolling 2.3 Scrolling Overflow
+    scroll-origin.html
+    unreachable-overflow.html
+    viewport-scroll-origin.html
+# css-overflow-3/#overflow-properties 3 Clipping and Scrolling Overflow: no page; it defines single-axis and dual-axis scroll containers, which 3.1 shows
+css-overflow-3/#overflow-control 3.1 Managing Overflow: the overflow-x, overflow-y, and overflow properties
+    overflow-values.html
+    overflow-scroll-auto.html
+    overflow-axes.html
+    overflow-pairs.html
+    overflow-clip.html
+    overflow-clip-floats.html
+css-overflow-3/#scroll-visibility 3.1.1 Interaction of visibility and overflow
+    overflow-visibility.html
+css-overflow-3/#corner-clipping 3.1.2 Interaction of border-radius and overflow
+    overflow-border-radius.html
+# css-overflow-3/#static-media 3.1.3 Overflow in Print and Other Static Media: no page; it is about print and other non-interactive media, which a page on a screen cannot show
+css-overflow-3/#overflow-propagation 3.1.4 Overflow Viewport Propagation
+    overflow-propagation.html
+    overflow-propagation-values.html
+    overflow-propagation-contain.html
+    overflow-propagation-containment.html
+css-overflow-3/#overflow-clip-margin 3.2 Expanding Clipping Bounds: the overflow-clip-margin property
+    overflow-clip-margin.html
+    overflow-clip-margin-corners.html
+    overflow-clip-margin-scroll.html
+css-overflow-3/#scrollable-overflow-calculation 3.3 Calculating the Scrollable Overflow Area
+    scrollable-overflow-area.html
+    scrollable-overflow-margins.html
+    scrollable-overflow-padding.html
+    scrollable-overflow-padding-out.html
+    scrollable-overflow-clipped.html
+# css-overflow-3/#scrolling-behaviors 4 Scrolling Behaviors and Animations: no page; it introduces 4.1 and points to CSS Scroll Snap and CSS Overscroll Behavior
+css-overflow-3/#smooth-scrolling 4.1 Smooth Scrolling: the scroll-behavior Property
+    scroll-behavior.html
+# css-overflow-3/#scrollbar-layout 5 Scrollbars and Layout: no page; it introduces the subsections
+css-overflow-3/#scrollbar-sizing 5.1 Scrollbar Contributions to Sizing
+    scrollbar-sizing.html
+    scrollbar-sizing-assume.html
+css-overflow-3/#scrollbar-gutter-property 5.2 Reserving space for the scrollbar: the scrollbar-gutter property
+    scrollbar-gutter.html
+    scrollbar-gutter-overflow.html
+    scrollbar-gutter-root.html
+# css-overflow-3/#auto-ellipsis 6 Automatic Ellipses: no page; it introduces 6.1
+css-overflow-3/#text-overflow 6.1 Overflow Ellipsis: the text-overflow property
+    text-overflow.html
+    text-overflow-hidden.html
+css-overflow-3/#bidi-ellipsis 6.1.1 Bidi ellipsis examples
+    text-overflow-bidi.html
+css-overflow-3/#ellipsing-details 6.1.2 ellipsing details
+    text-overflow-details.html
+css-overflow-3/#ellipsis-interaction 6.1.3 user interaction with ellipsis
+    text-overflow-selection.html
+css-overflow-3/#text-overflow-examples 6.1.4 text-overflow examples
+    text-overflow-examples.html
+css-overflow-3/#ellipsis-scrolling 6.1.5 ellipsis interaction with scrolling interfaces
+    text-overflow-scrolling.html
+# css-overflow-3/#priv A Privacy Considerations: no page; nothing to see
+# css-overflow-3/#sec B Security Considerations: no page; nothing to see
+# css-overflow-3/#changes C Changes: no page; nothing to see
+# css-overflow-4/#intro 1 Introduction: no page; it says level 4 adds to level 3
+# css-overflow-4/#values 1.1 Value Definitions: no page; it defines terms
+# css-overflow-4/#placement 1.2 Module Interactions: no page; it says level 4 extends level 3
+# css-overflow-4/#overflow-concepts 2 Overflow Concepts and Terminology: no page; it is level 3's 2, whose pages show it
+# css-overflow-4/#overflow-properties 3 Scrolling and Clipping Overflow: no page; it is level 3's 3, whose pages show it
+css-overflow-4/#overflow-control 3.1 Managing Overflow: the overflow-x, overflow-y, and overflow properties
+    overflow-replaced.html
+css-overflow-4/#overflow-clip-margin 3.2 Changing Clipping Bounds: the overflow-clip-margin-* properties
+    overflow-clip-margin-sides.html
+# css-overflow-4/#auto-ellipsis 4 Automatic Ellipses: no page; it introduces 4.1 and 4.2
+css-overflow-4/#text-overflow 4.1 Inline Overflow Ellipsis: the text-overflow property
+    text-overflow-string.html
+    text-overflow-fade.html
+# css-overflow-4/#bidi-ellipsis 4.2 Bidi ellipsis examples: no page; its examples are level 3's 6.1.1, whose page shows them
+css-overflow-4/#ellipsing-details 4.3 ellipsing details
+    text-overflow-isolation.html
+# css-overflow-4/#ellipsis-interaction 4.4 user interaction with ellipsis: no page; it is level 3's 6.1.3, whose page shows it, for the new values too
+# css-overflow-4/#text-overflow-examples 4.5 text-overflow examples: no page; they are level 3's 6.1.4 and a fade, which 4.1 shows
+css-overflow-4/#ellipsis-scrolling 4.6 ellipsis interaction with scrolling interfaces
+    text-overflow-both-ends.html
+css-overflow-4/#block-ellipsis 4.2 Indicating Block-Axis Overflow: the block-ellipsis property
+    block-ellipsis.html
+    block-ellipsis-where.html
+# css-overflow-4/#suppressing-excess 5 Suppressing Excess Content: no page; it introduces the subsections
+css-overflow-4/#line-clamp 5.1 Limiting Visible Lines: the line-clamp shorthand property
+    line-clamp.html
+    line-clamp-measured.html
+css-overflow-4/#webkit-line-clamp 5.1.1 Legacy compatibility
+    webkit-line-clamp.html
+css-overflow-4/#max-lines 5.2 Forcing a Break After a Set Number of Lines: the max-lines property
+    max-lines.html
+    max-lines-auto.html
+css-overflow-4/#continue 5.3 Handling of Excess Content: the continue property
+    continue.html
+    continue-suppressed.html
+css-overflow-4/#line-clamp-containers 5.3.1 Line-clamp containers
+    line-clamp-containers.html
+    line-clamp-floats.html
+css-overflow-4/#discarding-content 5.3.2 Discarding Content
+    continue-discard.html
+# css-overflow-4/#sbg-ext A Possible extensions for scrollbar-gutter: no page; a non-normative proposal without consensus (always, match-parent) that the specification says not to implement

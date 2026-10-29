@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: the satellite example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .demo { font-size: 10px; line-height: 12px; }
+  .container { position: relative; border: solid; }
+  .scroller { overflow: scroll; height: 5em; margin: 5em; }
+  .satellite { position: absolute; top: 0; width: 80px; }
+  .demo-body { height: 10em; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: the satellite example</h1>
+  <p class=pr-lede><q>Finally, consider this case where an absolutely positioned element is mixed with an overflow
+  parent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The scroller does not scroll the satellite</h2>
+  <p><q>In this example, the "scroller" element will not scroll the "satellite" element, because the latter's
+  containing block is outside the element whose overflow is being clipped and scrolled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2
+  §11.1.1</a></span></p>
+  <div><pre class=pr-source>container { position: relative; border: solid; }
+scroller { overflow: scroll; height: 5em; margin: 5em; }
+satellite { position: absolute; top: 0; }
+body { height: 10em; }</pre>
+  <pre class=pr-source>&lt;container&gt;
+ &lt;scroller&gt;
+  &lt;satellite/&gt;
+  &lt;body/&gt;
+ &lt;/scroller&gt;
+&lt;/container&gt;</pre></div>
+  <figure>
+    <div class="pr-stage demo"><div class=container><div class="scroller pr-frame"><div class="pr-a pr-fit satellite">satellite</div><div class="pr-b demo-body">body</div></div></div></div>
+    <figcaption>At 10px to the em: the dashed scroller is 50px tall, 50px inside the black container. Satellite sits at
+    the container's top, outside the scroller, whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage demo"><div class=container><div id=scrolled class="scroller pr-frame"><div class="pr-a pr-fit satellite">satellite</div><div class="pr-b demo-body">body</div></div></div></div>
+    <figcaption>The scroller scrolled 30px by script: body moves up 30px, its label out of view; satellite has not
+    moved.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("scrolled").scrollTop = 30;</script>
+</body>
+</html>

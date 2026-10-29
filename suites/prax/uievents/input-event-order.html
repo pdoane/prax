@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of input events</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.4.2 Input Event Order</div>
+  <h1>The order of input events</h1>
+  <p class=pr-lede><q>The input events defined in this specification MUST occur in a set order relative to one
+  another.</q> beforeinput, then <q>DOM element is updated</q>, then input. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-inputevent-event-order">UI Events §3.4.2</a></span></p>
+</header>
+<section>
+  <h2>Before and after the update</h2>
+  <p>The page's script records the field's value as each event reaches it, as <code>value</code>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-inputevent-event-order">§3.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field value="ab"></div>
+      <ol class=pr-log data-log="beforeinput input" data-fields="data value" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click at the end of the field and type <code>c</code>: beforeinput with <code>value="ab"</code>, then
+    input with <code>value="abc"</code>. Press Backspace: beforeinput with <code>value="abc"</code>, input with
+    <code>value="ab"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>In an editing host</h2>
+  <p>The same order holds for <q>any Element with contenteditable attribute enabled</q>; the page's script records
+  its text. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-beforeinput">§3.4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=host contenteditable>xy</div></div>
+      <ol class=pr-log data-log="beforeinput input" data-fields="data value" data-on="#host" data-lines=2></ol>
+    </div>
+    <figcaption>Click after <code>xy</code> and type <code>z</code>: beforeinput with <code>value="xy"</code>, then
+    input with <code>value="xyz"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the text of the control or editing host as each input event reaches it, before the log reads it.
+  for (const [id, read] of [["field", e => e.value], ["host", e => e.textContent]]) {
+      const element = document.getElementById(id);
+      for (const type of ["beforeinput", "input"])
+          element.addEventListener(type, event => { event.value = read(element); }, {capture: true});
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

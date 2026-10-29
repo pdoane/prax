@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines overlap other content</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outlines overlap other content</h1>
+  <p class=pr-lede>An outline is left out of layout, so nothing makes room for it: it is drawn over whatever is
+  next to its box.</p>
+</header>
+
+<section>
+  <h2>Outlines may overlap other content</h2>
+  <p><q>Since the outline does not affect formatting (i.e., no space is left for it in the box model), it may well
+  overlap other elements on the page.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-outlines">CSS 2 §18.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px">Text above,<br>and <span style="outline: 6px solid rgba(192, 57, 43, 0.6)">a word</span> outlined,<br>then text below.</div>
+    <figcaption>A 6px outline on an inline box: the lines keep their 20px spacing, and the outline overlaps the text
+    above and below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 10px"><div style="padding: 0 6px; outline: 8px solid rgba(192, 57, 43, 0.6)">An outlined block.</div><div style="padding: 0 6px">The next block.</div></div>
+    <figcaption>An 8px outline on a block: the next block starts right below it, 20px down, and the outline covers
+    the top 8px of its line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

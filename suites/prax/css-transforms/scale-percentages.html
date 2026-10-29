@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scale functions take percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 40px; top: 30px; width: 80px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 12.1 2D Transform Functions</div>
+  <h1>Scale functions take percentages</h1>
+  <p class=pr-lede><q>The scale functions defined in [css-transforms-1] now support percentages.</q> <q>A percentage in
+  a scale function is equivalent to a number</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#two-d-transform-functions">CSS Transforms 2 §12.1</a></span>
+  Each blue box is 80 by 40 at (40, 30), where the dashed outline is, about its center, (80, 50).</p>
+</header>
+
+<section>
+  <h2>scale(), scaleX(), scaleY()</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scale(50%)">A</div></div>
+    <figcaption><code>scale(50%)</code>, as <code>scale(0.5)</code>: 40 by 20, 60 to 100 across, 40 to 60
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scale(150%, 50%)">A</div></div>
+    <figcaption><code>scale(150%, 50%)</code>: 120 by 20, 20 to 140 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scaleY(200%)">A</div></div>
+    <figcaption><code>scaleY(200%)</code>: 80 tall, 10 to 90 down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What skipping contents does</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 70px; }
+  .h { content-visibility: hidden; }
+  .b { background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .of { float: left; width: 40px; height: 40px; background: #d68a3c; }
+  img { display: block; width: 80px; height: 40px; margin: 10px; border: 5px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 4 Suppressing An Element’s Contents Entirely, skipped contents</div>
+  <h1>What skipping contents does</h1>
+  <p class=pr-lede><q>When an element skips its contents, the user agent must change the used value of the 'contain'
+  property so as to turn on layout containment, style containment, paint containment, and size containment. Further,
+  its contents (the flat tree descendants of the element, including both text and elements, or the replaced content of
+  a replaced element) are not painted (as if they had visibility: hidden)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#content-visibility">CSS Containment 2 §4</a></span>
+  Each blue box has <code>content-visibility: hidden</code>.</p>
+</header>
+
+<section>
+  <h2>Contents not painted</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="b h" style="height: 40px"><div style="visibility: visible">visible</div></div></div>
+    <figcaption>A box 40 tall holding a child with <code>visibility: visible</code>: the child is not drawn either; the
+    box is empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-measure"><div class="b h" style="height: 40px"><div style="position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; background: #d68a3c"></div></div></div>
+    <figcaption>An absolutely positioned child, placed at the stage's corner, outside the box: not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img class=h alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An <code>img</code> 80 by 40 with a 5px border: the border is drawn, the purple image is
+    not.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The containments, in use</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=of></div><div class="b h" style="height: 30px">text</div></div>
+    <figcaption>After an orange float: layout containment makes the box a formatting context, so it sits beside the
+    float, 110 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="b h" style="float: left; padding: 10px">some text</div></div>
+    <figcaption>A float with 10px padding: size containment makes it 20 by 20.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="counter-reset: n"><div class=h><div style="counter-increment: n 5"></div></div><div class=pc></div></div>
+    <style>.pc::before { content: "n=" counter(n); }</style>
+    <figcaption>An increment of 5 in the box: style containment keeps it there, so the line after reads n=0. <span class=pr-flag>Safari</span> reads
+    n=5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

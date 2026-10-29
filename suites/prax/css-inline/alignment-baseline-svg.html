@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>alignment-baseline: legacy SVG values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  svg { display: block; width: 150px; height: 80px; }
+  section:first-of-type .pr-stage { width: 150px; }
+  section:first-of-type figcaption { max-width: 150px; }
+  text { font: 30px "PR Baseline Diagnostic"; }
+  line { stroke: #c0392b; stroke-width: 1; stroke-dasharray: 3 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.2.1 Legacy Values for SVG</div>
+  <h1>alignment-baseline: legacy SVG values</h1>
+  <p class=pr-lede><q>SVG implementations may support the following aliases in order to support legacy content:
+  text-before-edge aliasing text-top; text-after-edge aliasing text-bottom. These values are not allowed in the
+  vertical-align shorthand.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-svg-legacy">CSS Inline Layout 3 §4.2.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>In SVG text</h2>
+  <p><q>In SVG text layout, these values instead specify the baseline that is aligned to the SVG current text
+  position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">§4.2.2</a></span>
+  Each SVG holds two <code>text</code> elements of 30px PR Baseline Diagnostic's █, which fills its ascent to its
+  descent, at y = 40, dashed in red; the right one has the caption's <code>alignment-baseline</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><svg viewBox="0 0 150 80"><line x1=0 y1=40 x2=160 y2=40></line><text x=20 y=40>█</text><text x=90 y=40 style="alignment-baseline: text-top">█</text></svg></div>
+    <figcaption><code>text-top</code>: the right █ hangs from the red line. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> On it, level with the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg viewBox="0 0 150 80"><line x1=0 y1=40 x2=160 y2=40></line><text x=20 y=40>█</text><text x=90 y=40 style="alignment-baseline: text-before-edge">█</text></svg></div>
+    <figcaption><code>text-before-edge</code>, its alias, which an SVG implementation may support: the
+    same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg viewBox="0 0 150 80"><line x1=0 y1=40 x2=160 y2=40></line><text x=20 y=40>█</text><text x=90 y=40 style="alignment-baseline: text-after-edge">█</text></svg></div>
+    <figcaption><code>text-after-edge</code>, the alias of <code>text-bottom</code>: the right █ stands on the red
+    line, its descent above it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not in vertical-align</h2>
+  <p>Each span declares <code>vertical-align: 10px</code> and then the caption's.</p>
+  <figure>
+    <div class="pr-stage pr-text">Xx <span class=pr-hl id=v1 style="vertical-align: 10px; vertical-align: text-before-edge">span</span></div>
+    <figcaption><code>vertical-align: text-before-edge</code>, not allowed here, is dropped: the span stays
+    raised 10px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">Xx <span class=pr-hl id=v2 style="vertical-align: 10px; vertical-align: text-top">span</span></div>
+    <figcaption><code>vertical-align: text-top</code>: the span's top level with the top of the line's
+    text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

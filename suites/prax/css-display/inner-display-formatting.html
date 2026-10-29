@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inner display types: table, flex, grid, ruby</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .cell { display: table-cell; padding: 0 4px; background: #b9cde6; border: 1px solid #2c5a8f; }
+  .item { padding: 0 4px; background: #b9cde6; border: 1px solid #2c5a8f; }
+  rt, .rt { font-size: 10px; line-height: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.2 Inner Display Layout Models, table, flex, grid and ruby</div>
+  <h1>Inner display types: table, flex, grid, ruby</h1>
+  <p class=pr-lede><q>If a &lt;display-inside&gt; value is specified but &lt;display-outside&gt; is omitted, the
+  element's outer display type defaults to block—except for ruby, which defaults to inline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#inner-model">CSS Display 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Block-level by default</h2>
+  <p>Each orange chip is a <code>span</code> between "before" and "after", given an inner display type alone.</p>
+  <figure>
+    <div class=pr-stage>before <span id=i1 class=pr-chip style="display: table"><span class=cell>a</span><span class=cell>b</span></span> after</div>
+    <figcaption><code>table</code>: a table wrapper box round a table grid box, on a line of its own.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>before <span id=i2 class=pr-chip style="display: flex"><span class=item>a</span><span class=item>b</span></span> after</div>
+    <figcaption><code>flex</code>: a flex container as wide as the stage, on a line of its own.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>before <span id=i3 class=pr-chip style="display: grid; grid-template-columns: 1fr 1fr"><span class=item>a</span><span class=item>b</span></span> after</div>
+    <figcaption><code>grid</code> of two columns, on a line of its own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>ruby is inline</h2>
+  <p><q>The element generates a ruby container box and establishes a ruby formatting context</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding-top: 6px">before <div id=i4 style="display: ruby">base<span class=rt style="display: ruby-text">text</span></div> after</div>
+    <figcaption>A <code>div</code> with <code>display: ruby</code>: "base" on the line between the words, "text"
+    small above it. <span class=pr-flag>Safari</span>: a block, "text" beside "base".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding-top: 6px">before <span id=i5 style="display: block ruby">base<span class=rt style="display: ruby-text">text</span></span> after</div>
+    <figcaption><code>block ruby</code>: <q>generating a wrapper box of the appropriate outer display type</q>, so the
+    ruby on a line of its own. <span class=pr-flag>Safari</span> leaves it inline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

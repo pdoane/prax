@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Comparing positioning schemes: normal flow and relative</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { font-size: 12px; line-height: 200%; }
+  .doc p { margin: 0; }
+  #outer1, #outer2 { color: red; }
+  #inner1, #inner2 { color: blue; }
+  #outer2 { position: relative; top: -12px; }
+  #inner2 { position: relative; top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.8 Comparison of normal flow, floats, and absolute positioning</div>
+  <h1>Comparing positioning schemes: normal flow and relative</h1>
+  <p class=pr-lede>The specification's examples, on a paragraph with an <code>outer</code> span, red, holding an
+  <code>inner</code> one, blue, at <code>font-size: 12px; line-height: 200%</code>: 24px lines.</p>
+</header>
+
+<section>
+  <h2>Normal flow</h2>
+  <p><q>The P element contains all inline content: anonymous inline text and two SPAN elements. Therefore, all of the
+  content will be laid out in an inline formatting context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-normal-flow">CSS 2 §9.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide doc"><p>Beginning of body contents. <span id=outer1> Start of outer contents. <span id=inner1> Inner contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#outer { color: red } #inner { color: blue }</code></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Relative positioning</h2>
+  <p><q>The inline boxes containing the text (distributed over three lines) are shifted as a unit by '-12px'
+  (upwards).</q> <q>The inner contents are themselves offset relative to the outer contents by '12px' (downwards), back
+  to their original position.</q> <q>Note that the content following outer is not affected by the relative positioning
+  of outer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-relpos">CSS 2 §9.8.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide doc"><p>Beginning of body contents. <span id=outer2> Start of outer contents. <span id=inner2> Inner contents.</span> End of outer contents.</span> End of body contents.</p></div>
+    <figcaption><code>#outer { position: relative; top: -12px } #inner { position: relative; top: 12px }</code>: red
+    text half a line up, blue text where it was.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

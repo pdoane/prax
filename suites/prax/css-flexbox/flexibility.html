@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flexibility: growing and shrinking</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 7 Flexibility</div>
+  <h1>Flexibility: growing and shrinking</h1>
+  <p class=pr-lede><q>The defining aspect of flex layout is the ability to make the flex items “flex”, altering their
+  width/height to fill the available space in the main dimension.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flexibility">CSS Flexible Box Layout 2 §7</a></span></p>
+</header>
+
+<section>
+  <h2>Grow to fill, shrink to fit</h2>
+  <p><q>A flex container distributes free space to its items (proportional to their flex grow factor) to fill the
+  container, or shrinks them (proportional to their flex shrink factor) to prevent overflow.</q> Each stage is a
+  flex container 200px wide.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 40px">A</div><div class="pr-b pr-fit" style="flex: 3 1 40px">B</div></div>
+    <figcaption>Two items of basis 40px, growing 1 and 3: the 120px of free space goes 30px to A and 90px to B, so A
+    is 70px wide and B 130px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 1 150px">A</div><div class="pr-b pr-fit" style="flex: 0 1 150px">B</div></div>
+    <figcaption>Two items of basis 150px, shrinking 1 each: they are 100px over, and lose 50px each, so each is
+    100px and B ends at the stage's right edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fully inflexible items</h2>
+  <p><q>A flex item is fully inflexible if both its flex-grow and flex-shrink values are zero, and flexible
+  otherwise.</q></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 0 40px">A</div><div class="pr-b pr-fit" style="flex: 0 0 40px">B</div></div>
+    <figcaption><code>flex: 0 0 40px</code>: each stays 40px wide, and 120px of the stage is left empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 0 0 150px">A</div><div class="pr-b pr-fit" style="flex: 0 0 150px">B</div></div>
+    <figcaption><code>flex: 0 0 150px</code>: each stays 150px wide, and B overflows the stage by 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Object sizing in each context</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  ul.big { font: 20px/40px "PR Arimo"; }
+  .content { margin: 10px; font: 13px/20px "PR Arimo"; }
+  .content::before { content: url(../shared/resources/flag-40x20.png); }
+  .bi { width: 100px; height: 20px; margin: 10px; border: 20px solid; border-image: url(../shared/resources/flag-ratio.svg) 50% / 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.4 Examples of CSS Object Sizing</div>
+  <h1>Object sizing in each context</h1>
+  <p class=pr-lede><q>The following examples show how the CSS 2.1 and CSS3 Backgrounds &amp; Borders sizing algorithms
+  correspond to concepts defined in this specification.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#object-sizing-examples">CSS Images 3 §4.4</a></span>
+  The flags are four colors in quarters: a PNG 40 by 20, and an SVG with only a 2:1 ratio.</p>
+</header>
+
+<section>
+  <h2>list-style-image: a 1em square</h2>
+  <p><q>They use the default sizing algorithm with no specified size and a default object size of 1em square.</q> The
+  list's font size is 20px.</p>
+  <figure>
+    <div class=pr-stage><ul class=big style="list-style-image: url(../shared/resources/flag-ratio.svg)"><li>Item</li></ul></div>
+    <figcaption>The ratio-only SVG: contained in 20 by 20, a marker 20 by 10. Chrome, Safari and Firefox draw it half
+    that, 10 by 5.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><ul class=big style="list-style-image: linear-gradient(to right, #4f81bd, #d68a3c)"><li>Item</li></ul></div>
+    <figcaption>A gradient: a marker 20 by 20, blue to orange. Chrome, Safari and Firefox draw it about 9 by
+    9.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>content and border-image</h2>
+  <p><q>Objects inserted via the CSS2.1 content property are anonymous replaced elements, and are sized the same
+  way.</q> A border image is first sized <q>with no specified size, and the border image area as the default object
+  size.</q></p>
+  <figure>
+    <div class=pr-stage><div class=content>after</div></div>
+    <figcaption><code>::before</code> with <code>content: url()</code> of the PNG: 40 by 20, its natural size, then
+    the text.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bi></div></div>
+    <figcaption>The ratio-only SVG as a border image, area 140 by 60: contained, 120 by 60, then sliced at 50%: each
+    20px corner a color, blue and orange at the top, green and purple at the bottom; the edges empty.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

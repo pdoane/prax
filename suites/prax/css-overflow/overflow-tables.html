@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow on tables: the table grid box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { height: 110px; }
+  .t { width: 100px; table-layout: fixed; margin: 10px 40px; border: 2px solid #2c5a8f; }
+  .t .pr-table-cell { padding: 0; }
+  .wide { width: 150px; }
+  .cap { width: 0; color: #9c5f22; font-size: 12px; font-weight: 600; line-height: 20px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 1.2 Module Interactions</div>
+  <h1>Overflow on tables: the table grid box</h1>
+  <p class=pr-lede><q>When applied to display: table elements, the properties defined in this module apply to the table
+  grid box (not the table wrapper box).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#placement">CSS Overflow 3 §1.2</a></span></p>
+</header>
+
+<section>
+  <h2>The grid clips; the caption is outside it</h2>
+  <p>Each table has a blue 2px border, <code>table-layout: fixed</code>, 100px wide, a single cell holding a 150px wide A, and a caption whose text, on
+  one line, is longer than the table is wide; the text is in a block of no width, so it does not widen the table. The caption belongs to the wrapper box, beside the grid box.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-table t"><div class=pr-table-caption><div class=cap>caption: longer than the table</div></div><div class=pr-table-row><div class=pr-table-cell><div class="pr-a pr-fit wide">A, 150px wide</div></div></div></div></div>
+    <figcaption><code>visible</code>: A runs 50px past the table's right border, and the caption's text past its right
+    end.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-table t" style="overflow: hidden"><div class=pr-table-caption><div class=cap>caption: longer than the table</div></div><div class=pr-table-row><div class=pr-table-cell><div class="pr-a pr-fit wide">A, 150px wide</div></div></div></div></div>
+    <figcaption><code>overflow: hidden</code> on the table: A is cut at the inside of the table's border, and the
+    caption's text, outside the grid box, still runs past the end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

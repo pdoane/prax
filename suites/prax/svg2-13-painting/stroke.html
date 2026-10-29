@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>stroke: along the outline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 36px "PR Arimo"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><linearGradient id="across"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.5.1 Specifying stroke paint: the ‘stroke’ property</div>
+  <h1>stroke: along the outline</h1>
+  <p class=pr-lede><q>The 'stroke' property paints along the outline of the given graphical element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingStrokePaint">SVG 2 §13.5.1</a></span>
+  Its value is a paint <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingPaint">§13.2</a></span>,
+  and its initial value <code>none</code>. Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>A band on the outline</h2>
+  <p>A stroke 10 wide reaches 5 to each side of the outline <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#StrokeShape">§13.5.7</a></span>.
+  The rectangle is 120 by 40 at 20, 10, filled blue.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></svg></div>
+    <figcaption>No <code>stroke</code>: none, only the fill.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption><code>stroke="#d68a3c"</code>, 10 wide: an orange frame from 15, 5 to 145, 55, its inner edge at 25,
+    15 to 135, 45.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="none" stroke="url(#across)" stroke-width="10" /></svg></div>
+    <figcaption><code>stroke="url(#across)"</code>, a gradient over the rectangle's box: blue on the left side to
+    orange on the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Open subpaths, and text</h2>
+  <p>Unlike the fill, the stroke follows only the outline as drawn.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="6" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 L 140 50</code>: two sides, no line along y 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><text x="20" y="44" fill="#4f81bd" stroke="#d68a3c" stroke-width="3">Paint</text></svg></div>
+    <figcaption>Text stroked orange, 3 wide, over its blue fill: around each glyph.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

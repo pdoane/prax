@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Width distribution in fixed mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; table-layout: fixed; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.3.1 Changes to width distribution in fixed mode</div>
+  <h1>Width distribution in fixed mode</h1>
+  <p class=pr-lede><q>The following changes to previous algorithm apply in fixed mode</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#width-distribution-in-fixed-mode">CSS Table 3 §3.9.3.1</a></span>
+  Every table is <code>table-layout: fixed</code>, one row of two cells; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Percent-columns have no minimum</h2>
+  <p><q>The min-content width of percent-columns and auto-columns is considered to be zero</q>. (A width of a
+  percentage plus a length, which the section counts as two columns, is now <q>treated as if auto had been
+  specified</q>: <a href="https://drafts.csswg.org/css-values-4/#calc-computed-value">CSS Values and Units 4 §10.11</a>.)</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 50%">aaaa</td><td style="width: 150px">b</td></tr></table></div>
+    <figcaption>200px: blue <code>50%</code>, orange <code>150px</code>. The pixel-column keeps 150px and the
+    percent-column gets the other 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages: border-box, and scaled to fit</h2>
+  <p><q>Cells ignore their border and padding size if their width is a percentage ('box-sizing' is ignored)</q>. <q>If,
+  when percentages are resolved based on the assignable table width, the sum of columns widths based on this
+  resolution would exceed the assignable table width, they are instead to be resolved relative to their percentage
+  value such that the sum of columns width meets the assignable table width exactly.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 50%; padding: 0 20px">a</td><td>b</td></tr></table></div>
+    <figcaption>Blue <code>50%</code>, 20px of padding a side: 100px, padding in. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> add the padding, 140px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 200px"><tr><td style="width: 90%">a</td><td style="width: 60%">b</td></tr></table></div>
+    <figcaption><code>90%</code> and <code>60%</code>, 300px in all: scaled to 200px, 120px and 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>conic-gradient(): from an angle, at a position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 80px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.3.1 conic-gradient() Syntax</div>
+  <h1>conic-gradient(): from an angle, at a position</h1>
+  <p class=pr-lede><q>[ from [ &lt;angle&gt; | &lt;zero&gt; ] ]? [ at &lt;position&gt; ]?</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#conic-gradient-syntax">CSS Images 4 §3.3.1</a></span>
+  Each box is 140 by 80. Its gradient is <code>blue 25%, orange 0 50%, green 0 75%, purple 0</code>: a quarter turn
+  of each, clockwise.</p>
+</header>
+
+<section>
+  <h2>from: the whole gradient turned</h2>
+  <p><q>The entire gradient is rotated by this angle. If omitted, defaults to 0deg. The unit identifier may be omitted
+  if the &lt;angle&gt; is zero.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(from 0, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>from 0</code>: blue at the top right, orange, green, purple at the top left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(from 90deg, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>from 90deg</code>: each quarter a quarter turn on, blue at the bottom right, purple at the top
+    right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(from 45deg, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>from 45deg</code>: blue to the right, orange below, green to the left, purple above, split by lines at 45deg
+    through the center.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>at: the gradient center</h2>
+  <p>The position <q>is resolved using the center-point as the object area and the gradient box as the positioning
+  area. If this argument is omitted, it defaults to center.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(at 40px 20px, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>at 40px 20px</code>: the four meet at 50, 30 on the guides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(at right 20px bottom 20px, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>at right 20px bottom 20px</code>: they meet at 130, 70, so purple fills most of the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background: conic-gradient(at 100% 0%, #4f81bd 25%, #d68a3c 0 50%, #6aa36a 0 75%, #8e44ad 0)"></div></div>
+    <figcaption><code>at 100% 0%</code>: the center on the top right corner; only the green quarter, below and to its
+    left, is in the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

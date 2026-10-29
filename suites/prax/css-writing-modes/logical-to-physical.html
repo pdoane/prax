@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative to physical</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 80px; height: 80px; font: 13px/20px "PR Arimo"; }
+  .box { inline-size: 50px; block-size: 30px; background: #e7eaef; border-block-start: 6px solid #2c5a8f; border-inline-start: 6px solid #d68a3c; }
+  figcaption { max-width: 92px; }
+  figure { margin-right: 8px; }
+  .key { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 6.4 Abstract-to-Physical Mappings</div>
+  <h1>Flow-relative to physical</h1>
+  <p class=pr-lede><q>The following table summarizes the abstract-to-physical mappings (based on the used direction
+  and writing-mode)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#logical-to-physical">CSS Writing Modes 4 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>block-size, inline-size, block-start, inline-start</h2>
+  <p>Each stage's box has <code>inline-size: 50px; block-size: 30px</code>, a <span class=key style="background:
+  #2c5a8f"></span> blue <code>border-block-start</code> and an <span class=key style="background: #d68a3c"></span>
+  orange <code>border-inline-start</code> (<a href="https://drafts.csswg.org/css-logical-1/#box">CSS Logical Properties and Values 1 §4</a>),
+  and sits at the stage's block-start and inline-start corner. <q>in vertical writing modes, a text-orientation value
+  of upright forces the used direction to ltr.</q></p>
+  <figure>
+    <div class=pr-stage><div class=box></div></div>
+    <figcaption><code>horizontal-tb ltr</code>: blue top, orange left; 50 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><div class=box></div></div>
+    <figcaption><code>horizontal-tb rtl</code>: blue top, orange right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl"><div class=box></div></div>
+    <figcaption><code>vertical-rl ltr</code>: blue right, orange top; 50 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl; direction: rtl"><div class=box></div></div>
+    <figcaption><code>vertical-rl rtl</code>: blue right, orange bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-lr"><div class=box></div></div>
+    <figcaption><code>vertical-lr ltr</code>: blue left, orange top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-lr; direction: rtl"><div class=box></div></div>
+    <figcaption><code>vertical-lr rtl</code>: blue left, orange bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: sideways-lr"><div class=box></div></div>
+    <figcaption><code>sideways-lr ltr</code>: blue left, orange bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: sideways-lr; direction: rtl"><div class=box></div></div>
+    <figcaption><code>sideways-lr rtl</code>: blue left, orange top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: sideways-rl"><div class=box></div></div>
+    <figcaption><code>sideways-rl ltr</code>: as <code>vertical-rl</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="writing-mode: vertical-rl; direction: rtl; text-orientation: upright"><div class=box></div></div>
+    <figcaption><code>vertical-rl rtl upright</code>: as <code>ltr</code>, orange top.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> orange bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

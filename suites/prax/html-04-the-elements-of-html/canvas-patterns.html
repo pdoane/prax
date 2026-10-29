@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas patterns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.10 Fill and stroke styles</div>
+  <h1>Canvas patterns</h1>
+  <p class=pr-lede>createPattern <q>Returns a CanvasPattern object that uses the given image and repeats in the
+  direction(s) given</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#fill-and-stroke-styles">HTML §4.12.5.1.10</a></span>
+  The image is the 40 by 20 flag. Each pattern fills a rectangle from (10, 10) to (190, 50), outlined in red.</p>
+</header>
+<section>
+  <h2>Repetition, from the origin, and the pattern's matrix</h2>
+  <p><q>Place a copy of the image on the bitmap, anchored such that its top left corner is at the origin of the
+  coordinate space</q>, then repeat it as the repetition says. <q>Transform the resulting bitmap according to the
+  pattern's transformation matrix.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=pattern data-repeat=repeat></canvas></div>
+    <figcaption><code>repeat</code>: flags every 40 across and 20 down from (0, 0), so the rectangle's top left falls
+    in the first flag's green quarter.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=pattern data-repeat=repeat-x></canvas></div>
+    <figcaption><code>repeat-x</code>: one row, y 0 to 20, so only its green and purple halves show, y 10 to
+    20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=pattern data-repeat=no-repeat></canvas></div>
+    <figcaption><code>no-repeat</code>: one flag at (0, 0), so only its corner shows, x 10 to 40, y 10 to 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=pattern data-repeat=repeat data-matrix="1 0 0 1 10 10"></canvas></div>
+    <figcaption><code>setTransform</code> moving the pattern to (10, 10): whole flags from the rectangle's corner, blue
+    at the top left.</figcaption>
+  </figure>
+</section>
+<script>
+  const flag = new Image();
+  flag.src = "../shared/resources/flag-40x20.png";
+  flag.onload = () => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]")) {
+      const context = canvas.getContext("2d");
+      const pattern = context.createPattern(flag, canvas.dataset.repeat);
+      if (canvas.dataset.matrix) {
+        const [a, b, c, d, e, f] = canvas.dataset.matrix.split(" ").map(Number);
+        pattern.setTransform({a, b, c, d, e, f});
+      }
+      context.fillStyle = pattern;
+      context.fillRect(10, 10, 180, 40);
+      context.strokeStyle = "#c0392b";
+      context.strokeRect(9.5, 9.5, 181, 41);
+    }
+  };
+</script>
+</body>
+</html>

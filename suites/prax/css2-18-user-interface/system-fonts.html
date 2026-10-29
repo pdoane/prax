@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>User preferences for fonts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sf { padding: 2px 6px; }
+  .sf:nth-child(odd) { background: #f4f5f7; }
+  .sf .pr-computed { font: 600 11px/1.3 ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.3 User preferences for fonts</div>
+  <h1>User preferences for fonts</h1>
+  <p class=pr-lede><q>As for colors, authors may specify fonts in a way that makes use of a user's system resources.</q>
+  The <code>font</code> shorthand takes six names of system fonts; what each looks like depends on the platform.</p>
+</header>
+
+<section>
+  <h2>The system fonts</h2>
+  <p><q>System fonts may only be set as a whole; that is, the font family, size, weight, style, etc. are all set at the
+  same time.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#system-fonts①">CSS 2 §18.3</a>, <a href="https://drafts.csswg.org/css2/#font-shorthand">§15.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=sf id=f1 style="font: caption">caption <code class=pr-computed data-of=f1 data-property=font-size></code></div>
+      <div class=sf id=f2 style="font: icon">icon <code class=pr-computed data-of=f2 data-property=font-size></code></div>
+      <div class=sf id=f3 style="font: menu">menu <code class=pr-computed data-of=f3 data-property=font-size></code></div>
+      <div class=sf id=f4 style="font: message-box">message-box <code class=pr-computed data-of=f4 data-property=font-size></code></div>
+      <div class=sf id=f5 style="font: small-caption">small-caption <code class=pr-computed data-of=f5 data-property=font-size></code></div>
+      <div class=sf id=f6 style="font: status-bar">status-bar <code class=pr-computed data-of=f6 data-property=font-size></code></div>
+    </div>
+    <figcaption>Each row is in the font it names: <q>captioned controls</q>, <q>to label icons</q>, <q>menus</q>,
+    <q>dialog boxes</q>, <q>labeling small controls</q>, <q>window status bars</q>. Beside it, its font size, read
+    back.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Set as a whole, then altered</h2>
+  <p><q>These values may then be altered individually if desired.</q> <q>System fonts can only be specified with this
+  property, not with 'font-family' itself.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-shorthand">CSS 2 §15.8</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div style="font: menu">font: menu</div><div style="font: menu; font-weight: bold; font-style: italic">and bold italic</div></div>
+    <figcaption>The second line is <code>font: menu; font-weight: bold; font-style: italic</code>: the menu font,
+    bold and italic.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-text style="font-family: caption">font-family: caption</div></div>
+    <figcaption><code>font-family: caption</code> names a family called <q>caption</q>, not the system font: none
+    exists, so the text is in the default font.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

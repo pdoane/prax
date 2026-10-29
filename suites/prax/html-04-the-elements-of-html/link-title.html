@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The link element's title</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.4 The link element</div>
+  <h1>The link element's title</h1>
+  <p class=pr-lede><q>The title attribute gives the title of the link. With one exception, it is purely advisory.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-link-element">HTML §4.2.4</a></span></p>
+</header>
+<section>
+  <h2>Titles name style sheet sets</h2>
+  <p><q>The exception is for style sheet links that are in a document tree, for which the title attribute defines CSS
+  style sheet sets.</q> The first titled set is the preferred one, and sheets of other titles are not applied. Each
+  frame is a document of its own.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet title=Green href=support/green.css><link rel=stylesheet title=Orange href=support/orange.css><div class=styled>title=Green, then Orange</div>"></iframe></div>
+    <figcaption>Green: the second sheet, titled Orange, is not in the preferred set.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet title=Green href=support/green.css><link rel=stylesheet href=support/orange.css><div class=styled>title=Green, then none</div>"></iframe></div>
+    <figcaption>Orange: a sheet without a title applies whatever set is chosen, and comes last.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

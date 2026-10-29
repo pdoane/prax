@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vector-effect: size, rotation and position</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.13 Vector effects</div>
+  <h1>vector-effect: size, rotation and position</h1>
+  <p class=pr-lede><q>Sometimes it is of interest to let the outline of an object keep its original width or to let
+  the position of an object fix no matter which transforms are applied to it.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#VectorEffects">SVG 2 §8.13</a></span>
+  Each stage is an SVG 160 by 60, the host. The arrow is 40 by 20 about its origin, pointing right; dashed, without
+  the effect.</p>
+</header>
+
+<section>
+  <h2>non-scaling-size and non-rotation</h2>
+  <p><code>non-scaling-size</code>: <q>The scale of the user coordinate system do not change in spite of change of CTMs
+  from a host coordinate space.</q>
+  <code>non-rotation</code>: <q>The rotation and skew of the user coordinate system is suppressed in spite of change of
+  CTMs from a host coordinate space.</q> Neither suppresses the other.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(40 30) scale(2)"><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" class=pr-ghost /><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" fill="#4f81bd" vector-effect="non-scaling-size" /></g></svg></div>
+    <figcaption><code>non-scaling-size</code> in <code>scale(2)</code>, origin at 40, 30: 40 by 20 from 20 to 60,
+    inside the dashed 80 by 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 30) rotate(90)"><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" class=pr-ghost /><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" fill="#4f81bd" vector-effect="non-rotation" /></g></svg></div>
+    <figcaption><code>non-rotation</code> in <code>rotate(90)</code> about 80, 30: still pointing right, across the
+    dashed one pointing down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Pointing down.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 30) rotate(90) scale(1.5)"><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" class=pr-ghost /><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" fill="#4f81bd" vector-effect="non-rotation" /></g></svg></div>
+    <figcaption><code>non-rotation</code> in <code>rotate(90) scale(1.5)</code>: pointing right, scaled, 60 by 30
+    from 50 to 110. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Pointing down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>fixed-position</h2>
+  <p><q>The placement of user coordinate system is fixed in spite of change of CTMs from a host coordinate space.</q>
+  <q>The shift components e and f of matrix of transform property are used to transfer the origin of fixed user
+  coordinate system.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 0)"><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" class=pr-ghost transform="translate(40 30)" /><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" fill="#4f81bd" vector-effect="fixed-position" transform="translate(40 30)" /></g></svg></div>
+    <figcaption>In a <code>g</code> moved 80 right, <code>translate(40 30)</code>: its origin at 40, 30, not 120, 30.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> At 120, 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 0) scale(1.5)"><path class=pr-ghost transform="translate(40 30)" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /><path d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" fill="#4f81bd" vector-effect="fixed-position" transform="translate(40 30)" /></g></svg></div>
+    <figcaption>In a <code>g</code> moved and scaled 1.5, the same: at 40, 30, scaled, 60 by 30 from 10 to 70.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At 140,
+    45.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

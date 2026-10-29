@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-position: placing the mask</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .subj { width: 60px; height: 30px; padding: 10px; margin: 10px; border: 10px solid #d68a3c;
+          background: linear-gradient(#4f81bd, #4f81bd) content-box, #b9cde6;
+          mask-image: url(support/disc.svg); mask-repeat: no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.4 Positioning Mask Images: the mask-position property</div>
+  <h1>mask-position: placing the mask</h1>
+  <p class=pr-lede><q>See the background-position property for the definitions of the property values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-position">CSS Masking 1 §7.4</a></span>
+  Each box is 100 by 70 at 10, 10, masked by one 20px disc. What differs from a background is the area: the mask
+  positioning area is the border box, as <a href="mask-origin.html">mask-origin</a>'s initial value gives it.</p>
+</header>
+
+<section>
+  <h2>From the border box's edges</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj></div></div>
+    <figcaption>The initial <code>0% 0%</code>: the disc on the border's top left corner, 10 to 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-position: 100% 100%"></div></div>
+    <figcaption><code>100% 100%</code>: on the border's bottom right corner, 90 to 110 across, 60 to 80
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-position: right 20px bottom 10px"></div></div>
+    <figcaption><code>right 20px bottom 10px</code>: 70 to 90 across, 50 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="mask-position: 50% 50%"></div></div>
+    <figcaption><code>50% 50%</code>: half of 100 − 20 and of 70 − 20, so 50 to 70 across, 35 to 55
+    down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

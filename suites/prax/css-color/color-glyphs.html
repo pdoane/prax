@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The color property and color glyphs</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .nabla { font: 40px/60px "PR Nabla"; padding: 0 6px; white-space: nowrap; }
+  .colr { font: 40px/60px "PR Colr Test Glyphs"; padding: 0 6px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.2 Foreground Color: the color property, color glyphs</div>
+  <h1>The color property and color glyphs</h1>
+  <p class=pr-lede><q>When applied to text, this property, including its alpha component, has no effect on “color
+  glyphs” (such as the emoji in some fonts), which are colored by a built-in palette.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#the-color-property">CSS Color 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A palette's colors are the font's</h2>
+  <p>PR Nabla's glyphs are COLRv1 layers colored from its own palette, orange, yellow and brown.</p>
+  <figure>
+    <div class="pr-stage nabla" style="color: #4f81bd">Ab</div>
+    <figcaption><code>color: #4f81bd</code>: "Ab" in Nabla's own orange and yellow, not blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage nabla" style="color: rgb(0 0 0 / 20%)">Ab</div>
+    <figcaption><code>color: rgb(0 0 0 / 20%)</code>: the same, fully opaque; the color's alpha has no
+    effect either. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Firefox</span> Each draws the glyphs at 20% opacity, faint.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The foreground color in a palette</h2>
+  <p><q>some colored fonts are able to refer to a contextual “foreground color”, such as by palette entry 0xFFFF in
+  the COLR table of OpenType [...] In such cases, the foreground color is set by this property, identical to how it
+  sets the currentcolor value.</q> The two glyphs of PR Colr Test Glyphs here each fill a square with palette entry
+  0xFFFF: the first at the entry's own alpha, the second at 30% of it.</p>
+  <figure>
+    <div class="pr-stage colr" style="color: #c0392b">&#xF0B06;&#xF0B07;</div>
+    <figcaption><code>color: #c0392b</code>: a red square, then a pale red one. Safari, which has no COLRv1,
+    draws the glyphs' outlines in the text color: two red squares as one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage colr" style="color: #2c5a8f">&#xF0B06;&#xF0B07;</div>
+    <figcaption><code>color: #2c5a8f</code>: the same glyphs in blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

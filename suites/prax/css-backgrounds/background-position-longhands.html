@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-position-x, -y, -inline, -block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") no-repeat; }
+  .rtl { direction: rtl; }
+  .v { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.6 Background Positioning: the background-position-x, background-position-y, background-position-inline, and background-position-block properties</div>
+  <h1>background-position-x, -y, -inline, -block</h1>
+  <p class=pr-lede><q>This property specifies the background position's horizontal component. An omitted origin keyword
+  is assumed to be left.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-position-longhands">CSS Backgrounds 4 §2.6</a></span>
+  Each dashed box is 140 by 60, with a blue 20px square drawn once. The section is open: <q>This section is still
+  being worked out.</q></p>
+</header>
+
+<section>
+  <h2>One axis at a time, from an edge</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position-x: right 10px; background-position-y: 20px"></div></div>
+    <figcaption><code>x: right 10px</code>, <code>y: 20px</code>: 10px from the right, 20px down.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost rtl" style="background-position-x: x-start 10px"></div></div>
+    <figcaption><code>direction: rtl</code>, <code>x-start 10px</code>: the x axis starts at the right, so 10px from
+    the right, at the top. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-position-y: bottom 10px"></div></div>
+    <figcaption><code>y: bottom 10px</code>: 10px above the bottom, at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative</h2>
+  <p><q>An omitted origin keyword is assumed to be start.</q> The boxes are <code>vertical-rl</code>: the block axis
+  runs right to left, the inline axis down.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-position-block: 10px; background-position-inline: end"></div></div>
+    <figcaption><code>block: 10px</code>, <code>inline: end</code>: 10px from the right, at the bottom. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-position-inline: 20px"></div></div>
+    <figcaption><code>inline: 20px</code>: 20px down from the top; block start 0%, at the right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the top left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Vertical writing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 14px/22px "PR Noto Sans JP"; }
+  .h { width: 130px; }
+  .v { writing-mode: vertical-rl; width: auto; height: 130px; }
+  figure.s figcaption { max-width: 130px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 3.1 Introduction to Vertical Writing</div>
+  <h1>Vertical writing</h1>
+  <p class=pr-lede><q>Unlike languages that use the Latin script which are primarily laid out horizontally, Asian
+  languages such as Chinese and Japanese can be laid out vertically.</q> The section is non-normative. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#vertical-intro">CSS Writing Modes 4 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The same text, horizontal and vertical</h2>
+  <p><q>Indentation from the left edge in the left-to-right horizontal case translates to indentation from the top
+  edge in the top-to-bottom vertical case.</q> Each stage is indented 1em.</p>
+  <figure class=s>
+    <div class="pr-stage h" style="text-indent: 1em">日本語の文章。縦と横に書く。</div>
+    <figcaption>Horizontal: the first line indented from the left; 。 at the bottom left.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="text-indent: 1em">日本語の文章。縦と横に書く。</div>
+    <figcaption>Vertical: lines from the right, the first indented from the top; 。 at the top
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Latin and numbers in vertical text</h2>
+  <p><q>Latin words can be rotated sideways, or each letter can be oriented upright</q>; for <q>two-digit numbers in dates,
+  text is fit compactly into a single vertical character box</q>.</p>
+  <figure class=s>
+    <div class="pr-stage v">英語のvirusと<span style="text-orientation: upright">DNA</span></div>
+    <figcaption>"virus" turned; the letters of "DNA" upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v">四月<span style="text-combine-upright: all">16</span>日に</div>
+    <figcaption>"16" side by side in one character's square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

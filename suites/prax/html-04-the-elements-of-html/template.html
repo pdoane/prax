@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The template element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .shown { display: block; height: 20px; border: 1px dashed var(--pr-line); background: #f6d7b4; }
+  .rows { margin: 0; padding: 0; list-style: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.3 The template element</div>
+  <h1>The template element</h1>
+  <p class=pr-lede><q>The template element is used to declare fragments of HTML that can be cloned and inserted in the
+  document by script.</q> <q>In a rendering, the template element represents nothing.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-template-element">HTML §4.12.3</a></span></p>
+</header>
+<section>
+  <h2>Its contents are not drawn</h2>
+  <p><q>The template contents of a template element are not children of the element itself.</q> <code>template {
+  display: none; }</code> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#hidden-elements">§15.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage stage pr-text">before <template><b>Hidden</b></template>after</div>
+    <figcaption>"before after": the template's bold word is not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">before<template class=shown><b>Hidden</b></template>after</div>
+    <figcaption><code>display: block</code> on the template, an orange box with a dashed border, 20px tall: drawn
+    empty, since the word is in its contents, not its children.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Clones of the contents are drawn</h2>
+  <p>The page's script clones <code>template.content</code> three times into the list, filling each clone's text.</p>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <ul class=rows id=cats></ul>
+      <template id=row><li><b></b> has <span></span> legs</li></template>
+    </div>
+    <figcaption>Three lines from one template: "<b>Pillar</b> has 3 legs", "<b>Hedral</b> has 4 legs", "<b>Kite</b>
+    has 4 legs".</figcaption>
+  </figure>
+</section>
+<script>
+  const template = document.getElementById("row");
+  for (const [name, legs] of [["Pillar", 3], ["Hedral", 4], ["Kite", 4]]) {
+    const clone = template.content.cloneNode(true);
+    clone.querySelector("b").textContent = name;
+    clone.querySelector("span").textContent = legs;
+    document.getElementById("cats").append(clone);
+  }
+</script>
+</body>
+</html>

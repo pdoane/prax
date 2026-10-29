@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track sizes: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; }
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, auto</div>
+  <h1>Track sizes: auto</h1>
+  <p class=pr-lede><code>auto</code> <q>When appearing outside a minmax() notation: equivalent to minmax(auto, auto),
+  representing the range between the minimum and maximum described above.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>As a maximum: max-content, and stretchable</h2>
+  <p><q>As a maximum: represents the largest max-content contribution of the grid items occupying the grid track;
+  however, unlike max-content, allows expansion of the track by the align-content and justify-content
+  properties.</q> Each grid holds "ab" and "abcd", 20 and 40px.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto"><div class=t1>ab</div><div class=t2>abcd</div></div></div>
+    <figcaption><code>auto auto</code>, <code>justify-content: normal</code>: 140px left over, 70px more to each:
+    90 and 110px, the second from 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto auto; justify-content: start"><div class=t1>ab</div><div class=t2>abcd</div></div></div>
+    <figcaption><code>justify-content: start</code>: 20 and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: max-content max-content"><div class=t1>ab</div><div class=t2>abcd</div></div></div>
+    <figcaption><code>max-content max-content</code>, <code>normal</code>: not expanded, 20 and 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>As a minimum: the items' minimum sizes</h2>
+  <p><q>As a minimum: represents the largest minimum size (specified by min-width/min-height) of the grid items
+  occupying the grid track.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(auto, 10px) 1fr"><div class=t1 style="min-width: 60px">a</div><div class=t2>b</div></div></div>
+    <figcaption><code>minmax(auto, 10px) 1fr</code>, an item with <code>min-width: 60px</code>: the column is
+    60px, "b" from 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="width: 18px; grid-template-columns: minmax(auto, 1fr)"><div class=t1>abc def</div></div></div>
+    <figcaption>A dashed grid 20px wide, <code>minmax(auto, 1fr)</code>, "abc def": the item's automatic minimum is
+    its min-content size, so the column is 30px, the text on two lines, past the grid.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

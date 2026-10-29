@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+  .edge { outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5 The canvas element</div>
+  <h1>The canvas element</h1>
+  <p class=pr-lede><q>The canvas element provides scripts with a resolution-dependent bitmap canvas, which can be used
+  for rendering graphs, game graphics, art, or other visual images on the fly.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#the-canvas-element">HTML §4.12.5</a></span>
+  Each canvas's edge is dashed red. The page fills some with the four quarters of a flag: blue at the top left,
+  orange at the top right, green at the bottom left and purple at the bottom right.</p>
+</header>
+<section>
+  <h2>The bitmap's size</h2>
+  <p><q>The width attribute defaults to 300, and the height attribute defaults to 150.</q> <q>The natural dimensions of
+  the canvas element when it represents embedded content are equal to the dimensions of the element's bitmap.</q></p>
+  <figure>
+    <div class="pr-stage pr-wide"><canvas class=edge data-draw=flag></canvas></div>
+    <figcaption>No attributes: 300 by 150, as wide as the stage, each quarter 150 by 75.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 40px"><canvas class=edge width=40 height=20></canvas></div>
+    <figcaption><code>width=40 height=20</code>, and no context: 40 by 20, <q>transparent black</q>, the guides
+    showing through.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Sized by a style sheet</h2>
+  <p><q>A canvas element can be sized arbitrarily by a style sheet, its bitmap is then subject to the 'object-fit' CSS
+  property.</q> Each bitmap is the 40 by 20 flag.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><canvas class=edge width=40 height=20 data-draw=flag style="width: 160px; height: 60px"></canvas></div>
+    <figcaption><code>width: 160px; height: 60px</code>: the flag stretched to fill it, quarters of 80 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><canvas class=edge width=40 height=20 data-draw=flag style="width: 160px; height: 40px; object-fit: contain"></canvas></div>
+    <figcaption><code>object-fit: contain</code> in 160 by 40: the flag 80 by 40, centered, from x 40 to 120.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas class=edge width=40 height=20 data-draw=flag style="width: 100px"></canvas></div>
+    <figcaption>Only <code>width: 100px</code>: the height from the bitmap's ratio, 50px.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    flag(context, canvas) {
+      const w = canvas.width / 2, h = canvas.height / 2;
+      context.fillStyle = "#4f81bd"; context.fillRect(0, 0, w, h);
+      context.fillStyle = "#d68a3c"; context.fillRect(w, 0, w, h);
+      context.fillStyle = "#8e44ad"; context.fillRect(w, h, w, h);
+      context.fillStyle = "#6aa36a"; context.fillRect(0, h, w, h);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

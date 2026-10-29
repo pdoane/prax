@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transforms and positioning per fragment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .t { border: 2px solid #2c5a8f; background: rgba(79, 129, 189, 0.4); }
+  .ghostbox { outline: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.5 Transforms, Positioning, and Pagination</div>
+  <h1>Transforms and positioning per fragment</h1>
+  <p class=pr-lede><q>Fragmentation interacts with layout, and thus occurs before relative positioning, transforms, and any other graphical effects. Such effects are applied per fragment: for example, rotation applied to a fragmented box will calculate a rotation origin for each fragment and independently rotate that fragment around its origin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#transforms">CSS Fragmentation 4 §5.5</a></span> Each stage has three columns 60px tall; the tinted box has a 2px border and holds five lines. The dashed outline marks where the box is laid out.</p>
+</header>
+
+<section>
+  <h2>Per fragment</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=ghostbox><div class=t style="transform: rotate(8deg)">one two six ten red</div></div></div>
+    <figcaption><code>rotate(8deg)</code>: three fragments, the box’s border leaving room for two lines in a column, each turned about its own center. <span class=pr-flag>Firefox</span> Breaks the box once: "six", "ten" and "red" in the second column, overflowing it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=ghostbox><div class=t style="position: relative; left: 10px; top: 10px">one two six ten red</div></div></div>
+    <figcaption><code>position: relative; left: 10px; top: 10px</code>: each of the three fragments moved 10px right and 10px down from its place in its own column. <span class=pr-flag>Firefox</span> Breaks the box once: "six", "ten" and "red" in the second column, overflowing it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Absolute positioning</h2>
+  <p><q>Both the coordinate system and absolutely-positioned boxes belonging to a containing block will fragment across fragmentainers in the same fragmentation flow as the containing block.</q> Shown in <a href="../css-position/abspos-fragmentation.html">absolutely positioned boxes in columns</a>.</p>
+</section>
+
+</body>
+</html>

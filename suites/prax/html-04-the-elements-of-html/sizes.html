@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>sizes: the width an image is laid out at</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.2.2 Sizes attributes</div>
+  <h1>sizes: the width an image is laid out at</h1>
+  <p class=pr-lede><q>The &lt;source-size-value&gt; gives the intended layout width of the image. The author can
+  specify different widths for different environments with &lt;media-condition&gt;s.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#sizes-attributes">HTML §4.8.4.2.2</a></span>
+  Each img has one candidate, an orange image 160 by 80 described as <code>160w</code>, whose density is
+  <q>the width descriptor value divided by source size</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#normalizing-the-source-densities">§4.8.4.3.12</a></span></p>
+</header>
+
+<section>
+  <h2>A width, chosen by media condition</h2>
+  <p>The first size whose <code>&lt;media-condition&gt;</code> is true, or a last one without a condition. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#parsing-a-sizes-attribute">§4.8.4.3.11</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 160w" sizes="80px" alt=""></div>
+    <figcaption><code>sizes="80px"</code>: density 2, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 160w" sizes="(min-width: 1px) 40px, 120px" alt=""></div>
+    <figcaption><code>(min-width: 1px) 40px, 120px</code>: 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 160w" sizes="(max-width: 1px) 40px, 120px" alt=""></div>
+    <figcaption><code>(max-width: 1px) 40px, 120px</code>: 120 by 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No sizes: 100vw</h2>
+  <p>When no size is found, <q>Return 100vw.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#parsing-a-sizes-attribute">§4.8.4.3.11</a></span>
+  <q>When a source size has a unit relative to the viewport, it must be interpreted relative to the img element's node
+  document's viewport.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#images-processing-model">§4.8.4.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0 } img { display: block }</style><img srcset='support/orange-160x80.png 160w' alt=''>"></iframe></div>
+    <figcaption>In a frame 200 wide: orange, 200 by 100, filling the frame. <span class=pr-flag>Safari</span>
+    160 by 80, the image's own size.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

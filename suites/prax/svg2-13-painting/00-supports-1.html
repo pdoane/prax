@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13 Painting: Filling, Stroking and Marker Symbols · Support</div>
+  <h1>Painting declaration support</h1>
+  <p class=pr-lede>One declaration for each property the chapter's pages set from CSS. This checks that the
+  declarations parse, not what they do; the chapter's other pages show that.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>fill: #4f81bd</code>
+  <code class=pr-decl>fill-opacity: 50%</code>
+  <code class=pr-decl>stroke-opacity: 50%</code>
+  <code class=pr-decl>stroke-width: 0.5em</code>
+  <code class=pr-decl>stroke-dasharray: 20 40 10</code>
+  <code class=pr-decl>stroke-dasharray: none</code>
+  <code class=pr-decl>stroke-dashoffset: 40</code>
+  <code class=pr-decl>marker: url(#dot)</code>
+  <code class=pr-decl>marker: none</code>
+  <code class=pr-decl>marker-start: url(#square)</code>
+  <code class=pr-decl>marker-end: url(#square)</code>
+  <code class=pr-decl>paint-order: stroke</code>
+  <code class=pr-decl>paint-order: markers stroke</code>
+  <code class=pr-decl>transform: rotate(90deg)</code>
+  <code class=pr-decl>animation: turn 100s linear -25s infinite</code>
+  <code class=pr-decl>animation-name: lists</code>
+  <code class=pr-decl>animation-duration: 100s</code>
+  <code class=pr-decl>animation-delay: -25s</code>
+  <code class=pr-decl>animation-timing-function: linear</code>
+  <code class=pr-decl>animation-iteration-count: infinite</code>
+  <code class=pr-decl>animation-direction: alternate</code>
+  <code class=pr-decl>animation-fill-mode: both</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

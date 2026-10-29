@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>preserveAspectRatio: align</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="square"><rect width="20" height="20" fill="#4f81bd" /><circle cx="10" cy="10" r="4" fill="#d68a3c" /></g>
+  <g id="strip"><rect width="80" height="10" fill="#4f81bd" /><circle cx="40" cy="5" r="4" fill="#d68a3c" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.7 The ‘preserveAspectRatio’ attribute</div>
+  <h1>preserveAspectRatio: align</h1>
+  <p class=pr-lede><q>The &lt;align&gt; parameter indicates whether to force uniform scaling and, if so, the alignment
+  method to use in case the aspect ratio of the ‘viewBox’ doesn't match the aspect ratio of the SVG viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#PreserveAspectRatioAttribute">SVG 2 §8.7</a></span>
+  Each stage is an SVG 160 by 60. The content is a blue rect as large as the <code>viewBox</code> with an orange
+  dot at its middle.</p>
+</header>
+
+<section>
+  <h2>xMin, xMid, xMax</h2>
+  <p><q>Align the &lt;min-x&gt; of the element's ‘viewBox’ with the smallest X value of the SVG viewport.</q>
+  <code>viewBox="0 0 20 20"</code>, scaled 3 to 60 by 60.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="xMinYMid"><use href="#square" /></svg></div>
+    <figcaption><code>xMinYMid</code>: from x 0 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20"><use href="#square" /></svg></div>
+    <figcaption><code>xMidYMid</code>, the initial value: from x 50 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 20 20" preserveAspectRatio="xMaxYMid"><use href="#square" /></svg></div>
+    <figcaption><code>xMaxYMid</code>: from x 100 to 160.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>YMin, YMid, YMax</h2>
+  <p><code>viewBox="0 0 80 10"</code>, scaled 2 to 160 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 10" preserveAspectRatio="xMidYMin"><use href="#strip" /></svg></div>
+    <figcaption><code>xMidYMin</code>: from y 0 to 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 10" preserveAspectRatio="xMidYMid"><use href="#strip" /></svg></div>
+    <figcaption><code>xMidYMid</code>: from y 20 to 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 10" preserveAspectRatio="xMidYMax"><use href="#strip" /></svg></div>
+    <figcaption><code>xMidYMax</code>: from y 40 to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ellipse: one radius auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.4 The ‘ellipse’ element</div>
+  <h1>ellipse: one radius auto</h1>
+  <p class=pr-lede><q>An <code>auto</code> value for <em>either</em> ‘rx’ or ‘ry’ is converted to a used value,
+  following the rules given above for rectangles (but without any clamping based on width or height). Effectively, an
+  <code>auto</code> value creates a circular shape whose radius is defined by a value expressed solely in one
+  dimension</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#EllipseElement">SVG 2 §10.4</a></span>
+  Each stage is an SVG 160 by 80 with a blue ellipse about its center, 80, 40.</p>
+</header>
+
+<section>
+  <h2>A length and auto</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="30"</code>, <code>ry</code> the initial <code>auto</code>: a circle of radius 30, x 50 to
+    110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" ry="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry="30"</code>, <code>rx</code> <code>auto</code>: the same circle, y 10 to 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="30" ry="30" fill="#4f81bd" style="ry: auto" /></svg></div>
+    <figcaption><code>ry: auto</code> from CSS over <code>ry="30"</code>, with <code>rx="30"</code>: the same
+    circle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A circle from a percentage of one dimension</h2>
+  <p><q>a percentage of the coordinate system <b>width</b>; that is, a percentage value for ‘rx’ and an
+  <code>auto</code> value for ‘ry’.</q> <q>a percentage of the coordinate system <b>height</b>; that is, an
+  <code>auto</code> value for ‘rx’ and a percentage value for ‘ry’.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="25%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="25%"</code>: a quarter of the width 160, a circle of radius 40, touching the top and
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" ry="25%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry="25%"</code>: a quarter of the height 80, a circle of radius 20, x 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="50%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="50%"</code>: radius 80, not clamped to the height: a circle wider than the stage, cut
+    off by the SVG's edges, which it fills but for its four corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

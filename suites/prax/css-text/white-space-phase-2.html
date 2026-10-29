@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Phase II: the ends of lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .r { width: 100px; text-align: right; }
+  .og { font: 20px/30px "PR Noto Sans Ogham"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.3.2 Phase II: Trimming and Positioning</div>
+  <h1>Phase II: the ends of lines</h1>
+  <p class=pr-lede><q>A sequence of collapsible spaces at the end of a line is removed, as well as any trailing U+1680
+  OGHAM SPACE MARK whose 'white-space-collapse' property is 'collapse' or 'preserve-breaks'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-phase-2">CSS Text 4 §4.3.2</a></span>
+  Each stage is 100px wide and right-aligned, so what is left at a line's end shows as a gap at the right. The text
+  is highlighted.</p>
+</header>
+
+<section>
+  <h2>The Ogham space mark</h2>
+  <p>Ogham's word separator, U+1680, is drawn as a line along the stem. Each stage is two Ogham words, the mark,
+  then a <code>&lt;br&gt;</code>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage og r"><span class=t>ᚑᚌ&#x1680;ᚐᚋ&#x1680;</span><br>ᚑ</div>
+    <figcaption><code>normal</code>: the last mark removed, the highlight ending at "ᚋ", flush. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Keep it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage og r" style="white-space: pre-wrap"><span class=t>ᚑᚌ&#x1680;ᚐᚋ&#x1680;</span><br>ᚑ</div>
+    <figcaption><code>pre-wrap</code>: the mark kept, and it fits, so takes room.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other space separators hang</h2>
+  <p><q>If there remains any sequence of white space, other space separators, and/or preserved tabs at the end of a
+  line (after bidi reordering): If 'white-space-collapse' is 'collapse' or 'preserve-breaks', the UA must hang this
+  sequence (unconditionally).</q> Letters are 10px wide.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure r"><span class=t>aa&#x2003;&#x2003;</span><br>b</div>
+    <figcaption>"aa" and two U+2003 EM SPACE: they hang, "aa" flush right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure r"><span class=t>aa&nbsp;&nbsp;</span><br>b</div>
+    <figcaption>Two no-break spaces: they take room, "aa" 20px in.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure r" style="white-space: preserve-breaks"><span class=t>aa&#x2003;&#x2003;</span><br>b</div>
+    <figcaption><code>preserve-breaks</code>, the em spaces: they hang too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

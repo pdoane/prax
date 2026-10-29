@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which page-margin boxes are generated</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.2 Populating page-margin boxes</div>
+  <h1>Which page-margin boxes are generated</h1>
+  <p class=pr-lede><q>A page-margin box is generated if and only if the computed value of its 'content' property is not 'none'. Otherwise, no box is generated, as for elements with 'display: none'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#populating-margin-boxes">CSS Paged Media 3 §5.2</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>content: normal computes to none</h2>
+  <p><q>As with the :before and :after pseudo-elements, a specified 'content: normal' on a page-margin box computes to 'none'.</q> The specification's example <q>creates a green box in each corner of the page except the bottom-left corner.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-left-corner { content: ' '; border: solid green } @top-right-corner { content: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='%23d68a3c'/></svg>&quot;); border: solid green } @bottom-right-corner { content: counter(page); border: solid green } @bottom-left-corner { content: normal; border: solid green } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Green borders round three corners, 40 by 40: one empty, one around a 10px orange image, one around the page number, 1. None at the bottom left. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px; @top-center { width: 80px; background: #4f81bd } @bottom-center { content: ''; width: 80px; background: #4f81bd } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>No box at the top, where <code>content</code> is not set, though it has a size and a background; an 80 by 40 blue box at the bottom, whose content is an empty string. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

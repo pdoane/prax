@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing and excluding floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .s { height: 100px; }
+  .t { font: 13px/20px "PR Arimo"; }
+  .fl { float: left; width: 60px; height: 60px; }
+  .blk { background: rgba(214, 138, 60, 0.35); outline: 1px dashed #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.2.2 Containing or Excluding Floats</div>
+  <h1>Containing and excluding floats</h1>
+  <p class=pr-lede><q>Although block box boundaries are typically pervious to floats, sometimes an author needs them
+  to contain their own (descendant) floats or to exclude floats from outside. For Block layout, specifying display:
+  flow-root will make the box a formatting context root, which has this behavior.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#the-contain-floats-value">CSS Box Sizing 3 §3.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Containing its own floats</h2>
+  <p>An orange block holds a blue float 60px square and one line of text.</p>
+  <figure>
+    <div class="pr-stage s t"><div class=blk><div class="pr-a fl"></div>text</div></div>
+    <figcaption><code>display: block</code>: the block is its one 20px line; the float hangs out of it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s t"><div class=blk style="display: flow-root"><div class="pr-a fl"></div>text</div></div>
+    <figcaption><code>display: flow-root</code>: the block grows to contain the float, 62px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Excluding floats from outside</h2>
+  <p>A blue float 60px square, then an orange block of text.</p>
+  <figure>
+    <div class="pr-stage s t"><div class="pr-a fl"></div><div class=blk>text beside a float, and then below it, back at the left edge</div></div>
+    <figcaption><code>display: block</code>: the block starts at the stage's left, under the float; its lines wrap
+    around the float and then run to the left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s t"><div class="pr-a fl"></div><div class=blk style="display: flow-root">text beside a float, and then below it, back at the left edge</div></div>
+    <figcaption><code>display: flow-root</code>: the whole block sits beside the float, its left edge at 62px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

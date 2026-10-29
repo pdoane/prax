@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variation-settings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Roboto Flex'; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 8.2 Low-level font variation settings control: the 'font-variation-settings' property</div>
+  <h1>font-variation-settings</h1>
+  <p class=pr-lede>'font-variation-settings' is <code>normal | [ &lt;opentype-tag&gt; &lt;number&gt; ]#</code>: values for
+  a font's variation axes. Authors should use 'font-weight', 'font-width', 'font-style' and 'font-optical-sizing'
+  for <code>wght</code>, <code>wdth</code>, <code>slnt</code>, <code>ital</code> and <code>opsz</code>. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variation-settings-def">CSS Fonts 4 §8.2</a></span></p>
+</header>
+
+<section>
+  <h2>Axes with no property</h2>
+  <p>PR Roboto Flex has a grade axis, <code>GRAD</code>, from -200 to 150, which thickens strokes without changing
+  advances, and parametric axes such as <code>XTRA</code>, the counters' width.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variation-settings: 'GRAD' -200">Handgloves</div>
+    <figcaption><code>"GRAD" -200</code>: thin strokes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variation-settings: 'GRAD' 150">Handgloves</div>
+    <figcaption><code>"GRAD" 150</code>: heavier, and the same width as the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variation-settings: 'XTRA' 323">Handgloves</div>
+    <figcaption><code>"XTRA" 323</code>: narrow counters.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over the higher-level properties</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-weight: 100; font-variation-settings: 'wght' 900">Handgloves</div>
+    <figcaption><code>font-weight: 100</code> and <code>"wght" 900</code>: black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variation-settings: 'wght' 5000">Handgloves</div>
+    <figcaption><code>"wght" 5000</code>: <q>clamped to the values that are supported by the font</q>,
+    1000.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variation-settings: 'ABCD' 1">Handgloves</div>
+    <figcaption><code>"ABCD" 1</code>: no such axis, so no change.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

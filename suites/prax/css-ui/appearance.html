@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>appearance: none and auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > * { display: block; margin: 0 0 6px; }
+  .none > * { appearance: none; }
+  .auto > * { appearance: auto; }
+  .plain { width: 100px; height: 20px; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2 Switching appearance: the appearance property</div>
+  <h1>appearance: none and auto</h1>
+  <p class=pr-lede><q>Using appearance: none allows authors to suppress the native appearance of widgets, giving them a
+  primitive appearance where CSS can be used to restyle them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-switching">CSS Basic User Interface 4 §7.2</a></span>
+  How a widget looks natively is each platform's; the figures compare a browser with itself.</p>
+</header>
+
+<section>
+  <h2>Native, then primitive</h2>
+  <p>For <code>auto</code>, <q>elements representing widgets should have the native appearance of that widget.</q>
+  For <code>none</code>, <q>Widgets must not have their native appearance, and instead must have their primitive
+  appearance.</q> Each stage holds a checked checkbox, a button, a text field, a <code>select</code> and a range.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium auto">
+      <input type=checkbox checked><button>Button</button><input value=Text size=10><select><option>Select</select><input type=range>
+    </div>
+    <figcaption><code>auto</code>: the platform's controls.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium none">
+      <input type=checkbox checked><button>Button</button><input value=Text size=10><select><option>Select</select><input type=range>
+    </div>
+    <figcaption><code>none</code>: the checkbox, with no style of its own, draws nothing; the button, field and
+    <code>select</code> are plain boxes with the browser's style sheet's borders, and no arrow; the range keeps a
+    thumb.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Elements that are not widgets</h2>
+  <p><q>Elements other than widgets must be rendered as for none.</q></p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><div class=plain style="appearance: auto"></div></div>
+    <figcaption>A <code>div</code> with <code>appearance: auto</code>: a plain grey box, 100 by 20, as
+    without it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

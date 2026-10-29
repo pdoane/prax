@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested objects</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 12px; line-height: 20px; }
+  .pic object.doc { width: 140px; height: 40px; }
+  .fallback { display: inline-block; padding: 0 6px; background: #f6d7b4; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.7 The object element</div>
+  <h1>Nested objects</h1>
+  <p class=pr-lede><q>Due to the algorithm above, the contents of object elements act as fallback content, used only when referenced resources can't be shown (e.g. because it returned a 404 error).</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-object-element">HTML §4.8.7</a></span> Each object's fallback content is an orange "fallback".</p>
+</header>
+
+<section>
+  <h2>Nested objects: the first that can be shown</h2>
+  <p><q>This allows multiple object elements to be nested inside each other, targeting multiple user agents with
+  different capabilities, with the user agent picking the first one it supports.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object data="support/missing.png"><object data="support/orange-160x80.png" width="80" height="40"><span class=fallback>fallback</span></object></object></div>
+    <figcaption>A 404, holding an orange PNG: orange, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><object data="support/blue-80x40.png"><object data="support/orange-160x80.png" width="80" height="40"><span class=fallback>fallback</span></object></object></div>
+    <figcaption>Blue, holding orange: blue alone. The inner object is not shown.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>fit-content() in the sizing properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 3.2 New Sizing Values: fit-content()</div>
+  <h1>fit-content() in the sizing properties</h1>
+  <p class=pr-lede>fit-content(&lt;length-percentage [0,∞]&gt;): <q>Use the fit-content formula with the available
+  space replaced by the specified argument, i.e. min(max-content, max(min-content, &lt;length-percentage&gt;)), where
+  the &lt;length-percentage&gt; argument is resolved exactly as for &lt;length-percentage&gt; values standing
+  alone.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#sizing-values">CSS Box Sizing 4 §3.2</a></span>
+  Text is PR Cousine, 9px a character; each stage is 150px wide.</p>
+</header>
+
+<section>
+  <h2>Between min-content and max-content</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: fit-content(80px)">abc def ehg ijk</div></div>
+    <figcaption><code>width: fit-content(80px)</code>, "abc def ehg ijk": 80px, two lines. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> drop it: 150px,
+    one line.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: fit-content(80px)">abc</div></div>
+    <figcaption>"abc": max-content is less, 27px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: fit-content(10px)">abcdef ghi</div></div>
+    <figcaption><code>fit-content(10px)</code>, "abcdef ghi": min-content is more, 54px. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage argument, and the limits</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="width: fit-content(40%)">abc def ehg ijk</div></div>
+    <figcaption><code>fit-content(40%)</code>: 40% of 150, 60px, four lines. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s t"><div class=box style="max-width: fit-content(80px)">abc def ehg ijk</div></div>
+    <figcaption><code>max-width: fit-content(80px)</code> on a block: 80px, two lines. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

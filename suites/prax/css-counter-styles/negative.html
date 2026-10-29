@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The negative descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style money { system: extends decimal; negative: "(" ")"; suffix: " "; }
+  @counter-style minus { system: extends decimal; negative: "−"; }
+  @counter-style cyc { system: cyclic; symbols: "A" "B" "C"; negative: "(" ")"; }
+  @counter-style money-paren { system: extends money; suffix: ". "; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.2 Formatting negative values: the negative descriptor</div>
+  <h1>The negative descriptor</h1>
+  <p class=pr-lede><q>The first &lt;symbol&gt; in the value is prepended to the representation when the counter value is
+  negative. The second &lt;symbol&gt;, if specified, is appended to the representation when the counter value is
+  negative.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-negative">CSS Counter Styles 3 §3.2</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Before, and after</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: money" start=-2><li>-2<li>-1<li>0<li>1</ol></div>
+    <figcaption>The example's <code>negative: "(" ")"</code>: "(2) (1) 0 1".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: minus" start=-2><li>-2<li>-1<li>0</ol></div>
+    <figcaption>One symbol, a minus sign: "−2.", "−1.", "0.".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Styles that use a negative sign</h2>
+  <p><q>a counter style uses a negative sign if its 'system' value is 'symbolic', 'alphabetic', 'numeric', 'additive', or
+  'extends' if the extended counter style itself uses a negative sign. If a counter style does not use a negative sign,
+  it ignores the negative sign when generating a counter representation.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: cyc" start=-1><li>-1<li>0<li>1</ol></div>
+    <figcaption>A cyclic style with <code>negative: "(" ")"</code>: B, C, A, no parentheses.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: money-paren" start=-1><li>-1<li>0</ol></div>
+    <figcaption>Extending <code>money</code> takes its negative too: "(1).", "0.".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

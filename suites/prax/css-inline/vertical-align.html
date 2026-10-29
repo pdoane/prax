@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vertical-align: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; white-space: nowrap; }
+  .tall { line-height: 50px; }
+  .big { font-size: 30px; }
+  .sq { display: inline-block; width: 10px; height: 10px; background: #4f81bd; }
+  .ib { display: inline-block; width: 60px; white-space: normal; line-height: 20px; }
+  .cell { height: 60px; width: 90px; }
+  .col { display: inline-flex; flex-direction: column; width: 60px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2 Transverse Box Alignment: the vertical-align property</div>
+  <h1>vertical-align: the shorthand</h1>
+  <p class=pr-lede><q>This shorthand property specifies how an inline-level box is aligned within the line by
+  specifying its alignment baseline type (alignment-baseline), baseline alignment preference (baseline-source), and
+  post-alignment shift (baseline-shift) in a single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#transverse-alignment">CSS Inline Layout 3 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Its longhands</h2>
+  <p><q>If first or last is specified, it sets baseline-source (which is otherwise reset to auto). Other values are as
+  for the corresponding longhand properties</q>. The red line is the line's baseline.</p>
+  <figure>
+    <div class="pr-stage tall"><span class=pr-baseline></span>Xx <span class=pr-hl style="vertical-align: super">super</span></div>
+    <figcaption><code>super</code>, which sets <code>baseline-shift</code>: the span raised above the red line, as a
+    superscript.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage tall"><span class=pr-baseline></span>Xx <span class="pr-chip col" style="baseline-source: last; vertical-align: baseline"><span>one</span><span>two</span></span></div>
+    <figcaption><code>baseline-source: last; vertical-align: baseline</code> on an inline flex container:
+    <code>baseline</code> resets <code>baseline-source</code> to <code>auto</code>, so its first line, "one", is on
+    the red line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Several longhands at once</h2>
+  <p><code>vertical-align</code> takes <code>[ first | last] || &lt;'alignment-baseline'&gt; ||
+  &lt;'baseline-shift'&gt;</code>. The red line is the line's baseline.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage tall"><span class=pr-baseline></span><span class=big>Xx <span class=sq style="vertical-align: text-top 10px"></span> <span class=sq style="vertical-align: text-top"></span></span></div>
+    <figcaption><code>text-top 10px</code>, the left square: aligned by its top to the 30px text's ascent, then
+    raised 10px above the right one, at <code>text-top</code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> The left square on the baseline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage tall"><span class=pr-baseline></span>Xx <span class="pr-chip ib" style="vertical-align: first">one<br>two<br>three</span></div>
+    <figcaption><code>first</code>: the inline-block's first line, "one", on the red line, the rest below it. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Its last line, "three", is.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

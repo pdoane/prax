@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Integers interpolate as numbers, then round</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { column-gap: 10px; column-rule: 1px dashed #6b7381; animation: 1s linear paused; }
+  @keyframes cc { from { column-count: 1; } to { column-count: 4; } }
+  @keyframes zi { from { z-index: -1; } to { z-index: 2; } }
+  .z { position: absolute; width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 5.2.1 Computation and Combination of &lt;integer&gt;</div>
+  <h1>Integers interpolate as numbers, then round</h1>
+  <p class=pr-lede><q>interpolation happens in the real number space as for &lt;number&gt;s, and the result is converted
+  to an &lt;integer&gt; by rounding to the nearest integer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combine-integers">CSS Values and Units 4 §5.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>column-count from 1 to 4</h2>
+  <p>A linear animation, paused part of the way.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="animation-name: cc; animation-delay: -0.5s">one two three four five six</div>
+    <figcaption>Halfway, 2.5 rounds up: three columns.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="animation-name: cc; animation-delay: -0.15s">one two three four five six</div>
+    <figcaption>At 15%, 1.45 rounds down: one column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>z-index from −1 to 2</h2>
+  <p>Blue A, first, animates its <code>z-index</code> paused halfway, at 0.5; orange B, after it, is
+  <code>z-index: 0</code>.</p>
+  <figure>
+    <div class="pr-stage pr-stacking" style="height: 100px"><div class="pr-a pr-fit z" style="left: 20px; top: 10px; animation: zi 1s linear -0.5s paused">A</div><div class="pr-b pr-fit z" style="z-index: 0; left: 80px; top: 30px">B</div></div>
+    <figcaption>0.5 rounds to 1: A paints over B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

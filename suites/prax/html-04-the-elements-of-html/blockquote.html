@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The blockquote element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .t blockquote { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.4 The blockquote element</div>
+  <h1>The blockquote element</h1>
+  <p class=pr-lede><q>The blockquote element represents a section that is quoted from another source.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-blockquote-element">HTML §4.4.4</a></span></p>
+</header>
+<section>
+  <h2>A block, set in by 40px</h2>
+  <p><q>blockquote, figure, listing, p, plaintext, pre, xmp { margin-block: 1em; }</q> <q>blockquote, figure {
+  margin-inline: 40px; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span> The stage's text is 10px on 20px lines.</p>
+  <figure>
+    <div class="pr-stage t">Before<blockquote>A quotation from elsewhere.</blockquote>After</div>
+    <figcaption>The tinted quotation, 40px in from each side of the text, so 100px wide, and 10px below "Before" and
+    above "After".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

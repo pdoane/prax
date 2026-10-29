@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rounded clipping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { width: 100px; height: 60px; margin: 20px 40px; border: 10px solid #b5bcc7; border-radius: 30px; }
+  .fill { height: 120px; margin: -30px -30px 0; background: repeating-linear-gradient(45deg, #4f81bd 0 6px, #d68a3c 6px 12px); }
+  .stage { height: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.2 Interaction of border-radius and overflow</div>
+  <h1>Rounded clipping</h1>
+  <p class=pr-lede><q>the clipping region established by overflow can be rounded</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#corner-clipping">CSS Overflow 3 §3.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>By overflow's values in each axis</h2>
+  <p>Each box is 100 by 60 inside a 10px grey border with <code>border-radius: 30px</code>, and holds a striped child
+  that reaches 30px past it on the top, left and right, and well below.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=r style="overflow: hidden"><div class=fill></div></div></div>
+    <figcaption><code>hidden</code>: <q>the clipping region is rounded based on the border radius, adjusted to the
+    padding edge</q>: the stripes follow the border's inner curve, of radius 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class=r style="overflow: clip"><div class=fill></div></div></div>
+    <figcaption><code>clip</code> in both axes: <q>rounded as described in</q> 3.2; with the default
+    <code>overflow-clip-margin</code>, the padding edge, the same.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=r style="overflow: clip; overflow-clip-margin: 20px"><div class=fill></div></div></div>
+    <figcaption><code>clip</code> with <code>overflow-clip-margin: 20px</code>: the clip lies 10px outside the
+    border, its corners rounded to 40px, a box shadow's shape. <span class=pr-flag>Safari</span> ignores the margin and
+    cuts at the padding edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=r style="overflow: clip visible"><div class=fill></div></div></div>
+    <figcaption><code>clip visible</code>: <q>the clipping region is not rounded</q>: the stripes are cut square at
+    the left and right padding edges, and run past the top and bottom. <span class=pr-flag>Firefox</span> rounds the
+    cut's corners. <span class=pr-flag>Safari</span> clips both axes, rounded, as <code>hidden</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

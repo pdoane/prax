@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Adding to and removing from the top layer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 3.3 Top Layer Manipulation</div>
+  <h1>Adding to and removing from the top layer</h1>
+  <p class=pr-lede>Features such as popovers and modal dialogs use the algorithms of this section to move an element
+  into and out of the top layer. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#top-manip">CSS Positioned Layout 4 §3.3</a></span>
+  Each frame is a document, 160 by 80, run by a script.</p>
+</header>
+
+<section>
+  <h2>Added at the end</h2>
+  <p>To add an element to the top layer: <q>If el is already contained in doc’s top layer</q>, <q>Remove el from both
+  doc’s top layer and pending top layer removals.</q> <q>Append el to doc’s top layer.</q></p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .p { position: fixed; width: 80px; height: 40px }</style><div popover=manual id=o class='p b' style='top: 10px; left: 10px'></div><div popover=manual id=g class='p c' style='top: 30px; left: 60px'></div><script>o.showPopover(); g.showPopover()</script>"></iframe></div>
+    <figcaption>For comparison, orange shown, then green: green covers orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .p { position: fixed; width: 80px; height: 40px }</style><div popover=manual id=o class='p b' style='top: 10px; left: 10px'></div><div popover=manual id=g class='p c' style='top: 30px; left: 60px'></div><script>o.showPopover(); g.showPopover(); o.hidePopover(); o.showPopover()</script>"></iframe></div>
+    <figcaption>Orange shown, then green, then orange hidden and shown again: appended after green, orange covers it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Removed</h2>
+  <p>An element is rendered in the top layer while it is in it <q>and el has overlay: auto</q>; removing it takes away
+  the UA's <code>overlay: auto</code>.</p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .clip { position: relative; margin: 10px; width: 100px; height: 40px; overflow: hidden; outline: 1px dashed #6b7381 } dialog { position: absolute; top: 20px; left: 20px; width: 100px; height: 40px; margin: 0; padding: 0; border: 0; background: #d68a3c; max-width: none; max-height: none } dialog::backdrop { background: none }</style><div class=clip><dialog id=d></dialog></div><script>d.showModal()</script>"></iframe></div>
+    <figcaption>A <code>dialog</code> in the dashed box, which clips, shown modally: in the top layer, drawn whole, 100 by 40 from 20, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 80px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad }  .clip { position: relative; margin: 10px; width: 100px; height: 40px; overflow: hidden; outline: 1px dashed #6b7381 } dialog { position: absolute; top: 20px; left: 20px; width: 100px; height: 40px; margin: 0; padding: 0; border: 0; background: #d68a3c; max-width: none; max-height: none } dialog::backdrop { background: none }</style><div class=clip><dialog id=d></dialog></div><script>d.showModal(); d.close(); d.show()</script>"></iframe></div>
+    <figcaption>Shown modally, closed, which removes it from the top layer, then shown without it: laid out in the dashed box again, and clipped.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

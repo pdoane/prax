@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Image smoothing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.18 Image smoothing</div>
+  <h1>Image smoothing</h1>
+  <p class=pr-lede>imageSmoothingEnabled <q>Returns whether pattern fills and the drawImage() method will attempt to
+  smooth images if their pixels don't line up exactly with the display, when scaling images up.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#image-smoothing">HTML §4.12.5.1.18</a></span>
+  The source is a canvas of 4 by 2 pixels, alternating blue and orange like a checkerboard, scaled up 40 times to 160
+  by 80.</p>
+</header>
+<section>
+  <h2>Smoothed, or nearest neighbor</h2>
+  <p>When scaling up, <q>if the imageSmoothingEnabled attribute is set to true, the user agent should attempt to apply a
+  smoothing algorithm</q>; <q>Otherwise, the image must be rendered using nearest-neighbor interpolation.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-images">§4.12.5.1.15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><canvas width=160 height=80 data-draw=scale data-smooth=true></canvas></div>
+    <figcaption><code>true</code>, the initial value: blurred, the colors blending across each square's
+    edges.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><canvas width=160 height=80 data-draw=scale data-smooth=false></canvas></div>
+    <figcaption><code>false</code>: hard squares of 40 by 40, a checkerboard of eight.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><canvas width=160 height=80 data-draw=pattern></canvas></div>
+    <figcaption>As a pattern, scaled 40 times, with <code>false</code>: the same hard squares.
+    <span class=pr-flag>Safari</span> Blurred.</figcaption>
+  </figure>
+</section>
+<script>
+  const source = document.createElement("canvas");
+  source.width = 4;
+  source.height = 2;
+  const pixels = source.getContext("2d");
+  for (let y = 0; y < 2; y++)
+    for (let x = 0; x < 4; x++) {
+      pixels.fillStyle = (x + y) % 2 ? "#d68a3c" : "#4f81bd";
+      pixels.fillRect(x, y, 1, 1);
+    }
+  const draw = {
+    scale(context, canvas) {
+      context.imageSmoothingEnabled = canvas.dataset.smooth === "true";
+      context.drawImage(source, 0, 0, 160, 80);
+    },
+    pattern(context) {
+      context.imageSmoothingEnabled = false;
+      const pattern = context.createPattern(source, "repeat");
+      pattern.setTransform(new DOMMatrix().scale(40));
+      context.fillStyle = pattern;
+      context.fillRect(0, 0, 160, 80);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

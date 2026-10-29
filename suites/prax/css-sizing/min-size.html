@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width, min-height, min-inline-size and min-block-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 120px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 3.1.2 Minimum Size Properties</div>
+  <h1>min-width, min-height, min-inline-size and min-block-size</h1>
+  <p class=pr-lede><q>The min-width and min-height (physical) and min-inline-size and min-block-size (flow-relative)
+  are sizing properties that specify the minimum width (“min width”) and minimum height (“min height”) or minimum
+  inline size (“min inline size”) and minimum block size (“min block size”) of the box, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#min-size-properties">CSS Box Sizing 3 §3.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>A floor under the preferred size</h2>
+  <p>Each blue box is <code>width: 60px; height: 20px</code>, in a stage 150 by 120.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 60px; height: 20px; min-width: 100px; min-height: 40px">min</div></div>
+    <figcaption><code>min-width: 100px; min-height: 40px</code>: 100 by 40.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 60px; height: 20px; min-width: 80%; min-height: 50%">min %</div></div>
+    <figcaption><code>min-width: 80%; min-height: 50%</code>: 120 by 60.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 60px; height: 20px; min-width: 30px; min-height: 10px">min 30</div></div>
+    <figcaption><code>min-width: 30px; min-height: 10px</code>, under the preferred sizes: 60 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The flow-relative minimums</h2>
+  <p>Each blue box is <code>inline-size: 40px; block-size: 20px</code> with <code>min-inline-size: 100px;
+  min-block-size: 30px</code>.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="inline-size: 40px; block-size: 20px; min-inline-size: 100px; min-block-size: 30px">horizontal</div></div>
+    <figcaption>Horizontal: 100 wide, 30 tall.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="writing-mode: vertical-rl; inline-size: 40px; block-size: 20px; min-inline-size: 100px; min-block-size: 30px">vertical</div></div>
+    <figcaption>The box <code>vertical-rl</code>: 30 wide, 100 tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

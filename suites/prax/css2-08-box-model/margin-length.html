@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Margins: lengths</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3 Margin properties</div>
+  <h1>Margins: lengths</h1>
+  <p class=pr-lede><code>margin-*</code> and <code>margin</code> take <code>&lt;length&gt; | &lt;percentage&gt; |
+  auto</code>. Initial <code>0</code>, not inherited; computed: the percentage as given or the absolute length. The
+  orange tint is each box's margin area.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt;</h2>
+  <p><q>Specifies a fixed width.</q> Each side on its own. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#margin-properties">CSS 2 §8.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-top: 30px">box</div></div></div>
+    <figcaption><code>margin-top: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-right: 30px">box</div></div></div>
+    <figcaption><code>margin-right: 30px</code>: an auto width leaves 170px for the box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-bottom: 30px">box</div></div></div>
+    <figcaption><code>margin-bottom: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-left: 30px">box</div></div></div>
+    <figcaption><code>margin-left: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin-left: 2.5em">box</div></div></div>
+    <figcaption><code>margin-left: 2.5em</code> of the box's own 12px font: 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-margin-area><div class=pr-a style="margin: 0">box</div></div></div>
+    <figcaption><code>margin: 0</code>, the initial value: no margin area.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

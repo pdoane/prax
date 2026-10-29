@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Images in a content list</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .two::before { content: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") " and " url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='10'><rect width='30' height='10' fill='%23d68a3c'/></svg>") " "; }
+  .tall { line-height: 20px; }
+  .tall::before { content: "up " url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='40'><rect width='20' height='40' fill='%236aa36a'/></svg>") " "; }
+  .broken::before { content: "[" url(no-such-image.png) "]"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.2 2D Images: &lt;image&gt; values</div>
+  <h1>Images in a content list</h1>
+  <p class=pr-lede>An <code>&lt;image&gt;</code> among other values <q>Represents an anonymous inline replaced element
+  filled with the specified &lt;image&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#content-uri">CSS Generated Content 3 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Inline replaced elements on the line</h2>
+  <p>Each image sits on the baseline at its natural size, as an <code>img</code> would.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=two>text</div></div>
+    <figcaption>A 20 by 20 blue square, "and", a 30 by 10 orange bar, then "text", both images on the
+    baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=tall>a line<br>a second line</div></div>
+    <figcaption>A 20 by 40 green image makes the first line taller than the second's 20px, its bottom on the
+    baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An image that cannot be displayed</h2>
+  <p><q>If an &lt;image&gt; represents an invalid image, the user agent must (consistently) do one of the following:</q>
+  <q>“Skip” the &lt;image&gt;, generating nothing for it.</q> <q>Display some indication that the image can't be
+  displayed in place of the &lt;image&gt;, such as a “broken image” icon.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=broken>text</div></div>
+    <figcaption>A URL that does not load, between brackets: "[]text", or a broken image icon between them. The strings
+    are drawn either way. Chrome and Firefox skip it; Safari draws an icon.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: glyphs</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage .initial { list-style-type: initial; }
+  .block-only { list-style-type: square; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-type property: glyphs</h1>
+  <p class=pr-lede><code>list-style-type</code> takes <code>disc | circle | square</code>, the numbering and alphabetic
+  keywords on the next pages, and <code>none</code>. Initial <code>disc</code>, inherited, applies to elements with
+  <code>display: list-item</code>.</p>
+</header>
+
+<section>
+  <h2>disc, circle, square and none</h2>
+  <p><q>This property specifies appearance of the list item marker if 'list-style-image' has the value 'none' or if the
+  image pointed to by the URI cannot be displayed. The value 'none' specifies no marker</q>. <q>Glyphs are specified
+  with disc, circle, and square. Their exact rendering depends on the user agent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul style="list-style-type: disc"><li>disc<li>disc</ul><ul style="list-style-type: circle"><li>circle<li>circle</ul></div>
+    <figcaption><code>disc</code>: a filled round marker; <code>circle</code>: a hollow one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul style="list-style-type: square"><li>square<li>square</ul><ul style="list-style-type: none"><li>none<li>none</ul></div>
+    <figcaption><code>square</code>: a filled square; <code>none</code>: no marker, the text still 30px in.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Initial value, inheritance, and what it applies to</h2>
+  <p>The initial value is <code>disc</code>; the property is inherited, so a list's items take it from the list; it
+  <q>Applies to: elements with 'display: list-item'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=initial><li>initial</ul><ul style="list-style-type: square"><li><span style="display: list-item; margin-left: 20px">inherited</span></li></ul></div>
+    <figcaption><code>initial</code>: a disc. Below, a list item inside an item of a <code>square</code> list
+    inherits <code>square</code>, two squares in all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text block-only" style="padding-left: 30px"><div>a block</div></div>
+    <figcaption>The stage and its block child have <code>square</code>, inherited, but neither is a list item: no
+    marker.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

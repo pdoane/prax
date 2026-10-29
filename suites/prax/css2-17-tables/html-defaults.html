@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table model: HTML's table elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td, th { padding: 0 6px; border: 1px solid #b5bcc7; background: #f4f5f7; }
+  caption { color: #9c5f22; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.2 The CSS table model</div>
+  <h1>The table model: HTML's table elements</h1>
+  <p class=pr-lede><q>The default style sheet for HTML4 in the appendix illustrates the use of these values for
+  HTML4</q>.</p>
+</header>
+
+<section>
+  <h2>The default style sheet</h2>
+  <p><code>table { display: table }</code>, <code>tr { display: table-row }</code>, <code>thead { display:
+  table-header-group }</code>, <code>tbody { display: table-row-group }</code>, <code>tfoot { display:
+  table-footer-group }</code>, <code>col { display: table-column }</code>, <code>colgroup { display:
+  table-column-group }</code>, <code>td, th { display: table-cell }</code>, <code>caption { display: table-caption
+  }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2 §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 6px 10px; width: 180px"><table><caption>caption</caption><colgroup><col><col></colgroup><thead><tr><th>th</th><th>th</th></tr></thead><tbody><tr><td>td</td><td>td</td></tr></tbody><tfoot><tr><td>td</td><td>td</td></tr></tfoot></table></div>
+    <figcaption>A caption over a header row, a body row and a footer row.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The same values on other elements</h2>
+  <p><q>User agents may ignore these 'display' property values for HTML table elements, since HTML tables may be
+  rendered using other algorithms intended for backwards compatible rendering. However, this is not meant to
+  discourage the use of 'display: table' on other, non-table elements in HTML.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-display">CSS 2
+  §17.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 6px 10px; width: 180px"><div class=pr-table><div class=pr-table-caption style="color: #9c5f22; font-size: 12px; font-weight: 600">caption</div><div class=pr-table-row><div class=pr-table-cell>div</div><div class=pr-table-cell>div</div></div></div></div>
+    <figcaption><code>div</code>s with the same display values make the same structure.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

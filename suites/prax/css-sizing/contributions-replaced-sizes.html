@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Contributions of sized images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 70px; overflow: hidden; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2 Intrinsic Contributions, sizes</div>
+  <h1>Contributions of sized images</h1>
+  <p class=pr-lede>A contribution is the size of <q>a hypothetical auto-sized float that contains only that box</q>.
+  <q>For this purpose, stretch self-alignment and stretch-fit sizing (when they are able to resolve extrinsically) are
+  considered definite the same way as resolveable percentages.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#intrinsic-contribution">CSS Box Sizing 3 §5.2</a></span>
+  Each dashed parent is <code>width: max-content</code>, and its width reads back below.</p>
+</header>
+
+<section>
+  <h2>A size, given or natural</h2>
+  <figure class=f>
+    <div class="pr-stage s"><div id=d1 class=pr-parent style="width: max-content"><img alt="" style="width: 50px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>An 80 by 40 image with <code>width: 50px</code>: the width contributes itself, 50px. Reads <code class=pr-computed data-of=d1 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=r1c class=pr-parent style="width: max-content"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='20' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>An image with a natural height of 20px and a 2:1 ratio: 40px through the ratio. Reads <code class=pr-computed data-of=r1c data-dom=offsetWidth></code>.
+    <span class=pr-flag>Firefox</span> 0, the image 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=r1d class=pr-parent style="width: max-content"><img alt="" style="max-height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>An 80 by 40 image with <code>max-height: 20px</code>: 40px, the maximum through the ratio. Reads <code class=pr-computed data-of=r1d data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A height that resolves against the parent</h2>
+  <p>Each image is a block of a 2:1 ratio and no natural size, in a parent of a fixed height.</p>
+  <figure class=f>
+    <div class="pr-stage s"><div id=r2a class=pr-parent style="width: max-content; height: 20px; min-height: 30px"><img alt="" style="display: block; height: 100%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>Parent <code>height: 20px; min-height: 30px</code>, image <code>height: 100%</code>: 30px, so 60px
+    wide. Reads <code class=pr-computed data-of=r2a data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=r2b class=pr-parent style="width: max-content; height: 60px; max-height: 30px"><img alt="" style="display: block; height: 100%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>Parent <code>height: 60px; max-height: 30px</code>: 30px, so 60px wide. Reads <code class=pr-computed data-of=r2b data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=st class=pr-parent style="width: max-content; height: 30px"><img alt="" style="display: block; height: stretch" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 1'><rect width='2' height='1' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>Parent <code>height: 30px</code>, image <code>height: stretch</code>: definite as a percentage would
+    be, 30px, so 60px wide. Reads <code class=pr-computed data-of=st data-dom=offsetWidth></code>. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 0: the image has no size.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

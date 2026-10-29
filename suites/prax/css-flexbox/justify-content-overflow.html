@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-content when the items overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { display: flex; }
+  .pr-stage > div { width: 70px; flex-shrink: 0; }
+  .pr-stage > div.s { width: 40px; }
+  figure { margin: 0 10px 12px 44px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.2 Axis Alignment: the justify-content property, overflow</div>
+  <h1>justify-content when the items overflow</h1>
+  <p class=pr-lede><q>It also exerts some control over the alignment of items when they overflow the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#justify-content-property">CSS Flexible Box Layout 2 §8.2</a></span>
+  Each stage is 100px wide; two items 70px wide that do not shrink leave −40px of free space.</p>
+</header>
+
+<section>
+  <h2>center overflows both ways; the distributed values fall back</h2>
+  <p><code>center</code>: <q>If the leftover free-space is negative, the flex items will overflow equally in both
+  directions.</q> <code>space-between</code>: <q>If the leftover free-space is negative or there is only a single flex item on the
+  line, this value falls back to safe flex-start.</q> <code>space-around</code> falls back the same way <q>to safe center</q>. Safe alignment of what overflows
+  <q>is instead aligned as if the alignment mode were flex-start</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overflow-values">CSS Box Alignment 3 §4.4</a></span>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>center</code>: A from −20px, B to 120px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: flex-end"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>flex-end</code>: B ends at 100px; A from −40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: space-between"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>space-between</code>: A at 0, B from 70 to 140px.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow" style="justify-content: space-around"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>space-around</code>: safe center, so as <code>flex-start</code>: A at 0.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: space-around"><div class="pr-a pr-fit s">A</div></div>
+    <figcaption><code>space-around</code>, one item 40px wide: centered, 30 to 70px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: space-between; flex-direction: row-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>row-reverse</code>, <code>space-between</code>: from the right; B from −40px.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow" style="justify-content: space-around; flex-direction: row-reverse"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>row-reverse</code>, <code>space-around</code>: safe center, so as <code>flex-start</code>: from
+    the right; A from 30px, B from −40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> as
+    <code>start</code>: from the left; B at 0, A from 70 to 140px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="justify-content: space-around; direction: rtl"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div>
+    <figcaption><code>rtl</code>, <code>space-around</code>: from the right; B from −40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

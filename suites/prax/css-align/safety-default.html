@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default safety: everything else</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 100px; justify-content: center; height: 20px; }
+  .clip { display: grid; height: 20px; overflow: hidden; }
+  .blk { height: 40px; margin: 16px 0 32px; }
+  .tall { height: 70px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.4.1.3 All Other Alignment</div>
+  <h1>Default safety: everything else</h1>
+  <p class=pr-lede><q>If the alignment subject overflows its alignment container, align as specified (unsafe).</q>
+  <q>If the alignment subject would overflow the scrollable overflow area of its nearest ancestor scroll container,
+  (thus extending into the “unscrollable” region), then its overflow in that direction is limited by biasing any
+  remaining overflow to the opposite side.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#auto-safety-default">CSS Box Alignment 3 §4.4.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Grid items</h2>
+  <p>A is <code>justify-self: center</code>, with no <code>safe</code> or <code>unsafe</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class="pr-a pr-fit" style="width: 160px; justify-self: center">A</div></div></div>
+    <figcaption>A 160px wide, in a 100px column centered in the stage: from 20 to 180px, as <code>unsafe</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=clip><div class="pr-a pr-fit" style="width: 260px; justify-self: center">A</div></div></div>
+    <figcaption>A 260px wide, in a grid that clips, a scroll container: from 0, cut off at the right, not 30px off each
+    side.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Blocks</h2>
+  <p><q>UAs that have not implemented the “smart” default behavior must behave as safe for 'align-content' on block
+  containers and unsafe otherwise.</q> A block 40px tall holds a tinted 70px of content.</p>
+  <figure>
+    <div class="pr-stage blk" style="align-content: center"><div class="tall pr-parent"><div class=pr-a>A</div></div></div>
+    <figcaption><code>center</code>: as <code>safe</code>, the content from the top, 30px out at the
+    bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage blk" style="align-content: unsafe center"><div class="tall pr-parent"><div class=pr-a>A</div></div></div>
+    <figcaption><code>unsafe center</code>: 15px out at the top, 15px at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

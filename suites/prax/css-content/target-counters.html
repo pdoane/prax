@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>target-counters(): every counter at the target</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc, .doc div { counter-reset: sec; }
+  .doc h3 { margin: 0; font-size: 13px; line-height: 20px; counter-increment: sec; }
+  .doc h3::before { content: counters(sec, ".") " "; }
+  .doc div { padding-left: 20px; }
+  .doc p { margin: 0; }
+  .doc a { color: #2c5a8f; }
+  .dot a::after { content: " (" target-counters(attr(href), sec, ".") ")"; }
+  .alpha a::after { content: " (" target-counters(attr(href), sec, "-", lower-alpha) ")"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.6.2 The target-counters() function</div>
+  <h1>target-counters(): every counter at the target</h1>
+  <p class=pr-lede><q>This functions fetches the value of all counters of a given name from the end of a link, and
+  formats them by inserting a given string between the value of each nested counter.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#target-counters">CSS Generated Content 3 §2.6.2</a></span></p>
+</header>
+
+<section>
+  <h2>The nested counters, outermost first</h2>
+  <p>Each stage numbers nested headings with <code>counters(sec, ".")</code>, and links to "Ahab", heading 2.2.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc dot"><h3>Loomings</h3><h3>Characters</h3><div><h3>Ishmael</h3><h3 id=c-ahab>Ahab</h3></div><p>See <a href="#c-ahab">Ahab</a>.</p></div>
+    <figcaption><code>target-counters(…, sec, ".")</code>: "See Ahab (2.2)."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None has
+    the function: no text after the link.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc alpha"><h3>Loomings</h3><h3>Characters</h3><div><h3>Ishmael</h3><h3 id=d-ahab>Ahab</h3></div><p>See <a href="#d-ahab">Ahab</a>.</p></div>
+    <figcaption>With <code>"-"</code> and <code>lower-alpha</code>: "See Ahab (b-b)."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No text
+    after the link.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

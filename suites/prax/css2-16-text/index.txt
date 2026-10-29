@@ -1,0 +1,51 @@
+00-supports-1.html
+00-supports-2.html
+CSS2/#indentation-prop 16.1 Indentation: the text-indent property
+    text-indent-length.html
+    text-indent-line-box.html
+    text-indent-keywords.html
+    text-indent-percentage.html
+    text-indent-direction.html
+    text-indent-first-line.html
+    text-indent-first-line-blocks.html
+CSS2/#alignment-prop 16.2 Alignment: the text-align property
+    text-align-values.html
+    text-align-applies.html
+    text-align-direction.html
+    text-align-shorthand.html
+    text-align-last-blocks.html
+    text-align-justify.html
+    text-align-justify-spaces.html
+    text-align-justify-pre.html
+    text-align-justify-pre-stretched.html
+CSS2/#lining-striking-props 16.3.1 Underlining, overlining, striking, and blinking: the text-decoration property
+    text-decoration-values.html
+    text-decoration-color-hidden.html
+    text-decoration-propagation.html
+    text-decoration-text-only.html
+    text-decoration-baseline.html
+    text-decoration-descendants.html
+    text-decoration-example.html
+CSS2/#spacing-props 16.4 Letter and word spacing: the letter-spacing and word-spacing properties
+    letter-spacing.html
+    letter-spacing-justify.html
+    word-spacing.html
+CSS2/#caps-prop 16.5 Capitalization: the text-transform property
+    text-transform.html
+    text-transform-scripts.html
+CSS2/#white-space-prop 16.6 White space: the white-space property
+    white-space-values.html
+    white-space-wrapping.html
+    white-space-newlines.html
+    white-space-html.html
+CSS2/#white-space-model 16.6.1 The white-space processing model
+    processing-collapsing.html
+    processing-lines.html
+    processing-line-ends.html
+    processing-breaks.html
+    processing-breaks-atomic.html
+CSS2/#egbidiwscollapse 16.6.2 Example of bidirectionality with white space collapsing
+    bidi-collapsing.html
+CSS2/#ctrlchars 16.6.3 Control and combining characters' details
+    control-characters.html
+    combining-characters.html

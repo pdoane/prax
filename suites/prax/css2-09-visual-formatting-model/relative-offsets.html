@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative positioning: which offsets win</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rel { position: relative; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.3 Relative positioning</div>
+  <h1>Relative positioning: which offsets win</h1>
+  <p class=pr-lede><q>Since boxes are not split or stretched as a result of 'left' or 'right', the used values are always:
+  left = -right.</q> The same holds of top and bottom. Each orange box is 80px wide, in normal flow at the stage's
+  top left; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>left and right</h2>
+  <p><q>If both 'left' and 'right' are 'auto' (their initial values), the used values are '0'.</q> <q>If 'left' is
+  'auto', its used value is minus the value of 'right'.</q> <q>If neither 'left' nor 'right' is 'auto', the position is
+  over-constrained, and one of them has to be ignored. If the 'direction' property of the containing block is 'ltr',
+  the value of 'left' wins and 'right' becomes -'left'. If 'direction' of the containing block is 'rtl', 'right' wins
+  and 'left' is ignored.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-b pr-fit rel" style="right: 20px">right 20</div></div>
+    <figcaption><code>right: 20px</code>: 20px to the left, past the stage's edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-b pr-fit rel" style="left: 20px; right: 50px">left 20</div></div>
+    <figcaption><code>left: 20px; right: 50px</code> in a left-to-right stage: left wins, 20px right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><div class="pr-b pr-fit rel" style="left: 20px; right: 50px">right 50</div></div>
+    <figcaption>The same in a right-to-left stage, where the box starts at the right: right wins, 50px left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>top and bottom</h2>
+  <p><q>If both are 'auto', their used values are both '0'. If one of them is 'auto', it becomes the negative of the
+  other. If neither is 'auto', 'bottom' is ignored.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#relative-positioning">CSS 2 §9.4.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px; padding-top: 20px"><div class="pr-b pr-fit rel" style="bottom: 10px">bottom 10</div></div>
+    <figcaption><code>bottom: 10px</code>: 10px up, from 20 to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px; padding-top: 20px"><div class="pr-b pr-fit rel" style="top: 20px; bottom: 10px">top 20</div></div>
+    <figcaption><code>top: 20px; bottom: 10px</code>: top wins, 20px down, from 20 to 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

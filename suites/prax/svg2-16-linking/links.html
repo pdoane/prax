@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The a element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg rect { fill: #d68a3c; }
+  svg a:link > rect { fill: #4f81bd; }
+  svg a:link > rect:hover { fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.2 Links out of SVG content: the ‘a’ element</div>
+  <h1>The a element</h1>
+  <p class=pr-lede><q>An ‘a’ element forms a link if it has a ‘href’ or ‘xlink:href’ attribute; without these attributes
+  the ‘a’ element is an inactive placeholder for a link.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#Links">SVG 2 §16.2</a></span>
+  A style sheet fills the rects of a link, <code>a:link</code>, blue, and dark blue under the pointer; other rects
+  orange.</p>
+</header>
+
+<section>
+  <h2>Links, placeholders, and nested links</h2>
+  <p><q>if an ‘a’ element is a descendent of another hyperlink element (whether in the SVG namespace or another
+  namespace), user agents must ignore its href attribute and treat it as inactive. The invalid ‘a’ element must still be
+  rendered as a generic container element.</q> Three <code>a</code> elements, each around a rect 70 by 40: with
+  <code>href</code>, without, and nested in an HTML link.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><a href="#target"><rect x="20" y="10" width="70" height="40" /></a><a><rect x="115" y="10" width="70" height="40" /></a></svg>
+      <a href="#target" style="position: absolute; margin: -50px 0 0 210px"><svg width="70" height="40"><a href="#target"><rect width="70" height="40" /></a></svg></a>
+    </div>
+    <figcaption>Left, a link: blue. Middle, no <code>href</code>: orange. Right, in an HTML link: inactive, orange,
+    but drawn.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A hit region for each rendered element</h2>
+  <p><q>a linked hit region is defined for each separate rendered element contained within the ‘a’ element</q>,
+  <q>rather than for the bounding box of the ‘a’ element itself.</q> One link around two rects, 60 by 40 at 30, 10 and
+  210, 10; dashed, the link's bounding box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><a href="#target"><rect x="30" y="10" width="60" height="40" /><rect x="210" y="10" width="60" height="40" /></a><rect class=pr-ghost x="30" y="10" width="240" height="40" style="fill: none" /></svg>
+    </div>
+    <figcaption>The pointer over either rect: that one dark blue, the pointer a hand. Between them, inside the box:
+    the arrow, no link.</figcaption>
+  </figure>
+  <p id=target class=pr-note>The links' target.</p>
+</section>
+
+</body>
+</html>

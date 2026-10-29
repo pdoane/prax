@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: clearance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: clearance</h1>
+  <p class=pr-lede><q>Clearance inhibits margin collapsing and acts as spacing above the margin-top of an element. It is
+  used to push the element vertically past the float.</q> Every named box is 20px tall unless it says otherwise; the
+  guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The specification's examples</h2>
+  <p>Example 1: B1 with a bottom margin M1, a float F of height H, and B2 with a top margin M2 and <code>clear:
+  both</code>. Clearance puts B2's top border edge at the bottom of F, so <q>C1 = H - M2</q>. Example 2: <q>the
+  clearance is -1em</q>, as here in pixels: <q>clearance + margin-top = 2em</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2
+  §9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 10px">B1: mb 10</div><div class="pr-c pr-fit f" style="height: 50px">F: 50</div><div class=pr-b style="margin-top: 20px; clear: both">B2: mt 20</div></div>
+    <figcaption>M1 = 10, H = 50, M2 = 20. F is 10 to 60px below B1, and B2 is at its bottom, 60px: clearance is
+    50 − 20 = 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-bottom: 40px">first: mb 40</div><div class="pr-c pr-fit f" style="height: 20px">F: 20</div><div class=pr-b style="margin-top: 30px; clear: left">last: mt 30</div></div>
+    <figcaption>Margins of 40 and 30, and a float 20px tall at 40: the last box is at the float's bottom, 60px.
+    Clearance + 30 is the float's 20, so clearance is −10px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clear on a float</h2>
+  <p>On a float, <code>clear</code> adds a rule to placing it: <q>10. The top outer edge of the float must be below the
+  bottom outer edge of all earlier left-floating boxes (in the case of 'clear: left') ...</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2
+  §9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit f" style="height: 30px">A</div><div class="pr-b pr-fit f">B</div></div>
+    <figcaption>Two left floats, side by side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit f" style="height: 30px">A</div><div class="pr-b pr-fit f" style="clear: left">B</div></div>
+    <figcaption>The second with <code>clear: left</code>: below the first, at 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

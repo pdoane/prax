@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The font display timeline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @font-face { font-family: "PR Never"; src: url(no-such-font.ttf); font-display: block; }
+  @font-face { font-family: "PR Never Swap"; src: url(no-such-font.ttf); font-display: swap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 3.2 The font display timeline</div>
+  <h1>The font display timeline</h1>
+  <p class=pr-lede>A downloaded face's timer passes through the <q>block period</q>, in which text <q>render[s] with an
+  invisible fallback font face</q>, the <q>swap period</q>, in which it renders with a visible fallback, and the
+  <q>failure period</q>, after which the face is treated as failed. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-display-timeline">CSS Fonts 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A face that loads: used once loaded</h2>
+  <p><q>If the font face successfully loads during the block period, the font face is then used normally.</q> Once
+  this page has settled, its fonts have loaded.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Architects Daughter', 'PR Tinos'">Handgloves</div>
+    <figcaption>PR Architects Daughter, handwritten.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A face that fails: the fallback, visible</h2>
+  <p>A face whose source is not found fails, and text in it is set in the next family, whatever its
+  'font-display'.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Never', 'PR Tinos'">Handgloves</div>
+    <figcaption><code>font-display: block</code>, failed: PR Tinos, visible.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Never Swap', 'PR Tinos'">Handgloves</div>
+    <figcaption><code>font-display: swap</code>, failed: PR Tinos.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

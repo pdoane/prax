@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Floats: making room</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5 Floats</div>
+  <h1>Floats: making room</h1>
+  <p class=pr-lede>A float takes room from the lines beside it, and moves down where there is no room for it. The guides
+  are 10px apart.</p>
+</header>
+
+<section>
+  <h2>No room beside</h2>
+  <p><q>If there is not enough horizontal room for the float, it is shifted downward until either it fits or there are
+  no more floats present.</q> <q>If a shortened line box is too small to contain any content, then the line box is
+  shifted downward ... until either some content fits or there are no more floats present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2
+  §9.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="float: left; width: 120px; height: 40px">120 by 40</div><div class="pr-b pr-fit" style="float: left; width: 120px; height: 20px">120 by 20</div></div>
+    <figcaption>Two 120px floats in 200px: the second is below the first.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit" style="float: left; width: 120px; height: 40px">float</div>Supercalifragilisticexpialidocious</div>
+    <figcaption>A word too wide for the 80px beside the float: its line moves below the float.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Which lines are shortened</h2>
+  <p><q>The current and subsequent line boxes created next to the float are shortened as necessary to make room for the
+  margin box of the float.</q> <q>This means that floats with zero outer height or negative outer height do not
+  shorten line boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#floats">CSS 2 §9.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit" style="float: left; width: 60px; height: 20px; margin-bottom: 20px">float</div>Two lines beside the float and its margin, then the rest.</div>
+    <figcaption>A 20px float with a 20px bottom margin: the first two lines are shortened.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit" style="float: left; width: 60px; height: 20px; margin-bottom: -20px">float</div>No line is shortened by this float at all.</div>
+    <figcaption>The same float with <code>margin-bottom: -20px</code>: zero outer height, and the text runs over
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 20px"><div class="pr-a pr-fit" style="float: left; width: 60px; height: 20px; margin-bottom: -20px">float</div><div class="pr-b pr-fit" style="float: left; width: 40px; height: 20px">next</div></div>
+    <figcaption>That float, then a 40px one: its top is not above the first's bottom outer edge (<a href="https://drafts.csswg.org/css2/#float-position">§9.5.1</a>, rule 2),
+    so it is not pushed aside, and covers the first at the left edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

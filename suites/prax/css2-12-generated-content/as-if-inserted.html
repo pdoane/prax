@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Before and after: as if real elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage p { margin: 0; }
+  .p1:before { display: block; content: 'Some'; }
+  .p2 span { display: block; }
+  .h { font-size: 16px; font-weight: 700; line-height: 20px; }
+  .h1:after { display: block; content: 'Thing'; }
+  .h2 span { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.1 The :before and :after pseudo-elements</div>
+  <h1>Before and after: as if real elements</h1>
+  <p class=pr-lede><q>The :before and :after pseudo-elements interact with other boxes as if they were real elements
+  inserted just inside their associated element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#before-after-content">CSS 2 §12.1</a></span> Each pair of figures must
+  render the same.</p>
+</header>
+
+<section>
+  <h2>A block before the content</h2>
+  <p>The specification's first example: <code>&lt;p&gt; Text &lt;/p&gt;</code> with <code>p:before { display: block;
+  content: 'Some'; }</code> <q>would render in exactly the same way as</q> <code>&lt;p&gt;&lt;span&gt;Some&lt;/span&gt;
+  Text &lt;/p&gt;</code> with <code>span { display: block }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#before-after-content">CSS 2 §12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><p class="p1 pr-frame"> Text </p></div>
+    <figcaption>Generated: "Some" on the first line, "Text" on the second, both inside the dashed paragraph.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><p class="p2 pr-frame"><span>Some</span> Text </p></div>
+    <figcaption>Real: the same two lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A block after the content</h2>
+  <p><code>&lt;h2&gt; Header &lt;/h2&gt;</code> with <code>h2:after { display: block; content: 'Thing'; }</code> <q>would
+  render in exactly the same way as</q> <code>&lt;h2&gt; Header &lt;span&gt;Thing&lt;/span&gt;&lt;/h2&gt;</code> with
+  <code>span { display: block; }</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#before-after-content">CSS 2 §12.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h h1 pr-frame"> Header </div></div>
+    <figcaption>Generated: "Header" on the first line, "Thing" on the second, both bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="h h2 pr-frame"> Header <span>Thing</span></div></div>
+    <figcaption>Real: the same two lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Input events in a composition</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.6 Input Events During Composition</div>
+  <h1>Input events in a composition</h1>
+  <p class=pr-lede><q>During the composition session, the compositionupdate MUST be dispatched after the beforeinput is
+  sent, but before the input event is sent.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-input-events">UI Events §3.6.6</a></span></p>
+</header>
+<section>
+  <h2>Each update</h2>
+  <p>beforeinput, compositionupdate, then <q>Any DOM updates occur at this point</q>, then input. The page's script
+  records the field's value as each event reaches it, as <code>value</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-input-events">§3.6.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="beforeinput compositionupdate input" data-fields="data value" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click the field and type <code>ka</code>. For each
+    key: beforeinput, then compositionupdate, both with the field's old <code>value</code>, then input with the new,
+    such as <code>value="か"</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Nothing at the end</h2>
+  <p><q>Since there are no DOM updates associated with the compositionend event, beforeinput and input events should
+  not be sent at that time.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-input-events">§3.6.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=end></div>
+      <ol class=pr-log data-log="beforeinput input compositionend" data-fields="data isComposing" data-on="#end" data-lines=3></ol>
+    </div>
+    <figcaption>With the input method on, type <code>ka</code> in the field and press Enter to commit it: the log
+    ends with compositionend, with no beforeinput or input after it, as it <q>should</q>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the field's value as each event reaches it, before the log reads it.
+  const field = document.getElementById("field");
+  for (const type of ["beforeinput", "compositionupdate", "input"])
+      field.addEventListener(type, event => { event.value = field.value; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

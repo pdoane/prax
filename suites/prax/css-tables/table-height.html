@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table's height and its rows' minimum heights</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  tr + tr td, tbody + tbody td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.1 Computing the table height</div>
+  <h1>The table's height and its rows' minimum heights</h1>
+  <p class=pr-lede><q>The height of a table is the sum of the row heights plus any cell spacing or borders. If the
+  table has a 'height' property with a value other than auto, it is treated as a minimum height for the table
+  grid</q>. <q>If their collective size ends up being greater than the specified 'height', the specified 'height' will
+  have no effect.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-the-table-height">CSS Table 3 §3.10.1</a></span>
+  Tables are outlined, rows of a line of <code>.pr-measure</code> text, 20px.</p>
+</header>
+
+<section>
+  <h2>A row's minimum height, and the table's</h2>
+  <p>It is the largest of <q>the computed 'height' (if definite, percentages being considered 0px) of its corresponding
+  table-row (if any)</q>, <q>the computed 'height' of each cell spanning the current row exclusively (if definite,
+  percentages being treated as 0px)</q>, and the height its cells need.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table style="height: 30px"><tr><td>a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>The table <code>height: 30px</code>: the rows need 40px, so 40px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr style="height: 40px"><td>a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>Blue row <code>height: 40px</code>: 40px, and the table 60px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td style="height: 40px">a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>Blue cell <code>height: 40px</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td style="height: 200%">a</td></tr><tr><td>b</td></tr></table></div>
+    <figcaption>Blue cell <code>height: 200%</code>, table auto: 0px; 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tbody style="height: 80px"><tr><td>a</td></tr></tbody><tbody><tr><td>b</td></tr></tbody></table></div>
+    <figcaption>A row group of <code>height: 80px</code>: ignored, a note says; 40px in all. Firefox makes it
+    80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

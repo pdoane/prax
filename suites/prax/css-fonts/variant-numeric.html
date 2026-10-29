@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-numeric</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 26px; }
+  .col { padding: 0 6px; font: 22px/30px 'PR Literata'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.7 Numerical formatting: the 'font-variant-numeric' property</div>
+  <h1>font-variant-numeric</h1>
+  <p class=pr-lede>'font-variant-numeric' chooses figure styles (<code>lining-nums</code>, <code>oldstyle-nums</code>),
+  widths (<code>proportional-nums</code>, <code>tabular-nums</code>), fractions, <code>ordinal</code> and
+  <code>slashed-zero</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-numeric-prop">CSS Fonts 4 §6.7</a></span></p>
+</header>
+
+<section>
+  <h2>Style and width</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-numeric: lining-nums">1983 0467</div>
+    <figcaption><code>lining-nums</code>: figures as tall as capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-numeric: oldstyle-nums">1983 0467</div>
+    <figcaption><code>oldstyle-nums</code>: figures that rise and descend like lowercase.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage col" style="font-variant-numeric: proportional-nums">1111<br>8888</div>
+    <figcaption><code>proportional-nums</code>: the 1s narrower than the 8s.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage col" style="font-variant-numeric: tabular-nums">1111<br>8888</div>
+    <figcaption><code>tabular-nums</code>: the rows the same width.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fractions, ordinals and zero</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-numeric: diagonal-fractions">1/2 3/4</div>
+    <figcaption><code>diagonal-fractions</code>: small numerators and denominators across a fraction
+    slash.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-numeric: ordinal">No 1</div>
+    <figcaption><code>ordinal</code>: Literata's ordinal forms; "No" as a numero sign.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-numeric: slashed-zero">0 O 0</div>
+    <figcaption><code>slashed-zero</code>: a zero distinct from the letter O, where the font has one.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

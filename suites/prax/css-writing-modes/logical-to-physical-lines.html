@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line-relative to physical</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 80px; height: 80px; font: 16px/30px "PR Arimo"; text-align: left; }
+  .t { text-decoration: underline #c0392b; }
+  .t span { text-decoration: overline #2c5a8f; }
+  figcaption { max-width: 92px; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 6.4 Abstract-to-Physical Mappings, line-relative</div>
+  <h1>Line-relative to physical</h1>
+  <p class=pr-lede>The table's line-relative rows, <q>over</q>, <q>under</q>, <q>line-left</q> and <q>line-right</q>,
+  depend on the writing mode alone, not on the direction. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#logical-to-physical">CSS Writing Modes 4 §6.4</a></span></p>
+</header>
+
+<section>
+  <h2>over and line-left</h2>
+  <p>Each stage holds "abc" with <code>text-align: left</code>, which goes to line-left, and a blue overline and a
+  red underline, which go on the over and under sides (<a href="https://drafts.csswg.org/css-writing-modes-4/#line-mappings">§7.5</a>).</p>
+  <figure>
+    <div class=pr-stage><span class=t><span>abc</span></span></div>
+    <figcaption><code>horizontal-tb</code>: over top, line-left left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><span class=t><span>abc</span></span></div>
+    <figcaption><code>horizontal-tb rtl</code>: the same, "abc" still at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl"><span class=t><span>abc</span></span></div>
+    <figcaption><code>vertical-rl</code>: over right, line-left top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl; direction: rtl"><span class=t><span>abc</span></span></div>
+    <figcaption><code>vertical-rl rtl</code>: the same, "abc" still at the top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-lr"><span class=t><span>abc</span></span></div>
+    <figcaption><code>vertical-lr</code>: over right, line-left top; the first line at the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: sideways-rl"><span class=t><span>abc</span></span></div>
+    <figcaption><code>sideways-rl</code>: over right, line-left top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: sideways-lr"><span class=t><span>abc</span></span></div>
+    <figcaption><code>sideways-lr</code>: over left, line-left bottom; "abc" read upward from the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="writing-mode: vertical-rl; text-orientation: upright"><span class=t><span>abc</span></span></div>
+    <figcaption><code>vertical-rl upright</code>: over still right, line-left top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

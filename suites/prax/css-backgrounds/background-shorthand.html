@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The background shorthand: size, boxes and layers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed rgba(44, 90, 143, 0.6); }
+  .size { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>") center / 40px 20px no-repeat; }
+  .one { background: #b9cde6 content-box; }
+  .two { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%23d68a3c'/></svg>") no-repeat border-box content-box; }
+  .layers {
+    background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") left no-repeat,
+                url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>") right / 20px 40px no-repeat padding-box,
+                #c3d08b;
+  }
+  .reset { background-size: 10px 10px; background-repeat: repeat; }
+  .reset { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>") no-repeat; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.12 Backgrounds Shorthand: the background property</div>
+  <h1>The background shorthand: size, boxes and layers</h1>
+  <p class=pr-lede><q>The number of comma-separated items defines the number of background image layers.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background">CSS Backgrounds 4 §2.12</a></span>
+  Each box has a 10px dashed border, 10px of padding and a content box 60 by 20.</p>
+</header>
+
+<section>
+  <h2>Each layer reset, then set</h2>
+  <p>For each layer, the shorthand, whose color is in the last layer, sets each longhand <q>to that property's initial value, then assigns any explicit
+  values specified for this layer in the declaration.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box size"></div></div>
+    <figcaption><code>center / 40px 20px</code>: a disc stretched to 40 by 20, in the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box reset"></div></div>
+    <figcaption><code>background-size: 10px 10px</code>, then a <code>background</code> with no size: the disc at
+    its natural 20 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box layers"></div></div>
+    <figcaption>Blue at the left, orange 20 by 40 at the right, over green, also under the dashes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One box, or two</h2>
+  <p><q>If one &lt;visual-box&gt; value is present, then it sets both 'background-origin' and 'background-clip' to
+  that value.</q> <q>If two &lt;visual-box&gt; values are present, then the first sets 'background-origin' and the
+  second 'background-clip'.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box one"></div></div>
+    <figcaption><code>#b9cde6 content-box</code>: the color only in the content box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box two"></div></div>
+    <figcaption><code>border-box content-box</code>: a 30px square at the outer corner shows only its last 10 by 10,
+    in the content box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

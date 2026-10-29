@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>target-counter(): a counter at the link's target</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .doc { counter-reset: sec; }
+  .doc h3 { margin: 0; font-size: 13px; line-height: 20px; counter-increment: sec; }
+  .doc h3::before { content: counter(sec) ". "; }
+  .doc p { margin: 0; }
+  .doc a { color: #2c5a8f; }
+  .tc a::after { content: " (section " target-counter(attr(href), sec) ")"; }
+  .tr a::after { content: " (part " target-counter(attr(href), sec, upper-roman) ")"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · 2.6.1 The target-counter() function</div>
+  <h1>target-counter(): a counter at the link's target</h1>
+  <p class=pr-lede><q>The 'target-counter()' function retrieves the value of the innermost counter with a given name.
+  The required arguments are the url of the target and the name of the counter. An optional counter-style argument can
+  be used to format the result.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-content-3/#target-counter">CSS Generated Content 3 §2.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>The value at the target, before or after the link</h2>
+  <p>Each stage numbers its headings with a counter <code>sec</code>, and has a link to a heading.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc tc"><h3 id=a-loom>Loomings</h3><h3 id=a-bag>The Carpet-Bag</h3><p>See <a href="#a-inn">the inn</a>.</p><h3 id=a-inn>The Spouter-Inn</h3></div>
+    <figcaption>A link to the third heading, which comes after it: "See the inn (section 3)."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None has
+    the function: no text after the link.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text doc tr"><h3 id=b-loom>Loomings</h3><h3 id=b-bag>The Carpet-Bag</h3><p>See <a href="#b-bag">the bag</a>.</p><h3>The Spouter-Inn</h3></div>
+    <figcaption>With <code>upper-roman</code>, a link back to the second: "See the bag (part II)."
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No text
+    after the link.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

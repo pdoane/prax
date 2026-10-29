@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 11: the used cross size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; }
+  .half { height: 50%; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.4 Cross Size Determination, step 11</div>
+  <h1>Step 11: the used cross size</h1>
+  <p class=pr-lede><q>If a flex item's cross size depends on the available space in the cross axis, recalculate its
+  cross size using the flex line's cross size (rather than the flex container's) as the available space. Otherwise,
+  the used cross size is the item's hypothetical cross size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#cross-sizing">CSS Flexible Box Layout 2 §9.4</a></span></p>
+</header>
+
+<section>
+  <h2>A stretched item takes its line's cross size</h2>
+  <p>A <code>stretch</code> item's <q>used value is the length necessary to make the cross size of the item's margin
+  box as close to the same size as the line as possible</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">§8.3</a></span></p>
+  <figure>
+    <div class="pr-stage flex" style="flex-wrap: wrap; height: 80px; align-content: flex-start"><div class="pr-a pr-fit" style="width: 120px">A</div><div class="pr-b pr-fit" style="width: 60px; height: 40px">B</div><div class="pr-c pr-fit" style="width: 120px">C</div></div>
+    <figcaption>Two lines, packed at the top: A stretches to the 40px of its line, set by B, and C to its own
+    line's 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="flex-wrap: wrap; height: 80px; align-content: flex-start"><div class="pr-a pr-fit" style="width: 120px; margin: 5px 0; max-height: 25px">A</div><div class="pr-b pr-fit" style="width: 60px; height: 40px">B</div><div class="pr-c pr-fit" style="width: 120px; margin-bottom: 10px">C</div></div>
+    <figcaption>A with 5px margins and <code>max-height: 25px</code>: 25px, from 5px; C with
+    <code>margin-bottom: 10px</code>: its line is 30px and C 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its contents laid out again, its main size kept</h2>
+  <p><q>If the flex item's cross size changed as a result, redo layout for its contents, treating this used size as
+  its definite cross size so that percentage-sized children can be resolved.</q> <q>Note: This step does not affect the main size of the flex item, even if it has a preferred aspect ratio.</q></p>
+  <figure>
+    <div class="pr-stage flex"><div class="pr-a pr-fit" style="width: 60px; border: 0"><div class=half></div></div><div class="pr-b pr-fit" style="width: 60px; height: 60px"></div></div>
+    <figcaption>The container's height is auto; A, holding a purple child of <code>height: 50%</code>, stretches to the line's 60px, so its child is 30px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="flex-wrap: wrap"><div class="pr-a pr-fit" style="width: 40px; aspect-ratio: 2"></div><div class="pr-b pr-fit" style="width: 40px; height: 60px"></div></div>
+    <figcaption>A, <code>width: 40px; aspect-ratio: 2</code>, would be 20px tall; stretched to the 60px line, it
+    stays 40px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

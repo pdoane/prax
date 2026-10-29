@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties the wrapper takes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; background: #4f81bd; color: white; }
+  caption { background: #d68a3c; color: white; }
+  .out { position: relative; left: 100px; background: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.6.1 Overrides applying in all modes, the wrapper</div>
+  <h1>Properties the wrapper takes</h1>
+  <p class=pr-lede><q>The computed values of properties 'position', 'float', 'margin'-*, 'top', 'right', 'bottom', and
+  'left' on the table are used on the table-wrapper box and not the table grid box; the same holds true for the
+  properties whose use could force the used value of 'transform-style' to flat</q>, <q>'overflow', 'opacity', 'filter',
+  'clip', 'clip-path', 'isolation', 'mask'-*, 'mix-blend-mode', 'transform'-* and 'perspective'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#global-style-overrides">CSS Table 3 §3.6.1</a></span>
+  Captions orange, cells blue.</p>
+</header>
+
+<section>
+  <h2>Effects on the wrapper reach the captions</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="filter: grayscale(1)"><caption>caption</caption><tr><td>table</td></tr></table></div>
+    <figcaption><code>filter: grayscale(1)</code>: caption and cell both grey.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="clip-path: inset(10px 0 0 0)"><caption>caption</caption><tr><td>table</td></tr></table></div>
+    <figcaption><code>clip-path: inset(10px 0 0 0)</code>: the wrapper's top 10px is cut, the top half of the
+    caption; the cell is whole. <span class=pr-flag>Firefox</span> clips the grid box instead: the caption is
+    whole and the cell's top is cut.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="position: relative; left: 40px; top: 10px"><caption>caption</caption><tr><td>table</td></tr></table></div>
+    <figcaption><code>left: 40px; top: 10px</code>, relative: both move.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>overflow</h2>
+  <p><q>The 'overflow' property on the table-root and table-wrapper box, when its value is not either visible, clip or
+  hidden, is ignored and treated as if its value was visible.</q> A red block in the cell is shifted 100px right,
+  past the table.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="overflow: hidden"><caption>caption</caption><tr><td>table<div class=out>red</div></td></tr></table></div>
+    <figcaption><code>hidden</code>: clipped at the wrapper's edge, so no red shows; the caption, inside the wrapper,
+    is whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="overflow: scroll"><caption>caption</caption><tr><td>table<div class=out>red</div></td></tr></table></div>
+    <figcaption><code>scroll</code>: treated as <code>visible</code>: no scrollbars, and "red" shows 100px to the
+    right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

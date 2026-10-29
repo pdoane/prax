@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-inset across lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 5px 0; width: 60px; }
+  .u { text-decoration: underline #c0392b 3px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
+  .pr-stage.pr-measure { line-height: 26px; }
+  figure { margin-right: 14px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.9.1 Trimming, Expanding, and Shifting Text Decoration Lines: the text-decoration-inset property, fragments</div>
+  <h1>text-decoration-inset across lines</h1>
+  <p class=pr-lede><q>The adjustment of the text decoration's endpoints is subject to 'box-decoration-break'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-inset-property">CSS Text Decoration 4 §2.9.1</a></span>
+  Each stage holds "aaaa bbbb cccc" in monospace: three lines, each x=0 to 40.</p>
+</header>
+
+<section>
+  <h2>slice: the box's two ends</h2>
+  <p><q>for slice (the default) endpoint adjustment is only applied to the start edge of the first fragment and the end
+  edge of the last fragment, and may accumulate to other fragments if the amount of the inset is more than the length
+  of the fragment.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-inset: 10px">aaaa bbbb cccc</span></div>
+    <figcaption><code>10px</code>: first line x=10 to 40, second 0 to 40, last 0 to 30, as in Firefox. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> All 0 to 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-inset: 50px 0">aaaa bbbb cccc</span></div>
+    <figcaption><code>50px 0</code>, past the first line's 40px, <q>may accumulate</q>: none on the
+    first; the second 10 to 40, or 0 to 40. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Draw the first too.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-inset: 0 10%">aaaa bbbb cccc</span></div>
+    <figcaption><code>0 10%</code> of 120px: the last line 0 to 28. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>clone: each fragment's ends</h2>
+  <p><q>for clone endpoint adjustment is applied to each fragment independently.</q> Percentages then refer <q>to the
+  inline size of each individual box fragment</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-inset: 10px; box-decoration-break: clone; -webkit-box-decoration-break: clone">aaaa bbbb cccc</span></div>
+    <figcaption><code>10px</code>: every line's underline from x=10 to 30, as Firefox
+    draws it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 0 to 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=u style="text-decoration-inset: 0 25%; box-decoration-break: clone; -webkit-box-decoration-break: clone">aaaa bbbb cccc</span></div>
+    <figcaption><code>0 25%</code> of each 40px fragment: every line's from x=0 to 30. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0 to
+    40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

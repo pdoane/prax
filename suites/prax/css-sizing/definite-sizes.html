@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definite and indefinite sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { width: 100px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 2 Terminology</div>
+  <h1>Definite and indefinite sizes</h1>
+  <p class=pr-lede>A <dfn>definite size</dfn> is <q>A size that can be determined without performing layout; that is,
+  a &lt;length&gt;, a measure of text (without consideration of line-wrapping), a size of the initial containing
+  block, or a &lt;percentage&gt; or other formula (such the “stretch-fit” sizing of non-replaced blocks) that is
+  resolved solely against definite sizes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#terms">CSS Box Sizing 3 §2</a></span></p>
+</header>
+
+<section>
+  <h2>A percentage resolves against a definite size</h2>
+  <p>Each dashed parent holds an orange block of <code>height: 50%</code>, which is its 20px line where the
+  percentage does not resolve.</p>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=pr-parent style="height: 50px"><div class="pr-b pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent <code>height: 50px</code>: definite, the block 25px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=pr-parent style="height: 80%"><div class="pr-b pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent <code>height: 80%</code> of the 60px stage: definite, the block 24px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=pr-parent><div class="pr-b pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent <code>height: auto</code>: indefinite, the block 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Keywords are indefinite; an absolute box's containing block is definite</h2>
+  <p><q>intrinsic sizing keywords such as max-content are indefinite, even if they can be determined without laying out
+  the children</q>. <q>Additionally, the size of the containing block of an absolutely positioned element is always
+  definite with respect to that element.</q></p>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=pr-parent style="height: max-content"><div class="pr-b pr-fit" style="height: 50%">50%</div></div></div>
+    <figcaption>Parent <code>height: max-content</code>: indefinite, so the block is 20px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=pr-parent style="position: relative"><div style="height: 50px"></div><div class="pr-b pr-fit" style="position: absolute; top: 0; right: 0; width: 60px; height: 50%">abs</div></div></div>
+    <figcaption>An absolute block of <code>height: 50%</code> in a parent of auto height, 50px from its content: 25px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

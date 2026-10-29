@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The shape of an outline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 20px; }
+  .box { width: 120px; height: 40px; background: #b9cde6; }
+  .child { width: 150px; height: 40px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 3.1 Outlines Shorthand: the outline property</div>
+  <h1>The shape of an outline</h1>
+  <p class=pr-lede><q>The parts of the outline are not required to be rectangular. To the extent that the outline
+  follows the border edge, it should follow the border-radius curve, as well as the corner-shape.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline">CSS Basic User Interface 4 §3.1</a></span>
+  Outlines round an inline box split over lines, and round corners, are on CSS 2's <a href="../css2-18-user-interface/outline-inline.html">outline-inline</a> page.</p>
+</header>
+
+<section>
+  <h2>Following corner-shape</h2>
+  <p>Each box is 120 by 40 with <code>border-radius: 20px</code> and a 6px red outline.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="border-radius: 20px; outline: 6px solid #c0392b"></div></div>
+    <figcaption>Round corners: the outline is rounded with them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class=box style="border-radius: 20px; corner-shape: bevel; outline: 6px solid #c0392b"></div></div>
+    <figcaption><code>corner-shape: bevel</code>: the corners are cut straight, and the outline follows the cuts, a
+    six-sided shape. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no
+    <code>corner-shape</code>: box and outline are round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Descendant boxes</h2>
+  <p><q>The position of the outline may be affected by descendant boxes.</q> The box is 120 by 20, and its child, 150
+  by 40, overflows it. The box has a 2px red outline.</p>
+  <figure>
+    <div class="pr-stage stage"><div class=box style="height: 20px; outline: 2px solid #c0392b"><div class=child></div></div></div>
+    <figcaption>Round the box alone, or round the child too: either is allowed. Chrome, Safari and Firefox outline
+    the box alone, 120 by 20, across the child.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

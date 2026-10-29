@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: an empty box with clearance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 30px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: an empty box with clearance</h1>
+  <p class=pr-lede>The dashed line E is an empty box with <code>clear: both</code>, after a float 50px tall: it is
+  put below the float, and margins collapse through it. The guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>The margins after it</h2>
+  <p><q>If the top and bottom margins of an element with clearance are adjoining, its margins collapse with the
+  adjoining margins of following siblings but that resulting margin does not collapse with the bottom margin of the
+  parent block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a>,
+  <a href="https://drafts.csswg.org/css2/#flow-control">§9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class="pr-c pr-fit f"></div><div class=pr-ghost style="clear: both; margin: 10px 0"></div><div class=pr-b style="margin-top: 20px">B: mt 20</div></div>
+    <figcaption>E, with margins of 10, has its border edge at the float's bottom, 70px, and its top margin starts at
+    60. Its margins and B's 20 collapse into one margin of 20 from there: B is at 80, not 90.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class="pr-c pr-fit f"></div><div class=pr-ghost style="clear: both; margin: 30px 0 10px"></div><div class=pr-b style="margin-top: 20px">B: mt 20</div></div>
+    <figcaption>E's top margin of 30: it starts at 40, and the collapsed margin is 30, so B is at the float's bottom,
+    70px, level with E.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not through the parent's end</h2>
+  <p>The dashed parent, with <code>margin-bottom: 20px</code>, ends with the anchor, the float and E; N follows it.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin-bottom: 20px"><div class=pr-a>anchor</div><div class="pr-c pr-fit f"></div><div class=pr-ghost style="clear: both"></div></div><div class=pr-b>N</div></div>
+    <figcaption>E's margins do not collapse with the parent's bottom margin: the parent ends at E, 70px, and N is
+    20px below it, at 90.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

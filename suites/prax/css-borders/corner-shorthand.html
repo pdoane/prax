@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner: all four corners</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.3 Sizing & Shaping All Corners At Once: The corner shorthand</div>
+  <h1>corner: all four corners</h1>
+  <p class=pr-lede><q>The 'corner' shorthand sets the 'corner-*-shape' and 'border-*-radius' longhands all together.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shorthand">CSS Borders and Box Decorations 4 §3.9.3</a></span> Each blue box is 120 by 60.</p>
+</header>
+
+<section>
+  <h2>Shapes and radii together</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner: bevel 20px"></div></div>
+    <figcaption><code>corner: bevel 20px</code>: four bevels 20 by 20. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner: scoop bevel 10px 30px"></div></div>
+    <figcaption><code>corner: scoop bevel 10px 30px</code>: top left and bottom right scooped 10, the others bevelled 30. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner: 40px / 20px squircle"></div></div>
+    <figcaption><code>corner: 40px / 20px squircle</code>: squircles 40 across, 20 down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ch and ic: the advance of 0 and of 水</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .glyphs { padding: 0 10px; box-sizing: border-box; font-size: 40px; line-height: 50px; white-space: nowrap; }
+  .diag { font-family: "PR Baseline Diagnostic Zero"; }
+  .mono { font-family: "PR Noto Sans Mono"; }
+  .jp { font-family: "PR Noto Sans JP"; }
+  .bar { height: 10px; margin: 0 0 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.1 Font-relative Lengths, ch and ic</div>
+  <h1>ch and ic: the advance of 0 and of 水</h1>
+  <p class=pr-lede>A ch is <q>measured as the used advance measure of the “0” (ZERO, U+0030) glyph in the font used to
+  render it</q>, and an ic <q>as the used advance measure of the “水” (CJK water ideograph, U+6C34) glyph found in the
+  font used to render it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#font-relative-lengths">CSS Values and Units 4 §6.1.1</a></span>
+  Each stage is 40px text, and under it a blue bar.</p>
+</header>
+
+<section>
+  <h2>ch</h2>
+  <p><q>This measurement is an approximation (and in monospace fonts, an exact measure) of a single narrow glyph’s
+  advance measure</q>. Under three zeros, a bar <code>3ch</code> wide.</p>
+  <figure>
+    <div class="pr-stage glyphs diag">000<div class=bar style="width: 3ch"></div></div>
+    <figcaption>PR Baseline Diagnostic Zero's 0 is a full em wide: the bar is 120px, as wide as the zeros, not the
+    60px of half an em.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage glyphs mono">000<div class=bar style="width: 3ch"></div></div>
+    <figcaption>PR Noto Sans Mono's is 0.6em: the bar is 72px, as wide as the zeros.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>ic</h2>
+  <p><q>This measurement is a typically an exact measure (in the few fonts with proportional fullwidth glyphs, an
+  approximation) of a single fullwidth glyph’s advance measure</q>. Under three ideographs, a bar <code>3ic</code>
+  wide.</p>
+  <figure>
+    <div class="pr-stage glyphs jp">水水水<div class=bar style="width: 3ic"></div></div>
+    <figcaption>PR Noto Sans JP's 水 is 1em: the bar is 120px, as wide as the three.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage glyphs" style="font-family: 'PR Arimo', 'PR Noto Sans JP'">0水<div class=bar style="width: 3ic"></div></div>
+    <figcaption>In PR Arimo, which has no 水, the font used to render it is PR Noto Sans JP: the bar is again
+    120px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Transforms 1 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · Support</div>
+  <h1>CSS Transforms 1 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do. Both levels' properties are here and on <a href="00-supports-2.html">the next page</a>; <a href="00-supports-3.html">the third</a> has the other properties the pages use.</p>
+</header>
+
+<section>
+  <h2>transform and transform-origin</h2>
+  <code class=pr-decl>transform: none</code>
+  <code class=pr-decl>transform: translate(50%, 50%)</code>
+  <code class=pr-decl>transform: translateX(40px) translateY(30px)</code>
+  <code class=pr-decl>transform: scale(2, 0.5) scaleX(2) scaleY(3)</code>
+  <code class=pr-decl>transform: rotate(90deg)</code>
+  <code class=pr-decl>transform: skew(45deg, 45deg) skewX(45deg) skewY(45deg)</code>
+  <code class=pr-decl>transform: matrix(1, 0.5, 2, 1, 0, 0)</code>
+  <code class=pr-decl>transform: scale(50%) scaleY(200%)</code>
+  <code class=pr-decl>transform: translate3d(10px, 10px, 50px) translateZ(-100px)</code>
+  <code class=pr-decl>transform: scale3d(1, 1, 2) scaleZ(0)</code>
+  <code class=pr-decl>transform: rotateX(60deg) rotateY(60deg) rotateZ(90deg)</code>
+  <code class=pr-decl>transform: rotate3d(1, 1, 0, 180deg)</code>
+  <code class=pr-decl>transform: perspective(100px)</code>
+  <code class=pr-decl>transform: perspective(none)</code>
+  <code class=pr-decl>transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,-0.01,0,0,0,1)</code>
+  <code class=pr-decl>transform-origin: right bottom</code>
+  <code class=pr-decl>transform-origin: 30% 100%</code>
+  <code class=pr-decl>transform-origin: 50% 50% -50px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

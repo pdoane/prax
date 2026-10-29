@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-width: fit-content()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .mc { font: 15px/20px "PR Cousine"; column-gap: 10px; column-rule: 1px solid #c0392b; }
+  .mc div { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 5.6 New Column Sizing Values: fit-content()</div>
+  <h1>column-width: fit-content()</h1>
+  <p class=pr-lede>fit-content(&lt;length-percentage&gt;) <q>Specifies the optimal column width as min(max-content
+  size, max(min-content size, &lt;length-percentage&gt;))</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#column-sizing">CSS Box Sizing 4 §5.6</a></span>
+  Level 4 adds the function to level 3's keywords, which <a href="column-width-keywords.html">column-width-keywords</a>
+  shows.</p>
+</header>
+
+<section>
+  <h2>The argument between the contents' sizes</h2>
+  <p>Each stage is a multi-column container 200px wide with <code>column-gap: 10px</code> and red rules, holding six
+  orange lines of "abc def" (63px, its words 27px).</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: fit-content(40px)"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>fit-content(40px)</code>: 40px, so four columns of 42.5px, each line wrapped in two. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: fit-content(10px)"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>fit-content(10px)</code>: raised to min-content, 27px, so five columns. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mc" style="column-width: fit-content(150px)"><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div><div>abc def</div></div>
+    <figcaption><code>fit-content(150px)</code>: held to max-content, 63px, so two columns. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

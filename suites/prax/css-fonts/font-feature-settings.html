@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-feature-settings</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.12 Low-level font feature settings control: the 'font-feature-settings' property</div>
+  <h1>font-feature-settings</h1>
+  <p class=pr-lede>'font-feature-settings' is <code>normal | &lt;feature-tag-value&gt;#</code>: a four-letter tag and an
+  optional value, 1 when left out, and <code>on</code> or <code>off</code> for 1 or 0. <q>Authors should generally use
+  'font-variant' and its related subproperties whenever possible</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-feature-settings-prop">CSS Fonts 4 §6.12</a></span></p>
+</header>
+
+<section>
+  <h2>Tags and values</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-feature-settings: 'smcp'">Paris 1983</div>
+    <figcaption><code>"smcp"</code>: small capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-feature-settings: 'onum' on, 'liga' off">fit 1983</div>
+    <figcaption><code>"onum" on, "liga" off</code>: old-style figures, and fi apart.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-feature-settings: 'onum', 'onum' 0">1983</div>
+    <figcaption><code>"onum", "onum" 0</code>: the later one wins, so lining figures.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

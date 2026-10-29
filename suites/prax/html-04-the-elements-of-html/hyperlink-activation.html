@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Activating a hyperlink</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.6.2 Links created by a and area elements</div>
+  <h1>Activating a hyperlink</h1>
+  <p class=pr-lede><q>The activation behavior of an a or area element element given an event event is:</q> to return if it has no href, else to download the hyperlink if it has a download attribute, and otherwise to follow it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#links-created-by-a-and-area-elements">HTML §4.6.2</a></span></p>
+</header>
+<section>
+  <h2>With an href, and without</h2>
+  <p><q>If element has no href attribute, then return.</q> Each frame holds a link to
+  <code>support/target.html</code>, which says "target.html" on green, and the query it was given.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif } img { display: block }</style><a href=support/target.html>Follow this link</a>"></iframe></div>
+    <figcaption>Click the link: the frame shows "target.html" on green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif } img { display: block }</style><a>No href here</a>"></iframe></div>
+    <figcaption>No href: click the text, and nothing changes.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A server-side image map</h2>
+  <p><q>If element is an a element, and event's target is an img with an ismap attribute specified</q>, the link is
+  followed with <q>the concatenation of U+003F (?), the value of x expressed as a base-ten integer using ASCII digits,
+  U+002C (,), and the value of y</q>, the click's distance from the image's left and top edges.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; font: 13px/20px sans-serif } img { display: block }</style><a href=support/target.html><img ismap src=../shared/resources/flag-40x20.png width=80 height=40 alt=''></a>"></iframe></div>
+    <figcaption>The flag, 80 by 40. Click its bottom right quarter: "target.html?60,30" or near it, the point
+    clicked.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

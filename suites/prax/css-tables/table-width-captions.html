@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The table's width and its captions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  caption { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.1 Computing the table width, captions</div>
+  <h1>The table's width and its captions</h1>
+  <p class=pr-lede><q>The caption width minimum (CAPMIN) is the largest of the table captions min-content
+  contribution.</q> It is one of the three the used min-width of the table is the greatest of. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-the-table-width">CSS Table 3 §3.9.1</a></span>
+  The grid box is outlined, cells blue and orange, captions green; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>A caption widens the table</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><caption>cccccccc</caption><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption>A caption of 80px: CAPMIN 80px, so the table is 80px, its two columns sharing it, 40px each.
+    <span class=pr-flag>Firefox</span> keeps the table 20px wide, and the caption sticks out past it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><caption style="margin: 0 20px">cccc</caption><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption><code>margin: 0 20px</code> on a caption of 40px: its contribution is 80px with the margins, so the
+    table is 80px. <span class=pr-flag>Firefox</span> keeps the table 20px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table><caption style="width: 120px">c</caption><tr><td>a</td><td>b</td></tr></table></div>
+    <figcaption>A caption of <code>width: 120px</code>: the table is 120px. <span class=pr-flag>Firefox</span> keeps
+    the table 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

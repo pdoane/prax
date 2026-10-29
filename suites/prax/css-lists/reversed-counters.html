@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Instantiating a reversed counter without a value</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .rev { counter-reset: reversed(list-item); }
+  .two li { counter-increment: list-item -2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.4.2 Instantiating Counters</div>
+  <h1>Instantiating a reversed counter without a value</h1>
+  <p class=pr-lede><q>When a counter is instantiated without an initial value, the user agent must dynamically calculate
+  the initial value at layout-time</q>: the negated increments of the elements that increment or set it in its scope,
+  summed up to the first that sets it, plus the set value, plus the last non-zero negated increment once more. <q>Only
+  reversed counters can be instantiated without an initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#instantiating-counters">CSS Lists and Counters 3 §4.4.2</a></span></p>
+</header>
+
+<section>
+  <h2>Counting down to 1</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text"><ol class=rev><li>a<li>b<li>c<li>d</ol></div>
+    <figcaption><code>counter-reset: reversed(list-item)</code>, four items: 4, 3, 2, 1. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 1, 2, 3, 4.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol reversed><li>a<li>b<li>c</ol></div>
+    <figcaption>HTML's <code>&lt;ol reversed&gt;</code>: 3, 2, 1.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-text two"><ol class=rev><li>a<li>b<li>c</ol></div>
+    <figcaption>Each item <code>list-item -2</code>: 6 + 2 = 8 to start, so 6, 4, 2. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> -2, -4, -6.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A value set on the way</h2>
+  <p><q>If el sets this counter with 'counter-set', then add that integer value to num and break this loop.</q> The
+  third item is <code>&lt;li value=10&gt;</code>, which sets <code>list-item</code> to 10 after its increment.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol reversed><li>a<li>b<li value=10>c<li>d</ol></div>
+    <figcaption>1 + 1 + 10, then 1 more: the counter starts at 13, and the items are 12, 11, 10, 9. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Start from the number of items: 4, 3, 10, 9.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

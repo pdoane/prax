@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rgb() and rgba()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 5.1 The RGB functions: rgb() and rgba()</div>
+  <h1>rgb() and rgba()</h1>
+  <p class=pr-lede><q>The rgb() and rgba() functions define an sRGB color by specifying the r, g and b (red, green,
+  and blue) components directly.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#rgb-functions">CSS Color 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Numbers to 255, percentages to 100%</h2>
+  <p><q>For r, g and b: 0% = 0.0, 100% = 255.0</q>. <q>0% represents the minimum value for that color component in
+  the sRGB gamut, and 100% represents the maximum value.</q> <q>Values outside these ranges are not invalid, but are
+  clamped to the ranges defined here at parsed-value time.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(214 138 60)"></div><div class=sw style="background: rgb(83.92% 54.12% 23.53%)"></div><div class=sw style="background: rgb(214 54.12% 60)"></div></div>
+    <figcaption><code>rgb(214 138 60)</code>, <code>rgb(83.92% 54.12% 23.53%)</code>, and numbers and a percentage
+    mixed: the same orange three times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(300 -20 60)"></div><div class=sw style="background: rgb(255 0 60)"></div><div class=sw style="background: rgb(120% 50% 50%)"></div></div>
+    <figcaption><code>rgb(300 -20 60)</code> beside <code>rgb(255 0 60)</code>: one red. <code>rgb(120% 50%
+    50%)</code>: pink, as <code>100%</code> red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alpha, and the legacy syntax</h2>
+  <p><q>The final argument, the &lt;alpha-value&gt;, specifies the alpha of the color. If omitted, it defaults to
+  100%.</q> <q>For historical reasons, rgb() and rgba() also support a legacy color syntax.</q> The stage is a
+  checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: rgb(214 138 60 / 0.5)"></div><div class=sw style="background: rgba(214 138 60 / 0.5)"></div><div class=sw style="background: rgba(214, 138, 60, 0.5)"></div></div>
+    <figcaption><code>rgb(214 138 60 / 0.5)</code>, <code>rgba(214 138 60 / 0.5)</code>, and <code>rgba(214, 138,
+    60, 0.5)</code>: the same half-transparent orange three times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: rgb(214, 138, 60)"></div><div class=sw style="background: rgba(214, 138, 60)"></div><div class=sw style="background: rgb(83.92%, 54.12%, 23.53%, 50%)"></div></div>
+    <figcaption><code>rgb(214, 138, 60)</code> and <code>rgba(214, 138, 60)</code>: solid orange twice.
+    <code>rgb(83.92%, 54.12%, 23.53%, 50%)</code>: half-transparent.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

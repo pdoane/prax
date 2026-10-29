@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative border widths</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .b { height: 40px; width: 80px; border: 2px solid #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.5.1 Flow-Relative Border Widths</div>
+  <h1>Flow-relative border widths</h1>
+  <p class=pr-lede><q>These properties correspond to the 'border-top-width', 'border-bottom-width', 'border-left-width', and 'border-right-width' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#border-width">CSS Logical Properties and Values 1 §4.5.1</a></span> Each box is 80px wide and 40px tall with a 2px border, in the stage's writing mode.</p>
+</header>
+
+<section>
+  <h2>The longhands</h2>
+  <p>Each box has <code>border-block-start-width: 10px; border-inline-start-width: 20px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-start-width: 10px; border-inline-start-width: 20px"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px on top, 20px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-start-width: 10px; border-inline-start-width: 20px"></div></div>
+    <figcaption><code>rtl</code>: 10px on top, 20px at the right; the box at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-start-width: 10px; border-inline-start-width: 20px"></div></div>
+    <figcaption><code>vertical-rl</code>: 10px at the right, 20px on top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-block-width and border-inline-width</h2>
+  <p><q>The first value represents the start edge width, and the second value represents the end edge width.</q> Each box has <code>border-block-width: 2px 10px; border-inline-width: 20px 4px</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-width: 2px 10px; border-inline-width: 20px 4px"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: 10px below, 20px at the left, 4px at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-width: 2px 10px; border-inline-width: 20px 4px"></div></div>
+    <figcaption><code>rtl</code>: 10px below, 20px at the right, 4px at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-width: 2px 10px; border-inline-width: 20px 4px"></div></div>
+    <figcaption><code>vertical-rl</code>: 10px at the left, 20px on top, 4px below.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

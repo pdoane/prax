@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Link type stylesheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+  .act { padding: 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.6.8.23 Link type "stylesheet"</div>
+  <h1>Link type stylesheet</h1>
+  <p class=pr-lede><q>The stylesheet keyword may be used with link elements. This keyword creates an external
+  resource link that contributes to the styling processing model.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/links.html#link-type-stylesheet">HTML §4.6.8.23</a></span></p>
+</header>
+<section>
+  <h2>Only text/css, but in quirks mode</h2>
+  <p><q>If the resource's Content-Type metadata is not text/css, then set success to false.</q> <q>Quirk: If the
+  document has been set to quirks mode, has the same origin as the URL of the external resource, and the Content-Type
+  metadata of the external resource is not a supported style sheet type, the user agent must instead assume it to be
+  text/css.</q> Each frame's document links <code>green.txt</code>, a rule that turns its box green, served as
+  <code>text/plain</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view src=support/standards-sheet.html></iframe></div>
+    <figcaption>A document with a doctype, in no-quirks mode: plain.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view src=support/quirks-sheet.html></iframe></div>
+    <figcaption>A document without one, in quirks mode, and of the same origin: green.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A new href, a new sheet</h2>
+  <p>A link is fetched and processed again <q>When the href attribute of the link element of an external resource
+  link that is already browsing-context connected is changed.</q> The frame's link names <code>green.css</code>; the
+  button sets it to <code>orange.css</code>, which turns the box orange, and back.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view id=swap-frame srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/green.css id=sheet><div class=styled>one link</div>"></iframe>
+      <div class=act><button id=swap>Change the href</button></div></div>
+    <figcaption>Green. Press the button: orange, and no green left; press again: green.</figcaption>
+  </figure>
+</section>
+<script>
+  document.getElementById("swap").addEventListener("click", () => {
+    const sheet = document.getElementById("swap-frame").contentDocument.getElementById("sheet");
+    sheet.setAttribute("href", sheet.getAttribute("href").includes("green") ? "support/orange.css" : "support/green.css");
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Finding the size of an fr</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+  .c { background: #cfe6c4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.7.1 Find the Size of an fr</div>
+  <h1>Finding the size of an fr</h1>
+  <p class=pr-lede><q>This algorithm finds the largest size that an fr unit can be without exceeding the target
+  size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-find-fr-size">CSS Grid Layout 2 §12.7.1</a></span>
+  Each grid fills its 150px stage, its columns from the start.</p>
+</header>
+
+<section>
+  <h2>Leftover space over the flex factors, at least one</h2>
+  <p><q>Let leftover space be the space to fill minus the base sizes of the non-flexible grid tracks.</q> <q>Let flex
+  factor sum be the sum of the flex factors of the flexible tracks. If this value is less than 1, set it to 1
+  instead.</q> <q>Let the hypothetical fr size be the leftover space divided by the flex factor sum.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 30px 1fr 3fr"><div class=a>a</div><div class=b>b</div><div class=c>c</div></div></div>
+    <figcaption><code>30px 1fr 3fr</code>: 120px over 4, an fr of 30px: 30, 30 and 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 0.2fr 0.4fr"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>0.2fr 0.4fr</code>: a sum of 0.6, taken as 1, so an fr of 150px: 30 and 60px, and 60px stay
+    empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 0.5fr 1fr"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>0.5fr 1fr</code>: a sum of 1.5, an fr of 100px: 50 and 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Tracks too big for their share</h2>
+  <p><q>If the product of the hypothetical fr size and a flexible track's flex factor is less than the track's base
+  size, restart this algorithm treating all such tracks as inflexible.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 1fr 1fr 1fr"><div class=a>abcdefghij</div><div class=b>b</div><div class=c>c</div></div></div>
+    <figcaption><code>1fr 1fr 1fr</code>, "abcdefghij" in the first: 50px is less than its 100px, so it is held at
+    100px, and the other two share 50px: 25px each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 1fr 2fr"><div class=a>abcdefgh</div><div class=b>b</div></div></div>
+    <figcaption><code>1fr 2fr</code>, "abcdefgh" in the first: 50px is less than 80px; held at 80px, the second
+    takes 70px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

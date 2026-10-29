@@ -1,0 +1,179 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-text-4/#intro 1 Introduction: no page; it says what the module covers
+# css-text-4/#placement 1.1 Module Interactions: no page; it says the module, with CSS Text Decoration, replaces CSS 2's chapter 16, whose pages point here
+# css-text-4/#values 1.2 Value Definitions: no page; it defines the value syntax, which is parsing
+css-text-4/#languages 1.3 Languages and Typesetting
+    content-language.html
+css-text-4/#characters 1.4 Characters and Letters
+    typographic-character-units.html
+css-text-4/#text-encoding 1.5 Text Processing
+    text-processing.html
+# css-text-4/#transforming 2 Transforming Text: no page; it introduces 2.1 to 2.3
+css-text-4/#text-transform-property 2.1 Case Transforms: the text-transform property
+    text-transform-full-width.html
+    text-transform-math-auto.html
+css-text-4/#text-transform-mapping 2.1.1 Mapping Rules
+    text-transform-mapping.html
+css-text-4/#word-space-transform 2.2 Expanding Between Words: the word-space-transform property
+    word-space-transform.html
+css-text-4/#text-transform-order 2.3 Order of Operations
+    text-transform-order.html
+css-text-4/#white-space-property 3 White Space and Wrapping: the white-space property
+    white-space-shorthand.html
+css-text-4/#white-space-processing 4 White Space Processing & Control Characters
+    segment-breaks-and-ignorables.html
+css-text-4/#white-space-collapsing 4.1 White Space Collapsing: the white-space-collapse property
+    white-space-collapse.html
+    white-space-collapse-break-spaces.html
+css-text-4/#white-space-trim 4.2 White Space Trimming: the white-space-trim property
+    white-space-trim.html
+css-text-4/#white-space-rules 4.3 The White Space Processing Rules
+    document-white-space.html
+css-text-4/#white-space-phase-1 4.3.1 Phase I: Collapsing and Transformation
+    white-space-phase-1.html
+css-text-4/#white-space-phase-2 4.3.2 Phase II: Trimming and Positioning
+    white-space-phase-2.html
+    white-space-hanging.html
+    tab-stops.html
+css-text-4/#line-break-transform 4.3.3 Segment Break Transformation Rules
+    segment-break-transformation.html
+css-text-4/#tab-size-property 4.4 Tab Character Size: the tab-size property
+    tab-size.html
+# css-text-4/#text-wrapping 5 Text Wrapping: no page; it defines forced line breaks, soft wrap breaks and soft wrap opportunities, which 5.1 and 6 show
+css-text-4/#text-wrap-mode 5.1 Deciding Whether to Wrap: the text-wrap-mode property
+    text-wrap-mode.html
+css-text-4/#wrap-inside 5.2 Controlling Breaks Within Boxes: the wrap-inside property
+    wrap-inside.html
+# css-text-4/#example-avoid 5.2.1 Example of using 'wrap-inside: avoid' in presenting a footer: no page; its example is drawn on 5.2's page
+css-text-4/#wrap-before 5.3 Controlling Breaks Between Boxes: the wrap-before/wrap-after properties
+    wrap-before-after.html
+css-text-4/#text-wrap-style 5.4 Selecting How to Wrap: the text-wrap-style property
+    text-wrap-balance.html
+    text-wrap-pretty.html
+css-text-4/#text-wrap-shorthand 5.5 Joint Wrapping Control: the text-wrap shorthand property
+    text-wrap-shorthand.html
+# css-text-4/#line-breaking 6 Line Breaking and Word Boundaries: no page; it introduces the controls of 6.1 to 6.4, and which scripts need analysis, which 6.1.1 shows
+css-text-4/#word-break-property 6.1 Breaking Rules for Letters: the word-break property
+    word-break.html
+    word-break-korean-ethiopic.html
+    word-break-auto-phrase.html
+    word-break-kept-opportunities.html
+# css-text-4/#analytical-word-breaking 6.1.1 Analytical Word Breaking: no page; it introduces 6.1.1.1 to 6.1.1.3
+css-text-4/#lexical-breaking 6.1.1.1 Lexical Word Breaking
+    lexical-breaking.html
+css-text-4/#orthographic-breaking 6.1.1.2 Orthographic Breaking
+    orthographic-breaking.html
+css-text-4/#fallback-breaking 6.1.1.3 Fallback Breaking
+    fallback-breaking.html
+# css-text-4/#phrase-pref 6.1.2 Expressing User Preferences for Phrase-based Line Breaking: no page; it is about the user origin's preferences, which a page cannot set; 6.1 shows auto-phrase
+css-text-4/#line-break-property 6.2 Line Breaking Strictness: the line-break property
+    line-break.html
+    line-break-loose.html
+    line-break-anywhere.html
+# css-text-4/#hyphenation 6.3 Hyphenation: Morphological Breaking Within Words: no page; it introduces 6.3.1 to 6.3.5
+css-text-4/#hyphens-property 6.3.1 Hyphenation Control: the hyphens property
+    hyphens.html
+    hyphens-opportunities.html
+css-text-4/#hyphenate-character 6.3.2 Hyphens: the hyphenate-character property
+    hyphenate-character.html
+css-text-4/#hyphenate-size-limits 6.3.3 Hyphenation Size Limit: the hyphenate-limit-zone property
+    hyphenate-limit-zone.html
+css-text-4/#hyphenate-char-limits 6.3.4 Hyphenation Character Limits: the hyphenate-limit-chars property
+    hyphenate-limit-chars.html
+css-text-4/#hyphenate-line-limits 6.3.5 Hyphenation Line Limits: the hyphenate-limit-lines and hyphenate-limit-last properties
+    hyphenate-limit-lines.html
+css-text-4/#overflow-wrap-property 6.4 Overflow Wrapping: the overflow-wrap (word-wrap) property
+    overflow-wrap.html
+    overflow-wrap-relaxing.html
+css-text-4/#line-break-details 6.5 Line Breaking Details
+    line-break-classes.html
+    line-break-atomic-inlines.html
+    line-break-scope.html
+    line-break-shaping.html
+# css-text-4/#justification 7 Alignment and Justification: no page; it introduces 7.1 to 7.6
+css-text-4/#text-align-property 7.1 Text Alignment: the text-align shorthand
+    text-align-match-parent.html
+    text-align-vertical.html
+css-text-4/#character-alignment 7.2 Character-based Alignment in a Table Column
+    text-align-string.html
+css-text-4/#text-align-all-property 7.3 Default Text Alignment: the text-align-all property
+    text-align-all.html
+css-text-4/#text-align-last-property 7.4 Last Line Alignment: the text-align-last property
+    text-align-last.html
+css-text-4/#text-justify-property 7.5 Justification Method: the text-justify property
+    text-justify.html
+    text-justify-scope.html
+    text-justify-ruby.html
+css-text-4/#expanding-text 7.5.1 Expanding and Compressing Text
+    justification-opportunities.html
+css-text-4/#justify-symbols 7.5.2 Handling Symbols and Punctuation
+    justify-symbols.html
+css-text-4/#justify-limits 7.5.3 Unexpandable Text
+    justify-unexpandable.html
+css-text-4/#justify-cursive 7.5.4 Cursive Scripts
+    justify-cursive.html
+css-text-4/#justify-algos 7.5.5 Minimum Requirements for auto Justification
+    justify-auto.html
+css-text-4/#text-group-align-property 7.6 Aligning a block of text within its container: the text-group-align property
+    text-group-align.html
+# css-text-4/#spacing 8 Spacing: no page; it introduces 8.1 to 8.7
+css-text-4/#word-spacing-property 8.1 Word Spacing: the word-spacing property
+    word-spacing-percentages.html
+    word-separators.html
+css-text-4/#letter-spacing-property 8.2 Tracking: the letter-spacing property
+    letter-spacing-percentages.html
+    letter-spacing-bidi.html
+    letter-spacing-units.html
+    letter-spacing-ligatures.html
+css-text-4/#cursive-tracking 8.2.1 Cursive Scripts
+    letter-spacing-cursive.html
+css-text-4/#line-padding-property 8.3 Line Start/End Padding: the line-padding property
+    line-padding.html
+css-text-4/#text-autospace-property 8.4 Automatic Contextual Spacing: the text-autospace property
+    text-autospace.html
+    text-autospace-replace.html
+css-text-4/#inter-script-spacing 8.4.1 Inter-script Spacing
+    inter-script-spacing.html
+    inter-script-classes.html
+css-text-4/#autospace-bidi 8.4.2 Interaction with Bidirectional Text
+    autospace-bidi.html
+css-text-4/#text-spacing-trim-property 8.5 CJK Punctuation Spacing: the text-spacing-trim property
+    text-spacing-trim.html
+    text-spacing-trim-end.html
+css-text-4/#fullwidth-collapsing 8.5.1 Fullwidth Punctuation Collapsing
+    fullwidth-collapsing.html
+css-text-4/#text-spacing-classes 8.5.2 Text Spacing Trim Character Classes
+    text-spacing-classes.html
+css-text-4/#japanese-start-edges 8.5.3 Japanese Paragraph-start Conventions in CSS
+    japanese-start-edges.html
+css-text-4/#text-spacing-property 8.6 Character Class Spacing Shorthand: the text-spacing property
+    text-spacing.html
+css-text-4/#boundary-shaping 8.7 Shaping Across Element Boundaries
+    boundary-shaping.html
+# css-text-4/#edge-effects 9 Edge Effects: no page; it introduces 9.1 to 9.3
+css-text-4/#text-indent-property 9.1 First Line Indentation: the text-indent property
+    text-indent-keywords-combined.html
+css-text-4/#hanging 9.2 Hanging Glyphs
+    hanging-glyphs.html
+css-text-4/#hanging-punctuation-property 9.2.1 Hanging Punctuation: the hanging-punctuation property
+    hanging-punctuation.html
+    hanging-punctuation-end.html
+css-text-4/#bidi-linebox 9.3 Bidirectionality and Line Boxes
+    bidi-line-boxes.html
+css-text-4/#order A Text Processing Order of Operations
+    order-of-operations.html
+# css-text-4/#plaintext B Conversion to Plaintext: no page; it is about copying text, not what is drawn
+css-text-4/#default-stylesheet C Default UA Stylesheet
+    default-stylesheet.html
+css-text-4/#script-groups D Scripts and Spacing
+    script-categories.html
+css-text-4/#character-properties E Characters and Properties
+    character-properties.html
+css-text-4/#script-tagging F Identifying the Content Writing System
+    writing-system.html
+css-text-4/#small-kana G Small Kana Mappings
+    small-kana-mapping.html
+css-text-4/#word-phrase-detection H Word and Phrase Detection
+    phrase-detection.html

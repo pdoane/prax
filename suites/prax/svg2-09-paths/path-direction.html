@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The direction of a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.4 Path directionality</div>
+  <h1>The direction of a path</h1>
+  <p class=pr-lede><q>Some features, such as the orientation of markers and the shapes of line caps, are defined in
+  terms of the direction of the path</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDirectionality">SVG 2 §9.4</a></span>
+  Each stage is an SVG 160 by 60. The orange arrows are markers 16 wide with <code>orient="auto"</code>, at an end
+  pointing <q>in the path direction</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">§13.7.4</a></span>.</p>
+</header>
+
+<section>
+  <h2>At the start and end of a path</h2>
+  <p><q>If the given distance is zero, then the direction of the path is the direction at the start of the path's
+  first segment.</q> A zero-length segment takes its direction from <q>the closest preceding non-zero length
+  segment</q>, or, with none before it, from <q>the closest following non-zero length segment</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 140 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 L 140 50</code>, arrows up the first line and down the
+    last.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 L 80 10 L 80 10" fill="none" stroke="#2c5a8f" stroke-width="2" marker-end="url(#arrow)" /></svg></div>
+    <figcaption><code>M 20 50 L 80 10 L 80 10</code>: the last segment has no length, so the end
+    arrow points on up the line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> It points right, along the x-axis.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 10 L 30 10 L 130 50" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#arrow)" /></svg></div>
+    <figcaption><code>M 30 10 L 30 10 L 130 50</code>: the first segment has no length, so the start
+    arrow points down the line. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> It points right, along the x-axis.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

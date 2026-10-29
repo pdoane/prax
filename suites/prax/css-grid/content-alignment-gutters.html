@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributed alignment widens the gutters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0; background: #b9cde6; }
+  .u { padding: 0; background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.5 Aligning the Grid, distributed alignment</div>
+  <h1>Distributed alignment widens the gutters</h1>
+  <p class=pr-lede><q>Note that certain values of justify-content and align-content can cause the tracks to be spaced
+  apart (space-around, space-between, space-evenly) or to be resized (stretch).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-align">CSS Grid Layout 2 §11.5</a></span>
+  The space is <q>added to the relevant gutters</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-grid">CSS Box Alignment 3 §5.1.4</a></span>.</p>
+</header>
+
+<section>
+  <h2>Spanning items grow with the gutters</h2>
+  <p><q>the spanning item’s grid area is increased to accommodate the extra space assigned to the gutters due to
+  alignment</q>. <q>Note that alignment (unlike gap spacing) happens after the grid tracks are sized, so if the track
+  sizes are determined by the contents of the spanned item, it will gain excess space in the alignment stage</q>.</p>
+  <figure>
+    <div class=pr-stage><div style="display: grid; grid-template-columns: 40px 40px 40px; gap: 10px; justify-content: space-between"><div class=pr-a style="grid-column: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-c>D</div><div class=pr-c>E</div></div></div>
+    <figcaption>40px columns and 10px gaps, <code>space-between</code>: each gutter grows to 40px. A spans two
+    columns and a gutter: 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div style="display: grid; grid-template-columns: 50px 50px; grid-template-rows: 20px 20px 20px; height: 100px; align-content: space-between"><div class=pr-a style="grid-row: span 2">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d style="grid-column: 2">D</div></div></div>
+    <figcaption>Three 20px rows in 100px, <code>align-content: space-between</code>: rows at 0, 40 and 80px. A
+    spans two rows and the gutter between: 60px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: auto auto; justify-content: space-between"><div class=t>ab</div><div class=u>cd</div><div class=t style="grid-column: span 2">abcd</div></div></div>
+    <figcaption><code>auto</code> columns, sized to "abcd" across both, 20px each, then spread apart: the spanning
+    item is 200px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

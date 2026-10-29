@@ -1,0 +1,28 @@
+00-supports-1.html
+# SVG2/conform.html#conformance-overview 2.1 Overview: no page; it introduces the chapter
+# SVG2/conform.html#processing-modes 2.2 Processing modes: no page; its subsections have them
+SVG2/conform.html#features 2.2.1 Features
+    features.html
+# SVG2/conform.html#dynamic-interactive-mode 2.2.2 Dynamic interactive mode: no page; 2.2.1's page shows it, in an iframe
+# SVG2/conform.html#animated-mode 2.2.3 Animated mode: no page; no embedding uses it, so no figure can put a document in it
+# SVG2/conform.html#secure-animated-mode 2.2.4 Secure animated mode: no page; 2.2.1's page shows it, in an img
+# SVG2/conform.html#static-mode 2.2.5 Static mode: no page; no embedding uses it, so no figure can put a document in it
+# SVG2/conform.html#secure-static-mode 2.2.6 Secure static mode: no page; 2.3's page shows it, by a use
+SVG2/conform.html#referencing-modes 2.3 Processing modes for SVG sub-resource documents
+    referencing-modes.html
+# SVG2/conform.html#examples 2.3.1 Examples: no page; it is examples of the modes 2.3's page shows
+# SVG2/conform.html#DocumentConformanceClasses 2.4 Document Conformance Classes: no page; it classifies documents, which draws nothing
+# SVG2/conform.html#ConformingSVGDOMSubtrees 2.4.1 Conforming SVG DOM Subtrees: no page; it classifies documents
+# SVG2/conform.html#ConformingSVGFragments 2.4.2 Conforming SVG Markup Fragments: no page; it classifies documents
+# SVG2/conform.html#ConformingSVGXMLFragments 2.4.3 Conforming XML-Compatible SVG Markup Fragments: no page; it classifies documents
+# SVG2/conform.html#ConformingSVGXMLDOMSubtrees 2.4.4 Conforming XML-Compatible SVG DOM Subtrees: no page; it classifies documents
+# SVG2/conform.html#ConformingSVGStandAloneFiles 2.4.5 Conforming SVG Stand-Alone Files: no page; it classifies documents
+# SVG2/conform.html#ErrorProcessing 2.4.6 Error processing: no page; it is what makes a document in error, which each chapter's pages show for its elements
+# SVG2/conform.html#SoftwareConformanceClasses 2.5 Software Conformance Classes: no page; it classifies software
+# SVG2/conform.html#ConformingSVGGenerators 2.5.1 Conforming SVG Generators: no page; it classifies software
+# SVG2/conform.html#ConformingSVGAuthoringTools 2.5.2 Conforming SVG Authoring Tools: no page; it classifies software
+# SVG2/conform.html#ConformingSVGServers 2.5.3 Conforming SVG Servers: no page; it classifies software
+# SVG2/conform.html#ConformingSVGInterpreters 2.5.4 Conforming SVG Interpreters: no page; it classifies software
+# SVG2/conform.html#ConformingSVGViewers 2.5.5 Conforming SVG Viewers: no page; it classifies software
+# SVG2/conform.html#PrintingImplementationNotes 2.5.5.1 Printing implementation notes: no page; it is about printers' color and resolution
+# SVG2/conform.html#ConformingHighQualitySVGViewers 2.5.6 Conforming High-Quality SVG Viewer: no page; it classifies software

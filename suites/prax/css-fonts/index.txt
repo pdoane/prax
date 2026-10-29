@@ -1,0 +1,170 @@
+00-supports-1.html
+00-supports-2.html
+css-fonts-4/#font-relative 1.2 Interaction With Font-Relative Units
+    font-relative-units.html
+css-fonts-4/#font-family-prop 2.1 Font family: the font-family property
+    font-family.html
+# css-fonts-4/#font-family-name-syntax 2.1.1 Syntax of <font-family-name>: no page; it says how a family name is written, quoted or as identifiers, which is parsing
+# css-fonts-4/#generic-family-name-syntax 2.1.2 Syntax of <generic-font-family>: no page; it says how a generic is written, as a keyword or generic(), which is parsing; 2.1.5 shows what the generics draw
+css-fonts-4/#system 2.1.3 Syntax of <system-font-family-name>
+    system-font-names.html
+css-fonts-4/#font-families 2.1.4 Relationship Between Faces and Families
+    faces-and-families.html
+css-fonts-4/#generic-font-families 2.1.5 Generic font families
+    generic-families.html
+    generic-families-ui.html
+    generic-families-scripts.html
+css-fonts-4/#font-weight-prop 2.2 Font weight: the font-weight property
+    font-weight.html
+css-fonts-4/#relative-weights 2.2.1 Relative Weights
+    relative-weights.html
+css-fonts-4/#missing-weights 2.2.2 Missing weights
+    missing-weights.html
+css-fonts-4/#font-width-prop 2.3 Font width: the font-width property
+    font-width.html
+css-fonts-4/#font-stretch-prop 2.3.1 Font width: the font-stretch legacy name alias
+    font-stretch.html
+css-fonts-4/#font-style-prop 2.4 Font style: the font-style property
+    font-style.html
+css-fonts-4/#font-size-prop 2.5 Font size: the font-size property
+    font-size.html
+css-fonts-4/#absolute-size-mapping 2.5.1 Absolute Size Keyword Mapping Table
+    absolute-sizes.html
+css-fonts-4/#font-size-adjust-prop 2.6 Relative sizing: the font-size-adjust property
+    font-size-adjust.html
+css-fonts-4/#font-prop 2.7 Shorthand font property: the font property
+    font-shorthand.html
+css-fonts-4/#font-synthesis-intro 2.8 Controlling synthetic faces
+    synthetic-faces.html
+css-fonts-4/#font-synthesis-weight 2.8.1 Controlling synthesized bold: The font-synthesis-weight property
+    synthesis-weight.html
+css-fonts-4/#font-synthesis-style 2.8.2 Controlling synthesized oblique: The font-synthesis-style property
+    synthesis-style.html
+css-fonts-4/#font-synthesis-small-caps 2.8.3 Controlling synthesized small caps: The font-synthesis-small-caps property
+    synthesis-small-caps.html
+css-fonts-4/#font-synthesis-position 2.8.4 Controlling synthesized super- and subscripts: The font-synthesis-position property
+    synthesis-position.html
+css-fonts-4/#font-synthesis 2.8.5 Controlling synthetic faces: the font-synthesis shorthand
+    font-synthesis.html
+css-fonts-4/#font-display-timeline 3.2 The Font Display Timeline
+    font-display-timeline.html
+css-fonts-4/#font-face-rule 4.1 The @font-face rule
+    font-face-rule.html
+css-fonts-4/#font-family-desc 4.2 Font family: the font-family descriptor
+    family-descriptor.html
+css-fonts-4/#src-desc 4.3 Font reference: the src descriptor
+    src.html
+css-fonts-4/#font-face-src-parsing 4.3.1 Parsing the src descriptor
+    src-parsing.html
+css-fonts-4/#font-face-src-loading 4.3.2 Loading an individual item in the src descriptor
+    src-loading.html
+css-fonts-4/#font-face-src-formats 4.3.3 Selecting items in the src
+    src-selecting.html
+css-fonts-4/#local-font-fallback 4.3.3.1 Local font fallback
+    local-fallback.html
+css-fonts-4/#font-prop-desc 4.4 Font property descriptors: the font-style, font-weight, and font-width descriptors
+    face-descriptors.html
+css-fonts-4/#font-stretch-desc 4.4.1 Font width: the font-stretch legacy name alias
+    font-stretch-descriptor.html
+css-fonts-4/#unicode-range-desc 4.5 Character range: the unicode-range descriptor
+    unicode-range.html
+css-fonts-4/#composite-fonts 4.5.1 Using character ranges to define composite fonts
+    composite-fonts.html
+css-fonts-4/#font-rend-desc 4.6 Font features and variations: the font-feature-settings and font-variation-settings descriptors
+    face-features.html
+css-fonts-4/#font-named-instance 4.7 Using named instances from variable fonts: the font-named-instance descriptor
+    named-instance.html
+css-fonts-4/#font-face-loading 4.8.1 Font loading guidelines
+    font-loading.html
+# css-fonts-4/#font-fetching-requirements 4.8.2 Font fetching requirements: no page; it says how a font is fetched, with CORS, which is fetching rather than what is drawn
+css-fonts-4/#font-display-desc 4.9 Controlling Font Display Per Font-Face: the font-display descriptor
+    font-display.html
+css-fonts-4/#font-display-font-feature-values 4.9.1 Controlling Font Display Per Font-Family via @font-feature-values
+    font-display-family.html
+css-fonts-4/#font-language-override-desc 4.10 Default font language overriding: the font-language-override descriptor
+    language-override-descriptor.html
+css-fonts-4/#font-metrics-override-desc 4.11 Default font metrics overriding: the ascent-override, descent-override and line-gap-override descriptors
+    metrics-overrides.html
+css-fonts-4/#font-matching-algorithm 5 Font Matching Algorithm
+    each-character.html
+css-fonts-4/#localized-name-matching 5.1 Localized name matching
+    localized-names.html
+css-fonts-4/#font-style-matching 5.2 Matching font styles
+    family-lookup.html
+    narrowing-order.html
+    width-matching.html
+    style-matching.html
+    weight-matching.html
+    next-family.html
+    generic-by-language.html
+    installed-fallback.html
+    missing-glyphs.html
+    first-available-font.html
+css-fonts-4/#cluster-matching 5.3 Cluster matching
+    cluster-matching.html
+css-fonts-4/#char-handling-issues 5.4 Character handling issues
+    character-handling.html
+css-fonts-4/#glyph-selection-positioning 6.1 Glyph selection and positioning
+    glyph-selection.html
+css-fonts-4/#language-specific-support 6.2 Language-specific display
+    language-specific.html
+css-fonts-4/#font-kerning-prop 6.3 Kerning: the font-kerning property
+    font-kerning.html
+css-fonts-4/#font-variant-ligatures-prop 6.4 Ligatures: the font-variant-ligatures property
+    ligatures.html
+css-fonts-4/#font-variant-position-prop 6.5 Subscript and superscript forms: the font-variant-position property
+    variant-position.html
+css-fonts-4/#font-variant-caps-prop 6.6 Capitalization: the font-variant-caps property
+    variant-caps.html
+css-fonts-4/#font-variant-numeric-prop 6.7 Numerical formatting: the font-variant-numeric property
+    variant-numeric.html
+css-fonts-4/#font-variant-alternates-prop 6.8 Alternates and swashes: the font-variant-alternates property
+    variant-alternates.html
+css-fonts-4/#font-feature-values 6.9 Defining font specific alternates: the @font-feature-values rule
+    font-feature-values.html
+css-fonts-4/#font-feature-values-syntax 6.9.1 Basic syntax
+    feature-values-syntax.html
+css-fonts-4/#multi-value-features 6.9.2 Multi-valued feature value definitions
+    multi-valued.html
+css-fonts-4/#font-variant-east-asian-prop 6.10 East Asian text rendering: the font-variant-east-asian property
+    variant-east-asian.html
+css-fonts-4/#font-variant-prop 6.11 Overall shorthand for font rendering: the font-variant property
+    font-variant.html
+css-fonts-4/#font-feature-settings-prop 6.12 Low-level font feature settings control: the font-feature-settings property
+    font-feature-settings.html
+css-fonts-4/#font-language-override-prop 6.13 Font language override: the font-language-override property
+    font-language-override.html
+css-fonts-4/#font-feature-variation-resolution 7 Font Feature and Variation Resolution
+    feature-resolution.html
+css-fonts-4/#default-features 7.1 Default features
+    default-features.html
+css-fonts-4/#feature-variation-precedence 7.2 Feature and variation precedence
+    precedence.html
+css-fonts-4/#feature-precedence-examples 7.3 Feature precedence examples
+    precedence-examples.html
+css-fonts-4/#font-optical-sizing-def 8.1 Optical sizing control: the font-optical-sizing property
+    optical-sizing.html
+css-fonts-4/#font-variation-settings-def 8.2 Low-level font variation settings control: the font-variation-settings property
+    variation-settings.html
+css-fonts-4/#color-font-support 9 Color Font Support
+    color-fonts.html
+css-fonts-4/#font-palette-prop 9.1 Controlling Color Font Palettes: The font-palette property
+    font-palette.html
+css-fonts-4/#font-palette-values 9.2 User-defined font color palettes: The @font-palette-values rule
+    font-palette-values.html
+css-fonts-4/#font-family-2-desc 9.2.1 Font family: the font-family descriptor
+    palette-family.html
+css-fonts-4/#base-palette-desc 9.2.2 Specifying the base palette: the base-palette descriptor
+    base-palette.html
+css-fonts-4/#override-color 9.2.3 Overriding a colors from a palette: The override-colors descriptor
+    override-colors.html
+css-fonts-4/#font-variant-emoji-prop 9.3 Selecting the text presentation style: The font-variant-emoji property
+    font-variant-emoji.html
+css-fonts-4/#web-fonts 10.2 Web Fonts
+    web-fonts.html
+css-fonts-4/#system-font 10.4 System Font
+    system-font.html
+css-fonts-4/#font-tech-definitions 11.1 Font tech
+    font-tech.html
+css-fonts-4/#font-format-definitions 11.2 Font formats
+    font-formats.html

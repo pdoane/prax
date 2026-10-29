@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containment stops propagation from the body</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.4 Overflow Viewport Propagation, containment</div>
+  <h1>Containment stops propagation from the body</h1>
+  <p class=pr-lede>The body's values go to the viewport where the root's are <code>visible</code>, from <q>a body
+  element whose display value is also not display/none</q>, <q>the first such child element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-propagation">CSS Overflow 3 §3.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>Containment stops the body's propagation</h2>
+  <p><q>when any containments are active on either the HTML html or body elements, propagation of properties from the
+  body element to the initial containing block, the viewport, or the canvas background, is disabled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#contain-property">CSS Containment 2 §2</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { overflow: hidden; contain: paint; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>body { overflow: hidden; contain: paint }</code>: the body keeps <code>hidden</code> and cuts
+    the blue box at 30px, and the viewport is <code>auto</code> with nothing to scroll.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { contain: paint; background: #e7eaef } body { overflow: hidden; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><div></div><div></div><script>scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption><code>html { contain: paint }</code>: the same; the body's <code>hidden</code> stays on the
+    body.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

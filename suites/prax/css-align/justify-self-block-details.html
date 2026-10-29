@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>justify-self on blocks: margins and floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .fl { float: left; width: 60px; height: 40px; box-sizing: border-box; }
+  .bfc { display: flow-root; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.1.1 Block-Level Boxes, details</div>
+  <h1>justify-self on blocks: margins and floats</h1>
+  <p class=pr-lede><q>the rules for “over-constrained” computations in section 10.3.3 are ignored in favor of
+  alignment as specified here and the used value of the margin properties are therefore not adjusted to correct for
+  the over-constraint.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-block">CSS Box Alignment 3 §6.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Over-constrained margins</h2>
+  <p>A: <code>width: 100px; margin-left: 20px</code>; CSS 2 makes its right margin 80px.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin-left: 20px">A</div></div>
+    <figcaption><code>normal</code>: A from 20 to 120px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 100px; margin-left: 20px; justify-self: end">A</div></div>
+    <figcaption><code>end</code>: the margin box, 120px, at the right: A from 100 to 200px.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> From 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Beside a float</h2>
+  <p><q>for block-level elements that establish a block formatting context and are placed next to a float, the
+  alignment container is reduced by the space taken up by the float</q>. <q>This property does not apply to
+  floats.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="pr-b fl"></div><div class="pr-a bfc" style="justify-self: center">A</div></div>
+    <figcaption>A flow root, <code>center</code>: centered in the 140px beside the float, on 130px.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 140px wide,
+    beside the float.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-b fl" style="justify-self: end">B</div></div>
+    <figcaption>The float itself, <code>justify-self: end</code>: still at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Anonymous blocks</h2>
+  <p><q>Anonymous block boxes always behave as normal.</q> The stage, <code>justify-items: center</code>, holds
+  "text", in an anonymous block, and block A.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="justify-items: center"><span class=pr-hl>text</span><div class=pr-a>A</div></div>
+    <figcaption>"text" at the left; A as wide as its text, centered.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A as wide
+    as the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

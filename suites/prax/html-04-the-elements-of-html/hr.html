@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The hr element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.2 The hr element</div>
+  <h1>The hr element</h1>
+  <p class=pr-lede><q>The hr element represents a paragraph-level thematic break, e.g., a scene change in a story, or a transition to another topic within a section of a reference book</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-hr-element">HTML §4.4.2</a></span></p>
+</header>
+<section>
+  <h2>A gray inset line</h2>
+  <p><q>hr { color: gray; border-style: inset; border-width: 1px; margin-block: 0.5em; margin-inline: auto; overflow:
+  hidden; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-hr-element-2">§15.3.11</a></span> The stage's text is 10px on 20px lines.</p>
+  <figure>
+    <div class="pr-stage t">Before the break<hr>After the break</div>
+    <figcaption>A line 2px tall across the stage, 5px below the first line of text and 5px above the second: its top
+    border a darker gray than its bottom one, as inset borders are.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Its old attributes</h2>
+  <p>The obsolete attributes are presentational hints: <q>The width attribute on an hr element maps to the dimension
+  property 'width' on the element.</q> <q>hr[align=left i] { margin-left: 0; margin-right: auto; }</q> <q>hr[color],
+  hr[noshade] { border-style: solid; }</q> With noshade or color, <code>size</code> divided by two is each border's
+  width; without, <code>size</code> minus two is the height.</p>
+  <figure>
+    <div class="pr-stage t">width=50%<hr width=50%>width=50% align=left<hr width=50% align=left></div>
+    <figcaption>Two lines 100px wide, 2px tall: the first centered, the second at the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t">noshade size=6<hr noshade size=6>size=6<hr size=6>color=#c0392b<hr color=#c0392b></div>
+    <figcaption>A solid gray bar 6px tall; an inset frame 6px tall, around 4px of height; a solid red line 2px
+    tall. <span class=pr-flag>Firefox</span> Rounds the ends of the gray bar.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

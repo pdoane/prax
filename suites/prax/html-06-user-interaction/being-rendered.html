@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus and being rendered</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Focus and being rendered</h1>
+  <p class=pr-lede>A focusable area is an element that is <q>either being rendered, delegating its rendering to its children, or
+  being used as relevant canvas fallback content.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>A focused element that stops being rendered</h2>
+  <p>The page's script hides the box a second after it takes the focus. The next update of the rendering then
+  finds that <q>the focused area of doc is not a focusable area</q>, and will <q>run the focusing steps for doc's
+  viewport</q>. <q>This will usually fire blur events</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loop-processing-model">§8.1.7.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0; height: 30px">
+        <div class=pr-target id=vanish tabindex=0>click me, tabindex=0</div>
+      </div>
+      <ol class=pr-log data-log="focus blur focusout" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box: focus at it. A second later it disappears, and the log shows blur and
+    focusout at it, with nothing focused after. Click the stage to bring the box back.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Delegating its rendering to its children</h2>
+  <p>An element with <code>display: contents</code> has no box of its own but is still a focusable area. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=start tabindex=0>start, tabindex=0</div>
+        <div id=contents tabindex=0 style="display: contents"><div class=pr-target>a div, display: contents, tabindex=0</div></div>
+        <div class=pr-target id=end tabindex=0>end, tabindex=0</div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>start</code> and press Tab: focus at <code>contents</code>, which draws no ring, having no
+    box. Tab again: <code>end</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Hides the box a second after it takes the focus; a click of the stage puts it back.
+  const vanish = document.getElementById("vanish");
+  vanish.addEventListener("focus", () => setTimeout(() => { vanish.style.display = "none"; }, 1000));
+  vanish.closest(".pr-stage").addEventListener("click", event => {
+      if (event.target !== vanish)
+          vanish.style.display = "";
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

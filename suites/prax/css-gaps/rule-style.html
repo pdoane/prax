@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-rule-style, row-rule-style and rule-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; gap: 20px; height: 60px; column-rule-width: 8px; column-rule-color: #c0392b; }
+  .f > div { width: 40px; padding: 0; box-sizing: border-box; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; rule-width: 6px; rule-color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.2 Gap decoration style</div>
+  <h1>column-rule-style, row-rule-style and rule-style</h1>
+  <p class=pr-lede><q>These properties set the styles of gap decorations. The &lt;line-style&gt; values apply the same
+  as for 'border-style'.</q> Their initial value is <code>none</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-rule-style">CSS Gaps 1 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The border styles</h2>
+  <p>Each flexbox has two items 20px apart and an 8px red column rule.</p>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: solid"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>solid</code> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: dashed"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>dashed</code> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: dotted"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>dotted</code> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: double"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>double</code>: two lines <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: groove"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>groove</code>: carved in <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: ridge"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>ridge</code>: raised <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: inset"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>inset</code> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+  <figure class="pr-narrow pr-erratum"><div class="pr-stage pr-narrow"><div class=f style="column-rule-style: outset"><div class=pr-a></div><div class=pr-a></div></div></div>
+    <figcaption><code>outset</code> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None</figcaption></figure>
+</section>
+
+<section>
+  <h2>none and hidden draw nothing</h2>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption>Width and color but no style: <code>none</code>, so no rules. <code>rule-style: hidden</code>
+    draws none either.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g style="rule-style: dashed"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>rule-style: dashed</code> sets both axes: dashed rules down and across. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

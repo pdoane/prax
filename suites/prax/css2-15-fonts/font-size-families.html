@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font size: a table for each family</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .keys { padding: 0 6px; font-family: Helvetica, sans-serif; line-height: 1.15; white-space: nowrap; }
+  .keys .pr-computed { font-size: 12px; font-weight: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.7 Font size: the 'font-size' property</div>
+  <h1>Font size: a table for each family</h1>
+  <p class=pr-lede><q>Implementors should build a table of scaling factors for absolute-size keywords relative to the
+  'medium' font size and the particular device and its characteristics</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/font-size.html">font-size</a>.</p>
+</header>
+
+<section>
+  <h2>A table for each family</h2>
+  <p><q>The table may be different from one font family to another.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#font-size-props">CSS 2 §15.7</a></span></p>
+  <figure>
+    <div class="pr-stage keys" style="font: medium serif"><span id=ms>medium serif</span><div class=pr-expect style="width: 10em"></div></div>
+    <figcaption><code>font: medium serif</code>: <code class=pr-computed data-of=ms data-property=font-size></code>; the
+    bar is 10em.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage keys" style="font: medium monospace"><span id=mm>medium monospace</span><div class=pr-expect style="width: 10em"></div></div>
+    <figcaption><code>font: medium monospace</code>: a family may have its own table; here <code class=pr-computed
+    data-of=mm data-property=font-size></code>.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-fonts-4/#absolute-size-mapping">CSS Fonts 4 §2.5.1</a></div>
+  <h2>A table of scaling factors, and xxx-large</h2>
+  <p>CSS 2 gave no factors. Now <q>The following table provides user agent guidelines for the absolute-size scaling
+  factor and their mapping to HTML heading and absolute font-sizes.</q> It adds <code>xxx-large</code>, three times
+  <code>medium</code>, for HTML size 7, and <q>The user agent may fine-tune these values for different fonts or
+  different types of display devices.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#absolute-size-mapping">CSS Fonts 4 §2.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide keys" style="font-size: 13px; line-height: 1">
+      <div><span id=t0 style="font-size: xx-small">Ag</span> xx-small, 3/5: <code class=pr-computed data-of=t0 data-property=font-size></code></div>
+      <div><span id=t1 style="font-size: x-small">Ag</span> x-small, 3/4: <code class=pr-computed data-of=t1 data-property=font-size></code></div>
+      <div><span id=t2 style="font-size: small">Ag</span> small, 8/9: <code class=pr-computed data-of=t2 data-property=font-size></code></div>
+      <div><span id=t3 style="font-size: medium">Ag</span> medium, 1: <code class=pr-computed data-of=t3 data-property=font-size></code></div>
+      <div><span id=t4 style="font-size: large">Ag</span> large, 6/5: <code class=pr-computed data-of=t4 data-property=font-size></code></div>
+      <div><span id=t5 style="font-size: x-large">Ag</span> x-large, 3/2: <code class=pr-computed data-of=t5 data-property=font-size></code></div>
+      <div><span id=t6 style="font-size: xx-large">Ag</span> xx-large, 2/1: <code class=pr-computed data-of=t6 data-property=font-size></code></div>
+      <div><span id=t7 style="font-size: xxx-large">Ag</span> xxx-large, 3/1: <code class=pr-computed data-of=t7 data-property=font-size></code></div>
+    </div>
+    <figcaption>"Ag" at each keyword's size. From a 16px <code>medium</code> the factors give 9.6, 12, 14.2,
+    16, 19.2, 24, 32 and 48px; Chrome, Safari and Firefox tune four to 9, 10, 13 and 18px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

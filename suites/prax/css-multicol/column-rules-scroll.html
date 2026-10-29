@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rules in a scrolled multicol container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .red { column-rule: 2px solid #c0392b; }
+  .fixed { height: 40px; column-fill: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4 Column Gaps and Rules, scrolling</div>
+  <h1>Rules in a scrolled multicol container</h1>
+  <p class=pr-lede><q>Column rules are painted just above the border of the multicol container. For scrollable
+  multicol containers, note that while the border and background of the multicol container obviously aren't
+  scrolled, the rules need to scroll along with the columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-gaps-and-rules">CSS Multi-column Layout 1 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Above the border and background, under the content</h2>
+  <p>Two columns of 95px and a 10px gap; the rule is 30px wide, from 85 to 115px, and the stage has a 4px
+  border.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="columns: 2; column-gap: 10px; column-rule: 30px solid #f9cc9d; border: 4px solid #2c5a8f"><div class=pr-a>A</div><div class=pr-b>B</div></div>
+    <figcaption>The orange rule over the stage's guides, from its top border to its bottom one, under the ends
+    of A and B, which cover it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rules scroll with the columns</h2>
+  <p>The stage scrolls
+  (<code>overflow: hidden</code>), 40px tall, with columns of 60px, and a script scrolls it 35px to the right.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure red fixed" id=scrolled style="overflow: hidden; columns: 60px; column-gap: 10px">one two three four five six seven eight</div>
+    <figcaption>The rules at 30, 100 and 170px, 35px left of where they would be; the first column out of
+    sight, and "three" and "four" from 35px. <span class=pr-flag>Safari</span> One line to a column,
+    and the rules of the columns out of view drawn on past the stage's right edge, not clipped.</figcaption>
+  </figure>
+</section>
+
+<script>
+const scroll = () => { document.getElementById("scrolled").scrollLeft = 35; };
+scroll();
+document.fonts.ready.then(scroll);
+addEventListener("load", scroll);
+</script>
+</body>
+</html>

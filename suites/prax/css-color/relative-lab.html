@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative lab()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.6 Relative Lab Colors</div>
+  <h1>Relative lab()</h1>
+  <p class=pr-lede><q>l is a &lt;number&gt; that corresponds to the origin color's CIE Lightness</q>; <q>a and b are
+  &lt;number&gt;s that correspond to the origin color's CIE Lab a and b axes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-Lab">CSS Color 5
+  §4.6</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>A gray of the same lightness</h2>
+  <p><q>Fully desaturating a color to gray, keeping the exact same
+  lightness</q>: orchid <q>is lab(62.753 52.460 -34.103)</q>, and <code>lab(from orchid l 0 0)</code> <q>is
+  lab(62.753 0 0) which is rgb(59.515% 59.515% 59.515%)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: orchid"></div><div class=sw style="background: lab(from orchid l 0 0)"></div><div class=sw style="background: rgb(59.515% 59.515% 59.515%)"></div></div>
+    <figcaption>Orchid, then its gray beside <code>rgb(59.515% 59.515% 59.515%)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alpha</h2>
+  <p><code>lab(from var(--mycolor) l a b / calc(alpha * 0.8))</code> <q>reduces the alpha [...] by 20% of
+  its original value.</q> On a checkerboard.</p>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: lab(from orchid l a b / calc(alpha * 0.8))"></div><div class=sw style="background: rgb(218 112 214 / 0.8)"></div></div>
+    <figcaption>Orchid at alpha 0.8, beside <code>rgb(218 112 214 / 0.8)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

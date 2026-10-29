@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-synthesis-position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8.4 Controlling synthesized super- and subscripts: the 'font-synthesis-position' property</div>
+  <h1>font-synthesis-position</h1>
+  <p class=pr-lede><q>This property controls whether user agents are required to synthesize superscript and subscript
+  glyphs for 'font-variant-position' when a font lacks them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis-position">CSS Fonts 4 §2.8.4</a></span></p>
+</header>
+
+<section>
+  <h2>A font without superscripts</h2>
+  <p>PR Tinos has no <code>sups</code> or <code>subs</code> feature. Each stage writes H<sub>2</sub>O and x<sup>2</sup>
+  with 'font-variant-position'.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-synthesis-position: auto">H<span style="font-variant-position: sub">2</span>O x<span style="font-variant-position: super">2</span></div>
+    <figcaption><code>auto</code>: <q>Synthesis of superscript and subscript forms is required</q>: smaller 2s,
+    lowered and raised. <span class=pr-flag>Safari</span> draws them at full size on the baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-synthesis-position: none">H<span style="font-variant-position: sub">2</span>O x<span style="font-variant-position: super">2</span></div>
+    <figcaption><code>none</code>: <q>not allowed</q>: the 2s at full size on the baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A font with superscripts</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-synthesis-position: none">H<span style="font-variant-position: sub">2</span>O x<span style="font-variant-position: super">2</span></div>
+    <figcaption>PR Literata's own inferior and superior 2s, drawn for their size, with <code>none</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

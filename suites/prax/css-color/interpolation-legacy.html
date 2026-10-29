@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Legacy colors interpolate in sRGB</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+  .half { animation: 10s linear -5s paused both; }
+  @keyframes legacy { from { background-color: red; } to { background-color: blue; } }
+  @keyframes modern { from { background-color: color(srgb 1 0 0); } to { background-color: blue; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.2 Color Space for Interpolation, legacy colors</div>
+  <h1>Legacy colors interpolate in sRGB</h1>
+  <p class=pr-lede><q>However, user agents <em>must</em> handle interpolation between legacy sRGB color formats (hex
+  colors, named colors, rgb(), hsl() or hwb() and the equivalent alpha-including forms) in gamma-encoded sRGB
+  space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation-space">CSS Color 4
+  §13.2</a></span></p>
+</header>
+
+<section>
+  <h2>Two legacy colors: sRGB</h2>
+  <p>Gradients from red to blue (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4
+  §3.1</a>).</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(to right, red, blue)"></div></div>
+    <figcaption><code>red</code> to <code>blue</code>: a dark purple in the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(to right, #f00, hsl(240 100% 50%))"></div><div class="sw half" style="animation-name: legacy"></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>The middle of <code>#f00</code> to <code>hsl(240 100% 50%)</code>, an animation from red to blue at
+    50%, and <code>rgb(50% 0% 50%)</code>: one purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One non-legacy color: Oklab</h2>
+  <p><q>authors can choose to opt-in to better interpolation, even between sRGB colors, by using the non-legacy
+  color(srgb r g b) form for at least one of their colors, or by explicitly specifying an interpolation color
+  space.</q></p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(to right, color(srgb 1 0 0), blue)"></div></div>
+    <figcaption><code>color(srgb 1 0 0)</code> to <code>blue</code>: a lighter lavender in the middle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(to right, color(srgb 1 0 0), blue)"></div><div class="sw half" style="animation-name: modern"></div><div class=sw style="background: rgb(55% 32.6% 63.7%)"></div></div>
+    <figcaption>Its middle, the animation from <code>color(srgb 1 0 0)</code> at 50%, and <code>rgb(55% 32.6%
+    63.7%)</code>: one lavender. <span class=pr-flag>Firefox</span> Animates in sRGB: the second is the dark purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

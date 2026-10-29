@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>in, cm, mm, Q, pt, pc, px: fixed ratios</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 5px 0; font: 12px/20px ui-monospace, Menlo, monospace; }
+  .row { height: 20px; margin: 0 0 4px; white-space: nowrap; }
+  .bar { display: inline-block; vertical-align: top; height: 20px; margin-right: 6px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.2 Absolute Lengths</div>
+  <h1>in, cm, mm, Q, pt, pc, px: fixed ratios</h1>
+  <p class=pr-lede><q>The absolute length units are fixed in relation to each other and anchored to some physical
+  measurement.</q> <q>For screen media</q> <q>it is recommended instead that the anchor unit be the pixel unit.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#absolute-lengths">CSS Values and Units 4 §6.2</a></span>
+  Each bar is as wide as the length beside it.</p>
+</header>
+
+<section>
+  <h2>One inch</h2>
+  <p><q>1in = 2.54cm = 96px</q>, <q>1pc = 1/6th of 1in</q>, <q>1pt = 1/72nd of 1in</q>, <q>1mm = 1/10th of 1cm</q>,
+  <q>1Q = 1/40th of 1cm</q>.</p>
+  <figure>
+    <div class="pr-stage rows">
+      <div class=row><span class=bar style="width: 1in"></span>1in</div>
+      <div class=row><span class=bar style="width: 2.54cm"></span>2.54cm</div>
+      <div class=row><span class=bar style="width: 25.4mm"></span>25.4mm</div>
+      <div class=row><span class=bar style="width: 101.6Q"></span>101.6Q</div>
+    </div>
+    <figcaption>Four bars of one length, 96px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage rows">
+      <div class=row><span class=bar style="width: 6pc"></span>6pc</div>
+      <div class=row><span class=bar style="width: 72pt"></span>72pt</div>
+      <div class=row><span class=bar style="width: 96px"></span>96px</div>
+      <div class=row><span class=bar style="width: calc(5pc + 12pt)"></span>5pc + 12pt</div>
+    </div>
+    <figcaption>Four more of the same 96px; picas and points add, as <q>2p3</q> is written <code>calc(2pc +
+    3pt)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Smaller units</h2>
+  <figure>
+    <div class="pr-stage rows">
+      <div class=row><span class=bar style="width: 1pc"></span>1pc = 16px</div>
+      <div class=row><span class=bar style="width: 30pt"></span>30pt = 40px</div>
+      <div class=row><span class=bar style="width: 1cm"></span>1cm ≈ 37.8px</div>
+      <div class=row><span class=bar style="width: 40Q"></span>40Q = 1cm</div>
+    </div>
+    <figcaption>16px, 40px, and two bars of one centimeter, about 37.8px, a pixel short of the fourth guide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-kerning</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 40px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.3 Kerning: the 'font-kerning' property</div>
+  <h1>font-kerning</h1>
+  <p class=pr-lede><q>Kerning is the contextual adjustment of inter-glyph spacing. This property controls metric
+  kerning, kerning that utilizes adjustment data contained in the font.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-kerning-prop">CSS Fonts 4
+  §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>auto, normal and none</h2>
+  <p>PR Literata kerns AV, To and Yo.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-kerning: normal">AVTo</div>
+    <figcaption><code>normal</code>: <q>kerning is applied</q>; the V tucked under the A, the o under the
+    T.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-kerning: none">AVTo</div>
+    <figcaption><code>none</code>: <q>kerning is not applied</q>; wider gaps.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-kerning: auto">AVTo</div>
+    <figcaption><code>auto</code>: <q>at the discretion of the user agent</q>; at this size, as
+    <code>normal</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Kerning, then letter-spacing</h2>
+  <p><q>If the 'letter-spacing' property is defined, kerning adjustments are considered part of the default spacing
+  and letter spacing adjustments are made after kerning has been applied.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-kerning: normal; letter-spacing: 10px">AVTo</div>
+    <figcaption><code>normal</code> and 10px letter-spacing: each gap 10px wider than kerned.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

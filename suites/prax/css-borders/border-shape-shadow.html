@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: shadows follow the shape</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.5.2 Interaction with box-shadow</div>
+  <h1>border-shape: shadows follow the shape</h1>
+  <p class=pr-lede><q>An outer box-shadow is cast as if the shape defined by the outer path were opaque. An inner box-shadow is cast as if everything outside the shape defined by the inner path were opaque.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-shadow-interaction">CSS Borders and Box Decorations 4 §7.5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Outer and inner</h2>
+  <p>Each box is 112 by 72 with a 6px blue border shaped as a circle.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: circle(50%); box-shadow: 8px 8px #8a93a1"></div></div>
+    <figcaption>A grey round shadow 8px down and right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular shadow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: circle(50%); box-shadow: inset 0 0 0 10px #6aa36a"></div></div>
+    <figcaption>A green band 10px wide inside the circle. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A rectangular band.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

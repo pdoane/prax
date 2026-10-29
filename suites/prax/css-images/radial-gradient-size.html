@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): explicit sizes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.1 radial-gradient() Syntax</div>
+  <h1>radial-gradient(): explicit sizes</h1>
+  <p class=pr-lede><q>If the ending-shape is an ellipse, its axises are aligned with the horizontal and vertical
+  axises.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-gradient-syntax">CSS Images 3 §3.2.1</a></span>
+  Each box is 160 by 60, its gradient centered: orange inside the ending shape, light blue beyond it.</p>
+</header>
+
+<section>
+  <h2>A circle's radius</h2>
+  <p>&lt;length [0,∞]&gt;: <q>Gives the radius of the circle explicitly.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 20px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 20px</code>: from 60 to 100 across, 10 to 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(circle 60px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>circle 60px</code>: from 20 to 140 across, past the top and bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An ellipse's radii</h2>
+  <p>&lt;length-percentage [0,∞]&gt;{2}: <q>The first value represents the horizontal radius, the second the
+  vertical radius. Percentages values are relative to the corresponding dimension of the gradient box.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse 30px 10px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>ellipse 30px 10px</code>: from 50 to 110 across, 20 to 40 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(10px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>10px 30px</code>: from 70 to 90 across, meeting the top and bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(25% 50%, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>25% 50%</code>: radii 40 and 30, a quarter of 160 and half of 60: from 40 to 120 across, meeting
+    the top and bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(50% 20px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>50% 20px</code>: radii 80 and 20, meeting the sides, 10 to 50 down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Checkboxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad input { margin: 0 6px 0 0; vertical-align: -2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.15 Checkbox state (type=checkbox)</div>
+  <h1>Checkboxes</h1>
+  <p class=pr-lede><q>The input element represents a two-state control that represents the element's checkedness
+  state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#checkbox-state-(type=checkbox)">HTML §4.10.5.1.15</a></span></p>
+</header>
+
+<section>
+  <h2>A click toggles it, then input and change</h2>
+  <p>A click toggles the checkedness before it is dispatched; then the input activation behavior is to <q>Fire an event
+  named input</q>, then <q>Fire an event named change</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#checkbox-state-(type=checkbox)">§4.10.5.1.15</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=checkbox id=box>unchecked</div>
+        <div><input type=checkbox id=ticked checked>checked</div>
+      </div>
+      <ol class=pr-log data-log="click input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click either: it toggles, then <code>click</code>, <code>input</code>, <code>change</code>. Tab to one
+    and press Space: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=checkbox id=agree required>required</div>
+      </div>
+    </div>
+    <figcaption><q>If the element is required and its checkedness is false, then the element is suffering from being
+    missing.</q> Red; check it: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Indeterminate</h2>
+  <p><q>If the element's indeterminateness is true, then the control's selection should be obscured.</q> A click toggles the
+  checkedness <q>and set this element's indeterminateness to false</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">§4.10.5</a></span>
+  The page's script sets <code>indeterminate</code> on both boxes at load.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=checkbox class=mixed>unchecked</div>
+        <div><input type=checkbox class=mixed checked>checked</div>
+      </div>
+    </div>
+    <figcaption>Both show the same mixed mark, a dash, whether checked or not. Click the first: checked; click the
+    second: unchecked. Neither returns to the mixed mark.</figcaption>
+  </figure>
+</section>
+<script>
+  for (const box of document.querySelectorAll(".mixed"))
+      box.indeterminate = true;
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

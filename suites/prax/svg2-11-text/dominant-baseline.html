@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dominant-baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .diag { font: 30px "PR Baseline Diagnostic Zero"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.5 The ‘dominant-baseline’ property</div>
+  <h1>dominant-baseline</h1>
+  <p class=pr-lede><q>SVG uses the value of the dominant-baseline property to align glyphs relative to the ‘x’ and
+  ‘y’ attributes.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#DominantBaselineProperty">SVG 2 §11.10.2.5</a></span>
+  Each stage is an SVG 160 by 70 holding "H" in 30px PR Baseline Diagnostic Zero at <code>x="20" y="35"</code>, the
+  y dashed in red. Its hanging baseline is 0.65 em above its alphabetic one, its ascent 0.8 em and its descent 0.2 em;
+  its H fills the band from the alphabetic baseline to the hanging one, 19.5 tall.</p>
+</header>
+
+<section>
+  <h2>The baseline put at y</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=diag x="20" y="35" dominant-baseline="hanging">H</text></svg></div>
+    <figcaption><code>hanging</code>: the H hangs from y 35, to 54.5.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=diag x="20" y="35" dominant-baseline="alphabetic">H</text></svg></div>
+    <figcaption><code>alphabetic</code>, what <code>auto</code> gives horizontal text: the H stands on y 35, from 15.5.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=diag x="20" y="35" dominant-baseline="text-top">H</text></svg></div>
+    <figcaption><code>text-top</code>, the ascent, 24 above the alphabetic baseline: the H from 39.5 to 59. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Stands on y 35.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=diag x="20" y="35" dominant-baseline="text-bottom">H</text></svg></div>
+    <figcaption><code>text-bottom</code>, the descent, 6 below it: the H from 9.5 to 29.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

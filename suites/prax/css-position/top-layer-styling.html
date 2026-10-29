@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>How the top layer lays out its elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 3.1 Top Layer Styling</div>
+  <h1>How the top layer lays out its elements</h1>
+  <p class=pr-lede>How every element rendered in the top layer is rendered. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#top-styling">CSS Positioned Layout 4 §3.1</a></span>
+  Each frame shows an orange popover, 60 by 20.</p>
+</header>
+
+<section>
+  <h2>Its containing block and position</h2>
+  <p><q>If its position property computes to fixed, its containing block is the viewport; otherwise, it's the initial
+  containing block.</q> <q>If its specified position property is not absolute or fixed, it computes to absolute.</q>
+</p>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .lead { height: 40px; background: #b9cde6 } .p { width: 60px; height: 20px } body { height: 300px } .t { transform: translate(0); margin: 10px; height: 50px; outline: 1px dashed #6b7381 }</style><div class=t><div popover=manual id=p class='p b' style='position: absolute; top: 40px; left: 20px'></div></div><script>p.showPopover(); scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>position: absolute; top: 40px</code>, in the transformed dashed box, the document scrolled 30px: held by the initial containing block, it scrolls to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .lead { height: 40px; background: #b9cde6 } .p { width: 60px; height: 20px } body { height: 300px } .t { transform: translate(0); margin: 10px; height: 50px; outline: 1px dashed #6b7381 }</style><div class=t><div popover=manual id=p class='p b' style='position: fixed; top: 40px; left: 20px'></div></div><script>p.showPopover(); scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>position: fixed; top: 40px</code>, the same: held by the viewport, at 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .lead { height: 40px; background: #b9cde6 } .p { width: 60px; height: 20px }</style><div class=lead></div><div popover=manual id=p class='p b' style='position: static; top: 20px; left: 20px'></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption><code>position: static; top: 20px; left: 20px</code>, after a block 40px tall: absolute, so at 20, 20, over the block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its static position, and its display</h2>
+  <p><q>Unless overridden by another specification, its static position for left, right, and top is zero.</q> <q>If its specified display property is contents, it computes to block.</q> It is not rendered <q>if its
+  shadow-including inclusive ancestor has the display: none.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } .lead { height: 40px; background: #b9cde6 } .p { width: 60px; height: 20px }</style><div class=lead></div><div popover=manual id=p class='p b' style='position: absolute'></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption><code>position: absolute</code>, its insets <code>auto</code>, after a block 40px tall: its static position is zero, so it is at 0, 0, over the block. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At 0, 40, after the block.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } </style><div popover=manual id=p class=b style='display: contents; position: fixed; top: 20px; left: 20px; width: 60px; height: 20px'></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption><code>display: contents</code>: block, so it has a box, its orange background 60 by 20 at 20, 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 160px"><iframe class=pr-view style="width: 160px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } [popover] { margin: 0; padding: 0; border: 0; inset: auto; overflow: visible; color: inherit; background: none } .a { background: #4f81bd } .b { background: #d68a3c } .c { background: #6aa36a } .d { background: #8e44ad } </style><div style='display: none'><div popover=manual id=p class=b style='position: fixed; top: 20px; left: 20px; width: 60px; height: 20px'></div></div><script>p.showPopover()</script>"></iframe></div>
+    <figcaption>The same, inside a box with <code>display: none</code>: not rendered; the frame is empty.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

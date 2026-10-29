@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Propagation stops at the fragmentation context</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; }
+  .p { border: 4px solid #2c5a8f; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.1.1 Child→Parent Break Propagation</div>
+  <h1>Propagation stops at the fragmentation context</h1>
+  <p class=pr-lede><q>a break-before value on a first in-flow child box is propagated to its container. Likewise a
+  break-after value on a last in-flow child box is propagated to its container.</q> <q>This propagation stops before
+  it breaks through the nearest matching fragmentation context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-propagation">CSS Fragmentation 4 §3.1.1</a></span>
+  Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Not through the fragmentation context</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b style="break-before: column">B</div><div class=pr-c>C</div></div>
+    <figcaption>B, the first child of the multi-column container, has <code>break-before: column</code>: it does not
+    leave the first column empty. B and C in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } @page :left { margin-left: 60px } body { margin: 0; padding: 0; background: white; color-scheme: light }</style><body class=pr-measure><div class=pr-b style='break-before: left'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>Printed, left pages with a 60px left margin. B, the first child of <code>body</code>, has
+    <code>break-before: left</code>, which propagates to the root: the document starts on a left page, and <q>The UA must
+    suppress the first (empty) page(s) in this case</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#progression">CSS Paged Media 3 §3.3</a></span>.
+    One page, B and C 60px in. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> A right page: B and C 10px in. <span class=pr-flag>Firefox</span> A blank first page; B
+    and C on the second, 10px in.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

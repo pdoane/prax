@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>safe alignment in a reversed flexbox</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .fr { display: flex; flex-direction: row-reverse; width: 100px; margin: 0 50px; background: rgba(79, 129, 189, 0.16); }
+  .fr > div { width: 70px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.4 Overflow Alignment, reversed</div>
+  <h1>safe alignment in a reversed flexbox</h1>
+  <p class=pr-lede><q>If the size of the alignment subject overflows the alignment container, the alignment subject is
+  instead aligned as if the alignment mode were flex-start.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#overflow-values">CSS Box Alignment 3 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>Items wider than a reversed flexbox</h2>
+  <p>A tinted <code>row-reverse</code> flex container 100px wide, from 50 to 150px, holds A and B, each 70px wide,
+  which do not shrink. Its main-start, where <code>flex-start</code> packs them, is at the right; its
+  <code>start</code> is at the left. <a href="https://github.com/w3c/csswg-drafts/issues/11937">csswg-drafts#11937</a>
+  changed the safe fallback from <code>start</code> to <code>flex-start</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=fr style="justify-content: unsafe center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>unsafe center</code>: 20px over each side; A from 100 to 170px, B from 30px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=fr style="justify-content: safe center"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>safe center</code>: as <code>flex-start</code>, flush at the right, all the overflow past the
+    left; A from 80 to 150px, B from 10 to 80px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> as <code>start</code>: B from 50px, A from
+    120 to 190px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

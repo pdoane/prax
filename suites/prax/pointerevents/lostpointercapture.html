@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lostpointercapture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { padding: 10px 20px; touch-action: none; }
+  .area .pr-target { display: inline-block; width: 120px; margin: 0 16px 0 0; }
+  .area .pr-target.captured { background: #6aa36a; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.11 lostpointercapture</div>
+  <h1>lostpointercapture</h1>
+  <p class=pr-lede><q>The user agent MUST fire a pointer event named lostpointercapture after pointer capture is released
+  for a pointer.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#lostpointercapture">Pointer Events §3.3.11</a></span></p>
+</header>
+<section>
+  <h2>Before the events that follow</h2>
+  <p><q>This event MUST be fired prior to any subsequent events for the pointer after capture was released. This event
+  is fired at the element from which pointer capture was removed. All subsequent events for the pointer except click,
+  auxclick, and contextmenu events follow normal hit testing mechanisms (out of scope for this specification) for
+  determining the event target.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#lostpointercapture">§3.3.11</a></span>
+  A <code>pointerdown</code> listener captures the pointer to the first box, and releases it a second later.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=area><div class=pr-target id=captor>Press, drag right</div><div class=pr-target id=other>other</div></div>
+      <ol class=pr-log data-log="lostpointercapture pointermove" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Press the first box and drag onto <code>other</code>, holding the button: <code>pointermove</code>s at
+    <code>captor</code> while it is green. A second after the press, <code>lostpointercapture</code> at
+    <code>captor</code>, and the next <code>pointermove</code> is at <code>other</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Captures the pointer to the first box when it is pressed, and releases it a second later.
+  const captor = document.getElementById("captor");
+  captor.addEventListener("pointerdown", event => {
+    captor.setPointerCapture(event.pointerId);
+    setTimeout(() => { if (captor.hasPointerCapture(event.pointerId)) captor.releasePointerCapture(event.pointerId); }, 1000);
+  });
+  captor.addEventListener("gotpointercapture", () => captor.classList.add("captured"));
+  captor.addEventListener("lostpointercapture", () => captor.classList.remove("captured"));
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

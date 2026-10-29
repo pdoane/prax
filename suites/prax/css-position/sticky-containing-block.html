@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky positioning: held inside the containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .sect { height: 100px; background: #b9cde6; }
+  .sect + .sect { background: #dce6f2; }
+  .st { position: sticky; top: 0; width: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4 Sticky positioning</div>
+  <h1>Sticky positioning: held inside the containing block</h1>
+  <p class=pr-lede>The box is shifted <q>insofar as it can while its position box remains contained within its
+  containing block. The position box is its margin box, except that for any side for which the distance between its
+  margin edge and the corresponding edge of its containing block is less than its corresponding margin, that
+  distance is used in place of that margin.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-insets">CSS Positioned Layout 3 §3.4</a></span>
+  Each stage scrolls, and holds two light blue sections 100px tall; the first holds the orange box, with <code>top:
+  0</code>.</p>
+</header>
+
+<section>
+  <h2>Pushed out with its section</h2>
+  <figure>
+    <div class="pr-stage sc" data-scroll=50><div class=sect><div class="pr-b st">A</div></div><div class=sect></div><div style="height: 100px"></div></div>
+    <figcaption>Scrolled 50px: held at the top, with 50px of its section left below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=90><div class=sect><div class="pr-b st">A</div></div><div class=sect></div><div style="height: 100px"></div></div>
+    <figcaption>Scrolled 90px: its section ends 10px below the top, and the box goes up with it, from −10 to
+    10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its margin box, and its containing block's content box</h2>
+  <figure>
+    <div class="pr-stage sc" data-scroll=70><div class=sect><div class="pr-b st" style="margin-bottom: 20px">A</div></div><div class=sect></div><div style="height: 100px"></div></div>
+    <figcaption>With <code>margin-bottom: 20px</code>, scrolled 70px: its margin box must stay in the section, so its
+    border box ends 20px before the section, from −10 to 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=70><div class=sect style="height: 80px; padding-bottom: 20px"><div class="pr-b st">A</div></div><div class=sect></div><div style="height: 100px"></div></div>
+    <figcaption>The section with 20px of bottom padding, scrolled 70px: the containing block is its content box, so
+    the box ends where the padding begins, from −10 to 10.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

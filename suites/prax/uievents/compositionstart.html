@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>compositionstart</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.7.1 compositionstart</div>
+  <h1>compositionstart</h1>
+  <p class=pr-lede><q>This event MUST be dispatched immediately before a text composition system begins a new
+  composition session, and before the DOM is modified due to the composition process.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionstart">UI Events §3.6.7.1</a></span></p>
+</header>
+<section>
+  <h2>After the keydown, before the change</h2>
+  <p><q>When a keyboard is used to feed an input method editor, this event type is generated after a keydown
+  event</q>. The page's script records the field's value as each event reaches it, as <code>value</code>.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionstart">§3.6.7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field value="ab"></div>
+      <ol class=pr-log data-log="keydown compositionstart compositionupdate" data-fields="key data value" data-on="#field" data-lines=3></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click at the end of the field and type
+    <code>k</code>: keydown, then compositionstart with <code>value="ab"</code>, before the field shows the
+    <code>k</code> being composed.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Over a selection</h2>
+  <p><q>Some implementations MAY populate the data attribute of the compositionstart event with the text currently
+  selected in the document (for editing and replacement). Otherwise, the value of the data attribute MUST be the empty
+  string.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionstart">§3.6.7.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=selected value="replace me"></div>
+      <ol class=pr-log data-log="compositionstart" data-fields="data" data-on="#selected" data-lines=2></ol>
+    </div>
+    <figcaption>With the input method on, double-click <code>replace</code> and type <code>k</code>: compositionstart
+    with <code>data="replace"</code>, or with no <code>data</code>, the empty string.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the field's value as each event reaches it, before the log reads it.
+  const field = document.getElementById("field");
+  for (const type of ["keydown", "compositionstart", "compositionupdate"])
+      field.addEventListener(type, event => { event.value = field.value; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

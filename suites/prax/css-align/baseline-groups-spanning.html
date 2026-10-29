@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanning several alignment contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .f { display: flex; flex-wrap: wrap; align-items: baseline; width: 120px; column-gap: 4px; }
+  .g { display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 4px; height: 70px; }
+  .gr { display: grid; grid-template: 35px 35px / auto auto; justify-content: start; column-gap: 4px; }
+  .gc { display: grid; grid-template-columns: 200px; grid-template-rows: 40px 40px; }
+  .f > div, .g > div, .gr > div, .gc > div { background: #f9cc9d; line-height: 1; padding: 0 3px; font-size: 13px; }
+  .gc > div { padding: 3px 0; }
+  .big { font-size: 32px !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 9.2 Baseline Alignment Grouping, spanning boxes</div>
+  <h1>Spanning several alignment contexts</h1>
+  <p class=pr-lede>Boxes share an alignment context when they are, among others, <q>grid items in the same row, along
+  the grid's row (inline) axis, established by the grid container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-terms">CSS Box Alignment 3 §9.2</a></span>
+  Items are highlighted.</p>
+</header>
+
+<section>
+  <h2>Spanning several contexts</h2>
+  <p><q>If a box spans multiple shared alignment contexts, then it participates in first/last baseline alignment within
+  its start-most/end-most shared alignment context along that axis.</q> Two rows of 35px; A spans both.</p>
+  <figure>
+    <div class=pr-stage><div class=gr><div class=big style="grid-row: span 2; align-self: last baseline">A</div><div style="align-self: last baseline">B</div><div style="align-self: last baseline">C</div></div></div>
+    <figcaption>A, B in row 1, C in row 2, all <code>last baseline</code>: A with C, on one baseline at the bottom; B
+    at the bottom of row 1.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=gr><div class=big style="grid-row: span 2; align-self: first baseline">A</div><div style="align-self: first baseline">B</div><div style="align-self: first baseline">C</div></div></div>
+    <figcaption>All <code>first baseline</code>: A with B, on one baseline at the top; C at the top of row 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

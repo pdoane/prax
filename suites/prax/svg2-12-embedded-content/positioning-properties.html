@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS positioning properties</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .moved { margin: 20px 0 0 40px; }
+  .shifted { position: relative; left: 40px; top: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>CSS positioning properties</h1>
+  <p class=pr-lede><q>CSS positioning properties (e.g. top and margin) have no effect when positioning the embedded
+  content element in the SVG coordinate system.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60. Each element is at 20, 10, outlined dashed grey there; the image is the flag, 40 by
+  20 in quarters.</p>
+</header>
+
+<section>
+  <h2>Not the element itself</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=moved href="../shared/resources/flag-40x20.png" x="20" y="10" width="80" height="40" /><rect x="20.5" y="10.5" width="79" height="39" class=pr-ghost /></svg></div>
+    <figcaption>An <code>image</code> with <code>margin: 20px 0 0 40px</code>: still from 20 to 100 across, 10 to
+    50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=moved x="20" y="10" width="80" height="40"><div class=pr-a>A</div></foreignObject><rect x="20.5" y="10.5" width="79" height="39" class=pr-ghost /></svg></div>
+    <figcaption>A <code>foreignObject</code> 80 by 40 with the same margin: A still from 20 to 100, 10 to 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=shifted x="20" y="10" width="80" height="40"><div class=pr-a>A</div></foreignObject><rect x="20.5" y="10.5" width="79" height="39" class=pr-ghost /></svg></div>
+    <figcaption>With <code>position: relative; left: 40px; top: 20px</code>: A still from 20 to 100, 10 to 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its children</h2>
+  <p><q>They can, however, be used to position child elements of a ‘foreignObject’ or HTML embedding element.</q>
+  The <code>foreignObject</code> is 120 by 40.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class="pr-a moved" style="width: 40px; box-sizing: border-box">A</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>A child, 40 wide, with <code>margin: 20px 0 0 40px</code>: from 60 to 100 across, 30 to 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="40"><div class="pr-a shifted" style="width: 40px; box-sizing: border-box">A</div></foreignObject><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>A child with <code>position: relative; left: 40px; top: 20px</code>: the same, 60 to 100, 30 to
+    50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

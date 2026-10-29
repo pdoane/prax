@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-line: the first formatted line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage p { margin: 0; }
+  .orange::first-line { color: #d68a3c; }
+  .upper::first-line { text-transform: uppercase; }
+  .w120 { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1 First-Line Text: the ::first-line pseudo-element</div>
+  <h1>::first-line: the first formatted line</h1>
+  <p class=pr-lede><q>The ::first-line pseudo-element represents the contents of the first formatted line of its
+  originating element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-line-pseudo">CSS Pseudo-Elements 4 §2.1</a></span>
+  Each paragraph's text is 10px a character on 20px lines.</p>
+</header>
+
+<section>
+  <h2>After the text wraps</h2>
+  <p><q>the ::first-line pseudo-element can select content on the first formatted line of an element after text
+  wrapping</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#intro">§1</a></span>. The same
+  paragraph, <code>p::first-line { color: orange }</code>, in two widths.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><p class=orange>one two three four five six seven eight</p></div>
+    <figcaption>200px wide: <q>one two three four</q> is orange, the 180px of the first line; the rest is black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><p class="orange w120">one two three four five six seven eight</p></div>
+    <figcaption>120px wide: only <q>one two</q>, 70px, is orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The section's example</h2>
+  <p><code>text-transform</code> is one of <q>any typesetting properties that apply to inline elements</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-line-styling">§2.1.2</a></span>, so it applies; the
+  example would <q>change the letters of the first line of every p element to uppercase</q>:
+  <code>p::first-line { text-transform: uppercase }</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><p class=upper>this is a somewhat long paragraph that is broken into lines</p></div>
+    <figcaption><q>THIS IS A SOMEWHAT</q>, 180px, in capitals; <q>long paragraph that</q> and the rest in small
+    letters. <span class=pr-flag>Safari</span> No capitals.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><p class="upper w120">this is a somewhat long paragraph that is broken into lines</p></div>
+    <figcaption>120px wide: only <q>THIS IS A</q>, 90px. <span class=pr-flag>Safari</span> No capitals.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

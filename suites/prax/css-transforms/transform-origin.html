@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>transform-origin: the point that stays put</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 30px; top: 20px; width: 100px; height: 60px; }
+  .s { transform: scale(0.5); }
+  .turn { position: absolute; left: 50px; top: 30px; width: 60px; height: 40px; transform-origin: left top;
+          transform: rotate(45deg); animation: turn 4s linear -0.5s infinite; }
+  @keyframes turn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 4 The transform-origin Property</div>
+  <h1>transform-origin: the point that stays put</h1>
+  <p class=pr-lede><q>The values of the transform and transform-origin properties are used to compute the
+  transformation matrix</q>: the transform is applied about the origin. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-origin-property">CSS Transforms 1 §4</a></span>
+  Each blue box, 100 by 60 at (30, 20) on the dashed outline, has <code>scale(0.5)</code>: it shrinks toward its
+  origin, which stays put.</p>
+</header>
+
+<section>
+  <h2>Keywords and offsets, and a turn</h2>
+  <p><q>The value for the horizontal and vertical offset represent an offset from the top left corner of the reference
+  box.</q> <q>If only one value is specified, the second value is assumed to be center.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p s" style="transform-origin: left top">A</div></div>
+    <figcaption><code>left top</code>: 30 to 80 across, 20 to 50 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p s" style="transform-origin: right bottom">A</div></div>
+    <figcaption><code>right bottom</code>: 80 to 130 across, 50 to 80 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p s">A</div></div>
+    <figcaption>The initial <code>50% 50%</code>, its center: 55 to 105 across, 35 to 65 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p s" style="transform-origin: 20px 40px">A</div></div>
+    <figcaption><code>20px 40px</code>, (50, 60): 40 to 90 across, 40 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p s" style="transform-origin: right">A</div></div>
+    <figcaption><code>right</code> is <code>right center</code>: 80 to 130, 35 to 65 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb pr-motion"><div class="pr-ghost" style="position: absolute; left: 50px; top: 30px; width: 60px; height: 40px"></div><div class="pr-a pr-fit turn">A</div></div>
+    <figcaption><code>left top</code>, turning. Still: 45deg about (50, 30). As it moves, the corner stays and the box
+    sweeps round it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

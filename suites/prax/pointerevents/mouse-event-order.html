@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mouse event order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .outer { height: 80px; margin: 10px 20px; padding: 20px 40px; box-sizing: border-box;
+           background: #b9cde6; border: 1px solid #2c5a8f; font-size: 12px; }
+  .inner { height: 40px; box-sizing: border-box; background: #f6d7b4; border: 1px solid #9c5f22;
+           font-size: 12px; text-align: center; line-height: 38px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.3 Mouse Event Order</div>
+  <h1>Mouse event order</h1>
+  <p class=pr-lede><q>Certain mouse events defined in this specification MUST occur in a set order relative to one
+  another.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">Pointer Events §11.3</a></span></p>
+</header>
+<section>
+  <h2>Into A, into B inside it, and out</h2>
+  <p><q>When a pointing device is moved into an element A, and then into a nested element B and then back out again,
+  the following sequence of events MUST occur</q>: mouseover A, mouseenter A; mouseout A, mouseover B, mouseenter B;
+  mouseout B, mouseleave B, mouseover A; mouseout A, mouseleave A.
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">§11.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=outer id=a><div class=inner id=b>b</div></div>
+      <ol class=pr-log data-log="mouseover mouseenter mouseout mouseleave" data-fields="target" data-on="#a" data-lines=10></ol>
+    </div>
+    <figcaption>Move from the stage into the blue box <code>a</code>, onto the orange <code>b</code>, back to
+    <code>a</code> and out to the stage: the ten events above, in that order, with <code>mousemove</code>s, not
+    logged, between them.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

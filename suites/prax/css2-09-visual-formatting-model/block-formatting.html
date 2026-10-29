@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Block formatting contexts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; width: 60px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.1 Block formatting contexts</div>
+  <h1>Block formatting contexts</h1>
+  <p class=pr-lede><q>Boxes in the normal flow belong to a formatting context</q>: block-level boxes to a block formatting
+  context, inline-level boxes to an inline one. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>One after the other</h2>
+  <p><q>In a block formatting context, boxes are laid out one after the other, vertically, beginning at the top of a
+  containing block. The vertical distance between two sibling boxes is determined by the 'margin' properties.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-formatting">CSS 2 §9.4.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a style="margin-top: 10px">A: mt 10</div><div class=pr-b style="margin-top: 20px">B: mt 20</div><div class=pr-c style="margin-top: 10px">C: mt 10</div></div>
+    <figcaption>A is 10px from the top, B 20px below A, and C 10px below B.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Left edges touch the containing block</h2>
+  <p><q>Each box's left outer edge touches the left edge of the containing block (for right-to-left formatting, right
+  edges touch). This is true even in the presence of floats (although a box's line boxes may shrink due to the
+  floats).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-formatting">CSS 2 §9.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit fl">float</div><div class=pr-b style="height: 60px; white-space: normal; font-weight: normal">the block's text wraps</div></div>
+    <figcaption>A block after a 60px float: its orange background starts at the stage's left edge, under the float,
+    and its text starts beside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl"><div class=pr-a style="width: 80px">A</div><div class=pr-b style="width: 120px">B</div></div>
+    <figcaption>In a right-to-left stage, boxes 80 and 120px wide touch its right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

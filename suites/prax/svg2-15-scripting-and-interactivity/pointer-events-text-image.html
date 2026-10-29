@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointer-events: text and images</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  svg { display: block; }
+  text { font: 700 32px "PR Arimo"; fill: #4f81bd; }
+  text:hover { fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.6 The ‘pointer-events’ property</div>
+  <h1>pointer-events: text and images</h1>
+  <p class=pr-lede><q>For text elements, hit-testing is performed on a character cell basis</q>. <q>For raster images,
+  hit-testing is performed on a whole-image basis (i.e., the rectangular area for the image is the determinant for
+  whether the image receives the event)</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#PointerEventsProp">SVG 2 §15.6</a></span>
+  The log lists clicks with their target.</p>
+</header>
+
+<section>
+  <h2>Text: the whole character cell</h2>
+  <p><q>The value visiblePainted means that the text string can receive events anywhere within the character cell if
+  either the ‘fill’ property is set to a value other than none or the ‘stroke’ property is set to a value other than
+  none</q>. The text, <code>#word</code>, turns dark blue under the pointer.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><text id=word x="90" y="38">o o</text></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Point inside an o's hole, or in the space between: dark blue; a click logs
+    <code>target=word</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Images: the whole rectangle</h2>
+  <p>The image, <code>#picture</code>, is an SVG 40 by 40 whose only content is a small blue dot in its middle; outside
+  the dot it is transparent. Outlined dashed.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><image id=picture x="130" y="5" width="40" height="40" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='5' fill='%234f81bd'/></svg>" /><rect class=pr-ghost x="130" y="5" width="40" height="40" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click in a corner of the outline, far from the dot: <code>target=picture</code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

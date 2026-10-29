@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks from transforms</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2.1 Containing Blocks of Positioned Boxes</div>
+  <h1>Containing blocks from transforms</h1>
+  <p class=pr-lede><q>Properties that can cause a box to establish a fixed positioning containing block include
+  transform, will-change, contain…</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span>
+  In each frame, a static dashed box with the property named holds an orange <code>fixed</code> box and a blue
+  <code>absolute</code> one, with <code>top: 0; right: 0</code> and <code>bottom: 0; left: 0</code>.</p>
+</header>
+
+<section>
+  <h2>Any transform, even one that moves nothing</h2>
+  <p><q>any value other than none for the transform property also causes the element to establish a containing block
+  for all descendants.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-rendering">CSS Transforms 1 §2</a></span>
+  The individual transform properties too, all values but none <q>(including “identity” transforms like translate:
+  0px)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#individual-transforms">CSS Transforms 2 §5</a></span></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; translate: 0px } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>translate: 0px</code>, which moves nothing: both in the dashed box's corners.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; transform: scale(1) } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>transform: scale(1)</code>: the same.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; transform: none } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>transform: none</code>: neither; both in the frame's corners.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Perspective, and boxes a transform does not apply to</h2>
+  <p>perspective <q>also establishes a containing block for all descendants, just like the transform property
+  does.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#perspective-property">CSS Transforms 2 §8</a></span>
+  A transform applies only to a transformable element, which a non-replaced inline box is not. <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></span></p>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; perspective: 100px } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><p><i class=f></i><i class=a></i></p>"></iframe></div>
+    <figcaption><code>perspective: 100px</code>: both in its corners.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; transform: translateX(0) } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><span><i class=f></i><i class=a></i></span>"></iframe></div>
+    <figcaption>An inline <code>span</code> with <code>transform: translateX(0)</code>: neither, as with <code>none</code>.</figcaption>
+  </figure>
+  <figure class="pr-narrow">
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 70px" srcdoc="<style>html { background: linear-gradient(to right, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, linear-gradient(to bottom, rgba(31,36,48,.08) 1px, transparent 1px) 0 0 / 10px 10px, #e7eaef } body { margin: 0 } p, span { margin: 15px 0 0 20px; width: 60px; height: 40px; border: 1px dashed #6b7381; display: inline-block; transform: translateX(0) } .f { position: fixed; top: 0; right: 0; width: 20px; height: 20px; background: #d68a3c } .a { position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; background: #4f81bd }</style><span><i class=f></i><i class=a></i></span>"></iframe></div>
+    <figcaption>An inline-block with it: both in its corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

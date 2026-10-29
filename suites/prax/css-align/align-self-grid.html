@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-self on grid items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-rows: 40px 40px; grid-auto-columns: 40px; grid-auto-flow: column; height: 80px; }
+  .v { writing-mode: vertical-rl; padding: 6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.2.5 Grid Items</div>
+  <h1>align-self on grid items</h1>
+  <p class=pr-lede>The alignment container is <q>The grid item’s grid area, assuming the writing mode of the grid
+  container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-grid">CSS Box Alignment 3 §6.2.5</a></span>
+  Grid layout's rules: <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#column-align">CSS Grid Layout 2 §11.4</a></span>.
+  Each stage is a grid of two 40px rows and 40px columns, filled down each column.</p>
+</header>
+
+<section>
+  <h2>The grid area</h2>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-row: span 2; align-self: center">A</div><div class=pr-b style="align-self: end">B</div><div class=pr-c>C</div></div></div>
+    <figcaption>A spans both rows, <code>center</code>: on 40px; B <code>end</code>, at the bottom of the first row;
+    C <code>normal</code>, 40px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class="pr-a v" style="align-self: self-end">A</div><div class="pr-b v" style="align-self: self-end; direction: rtl">B</div></div></div>
+    <figcaption><code>vertical-rl</code> items, <code>self-end</code>: A, <code>ltr</code>, at the bottom of its
+    area; B, <code>rtl</code>, at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>normal: stretch, or start for replaced items</h2>
+  <p><q>Sizes as either stretch (typical non-replaced elements) or start (typical replaced elements)</q>. The image
+  is 40 by 20.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-row: span 2">A</div><img alt="" style="display: block" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"><img alt="" style="display: block; align-self: stretch" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' preserveAspectRatio='none'><rect width='40' height='20' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>A <code>normal</code>: 80px tall; the image, <code>normal</code>: 20px tall at the top of its area;
+    the next, <code>stretch</code>: 40px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

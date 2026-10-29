@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Automatic minimum size of grid items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; width: 40px; }
+  .ta { background: #b9cde6; }
+  .bar { height: 6px; background: #8a93a1; }
+  .bar2 { height: 6px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.6 Automatic Minimum Size of Grid Items</div>
+  <h1>Automatic minimum size of grid items</h1>
+  <p class=pr-lede>The automatic minimum size of a grid item is its content-based minimum size if it is not a
+  scroll container, <q>it spans at least one track in that axis whose min track sizing function is auto</q>, and
+  <q>if it spans more than one track in that axis, none of those tracks are flexible</q>; <q>Otherwise, the automatic
+  minimum size is zero</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#min-size-auto">CSS Grid Layout 2 §6.6</a></span></p>
+</header>
+
+<section>
+  <h2>An auto minimum takes the content's</h2>
+  <p>Each dashed grid is 40px wide and holds "abcdefgh", 80px of text; the grey bar below fills the column.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: 1fr"><div class=ta>abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>1fr</code>, whose minimum is <code>auto</code>: the item's minimum is its 80px of text, and
+    the column is 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: minmax(0, 1fr)"><div class=ta>abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>minmax(0, 1fr)</code>: no <code>auto</code> minimum, so zero: the column and item are 40px and
+    the text spills.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not for scroll containers</h2>
+  <p><q>its computed overflow is not a scrollable overflow value</q>. Both columns are <code>1fr</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: 1fr"><div class=ta style="overflow: hidden">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>overflow: hidden</code>, scrollable: zero; the column is 40px and the text is clipped at
+    "abcd".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: 1fr"><div class=ta style="overflow: clip">abcdefgh</div><div class=bar></div></div></div>
+    <figcaption><code>overflow: clip</code>, not scrollable: the content-based minimum, so the column is
+    80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not across flexible tracks</h2>
+  <p>The item spans two columns; grey and orange bars fill them.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: auto auto"><div class=ta style="grid-column: span 2">abcdefgh</div><div class=bar></div><div class=bar2></div></div></div>
+    <figcaption><code>auto auto</code>: the 80px minimum is shared, 40px to each column.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-frame" style="grid-template-columns: 1fr 1fr"><div class=ta style="grid-column: span 2">abcdefgh</div><div class=bar></div><div class=bar2></div></div></div>
+    <figcaption><code>1fr 1fr</code>: flexible, so zero; the columns share the grid's 40px, 20px each, and the text
+    spills.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

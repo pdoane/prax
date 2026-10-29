@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line-clamp containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 0; background: #f4f5f7; continue: collapse; block-ellipsis: ellipsis; }
+  .stage { height: 110px; }
+  .in { background: #b9cde6; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.3.1 Line-clamp containers</div>
+  <h1>Line-clamp containers</h1>
+  <p class=pr-lede><q>A line-clamp container is an independent block formatting context that additionally follows the
+  rules in this section.</q> A clamp point is its start, a point between two consecutive line boxes, or <q>A point
+  between two in-flow block-level sibling boxes</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#line-clamp-containers">CSS Overflow 4 §5.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Between blocks, and what is suppressed</h2>
+  <p>Each dashed box is 100px wide, <code>continue: collapse; block-ellipsis: ellipsis</code>, in
+  <code>.pr-measure</code> text; blue blocks are its children. Suppressed are <q>Any in-flow or floating boxes that
+  follow the clamp point in the box tree</q>, the line boxes after it, and <q>Any absolutely positioned box which has
+  an visually suppressed box within its containing block chain</q>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-height: 50px"><div class=in style="height: 20px"></div><div class=in style="height: 20px; margin-top: 4px"></div><div class=in style="height: 20px; margin-top: 4px"></div></div></div>
+    <figcaption><code>max-height: 50px</code>, three blue blocks 20px tall, 4px apart: clamped between the second and third, 44px tall. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> suppress nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 1">line one<div class=in style="position: relative">line two<div class="pr-b pr-fit" style="position: absolute; left: 60px; top: 0; width: 30px; height: 20px"></div></div></div></div>
+    <figcaption><code>max-lines: 1</code>: the blue block is suppressed, and the orange box positioned in it: "line one…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> suppress nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="max-lines: 1">line one<br>line two<div class="pr-b pr-fit" style="position: absolute; margin-left: 60px; width: 30px; height: 20px"></div></div></div>
+    <figcaption>An orange box out of flow after "line two" counts as after the clamp point: not drawn. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> suppress nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

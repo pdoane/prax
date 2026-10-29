@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What keeps margins apart: clearance and the root</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.3.1 Collapsing margins</div>
+  <h1>What keeps margins apart: clearance and the root</h1>
+  <p class=pr-lede>Margins adjoin only if no line boxes, no clearance, no padding and no border separate them, and both boxes are in flow in one block formatting context. Every box is 20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Clearance</h2>
+  <p>A box with clearance is moved below a float, and its top margin no longer adjoins its parent's. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a>, <a href="https://drafts.csswg.org/css2/#flow-control">§9.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent><div class=pr-a style="float: left; width: 30px; height: 60px">fl</div><div class=pr-b style="margin-top: 40px">child: mt 40</div></div></div>
+    <figcaption><code>clear: none</code>: the child's 40px margin escapes the parent, and the float sits at the
+    parent's top, 40px down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-a>anchor</div><div class=pr-parent><div class=pr-a style="float: left; width: 30px; height: 60px">fl</div><div class=pr-b style="margin-top: 40px; clear: left">child: mt 40</div></div></div>
+    <figcaption><code>clear: left</code>: the parent and its float start at the anchor, and the child is below the
+    float.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The root element</h2>
+  <p><q>Margins of the root element's box do not collapse.</q> The frame holds a document whose root and body both
+  have top margins. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=pr-parent style="margin-top: 20px"><div class=pr-parent style="margin-top: 30px"><div class=pr-b>child</div></div></div></div>
+    <figcaption>Two nested boxes with mt 20 and mt 30: one 30px gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px 0 0; background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.08) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 30px 0 0; height: 20px; background: #d68a3c }</style>"></iframe></div>
+    <figcaption>The root's 20 and the body's 30 add: the body starts 50px down.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flex item contributions: content and preferred size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.3 Flex Item Intrinsic Size Contributions</div>
+  <h1>Flex item contributions: content and preferred size</h1>
+  <p class=pr-lede><q>The main-size max-content contribution of a flex item is the larger of its outer max-content
+  size and outer preferred size if that is not an automatic size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-item-contributions">CSS Flexible Box Layout 2 §9.10.3</a></span></p>
+</header>
+
+<section>
+  <h2>The larger of content and width</h2>
+  <p>Each dashed row is <code>width: max-content</code> around one item of <code>flex: auto</code>, which can grow
+  and shrink, so that its flex base size does not cap or floor its contribution <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-item-contributions">§9.10.3</a></span>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1 style="flex: auto">aaa</div></div></div>
+    <figcaption><code>width: auto</code>, "aaa": 30px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1 style="flex: auto; width: 60px">aa</div></div></div>
+    <figcaption><code>width: 60px</code>, "aa": 60px, the width.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1 style="flex: auto; width: 20px">aaaaa</div></div></div>
+    <figcaption><code>width: 20px</code>, "aaaaa": 50px, the content, and the item grows from its 20px basis to fill it.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    20px, the text overflowing.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1 style="flex: auto; width: 30px; margin: 0 10px">aa</div></div></div>
+    <figcaption><code>width: 30px</code> and 10px margins: outer, 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The min-content contribution</h2>
+  <p><q>The main-size min-content contribution of a flex item is the larger of its outer min-content size and outer
+  preferred size if that is not an automatic size.</q> Each row is <code>width: min-content</code>, of "aaa bbb"
+  (min-content 30px) and "cc".</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bbb</div><div class=i2>cc</div></div></div>
+    <figcaption><code>width: auto</code>: 30px and 20px, so 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1 style="width: 70px">aaa bbb</div><div class=i2>cc</div></div></div>
+    <figcaption>"aaa bbb" at <code>width: 70px</code>: 70px and 20px, so 90px, on one line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

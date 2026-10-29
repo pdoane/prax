@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border style: round dots and square-ended dashes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.3 Border style</div>
+  <h1>Border style: round dots and square-ended dashes</h1>
+  <p class=pr-lede>CSS 2 asks only for <q>a series of dots</q> and <q>a series of short line segments</q>. A later
+  specification gives the dots and dashes their shapes. Every figure's border is 10px wide.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-borders-4/#border-style">CSS Borders and Box Decorations 4 §2.2</a></div>
+  <h2>Round dots, square-ended dashes</h2>
+  <p><code>dotted</code> is <q>A series of round dots.</q> and <code>dashed</code> is <q>A series of square-ended
+  dashes.</q> Their spacing is still the user agent's: <q>There is no control over the spacing of the dots and dashes,
+  nor over the length of the dashes. Implementations are encouraged to choose a spacing that makes the corners
+  symmetrical.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-style">CSS Borders and Box Decorations 4 §2.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="height: 40px; border-width: 10px; border-style: dotted"></div></div>
+    <figcaption><code>dotted</code>: each dot is a circle 10px across, the width of the border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="height: 40px; border-width: 10px; border-style: dashed"></div></div>
+    <figcaption><code>dashed</code>: each dash is a rectangle 10px deep with square ends.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A sandboxed iframe</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .pic iframe { width: 140px; height: 40px; }
+  .pic iframe + iframe { margin-top: 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.5 The iframe element</div>
+  <h1>A sandboxed iframe</h1>
+  <p class=pr-lede><q>When the attribute is set, the content is treated as being from a unique opaque origin, forms,
+  scripts, and various potentially annoying APIs are disabled, and links are prevented from targeting other
+  navigables.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-iframe-element">HTML §4.8.5</a></span>
+  Each frame's document is in its <code>srcdoc</code>.</p>
+</header>
+
+<section>
+  <h2>Scripts</h2>
+  <p>The <q>allow-scripts</q> keyword re-enables scripts. Each document is orange, and its script turns it green.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe srcdoc="<body style='margin: 0; background: #f6d7b4; font: 12px/20px sans-serif; padding: 0 6px'>no sandbox<script>document.body.style.background = '#dcefd6'</script>"></iframe></div>
+    <figcaption>No sandbox: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe sandbox srcdoc="<body style='margin: 0; background: #f6d7b4; font: 12px/20px sans-serif; padding: 0 6px'>sandbox<script>document.body.style.background = '#dcefd6'</script>"></iframe></div>
+    <figcaption><code>sandbox</code>: orange, the script not run.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe sandbox="allow-scripts" srcdoc="<body style='margin: 0; background: #f6d7b4; font: 12px/20px sans-serif; padding: 0 6px'>allow-scripts<script>document.body.style.background = '#dcefd6'</script>"></iframe></div>
+    <figcaption><code>sandbox="allow-scripts"</code>: green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forms</h2>
+  <p>The <q>allow-forms</q> keyword re-enables forms. Each form submits to <code>landed.html</code>, which shows
+  green with the query it was sent.</p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe sandbox srcdoc="<body style='margin: 0; font: 12px/20px sans-serif'><form action='support/landed.html'><input type=hidden name=sent value=1><button>Submit</button></form>"></iframe></div>
+    <figcaption><code>sandbox</code>: press Submit, and the frame keeps its button.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><iframe sandbox="allow-forms" srcdoc="<body style='margin: 0; font: 12px/20px sans-serif'><form action='support/landed.html'><input type=hidden name=sent value=1><button>Submit</button></form>"></iframe></div>
+    <figcaption><code>sandbox="allow-forms"</code>: press Submit, and the frame shows landed.html?sent=1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

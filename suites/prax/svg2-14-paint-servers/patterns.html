@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Patterns: tiles on the canvas</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <pattern id="tiles" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#4f81bd" /></pattern>
+  <pattern id="shifted" x="5" y="5" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#4f81bd" /></pattern>
+  <pattern id="spaced" width="40" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="8" fill="#d68a3c" /></pattern>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.3 Patterns</div>
+  <h1>Patterns: tiles on the canvas</h1>
+  <p class=pr-lede><q>A pattern is used to ‘fill’ or ‘stroke’ an object using a pre-defined graphic object which can
+  be replicated ("tiled") at fixed intervals in x and y to cover the areas to be painted.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#Patterns">SVG 2 §14.3</a></span>
+  Each stage is an SVG 160 by 60. The patterns here are in user space.</p>
+</header>
+
+<section>
+  <h2>A reference rectangle, tiled both ways</h2>
+  <p><q>The reference rectangle has its top/left at (x, y) and its bottom/right at (x + width, y + height). The tiling
+  theoretically extends a series of such rectangles to infinity in X and Y (positive and negative), with rectangles
+  starting at (x + m*width, y + n*height) for each possible integer value for m and n.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="0" y="0" width="160" height="60" fill="url(#tiles)" /></svg></div>
+    <figcaption>Tiles 20 by 20 at 0, 0, each with a blue square 10 by 10 in its top left: a checker of squares on
+    every other guide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="0" y="0" width="160" height="60" fill="url(#shifted)" /></svg></div>
+    <figcaption>The same at <code>x="5" y="5"</code>: the squares from 5, 5 every 20, and tiles from −15 too, so
+    the squares' last 5 at the top and left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fill and stroke</h2>
+  <p>Tiles 40 by 20, each with an orange dot of radius 8 at 10, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#spaced)" /></svg></div>
+    <figcaption>A rect 120 by 40 at 20, 10, filled: the dots it covers, at x 10, 50, 90 and 130, cut by its
+    edges.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="none" stroke="url(#spaced)" stroke-width="20" /></svg></div>
+    <figcaption>Stroked, 20 wide: the dots, in a frame from 10, 0 to 150, 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

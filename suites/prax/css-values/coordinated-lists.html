@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Coordinated lists: repeated and cut</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .bg { height: 80px; background-image: linear-gradient(#4f81bd, #4f81bd), linear-gradient(#d68a3c, #d68a3c); background-repeat: no-repeat; background-size: 40px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · A Coordinating List-Valued Properties</div>
+  <h1>Coordinated lists: repeated and cut</h1>
+  <p class=pr-lede><q>The length of the coordinated value list is determined by the number of items specified in one
+  particular coordinating list property, the coordinating list base property. (In the case of backgrounds, this is the
+  'background-image' property.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#linked-properties">CSS Values and Units 4 §A</a></span>
+  Each stage has two background images, a blue square over an orange one, each 40px.</p>
+</header>
+
+<section>
+  <h2>Too few: repeated</h2>
+  <p><q>If a coordinating list property has too few values specified, its value list is repeated to add more used
+  values.</q></p>
+  <figure>
+    <div class="pr-stage bg" style="background-position: 20px 20px"></div>
+    <figcaption><code>background-position: 20px 20px</code> for both: only blue shows, over orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage bg" style="background-position: 20px 20px, 60px 30px; background-size: 40px 40px, 80px 40px, 20px 20px"></div>
+    <figcaption>Two positions, and three sizes: blue at 20,20, 40px; orange at 60,30, 80px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Too many: not used</h2>
+  <p><q>If a coordinating list property has too many values specified, excess values at the end of its list are not
+  used.</q></p>
+  <figure>
+    <div class="pr-stage bg" style="background-position: 0 0, 50px 20px, 120px 40px; background-repeat: no-repeat, no-repeat, repeat"></div>
+    <figcaption>Three positions and repeats for two images: blue at the corner, orange at 50,20, and nothing at
+    120,40 or repeated.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage bg" style="background-position: 20px 0px, 120px 40px; background-repeat: repeat-x"></div>
+    <figcaption>One <code>repeat-x</code>, repeated for both: a blue band across the top and an orange one across the
+    bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

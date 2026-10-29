@@ -1,0 +1,44 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-logical-1/#intro 1 Introduction: no page; it is not normative, and its blockquote example is what 4.2, 4.4 and 4.5.4 show
+# css-logical-1/#values 1.1 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+# css-logical-1/#directional-keywords 2 Flow-Relative Values: block-start, block-end, inline-start, inline-end: no page; it introduces the keywords, which 2.1 to 2.3 show
+css-logical-1/#caption-side 2.1 Logical Values for the caption-side Property
+    caption-side.html
+css-logical-1/#float-clear 2.2 Flow-Relative Values for the float and clear Properties
+    float-inline.html
+    clear-inline.html
+css-logical-1/#text-align 2.3 Flow-Relative Values for the text-align Property
+    text-align-start-end.html
+# css-logical-1/#page 3 Flow-Relative Page Classifications: no page; recto and verso, and :recto and :verso, act only in paged media, which a page on a screen cannot show
+css-logical-1/#box 4 Flow-Relative Box Model Properties
+    logical-cascade.html
+    logical-inheritance.html
+css-logical-1/#dimension-properties 4.1 Logical Height and Logical Width: the block-size/inline-size, min-block-size/min-inline-size, and max-block-size/max-inline-size properties
+    logical-sizes.html
+    logical-min-max.html
+css-logical-1/#margin-properties 4.2 Flow-Relative Margins: the margin-block-start, margin-block-end, margin-inline-start, margin-inline-end properties and margin-block and margin-inline shorthands
+    margin-logical.html
+    margin-logical-shorthands.html
+css-logical-1/#position-properties 4.3 Flow-Relative Offsets: the inset-block-start, inset-block-end, inset-inline-start, inset-inline-end properties and inset-block, inset-inline, and inset shorthands
+    inset-logical.html
+    inset-shorthands.html
+css-logical-1/#padding-properties 4.4 Flow-Relative Padding: the padding-block-start, padding-block-end, padding-inline-start, padding-inline-end properties and padding-block and padding-inline shorthands
+    padding-logical.html
+    padding-logical-shorthands.html
+# css-logical-1/#border-properties 4.5 Flow-Relative Borders: no page; it introduces 4.5.1 to 4.5.4
+css-logical-1/#border-width 4.5.1 Flow-Relative Border Widths: the border-block-start-width, border-block-end-width, border-inline-start-width, border-inline-end-width properties and border-block-width and border-inline-width shorthands
+    border-logical-width.html
+css-logical-1/#border-style 4.5.2 Flow-Relative Border Styles: the border-block-start-style, border-block-end-style, border-inline-start-style, border-inline-end-style properties and border-block-style and border-inline-style shorthands
+    border-logical-style.html
+css-logical-1/#border-color 4.5.3 Flow-Relative Border Colors: the border-block-start-color, border-block-end-color, border-inline-start-color, border-inline-end-color properties and border-block-color and border-inline-color shorthands
+    border-logical-color.html
+css-logical-1/#border-shorthands 4.5.4 Flow-Relative Border Shorthands: the border-block-start, border-block-end, border-inline-start, border-inline-end properties and border-block and border-inline shorthands
+    border-logical-shorthands.html
+css-logical-1/#border-radius-properties 4.6 Flow-Relative Corner Rounding: the border-start-start-radius, border-start-end-radius, border-end-start-radius, border-end-end-radius properties
+    border-logical-radius.html
+css-logical-1/#logical-shorthand-keyword 4.7 Four-Directional Shorthand Properties: the margin, padding, border-width, border-style, and border-color shorthands
+    logical-keyword.html
+# css-logical-1/#acknowledgements 5 Acknowledgements: no page; nothing to see
+# css-logical-1/#changes 6 Changes: no page; it lists changes, among them that the flow-relative values of resize moved to CSS UI 4

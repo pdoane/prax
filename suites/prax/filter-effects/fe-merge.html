@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feMerge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden=true>
+  <filter id=blue-top filterUnits="userSpaceOnUse" x=0 y=0 width=200 height=80 primitiveUnits="userSpaceOnUse">
+    <feFlood x=40 y=20 width=80 height=40 flood-color="#d68a3c" result=orange />
+    <feFlood x=80 y=20 width=80 height=40 flood-color="#4f81bd" result=blue />
+    <feMerge><feMergeNode in=orange /><feMergeNode in=blue /></feMerge>
+  </filter>
+  <filter id=orange-top filterUnits="userSpaceOnUse" x=0 y=0 width=200 height=80 primitiveUnits="userSpaceOnUse">
+    <feFlood x=40 y=20 width=80 height=40 flood-color="#d68a3c" result=orange />
+    <feFlood x=80 y=20 width=80 height=40 flood-color="#4f81bd" result=blue />
+    <feMerge><feMergeNode in=blue /><feMergeNode in=orange /></feMerge>
+  </filter>
+  <filter id=half-over filterUnits="userSpaceOnUse" x=0 y=0 width=200 height=80 primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood x=40 y=20 width=80 height=40 flood-color="#d68a3c" result=orange />
+    <feFlood x=80 y=20 width=80 height=40 flood-color="#4f81bd" flood-opacity="0.5" result=blue />
+    <feMerge><feMergeNode in=orange /><feMergeNode in=blue /></feMerge>
+  </filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.16 Filter primitive feMerge</div>
+  <h1>feMerge</h1>
+  <p class=pr-lede><q>This filter primitive composites input image layers on top of each other using the over operator
+  with Input1 (corresponding to the first feMergeNode child element) on the bottom and the last specified input,
+  InputN (corresponding to the last feMergeNode child element), on top.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feMergeElement">Filter Effects 1 §9.16</a></span>
+  Each stage is an SVG 200 by 80. Its filter floods orange from x 40 to 120 and blue from x 80 to 160, both from y 20
+  to 60, and merges the two.</p>
+</header>
+
+<section>
+  <h2>The last on top</h2>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect width=200 height=80 fill=none filter="url(#blue-top)"/></svg></div>
+    <figcaption>Orange, then blue: blue over the overlap, x 80 to 120; orange from 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect width=200 height=80 fill=none filter="url(#orange-top)"/></svg></div>
+    <figcaption>Blue, then orange: orange over the overlap, x 40 to 120; blue from 120 to 160.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Over</h2>
+  <p>The blue flood at half opacity, merged over the orange, in sRGB (<code>color-interpolation-filters</code>): half
+  of each over the overlap, <code>#93867d</code>, as the swatch below it.</p>
+  <figure>
+    <div class=pr-stage><svg width=200 height=80><rect width=200 height=80 fill=none filter="url(#half-over)"/><rect x=90 y=62 width=20 height=16 fill="#93867d"/></svg></div>
+    <figcaption>Orange from 40 to 80, the mix from 80 to 120, light blue from 120 to 160.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

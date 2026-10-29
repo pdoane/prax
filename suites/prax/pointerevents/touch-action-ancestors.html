@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>touch-action up to the scroller</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller .content { width: 500px; height: 300px; padding: 10px; }
+  .pan-y { touch-action: pan-y; padding: 6px; width: 220px; background: #f6d7b4; border: 1px solid #9c5f22; }
+  .pan-x { touch-action: pan-x; height: 30px; padding: 0 6px; line-height: 30px; background: #b9cde6;
+           border: 1px solid #2c5a8f; }
+  .turned { touch-action: pan-x; width: 160px; height: 40px; margin: 40px 0 0 20px; transform: rotate(90deg);
+            padding: 0 6px; line-height: 40px; background: #b9cde6; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.2 Determining supported direct manipulation behavior</div>
+  <h1>touch-action up to the scroller</h1>
+  <p class=pr-lede><q>When a user interacts with an element using a direct manipulation pointer (such as touch or stylus
+  on a touchscreen), the effect of that input is determined by the value of the touch-action property, and the default
+  direct manipulation behaviors of the element and its ancestors</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">Pointer Events §7.2</a></span></p>
+</header>
+<section>
+  <h2>pan-x inside pan-y</h2>
+  <p><q>A direct manipulation interaction for panning is supported if it conforms to the touch-action property of each
+  element between the hit tested element and its nearest inclusive ancestor that is a scroll container (as defined in
+  [CSS-OVERFLOW-3]).</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">§7.2</a></span>
+  Both figures need a touch screen; their boxes scroll both ways.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller><div class=content>
+        <div class=pan-y>pan-y<div class=pan-x>pan-x, inside</div></div>
+      </div></div>
+    </div>
+    <figcaption>Drag on the orange, <code>pan-y</code>, edge: the box scrolls up and down only. Drag on the blue
+    <code>pan-x</code> inside it, any way: the box does not scroll, since no direction conforms to both.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>In the element's coordinate space</h2>
+  <p><q>A direct manipulation interaction for panning and zooming conforms to an element's touch-action if the behavior
+  is allowed in the coordinate space of the element.</q> <q>for example, the X axis of an element rotated by 90 degrees
+  with respect to the screen will be parallel to the Y-axis of the screen coordinate.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#determining-supported-direct-manipulation-behavior">§7.2</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller><div class=content>
+        <div class=turned>pan-x, turned 90°</div>
+      </div></div>
+    </div>
+    <figcaption>The blue box has <code>touch-action: pan-x</code> and is turned on its side. Drag up and down on
+    it: the box scrolls up and down, along the turned box's X axis. Drag sideways: it does not.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

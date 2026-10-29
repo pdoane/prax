@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The div element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+  .t div { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.16 The div element</div>
+  <h1>The div element</h1>
+  <p class=pr-lede><q>The div element has no special meaning at all. It represents its children.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-div-element">HTML §4.4.16</a></span></p>
+</header>
+<section>
+  <h2>A block</h2>
+  <p>The user agent's style sheet makes it a block. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage t">Before<div>A div</div>After</div>
+    <figcaption>Three lines: "Before", the tinted div across the stage's width, and "After".</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>align</h2>
+  <p>The obsolete align attribute: <q>The center element, and the div element when it has an align attribute whose
+  value is an ASCII case-insensitive match for either the string "center" or the string "middle", are expected to
+  center text within themselves, as if they had their 'text-align' property set to 'center' in a presentational hint,
+  and to align descendants to the center.</q> Likewise left, right and justify. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage t"><div align=center>center</div><div align=right>right</div><div align=center><div style="width: 100px">a block</div></div></div>
+    <figcaption>"center" centered, "right" at the right, and, in a centered div, a block 100px wide centered, its
+    text centered in it.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

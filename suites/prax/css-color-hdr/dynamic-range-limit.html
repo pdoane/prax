@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dynamic-range-limit</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 3.1 The dynamic-range-limit property</div>
+  <h1>dynamic-range-limit</h1>
+  <p class=pr-lede><q>The highest luminance color that is displayed is the same as HDR Reference White, i.e. the CSS color white.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#the-dynamic-range-limit-property">CSS Color HDR 1
+  §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The three values, on an HDR image</h2>
+  <p>Each image is four gray steps encoded in PQ, at 100, 500, 1,000 and 5,000 cd/m², about 0.5, 2.5, 4.9 and 25 times
+  reference white, under a white bar.</p>
+  <figure>
+    <div class=pr-stage><div class=sw style="width: 160px; height: 10px; background: white"></div><img class=steps alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png" style="dynamic-range-limit: no-limit"></div>
+    <figcaption><code>no-limit</code>, the initial value: an HDR display shows the last three steps brighter than the
+    bar, each brighter than the one before, as far as its headroom reaches.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=sw style="width: 160px; height: 10px; background: white"></div><img class=steps alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png" style="dynamic-range-limit: standard"></div>
+    <figcaption><code>standard</code>: no step is brighter than the bar. <span class=pr-flag>Firefox</span> does not
+    parse the property, and draws the steps as <code>no-limit</code> does.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=sw style="width: 160px; height: 10px; background: white"></div><img class=steps alt="" src="../../../third_party/wpt/html/canvas/element/global-hdr-headroom/resources/pq-clli_none-mdcv_none.png" style="dynamic-range-limit: constrained"></div>
+    <figcaption><code>constrained</code>: the steps reach <q>somewhat greater than HDR Reference White</q>, short of
+    <code>no-limit</code>. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not parse the
+    value, and draw the steps as <code>no-limit</code> does.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

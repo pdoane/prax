@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative properties inherit from their namesakes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4 Flow-Relative Box Model Properties, inheritance</div>
+  <h1>Flow-relative properties inherit from their namesakes</h1>
+  <p class=pr-lede><q>Inheritance of each property is from its corresponding property on the parent.</q> <q>Unless otherwise specified, shorthand properties that encompass both logical and physical longhands (such as the 'all' shorthand) set their physical longhands last.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#box">CSS Logical Properties and Values 1 §4</a></span> Whether they inherit so is an open issue (#3029). Each stage's dashed <code>ltr</code> parent has <code>margin-inline-start: 40px</code> and holds B, <code>rtl</code>.</p>
+</header>
+
+<section>
+  <h2>From the namesake, not the same side</h2>
+  <p><q>although the inline-start margin of an rtl box is its right margin, 'margin-inline-start' on this box will inherit the 'margin-inline-start' of an ltr parent even though that happens to be the parent’s left margin.</q></p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-parent style="margin-inline-start: 40px"><div class="pr-b" dir=rtl style="margin-inline-start: inherit">B</div></div></div></div>
+    <figcaption>B with <code>margin-inline-start: inherit</code>: 40px at its inline start, the right. Browsers inherit by side: none.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-parent style="margin-inline-start: 40px"><div class="pr-b" dir=rtl style="margin-left: inherit">B</div></div></div></div>
+    <figcaption>B with <code>margin-left: inherit</code>: 40px at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>all sets the physical longhands last</h2>
+  <p><q>For example, all: inherit will set all of the 'margin' properties to inherit, but since the physical longhands are set last, the child's margins will inherit from their physical counterparts in the parent.</q> B stays <code>rtl</code>, as <code>all</code> leaves <code>direction</code> alone, and takes the parent's tint and outline.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=pr-margin-area><div class=pr-parent style="margin-inline-start: 40px"><div class="pr-b" dir=rtl style="all: inherit">B</div></div></div></div>
+    <figcaption>B with <code>all: inherit</code>: 40px at the left, from the parent's <code>margin-left</code>; none at the right.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative border colors</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .b { height: 40px; width: 80px; border: 6px solid #2c5a8f; background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 4.5.3 Flow-Relative Border Colors</div>
+  <h1>Flow-relative border colors</h1>
+  <p class=pr-lede><q>These properties correspond to the 'border-top-color', 'border-bottom-color', 'border-left-color', and 'border-right-color' properties. The mapping depends on the element's 'writing-mode', 'direction', and 'text-orientation'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#border-color">CSS Logical Properties and Values 1 §4.5.3</a></span> Each box is 80 by 40px with a 6px solid blue border, in the stage's writing mode.</p>
+</header>
+
+<section>
+  <h2>The longhands</h2>
+  <p>Each box has <code>border-block-start-color</code> orange and <code>border-inline-start-color</code> purple.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-start-color: #d68a3c; border-inline-start-color: #8e44ad"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: orange on top, purple at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-start-color: #d68a3c; border-inline-start-color: #8e44ad"></div></div>
+    <figcaption><code>rtl</code>: orange on top, purple at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-start-color: #d68a3c; border-inline-start-color: #8e44ad"></div></div>
+    <figcaption><code>vertical-rl</code>: orange at the right, purple on top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>border-block-color and border-inline-color</h2>
+  <p>Each box has <code>border-block-color</code> orange then green, and <code>border-inline-color</code> purple then blue.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class=b style="border-block-color: #d68a3c #6aa36a; border-inline-color: #8e44ad #2c5a8f"></div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: orange on top, green below, purple at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class=b style="border-block-color: #d68a3c #6aa36a; border-inline-color: #8e44ad #2c5a8f"></div></div>
+    <figcaption><code>rtl</code>: orange on top, green below, purple at the right.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class=b style="border-block-color: #d68a3c #6aa36a; border-inline-color: #8e44ad #2c5a8f"></div></div>
+    <figcaption><code>vertical-rl</code>: orange at the right, green at the left, purple on top.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

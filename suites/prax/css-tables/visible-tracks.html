@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Collapsed tracks take no room</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 30px; height: 20px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.11 Positioning of cells, captions and other internal table boxes, visible tracks</div>
+  <h1>Collapsed tracks take no room</h1>
+  <p class=pr-lede><q>For the purpose of this algorithm, a column or row is considered a visible track if neither its
+  corresponding table-track nor its table-track-group parent (if any) have 'visibility' set to collapse.</q> Positions
+  and sizes count only visible tracks, and the spacing between them. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#bounding-box-assignment">CSS Table 3 §3.11</a></span>
+  The draft still carries the issue <a href="https://github.com/w3c/csswg-drafts/issues/478">csswg-drafts#478</a>,
+  but it is closed, resolved that cells spanning collapsed tracks are clipped to their resulting bounds. Grey tables have <code>border-spacing: 10px</code>; cells are 30 by 20,
+  blue, orange and green by column.</p>
+</header>
+
+<section>
+  <h2>Rows and columns</h2>
+  <figure>
+    <div class=pr-stage><table><tr><td></td><td></td><td></td></tr><tr style="visibility: collapse"><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>The middle of three rows collapsed: two rows remain, and the table is 70px tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><col><col style="visibility: collapse"><col><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>The orange column collapsed: blue and green remain, and the table is 90px wide. <span class=pr-flag>Safari</span> keeps the
+    column: 130px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><colgroup style="visibility: collapse"><col><col></colgroup><col><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>A group of the first two columns collapsed: green alone, 50px wide. <span class=pr-flag>Safari</span> keeps
+    them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

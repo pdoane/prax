@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image: an SVG's aspect ratio</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.3 The ‘image’ element</div>
+  <h1>image: an SVG's aspect ratio</h1>
+  <p class=pr-lede><q>The aspect ratio to use when evaluating the ‘preserveAspectRatio’ attribute is defined by the
+  intrinsic aspect ratio of the referenced content.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#ImageElement">SVG 2 §12.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> of an SVG at 20, 10, 120 by 40, outlined dashed grey.</p>
+</header>
+
+<section>
+  <h2>An SVG image</h2>
+  <p><q>When the referenced image is an SVG, the image-rendering rectangle defines the SVG viewport used for rendering
+  that SVG.</q> The flag is an SVG file 40 by 20 with a <code>viewBox</code> of the same.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="20" y="10" width="120" height="40" preserveAspectRatio="xMaxYMid meet" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMaxYMid meet</code>: 80 by 40 at the right, from 60 to 140. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Centered, 40 to 120, as the SVG's own <code>xMidYMid meet</code> would.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>none</code>: stretched over 120 by 40, the seam at x 80.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.svg" x="20" y="10" width="120" height="40" preserveAspectRatio="xMidYMax slice" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMidYMax slice</code>: 120 by 60 to the bottom, cut at 10: blue and orange 10 tall, green and
+    purple 30. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 80 by 40, centered.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No intrinsic aspect ratio</h2>
+  <p><q>Where the embedded image does not have an intrinsic aspect ratio (e.g. an SVG file with neither ‘viewBox’
+  attribute nor explicit dimensions for the outermost svg element) the ‘preserveAspectRatio’ attribute is ignored;
+  the embedded image is drawn to fill the positioning rectangle</q>. The SVG has neither; it fills its left half
+  blue and puts an orange circle of radius 10 at its center.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='50%' height='100%' fill='%234f81bd'/><circle cx='50%' cy='50%' r='10' fill='%23d68a3c'/></svg>" x="20" y="10" width="120" height="40" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption>Its viewport is the rectangle: blue from 20 to 80, the circle centered at 80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='50%' height='100%' fill='%234f81bd'/><circle cx='50%' cy='50%' r='10' fill='%23d68a3c'/></svg>" x="20" y="10" width="120" height="40" preserveAspectRatio="xMinYMin meet" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMinYMin meet</code>, ignored: the same, blue from 20 to 80, the circle at 80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='50%' height='100%' fill='%234f81bd'/><circle cx='50%' cy='50%' r='10' fill='%23d68a3c'/></svg>" x="20" y="10" width="120" height="40" preserveAspectRatio="xMaxYMax slice" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>xMaxYMax slice</code>, ignored: the same again.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

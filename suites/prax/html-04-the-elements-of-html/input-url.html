@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>URL fields</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.4 URL state (type=url)</div>
+  <h1>URL fields</h1>
+  <p class=pr-lede><q>The input element represents a control for editing a single absolute URL given in the element's
+  value.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#url-state-(type=url)">HTML §4.10.5.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>An absolute URL, or nothing</h2>
+  <p><q>While the value of the element is neither the empty string nor a valid absolute URL, the element is suffering
+  from a type mismatch.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#url-state-(type=url)">§4.10.5.1.4</a></span>
+  Each field is outlined green while it is valid and red while it is not (<code>:valid</code>,
+  <code>:invalid</code>).</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=url value="https://example.com/" size=16></div>
+        <div><input type=url value="mailto:a@example.com" size=16></div>
+        <div><input type=url value="example.com" size=16></div>
+        <div><input type=url value="" size=16></div>
+      </div>
+    </div>
+    <figcaption>Green, green, red, green: an absolute URL of any scheme, then a relative one, then empty. Type
+    <code>https://</code> before "example.com": green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=url value="   https://example.com/   " style="width: 180px; box-sizing: border-box; text-align: center; font-size: 12px"></div>
+      </div>
+    </div>
+    <figcaption><q>Strip newlines from the value, then strip leading and trailing ASCII whitespace from the value.</q>
+    The attribute's three spaces at each end are gone: the URL is centered in the field, and green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

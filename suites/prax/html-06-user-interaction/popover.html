@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The popover attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pop { font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.12 The popover attribute</div>
+  <h1>The popover attribute</h1>
+  <p class=pr-lede>With the popover attribute, <q>the element won't be rendered until it becomes shown, at which point it will be
+  rendered on top of other page content.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">HTML §6.12</a></span></p>
+</header>
+<section>
+  <h2>Hidden, then on top, in the middle of the window</h2>
+  <p>The Rendering section gives a popover not open <code>display: none</code>, and every popover <code>position:
+  fixed; inset: 0; width: fit-content; height: fit-content; margin: auto; border: solid; padding: 0.25em</code>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="position: relative; overflow: hidden">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target popovertarget=plain>show the popover</button>
+        <div class=pop popover id=plain>a popover, with the user agent's style</div>
+        <div class=pr-a style="position: relative; z-index: 2147483647; margin: 0 0 10px">A, z-index 2147483647</div>
+      </div>
+    </div>
+    <figcaption>The popover, between the button and A, takes no room. Click the button: it is centered in the window,
+    fit to its text, with a medium border and 3px of padding, over A and its <code>z-index</code>, and not clipped by
+    this stage's <code>overflow</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Auto closes other autos; manual does not</h2>
+  <p><code>auto</code>: <q>Closes other popovers when opened; has light dismiss and responds to close requests.</q>
+  <code>manual</code>: <q>Does not close other popovers; does not light dismiss or respond to close requests.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute">§6.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=show-autos>show auto 1, then auto 2</button>
+        <button class=pr-target id=show-manuals>toggle manual 1, then manual 2</button>
+      </div>
+      <ol class=pr-log data-log="toggle" data-fields="target newState" data-lines=2 data-on=document></ol>
+    </div>
+    <figcaption>Click the first button: only <code>auto2</code> is open, showing it having closed <code>auto1</code>.
+    Click the second: both manuals open, top left and right, and the click outside <code>auto2</code> closes it. Esc
+    leaves the manuals; the second button again closes them.</figcaption>
+  </figure>
+</section>
+<div class=pop popover id=auto1>auto1</div>
+<div class=pop popover id=auto2>auto2</div>
+<div class=pop popover=manual id=manual1 style="margin: 10px auto auto 10px">manual1</div>
+<div class=pop popover=manual id=manual2 style="margin: 10px 10px auto auto">manual2</div>
+<script>
+  // Shows the two auto popovers one after the other, and toggles the two manual ones.
+  const byId = id => document.getElementById(id);
+  byId("show-autos").addEventListener("click", () => { byId("auto1").showPopover(); byId("auto2").showPopover(); });
+  byId("show-manuals").addEventListener("click", () => { byId("manual1").togglePopover(); byId("manual2").togglePopover(); });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

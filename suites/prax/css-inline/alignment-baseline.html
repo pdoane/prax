@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>alignment-baseline: each value</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .d .pr-stage { width: 112px; font: 72px/78px "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 2px; box-sizing: border-box; }
+  .d figure { margin-right: 10px; }
+  .d figcaption { max-width: 112px; }
+  .half { font-size: 36px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.2 Alignment Baseline Type: the alignment-baseline longhand</div>
+  <h1>alignment-baseline: each value</h1>
+  <p class=pr-lede><q>This property specifies the box’s alignment baseline: the baseline used to align the box
+  prior to applying its post-alignment shift (if applicable). Values have the same meanings as for
+  dominant-baseline</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#alignment-baseline-property">CSS Inline Layout 3 §4.2.2</a></span></p>
+</header>
+
+<section class=d>
+  <h2>Each &lt;baseline-metric&gt;</h2>
+  <p>Each stage is a block of 72px PR Baseline Diagnostic, whose baselines each have their own
+  height, holding a glyph and a 36px span of it with the caption's <code>alignment-baseline</code>.
+  Each glyph fills the band between two baselines: █ the ascent and descent, H hanging and
+  alphabetic, I ideographic over and under, x x-height and alphabetic, + math and alphabetic.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>█<span class=half style="alignment-baseline: text-bottom">█</span></div>
+    <figcaption><code>text-bottom</code>: the bottoms level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> By the span's line height: higher.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>H<span class=half style="alignment-baseline: alphabetic">H</span></div>
+    <figcaption><code>alphabetic</code>, as <code>baseline</code>: the bottoms level.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>I<span class=half style="alignment-baseline: ideographic">I</span></div>
+    <figcaption><code>ideographic</code>: the bottoms level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>x<span class=half style="alignment-baseline: middle">x</span></div>
+    <figcaption><code>middle</code>: the centers level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> The small x lower.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>I<span class=half style="alignment-baseline: central">I</span></div>
+    <figcaption><code>central</code>: the centers level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>+<span class=half style="alignment-baseline: mathematical">+</span></div>
+    <figcaption><code>mathematical</code>: the tops level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>H<span class=half style="alignment-baseline: hanging">H</span></div>
+    <figcaption><code>hanging</code>: the tops level. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> By alphabetic.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>█<span class=half style="alignment-baseline: text-top">█</span></div>
+    <figcaption><code>text-top</code>: the tops level. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> By alphabetic. <span class=pr-flag>Firefox</span> By the span's line height: lower.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

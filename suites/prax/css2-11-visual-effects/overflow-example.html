@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: the blockquote example</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .quote { font: 11px/14px -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  .quote div { width: 100px; height: 100px; border: thin solid red; }
+  .quote blockquote { width: 125px; height: 100px; margin-top: 50px; margin-left: 50px; border: thin dashed black; }
+  pre.pr-source { margin-right: 12px; font-size: 11px; }
+  .quote cite { display: block; text-align: right; border: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: the blockquote example</h1>
+  <p class=pr-lede><q>Consider the following example of a block quotation (&lt;blockquote&gt;) that is too big for its
+  containing block (established by a &lt;div&gt;).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The source</h2>
+  <pre class=pr-source>div { width : 100px; height: 100px;
+      border: thin solid red; }
+blockquote { width : 125px;
+      height : 100px;
+      margin-top: 50px;
+      margin-left: 50px;
+      border: thin dashed black }
+cite { display: block;
+       text-align : right;
+       border: none }</pre>
+  <pre class=pr-source>&lt;div&gt;
+&lt;blockquote&gt;
+&lt;p&gt;I didn't like the play,
+but then I saw it under
+adverse conditions - the
+curtain was up.&lt;/p&gt;
+&lt;cite&gt;- Groucho Marx&lt;/cite&gt;
+&lt;/blockquote&gt;
+&lt;/div&gt;</pre>
+</section>
+
+<section>
+  <h2>visible and hidden</h2>
+  <p><q>The initial value of 'overflow' is 'visible', so the &lt;blockquote&gt; would be formatted without
+  clipping.</q> <q>Setting 'overflow' to 'hidden' for the &lt;div&gt;, on the other hand, causes the
+  &lt;blockquote&gt; to be clipped by the containing &lt;div&gt;.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage quote" style="height: 170px"><div><blockquote><p>I didn't like the play, but then I saw it under adverse conditions - the curtain was up.</p><cite>- Groucho Marx</cite></blockquote></div></div>
+    <figcaption><code>visible</code>: the dashed blockquote starts 50px into the red div and runs out of its right and
+    bottom edges, whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage quote" style="height: 170px"><div style="overflow: hidden"><blockquote><p>I didn't like the play, but then I saw it under adverse conditions - the curtain was up.</p><cite>- Groucho Marx</cite></blockquote></div></div>
+    <figcaption><code>hidden</code> on the div: only the blockquote's top left 50 by 50 is seen, inside the red
+    border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

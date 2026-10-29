@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 3: the table wrapper box</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; background: #b9cde6; }
+  caption { background: #f6d7b4; }
+  .fl { float: left; width: 60px; height: 60px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, the table wrapper box</div>
+  <h1>Fixup, stage 3: the table wrapper box</h1>
+  <p class=pr-lede><q>An anonymous table-wrapper box must be generated around each table-root. Its display type is
+  inline-block for inline-table boxes and block for table boxes. The table wrapper box establishes a block formatting
+  context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span>
+  Cells are blue, captions orange; text is <code>.pr-measure</code>, 10px a letter.</p>
+</header>
+
+<section>
+  <h2>A formatting context, and the table's baseline</h2>
+  <p><q>The table-root box (not the table-wrapper box) is used when doing baseline vertical alignment for an
+  inline-table.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=fl></div><table><tr><td>aaa bbb ccc</table></div>
+    <figcaption>After a 60px float, a table: a formatting context, so it sits beside the float, 110px wide,
+    rather than over it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="padding-top: 20px"><span class=pr-baseline></span>x<table style="display: inline-table"><caption>cap</caption><tr><td>row</td></tr></table>x</div>
+    <figcaption>An inline-table with a caption on top: "row" sits on the line's baseline, beside the "x"s, and the
+    caption rises above it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its width, and percentages</h2>
+  <p><q>The width of the table-wrapper box is the border-edge width of the table grid box inside it. Percentages which
+  would depend on the 'width' and 'height' on the table-wrapper box's size are relative to the table-wrapper box's
+  containing block instead, not the table-wrapper box itself.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><table style="border: 10px solid #4f81bd"><caption>caption</caption><tr><td>aa</td></tr></table></div>
+    <figcaption>A table with a 10px border and a caption: the wrapper, and the caption, are as wide as the table's
+    border box, which the caption widens to 70px. <span class=pr-flag>Firefox</span> keeps the table 40px wide, and the
+    caption overhangs it by 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 50%"><caption>cap</caption><tr><td>aa</td></tr></table></div>
+    <figcaption><code>width: 50%</code>: half the 200px stage, the wrapper's containing block: 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

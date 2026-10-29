@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border shorthands: what is left out</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.4 Border shorthand properties</div>
+  <h1>Border shorthands: what is left out</h1>
+  <p class=pr-lede><code>border-top</code>, <code>-right</code>, <code>-bottom</code>, <code>-left</code> and <code>border</code> take a width, a style and a color, each at most once, in any order.</p>
+</header>
+
+<section>
+  <h2>What is left out is reset</h2>
+  <p>A shorthand sets all three of its longhands; one it does not name takes its initial value: a width of
+  <code>medium</code>, a style of <code>none</code> and a color of the element's <code>color</code>. The specification's
+  example is <code>H1 { border-bottom: thick solid red }</code>, which with the color left out takes the text's color.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#preshint">CSS 2 §6.4.4</a>, <a href="https://drafts.csswg.org/css2/#border-shorthand-properties">§8.5.4</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: thick solid red"></div></div>
+    <figcaption><code>border-bottom: thick solid red</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="color: #2c5a8f; border-bottom: thick solid"></div></div>
+    <figcaption><code>color: #2c5a8f; border-bottom: thick solid</code>: blue, the color.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: solid #c0392b"></div></div>
+    <figcaption><code>border-bottom: solid #c0392b</code>: medium, as <code>border-bottom-width</code> starts.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom: 10px #c0392b"></div></div>
+    <figcaption><code>border-bottom: 10px #c0392b</code>: no style, so no border at all.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-bottom-color: #c0392b; border-bottom: 10px solid"></div></div>
+    <figcaption><code>border-bottom-color: #c0392b; border-bottom: 10px solid</code>: the shorthand resets the color
+    to the element's <code>color</code>, the page's near-black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feDropShadow: a shadow of the input</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40. The source is an orange rectangle from x 20 to 80, y 5 to 25. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="sharp" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feDropShadow dx="20" dy="10" stdDeviation="0" flood-color="#8e44ad"/>
+  </filter>
+  <filter id="expanded" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="0"/>
+    <feOffset dx="20" dy="10" result="offsetblur"/>
+    <feFlood flood-color="#8e44ad"/>
+    <feComposite in2="offsetblur" operator="in"/>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="defaults" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feDropShadow/>
+  </filter>
+  <filter id="faint" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feDropShadow dx="20" dy="10" stdDeviation="0" flood-color="#8e44ad" flood-opacity="0.5"/>
+  </filter>
+  <filter id="disc" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feDropShadow dx="20" dy="10" stdDeviation="0" flood-color="#8e44ad"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.12 Filter primitive feDropShadow</div>
+  <h1>feDropShadow: a shadow of the input</h1>
+  <p class=pr-lede><q>This filter creates a drop shadow of the input image. It is a shorthand filter, and is defined
+  in terms of combinations of other filter primitives.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feDropShadowElement">Filter Effects 1 §9.12</a></span>
+  Each canvas, 160 by 40, holds an orange rectangle from x 20 to 80, y 5 to 25.</p>
+</header>
+
+<section>
+  <h2>The shorthand and the tree it stands for</h2>
+  <p>Blur the input's alpha, offset it by dx and dy, fill it with the flood color, then <q>merge the result of the
+  previous step</q> under the input. A <code>stdDeviation</code> of 0 leaves the blur out.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="20" y="5" width="60" height="20" fill="#d68a3c" filter="url(#sharp)"/></svg></div>
+    <figcaption><code>dx</code> 20, <code>dy</code> 10, purple: a sharp purple box x 40 to 100, y 15 to 35, under
+    the orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="20" y="5" width="60" height="20" fill="#d68a3c" filter="url(#expanded)"/></svg></div>
+    <figcaption>The five primitives it is equivalent to, written out: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="20" y="5" width="60" height="20" fill="#d68a3c" filter="url(#defaults)"/></svg></div>
+    <figcaption>No attributes: <code>dx</code>, <code>dy</code> and <code>stdDeviation</code> all 2, so a soft
+    black shadow just below and to the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The flood, and the input's alpha</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="20" y="5" width="60" height="20" fill="#d68a3c" filter="url(#faint)"/></svg></div>
+    <figcaption><code>flood-opacity</code> 0.5: the purple box at half opacity.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><circle cx="40" cy="15" r="10" fill="#d68a3c" filter="url(#disc)"/></svg></div>
+    <figcaption>A disc, 20 across at x 30 to 50: a purple disc of the same size, centered at x 60, y 25.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

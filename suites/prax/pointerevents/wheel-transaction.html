@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Wheel event transactions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 12 Wheel Events and interfaces</div>
+  <h1>Wheel event transactions</h1>
+  <p class=pr-lede><q>Wheels are devices that can be rotated in one or more spatial dimensions, and which can be associated with a
+  pointer device.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheel-events-and-interfaces">Pointer Events §12</a></span></p>
+</header>
+<section>
+  <h2>One target for a gesture</h2>
+  <p><q>A user agent MUST create a wheel event transaction when the first wheel event is fired, so that all
+  subsequent wheel events within a implementation-specific amount of time can be targetted at the same element.</q>
+  <q>If a series of wheel events targetted in a scrollable element start above a child element, later events for the
+  same user gesture may occur over the child element.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#wheel-events-and-interfaces">§12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=outer><p>Scroll from here, above the box. <span id=child
+        style="display: block; height: 40px; margin: 60px 0; background: #8cb6c0">a child box</span></p></div>
+      <ol class=pr-log data-log="wheel" data-fields="target deltaY" data-on="#outer" data-lines=4></ol>
+    </div>
+    <figcaption>Turn the wheel over the text above the blue box, and keep turning as the box passes under the
+    pointer: every wheel event's target is <code>outer</code>. Pause, then turn again over the box: the target is
+    <code>child</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

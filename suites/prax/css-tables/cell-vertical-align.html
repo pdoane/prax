@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vertical-align on cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/20px "PR Arimo"; }
+  table { border-spacing: 4px 0; }
+  td { padding: 0; vertical-align: baseline; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  .big { font-size: 32px; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.2 Row layout (first pass), vertical-align</div>
+  <h1>vertical-align on cells</h1>
+  <p class=pr-lede><q>The 'vertical-align' property of each table cell determines its alignment within the row.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#row-layout">CSS Table 3 §3.10.2</a></span>
+  In the first card, each row has a blue cell with a large "Hx" on 40px lines; the red line is its baseline.</p>
+</header>
+
+<section>
+  <h2>Values that do not apply</h2>
+  <p><q>Other values do not apply to cells; the cell is aligned at the baseline instead.</q> The orange cell holds a
+  small "x".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td class=big><span class=pr-baseline style="width: 100px; margin-right: -100px"></span>Hx</td><td>x</td></tr></table></div>
+    <figcaption><code>baseline</code>: "x" on the red line.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td class=big><span class=pr-baseline style="width: 100px; margin-right: -100px"></span>Hx</td><td style="vertical-align: super">x</td></tr></table></div>
+    <figcaption><code>super</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td class=big><span class=pr-baseline style="width: 100px; margin-right: -100px"></span>Hx</td><td style="vertical-align: text-bottom">x</td></tr></table></div>
+    <figcaption><code>text-bottom</code>: the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td class=big><span class=pr-baseline style="width: 100px; margin-right: -100px"></span>Hx</td><td style="vertical-align: 10px">x</td></tr></table></div>
+    <figcaption><code>10px</code>: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across the rows a cell spans</h2>
+  <p><q>top: The top of the cell box is aligned with the top of the first row it spans.</q> <q>bottom: The bottom of
+  the cell box is aligned with the bottom of the last row it spans.</q> <q>middle: The center of the cell is aligned
+  with the center of the rows it spans.</q> Blue cells "a", "b" and "c" make three rows; a green cell "z" spans
+  them.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td>a</td><td rowspan=3 style="vertical-align: top; background: #c3d08b">z</td></tr><tr><td>b</td></tr><tr><td>c</td></tr></table></div>
+    <figcaption><code>top</code>: "z" beside "a".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td>a</td><td rowspan=3 style="vertical-align: middle; background: #c3d08b">z</td></tr><tr><td>b</td></tr><tr><td>c</td></tr></table></div>
+    <figcaption><code>middle</code>: "z" beside "b".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table><tr><td>a</td><td rowspan=3 style="vertical-align: bottom; background: #c3d08b">z</td></tr><tr><td>b</td></tr><tr><td>c</td></tr></table></div>
+    <figcaption><code>bottom</code>: "z" beside "c".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

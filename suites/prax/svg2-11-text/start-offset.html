@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>startOffset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="line" d="M 20 40 H 140" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>startOffset</h1>
+  <p class=pr-lede><q>An offset from the start of the path for the initial current text position, calculated using
+  the user agent's distance along the path algorithm</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  Each stage is an SVG 160 by 60 holding "abcdef" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter,
+  on a path from 20, 40 to 140, 40, 120 long, dashed in red with its ends marked.</p>
+</header>
+
+<section>
+  <h2>A length, and a percentage</h2>
+  <p><q>If a percentage is given, then the ‘startOffset’ represents a percentage distance along the entire path.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50 M140 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" startOffset="30">abcdef</textPath></text></svg></div>
+    <figcaption><code>startOffset="30"</code>: "abcdef" from 50 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50 M140 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" startOffset="50%">abcdef</textPath></text></svg></div>
+    <figcaption><code>startOffset="50%"</code>, 60 along: "abcdef" from 80 to 140.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Off the path</h2>
+  <p><q>Negative values and values larger than the path length (e.g. 150%) are allowed.</q> <q>Any typographic
+  characters with mid-points that are not on the path are not rendered.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50 M140 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" startOffset="-30">abcdef</textPath></text></svg></div>
+    <figcaption><code>startOffset="-30"</code>: "abc" before the path's start, not drawn; "def" from 20 to
+    50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50 M140 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" startOffset="100">abcdef</textPath></text></svg></div>
+    <figcaption><code>startOffset="100"</code>: "ab" from 120 to 140; "cdef", past the end, not drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50 M140 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" startOffset="-50%">abcdefghijklmnop</textPath></text></svg></div>
+    <figcaption><code>startOffset="-50%"</code>, −60, on "abcdefghijklmnop": "ghijklmnop" from 20 to 120.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

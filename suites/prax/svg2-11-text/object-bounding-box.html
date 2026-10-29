@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The bounding box of text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 30px "PR Noto Sans Mono"; }
+</style>
+</head>
+<body>
+<svg class=pr-defs>
+  <defs>
+    <linearGradient id="halves"><stop offset="0.5" stop-color="#d68a3c" /><stop offset="0.5" stop-color="#2c5a8f" /></linearGradient>
+  </defs>
+</svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2 The ‘text’ and ‘tspan’ elements</div>
+  <h1>The bounding box of text</h1>
+  <p class=pr-lede><q>When one of these facilities is applied to text and keyword 'objectBoundingBox' is used (see
+  Object bounding box units) to specify a graphical effect relative to the "object bounding box", then the object
+  bounding box units are computed relative to the entire ‘text’ element in all cases, even when different effects
+  are applied to different ‘tspan’ or ‘textPath’ elements within the same ‘text’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextElement">SVG 2 §11.2</a></span></p>
+</header>
+
+<section>
+  <h2>A gradient on part of the text</h2>
+  <p>Each stage is an SVG 300 by 60 holding "abcdefgh" in 30px PR Noto Sans Mono, each letter 18 wide, from x 6 to
+  150, its middle at 78 dashed in red. The gradient is orange to its middle and blue after, in
+  <code>objectBoundingBox</code> units, the default.</p>
+  <figure>
+    <div class="pr-stage pr-wide"><svg width="300" height="60" fill="#8a93a1"><path d="M78 0V60" class=pr-baseline /><text class=big x="6" y="42" fill="url(#halves)">abcdefgh</text></svg></div>
+    <figcaption>The gradient on the <code>text</code>: "abcd" orange, "efgh" blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><svg width="300" height="60" fill="#8a93a1"><path d="M78 0V60" class=pr-baseline /><text class=big x="6" y="42">abcd<tspan fill="url(#halves)">efgh</tspan></text></svg></div>
+    <figcaption>The gradient on a <code>tspan</code> of "efgh", the rest grey: the box is the whole
+    <code>text</code>'s, so "efgh", right of its middle, all blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide"><svg width="300" height="60" fill="#8a93a1"><path d="M78 0V60" class=pr-baseline /><text class=big x="6" y="42" fill="none" stroke-width="1.5">abcd<tspan stroke="url(#halves)">efgh</tspan></text></svg></div>
+    <figcaption>The gradient as the stroke of the <code>tspan</code> of "efgh", nothing filled: "abcd" not drawn,
+    "efgh" outlined all in blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

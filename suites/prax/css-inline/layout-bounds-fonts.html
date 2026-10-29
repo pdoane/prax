@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout bounds: the fonts a line uses</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .fb { font: 20px "PR Arimo", "PR Noto Sans JP"; }
+
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 5.3 Calculating the Logical Height Contributions (“Layout Bounds”) of Inline Boxes, fonts</div>
+  <h1>Layout bounds: the fonts a line uses</h1>
+  <p class=pr-lede><q>When its computed line-height is normal, the layout bounds of an inline box encloses all its
+  glyphs, going from the highest A to the deepest D.</q> <q>When its computed line-height is not normal, its layout
+  bounds are derived solely from metrics of its first available font (ignoring glyphs from other fonts)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#inline-height">CSS Inline Layout 3 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>normal: the faces used on each line</h2>
+  <p>Each stage is 20px PR Arimo, then PR Noto Sans JP, whose ascent and descent are taller; its lines are in
+  orange spans. Arimo has no Japanese, so 漢 is Noto Sans JP's. Arimo's own lines at <code>normal</code> are
+  23px.</p>
+  <figure>
+    <div class="pr-stage fb" style="line-height: normal"><span class=pr-hl>Arimo</span><br><span class=pr-hl>漢 fallback</span><br><span class=pr-hl>Arimo</span></div>
+    <figcaption>The second line uses a Noto Sans JP glyph: it alone is taller, about 29px; the first and third stay
+    23px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage fb" style="line-height: 23px"><span class=pr-hl>Arimo</span><br><span class=pr-hl>漢 fallback</span><br><span class=pr-hl>Arimo</span></div>
+    <figcaption><code>line-height: 23px</code>: the fallback glyph is ignored; every line is 23px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Aligned by the first available font</h2>
+  <p>The layout bounds size the line; the box is aligned by its baseline set, which <q>derives from its first available
+  font regardless of whether the box actually contains any glyphs from that font.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-tables">§3.3</a></span>
+  Each stage is 13px Arimo on 20px lines; the orange span is 30px at <code>line-height: normal</code> with
+  <code>vertical-align: middle</code>.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="font-family: 'PR Arimo'"><span class=pr-baseline></span>Xx <span class=pr-hl style="font: 30px/normal 'PR Arimo', 'PR Noto Sans JP'; vertical-align: middle">Arimo</span></div>
+    <figcaption>Arimo alone.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="font-family: 'PR Arimo'"><span class=pr-baseline></span>Xx <span class=pr-hl style="font: 30px/normal 'PR Arimo', 'PR Noto Sans JP'; vertical-align: middle">漢 Arimo</span></div>
+    <figcaption>With a Noto Sans JP glyph: aligned by Arimo's baselines all the same, so "Arimo" is where it is
+    beside it. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Center its taller extent: about
+    2.6px lower.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

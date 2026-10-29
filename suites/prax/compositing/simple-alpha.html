@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Simple alpha compositing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .group { position: absolute; left: 10px; top: 10px; width: 80px; height: 40px; isolation: isolate; }
+  .b, .s { position: absolute; top: 0; width: 60px; height: 40px; }
+  .b { left: 0; }
+  .s { left: 20px; }
+  .sw { position: absolute; left: 110px; top: 10px; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 5.1 Simple alpha compositing</div>
+  <h1>Simple alpha compositing</h1>
+  <p class=pr-lede><q>The formula for simple alpha compositing is co = Cs x αs + Cb x αb x (1 - αs)</q>, and <q>the
+  formula for the resultant alpha of the composite is αo = αs + αb x (1 - αs)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#simplealphacompositing">Compositing and Blending 2 §5.1</a></span>
+  In each stage, in an isolated group, a source 60 by 40 at x 30 lies over a backdrop 60 by 40 at x 10, so they
+  overlap from x 30 to 70; the swatch at x 110 is the overlap's color by the formula, with its alpha, over the same
+  stage.</p>
+</header>
+
+<section>
+  <h2>A weighted average</h2>
+  <p><q>The contribution of the backdrop is further reduced based on the opacity of the graphic element.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s style="background: rgb(0 0 255 / 0.25)"></div></div><div class=sw style="background: rgb(75% 0% 25%)"></div></div>
+    <figcaption>Blue at 0.25 over opaque red: <code>co</code> = 0.25 blue + 0.75 red, <code>rgb(75% 0% 25%)</code>,
+    alpha 1.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s style="background: rgb(0 0 255 / 0.75)"></div></div><div class=sw style="background: rgb(25% 0% 75%)"></div></div>
+    <figcaption>Blue at 0.75: <code>rgb(25% 0% 75%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: #ff0000"></div><div class=s style="background: #0000ff"></div></div><div class=sw style="background: #0000ff"></div></div>
+    <figcaption><q>if the graphic element is fully opaque (αs=1) then no backdrop shows through</q>: blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The resultant alpha</h2>
+  <p>Over a translucent backdrop, the result is translucent too: <code>Co = co / αo</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(255 0 0 / 0.5)"></div><div class=s style="background: rgb(0 0 255 / 0.5)"></div></div><div class=sw style="background: rgb(33.33% 0% 66.67% / 0.75)"></div></div>
+    <figcaption>Both at 0.5: <code>αo</code> = 0.5 + 0.5 x 0.5 = 0.75, <code>Co</code> = <code>rgb(33% 0%
+    67%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(255 0 0 / 0.25)"></div><div class=s style="background: rgb(0 0 255 / 0.5)"></div></div><div class=sw style="background: rgb(20% 0% 80% / 0.625)"></div></div>
+    <figcaption>Red at 0.25 under blue at 0.5: <code>αo</code> = 0.625, <code>co</code> = <code>(0.125, 0,
+    0.5)</code>, <code>Co</code> = <code>rgb(20% 0% 80%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(255 0 0 / 0)"></div><div class=s style="background: rgb(0 0 255 / 0.5)"></div></div><div class=sw style="background: rgb(0% 0% 100% / 0.5)"></div></div>
+    <figcaption>A transparent backdrop: the source alone, blue at 0.5.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

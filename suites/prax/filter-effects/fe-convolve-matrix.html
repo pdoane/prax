@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feConvolveMatrix: a kernel over neighboring pixels</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40, and it computes in sRGB. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="half" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="1 1 1 1 1 1 1 1 1" divisor="18"/>
+  </filter>
+  <filter id="half-color" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="1 1 1 1 1 1 1 1 1" divisor="18" preserveAlpha="true"/>
+  </filter>
+  <filter id="bias" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="0 0 0 0 1 0 0 0 0" bias="0.5" preserveAlpha="true"/>
+  </filter>
+  <filter id="edges" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="0 -1 0 -1 4 -1 0 -1 0"/>
+  </filter>
+  <filter id="edges-none" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="0 -1 0 -1 4 -1 0 -1 0" edgeMode="none"/>
+  </filter>
+  <filter id="short" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40" color-interpolation-filters="sRGB">
+    <feConvolveMatrix kernelMatrix="0 -1 0 -1 4 -1"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.9 Filter primitive feConvolveMatrix</div>
+  <h1>feConvolveMatrix: a kernel over neighboring pixels</h1>
+  <p class=pr-lede><q>A convolution combines pixels in the input image with neighboring pixels to produce a resulting
+  image.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feConvolveMatrixElement">Filter Effects 1 §9.9</a></span>
+  Each canvas is 160 by 40, filtered in sRGB. A kernel works on pixels, so what it does at an edge is a pixel wide;
+  inside a flat color, every neighbor is the same, and the result can be read off a bar.</p>
+</header>
+
+<section>
+  <h2>The divisor, preserveAlpha and bias</h2>
+  <p>The source is an orange rectangle, <code>#d68a3c</code>, from x 20 to 140. <q>The initial value is the sum of
+  all values in kernelMatrix</q>; <q>A value of false indicates that the convolution will apply to all channels,
+  including the alpha channel.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect x="20" width="120" height="40" fill="#d68a3c" filter="url(#half)"/><rect x="20" y="45" width="120" height="10" fill="#d68a3c" fill-opacity="0.5"/></svg></div>
+    <figcaption>Nine ones, whose sum, 9, the divisor would be; divided by 18 instead: color and alpha halved,
+    so the orange at half opacity.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect x="20" width="120" height="40" fill="#d68a3c" filter="url(#half-color)"/><rect x="20" y="45" width="120" height="10" fill="#6b451e"/></svg></div>
+    <figcaption>The same with <code>preserveAlpha</code>: the color halved, <code>#6b451e</code>, still
+    opaque.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="55"><rect x="20" width="120" height="40" fill="#d68a3c" filter="url(#bias)"/><rect x="20" y="45" width="120" height="10" fill="#ffffbc"/></svg></div>
+    <figcaption>The center alone, <code>bias</code> 0.5, <code>preserveAlpha</code>: each channel raised by half,
+    <code>#ffffbc</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A kernel that sums to zero, and edgeMode</h2>
+  <p><q>if the sum is zero, then the divisor is set to 1.</q> <q>duplicate indicates that the input image is
+  extended along each of its borders as necessary by duplicating the color values at the given edge</q>; with
+  none, <q>the input image is extended with pixel values of zero</q>. Here the orange fills the canvas.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="#d68a3c" filter="url(#edges)"/></svg></div>
+    <figcaption>An edge kernel, <code>duplicate</code>: every neighbor alike, so nothing at all.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="#d68a3c" filter="url(#edges-none)"/></svg></div>
+    <figcaption><code>none</code>: zeros beyond the edge, so an orange line a pixel wide around the canvas.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="#d68a3c" filter="url(#short)"/></svg></div>
+    <figcaption>Six values for a 3 by 3 kernel: <q>the filter primitive acts as a pass through filter</q>, the orange
+    as it was. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

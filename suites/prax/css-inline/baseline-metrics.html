@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baselines and metrics</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .diag { font: 180px/1 "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 10px; box-sizing: border-box; }
+  .rule { display: inline-block; width: 200px; height: 0; margin: 0 -190px 0 -10px; border-top: 2px solid; opacity: 0.7; }
+  .r1 { color: #c0392b; } .r2 { color: #2c5a8f; } .r3 { color: #3f7a3f; } .r4 { color: #d68a3c; }
+  .key { font-weight: 600; }
+  .edge { display: inline-block; vertical-align: top; background: rgba(214, 138, 60, 0.5); outline: 1px solid #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 3.2 Baselines and Metrics</div>
+  <h1>Baselines and metrics</h1>
+  <p class=pr-lede><q>CSS uses the following text-based metrics as baselines for inline layout functions such as
+  alignment, box sizing, and initial letter layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-types">CSS Inline Layout 3 §3.2</a></span>
+  The stages use PR Baseline Diagnostic, whose "X" draws each of its baselines as a labeled line: its baseline table
+  has every one at its own height, its alphabetic baseline (<code>romn</code>) 0.05em above the glyphs' origin.
+</header>
+
+<section>
+  <h2>Baselines to align to</h2>
+  <p>Each colored line is a 2px rule with no other height, aligned by <code>vertical-align</code> to the baseline it
+  names. The alphabetic baseline is <q>Often represented as zero in font design coordinate systems; assigned to
+  romn in OpenType</q>; <code>text-top</code> and <code>text-bottom</code> are <q>the metric used as the line-over
+  edge</q> and line-under edge <q>of an inline’s content box per CSS2</q>, its ascent and descent.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage diag"><span class="rule r1" style="vertical-align: text-top"></span><span class="rule r2" style="vertical-align: middle"></span><span class="rule r3" style="vertical-align: alphabetic"></span><span class="rule r4" style="vertical-align: text-bottom"></span>X</div>
+    <figcaption><span class="key r1">text-top</span> on the ascent, <span class="key r2">middle</span> on x-middle,
+    halfway up to the x-height, <span class="key r3">alphabetic</span> on alphabetic, <span class="key
+    r4">text-bottom</span> on the descent. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Take the glyph origin, the dotted line 9px lower, as alphabetic, and so
+    put x-middle 4.5px low.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage diag"><span class="rule r1" style="vertical-align: hanging"></span><span class="rule r2" style="vertical-align: mathematical"></span><span class="rule r3" style="vertical-align: central"></span><span class="rule r4" style="vertical-align: ideographic"></span>X</div>
+    <figcaption><span class="key r1">hanging</span> on hanging, <span class="key r2">mathematical</span> on math,
+    <span class="key r3">central</span> on central, halfway between ideographic over and under, <span class="key
+    r4">ideographic</span> on ideographic under. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    All four on alphabetic.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

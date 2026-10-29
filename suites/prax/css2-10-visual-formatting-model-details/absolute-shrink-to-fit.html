@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: shrink-to-fit</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: shrink-to-fit</h1>
+  <p class=pr-lede>Rules 1 and 3 shrink a box to fit its content, within the room its offset leaves. Each stage is the
+  200px containing block of the orange box in it.</p>
+</header>
+
+<section>
+  <h2>The available width</h2>
+  <p><q>Thirdly, calculate the available width: this is found by solving for 'width' after setting 'left' (in case 1)
+  or 'right' (in case 3) to 0.</q> <q>Then the shrink-to-fit width is: min(max(preferred minimum width, available
+  width), preferred width).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 80px"><div class="pr-chip abs" style="right: 60px">Text too long for one line wraps.</div></div>
+    <figcaption>Rule 1, <code>right: 60px</code>: the available width is 140px with the border, so the box fills
+    from the left edge to 60px from the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 80px"><div class="pr-chip abs" style="left: 100px">Text too long for one line wraps.</div></div>
+    <figcaption>Rule 3, <code>left: 100px</code>: the available width is 100px with the border, so the box fills
+    from 100px to the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 40px"><div class="pr-chip abs" style="left: 100px">short</div></div>
+    <figcaption>Rule 3 with less text: the preferred width is less than available, and the box is as wide as the
+    word.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-text" style="height: 40px"><div class="pr-chip abs" style="left: 150px">unbreakable</div></div>
+    <figcaption>Rule 3, <code>left: 150px</code>: the word is wider than the 50px left, so the box is as wide as the
+    word, its preferred minimum, and overflows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

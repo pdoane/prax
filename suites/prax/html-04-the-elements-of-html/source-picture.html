@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The source element in a picture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.2 The source element</div>
+  <h1>The source element in a picture</h1>
+  <p class=pr-lede><q>The source element allows authors to specify multiple alternative source sets for img
+  elements</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-source-element">HTML §4.8.2</a></span>
+  The img's <code>src</code> is a blue image 80 by 40; each source offers an orange one, 160 by 80 at
+  <code>2x</code>, so 80 by 40 too.</p>
+</header>
+
+<section>
+  <h2>media: skipped where it does not match</h2>
+  <p><q>The user agent will skip to the next source element if the value does not match the environment.</q></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source media="(min-width: 1px)" srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption><code>media="(min-width: 1px)"</code> matches: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source media="(max-width: 1px)" srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption><code>media="(max-width: 1px)"</code> does not: the img's blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>type: skipped where the type is not supported</h2>
+  <p><q>The type attribute gives the type of the images in the source set, to allow the user agent to skip to the
+  next source element if it does not support the given type.</q></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source type="image/x-unknown" srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption><code>type="image/x-unknown"</code>: skipped, though the file is a PNG. The img's blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source type="image/png" srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption><code>type="image/png"</code>: orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The quotes property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .qt::before { content: open-quote; }
+  .qt::after { content: close-quote; }
+  .pairs { quotes: '"' '"' "'" "'"; }
+  .one-pair { quotes: "<" ">"; }
+  .no-quotes { quotes: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.3.1 Specifying quotes with the 'quotes' property</div>
+  <h1>The quotes property</h1>
+  <p class=pr-lede><q>The 'quotes' property specifies pairs of quotation marks for each level of embedded quotation.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes">CSS 2 §12.3</a></span> It takes <code>[&lt;string&gt; &lt;string&gt;]+ | none</code>; initial value
+  depends on the user agent, inherited, applies to all elements. Every span has <code>:before { content: open-quote
+  }</code> and <code>:after { content: close-quote }</code>.</p>
+</header>
+
+<section>
+  <h2>Pairs of strings</h2>
+  <p><q>The first (leftmost) pair represents the outermost level of quotation, the second pair the first level of
+  embedding, etc. The user agent must apply the appropriate pair of quotation marks according to the level of
+  embedding.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-specify">CSS 2 §12.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text pairs"><span class=qt>one <span class=qt>two</span> one</span></div>
+    <figcaption><code>quotes: '"' '"' "'" "'"</code>: "one 'two' one", straight double marks outside, single
+    inside.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text one-pair"><span class=qt>one</span></div>
+    <figcaption><code>quotes: "&lt;" "&gt;"</code>: one pair, "&lt;one&gt;".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>none, the initial value, and inheritance</h2>
+  <p><q>none: The 'open-quote' and 'close-quote' values of the 'content' property produce no quotation marks.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-specify">CSS 2 §12.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text no-quotes"><span class=qt>one</span></div>
+    <figcaption><code>quotes: none</code>: "one" with no marks.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><span class=qt>one <span class=qt>two</span> one</span></div>
+    <figcaption>No <code>quotes</code> set: the user agent's marks, which for English are usually curly double marks
+    outside and curly single marks inside. <span class="pr-flag pr-since">Since CSS 2</span> the initial value is
+    <code>auto</code>, marks for the language, next page.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text one-pair"><div><span class=qt>inherited</span></div></div>
+    <figcaption>The stage sets <code>quotes: "&lt;" "&gt;"</code>, and the span two levels in inherits it:
+    "&lt;inherited&gt;".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

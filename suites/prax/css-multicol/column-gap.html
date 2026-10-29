@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-gap in multicol</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 2; column-rule: 1px dashed #6b7381; }
+  .big { font-size: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4.1 Gutters Between Columns: the column-gap property</div>
+  <h1>column-gap in multicol</h1>
+  <p class=pr-lede><q>The column-gap property is defined in [CSS3-ALIGN].</q> <q>In a multi-column formatting context
+  the used value of normal for the column-gap property is 1em. This ensures columns are readable when the initial
+  values are used. If there is a column rule between columns, it will appear in the middle of the gap.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cg">CSS Multi-column Layout 1 §4.1</a></span>
+  The property is now defined in <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#column-row-gap">CSS Gaps 1 §2.1</a></span>,
+  whose pages show its percentages. Each stage has <code>columns: 2</code> and a dashed rule.</p>
+</header>
+
+<section>
+  <h2>normal is 1em</h2>
+  <figure>
+    <div class="pr-stage pr-measure">one two three four</div>
+    <figcaption><code>normal</code>, in 16.67px text: a gap of 16.67px, and columns of 91.67px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage big"><div class=pr-measure>one two</div><div class=pr-measure>three four</div></div>
+    <figcaption><code>normal</code> on a container whose font-size is 30px: a 30px gap, columns of 85px, the rule
+    at 100px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lengths</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-gap: 0">one two three four</div>
+    <figcaption><code>0</code>: columns of 100px, the rule at their meeting.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-gap: 60px">one two three four</div>
+    <figcaption><code>60px</code>: columns of 70px, from 0 and from 130px, the rule at 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

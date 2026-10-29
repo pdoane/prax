@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>element(): cycles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 30px; margin: 10px; isolation: isolate; background-repeat: no-repeat; }
+  .inner { width: 30px; height: 10px; margin: 10px; isolation: isolate; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.7.3 Cycle Detection</div>
+  <h1>element(): cycles</h1>
+  <p class=pr-lede><q>If the graph contains a cycle, any element() functions participating in the cycle are invalid
+  images.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#element-cycles">CSS Images 4 §2.7.3</a></span>
+  The graph's edges: <q>every element depends on its children</q>, and <q>for any element A with a property using the
+  element() function pointing to an element B, A depends on B</q>.</p>
+</header>
+
+<section>
+  <h2>Invalid images in a cycle</h2>
+  <p>Each dashed box, 60 by 30, has <code>background: element(#…), #6aa36a</code>, so an invalid image leaves it
+  green.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" id=self style="background: element(#self), #6aa36a"></div></div>
+    <figcaption>A box that names itself: green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" id=one style="background: element(#two), #6aa36a"></div><div class="box pr-ghost" id=two style="background: element(#one), #6aa36a"></div></div>
+    <figcaption>Two boxes that name each other: both green. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" id=parent style="background: #6aa36a"><div class="inner pr-ghost" style="background: element(#parent), #d68a3c"></div></div></div>
+    <figcaption>A child, 30 by 10, that names its green parent: plain orange inside the green. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No cycle</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" id=copied style="background: #4f81bd"></div><div class="box pr-ghost" style="background: element(#copied), #6aa36a"></div></div>
+    <figcaption>The second box names the blue first, which names nothing: blue too, a copy. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

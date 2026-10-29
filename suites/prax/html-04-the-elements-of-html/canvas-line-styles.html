@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line width and caps</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.4 Line styles</div>
+  <h1>Line width and caps</h1>
+  <p class=pr-lede>A stroke is <q>the edge of the areas that would be covered if a straight line of length equal to
+  style's lineWidth was swept along each subpath in path while being kept at an angle such that the line is orthogonal to
+  the path being swept, replacing each point with the end cap necessary to satisfy style's lineCap attribute</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#line-styles">HTML §4.12.5.1.4</a></span>
+  In each figure the path itself is drawn over its stroke as a thin red line.</p>
+</header>
+<section>
+  <h2>Width and caps</h2>
+  <p><q>The "butt" value means that no additional line cap is added. The "round" value means that a semi-circle with the
+  diameter equal to style's lineWidth width must additionally be placed on to the line coming out of each point. The
+  "square" value means that a rectangle with the length of style's lineWidth width and the width of half style's
+  lineWidth width</q> is added at each point.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=widths></canvas></div>
+    <figcaption>Lines from x 40 to 160 at y 20, 50 and 80, with <code>lineWidth</code> 2, 10 and 20: each centered on
+    its path, the last covering y 70 to 90.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=caps></canvas></div>
+    <figcaption>Width 20 from x 40 to 160: <code>butt</code> at y 20 ends at the path's ends; <code>round</code> at y 50
+    and <code>square</code> at y 80 reach 10 further, x 30 to 170, rounded and square.</figcaption>
+  </figure>
+</section>
+<script>
+  function path(context, points) {
+    context.beginPath();
+    context.moveTo(...points[0]);
+    for (const point of points.slice(1))
+      context.lineTo(...point);
+  }
+  function guide(context, points) {
+    context.save();
+    context.lineWidth = 1;
+    context.lineCap = "butt";
+    context.lineJoin = "miter";
+    context.strokeStyle = "#c0392b";
+    path(context, points);
+    context.stroke();
+    context.restore();
+  }
+  const draw = {
+    widths(context) {
+      context.strokeStyle = "#4f81bd";
+      for (const [y, width] of [[20, 2], [50, 10], [80, 20]]) {
+        context.lineWidth = width;
+        path(context, [[40, y], [160, y]]);
+        context.stroke();
+        guide(context, [[40, y], [160, y]]);
+      }
+    },
+    caps(context) {
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 20;
+      for (const [y, cap] of [[20, "butt"], [50, "round"], [80, "square"]]) {
+        context.lineCap = cap;
+        path(context, [[40, y], [160, y]]);
+        context.stroke();
+        guide(context, [[40, y], [160, y]]);
+      }
+    },
+    join(context, canvas) {
+      const points = [[20, 80], [50, 20], [80, 80]];
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 16;
+      context.lineJoin = canvas.dataset.join;
+      if (canvas.dataset.limit)
+        context.miterLimit = Number(canvas.dataset.limit);
+      path(context, points);
+      context.stroke();
+      guide(context, points);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

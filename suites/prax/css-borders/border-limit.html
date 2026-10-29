@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-limit: drawing part of a border</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 5.1 Partial Borders: the border-limit property</div>
+  <h1>border-limit: drawing part of a border</h1>
+  <p class=pr-lede><q>By default, the entire border is drawn. However, border rendering can be limited to only part of a border. The keyword specifies which part, and the length or percentage specifies how much.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-limit">CSS Borders and Box Decorations 4 §5.1</a></span> The section is <q>Not Ready For Implementation</q>. Each box is 100 by 40 inside a 10px border.</p>
+</header>
+
+<section>
+  <h2>sides and corners</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-limit: sides 50%"></div></div>
+    <figcaption><code>sides 50%</code>: the middle half of each side. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-limit: corners 20px"></div></div>
+    <figcaption><code>corners 20px</code>: each corner and 20px into the sides. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-radius: 20px; border-limit: corners"></div></div>
+    <figcaption><code>corners</code> with a 20px radius: only the curves. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One side's portion</h2>
+  <p><q>For the top and bottom (horizontal) sides, draws the entire side and corner. For the left and right (vertical) sides, draws the top/bottom portion, as specified.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-limit: left 40px"></div></div>
+    <figcaption><code>left 40px</code>: the left side whole; the top and bottom only their left 40px; nothing on the right. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-limit: top 20%"></div></div>
+    <figcaption><code>top 20%</code>: the top whole; the sides only their top 20%. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The whole border.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

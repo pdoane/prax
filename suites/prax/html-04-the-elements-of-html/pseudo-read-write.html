@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:read-only and :read-write</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows > *, .rows [contenteditable] > * { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; font-size: 12px; }
+  .rows div, .rows p { padding: 0 6px; line-height: 20px; background: var(--pr-plain); }
+  .rows [contenteditable] { padding: 6px 6px 0; }
+  .rows textarea { height: 24px; }
+  .rows :read-write { outline: 3px solid #3f9a3f; outline-offset: 1px; }
+  .rows :read-only { outline: 3px solid #d68a3c; outline-offset: 1px; }
+  .rows input[type=checkbox] { width: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:read-only and :read-write</h1>
+  <p class=pr-lede><code>:read-write</code> matches mutable inputs to which <code>readonly</code> applies, textareas
+  that are neither readonly nor disabled, and <q>elements that are editing hosts or editable and are neither input
+  elements nor textarea elements</q>. <q>The :read-only pseudo-class must match all other HTML elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Which the user can alter</h2>
+  <p>Outlines: green <code>:read-write</code>, orange <code>:read-only</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <input value="input">
+        <input value="input readonly" readonly>
+        <input value="input disabled" disabled>
+        <input type=checkbox>
+        <textarea>textarea</textarea>
+        <textarea readonly>textarea readonly</textarea>
+      </div>
+    </div>
+    <figcaption>Green, orange, orange; the checkbox orange, as <code>readonly</code> does not apply to it; then green,
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <div>a div</div>
+        <div contenteditable>an editing host<p>a p in it, editable</p></div>
+        <div contenteditable=false>contenteditable=false</div>
+      </div>
+    </div>
+    <figcaption>The plain <code>div</code> is orange. The editing host and the <code>p</code> in it are green: click
+    into either and type. The last is orange.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,171 @@
+00-supports-1.html
+00-supports-2.html
+00-supports-3.html
+# css-images-3/#intro 1 Introduction: no page; it introduces the module
+css-images-3/#placement 1.1 Module Interactions
+    image-contexts.html
+# css-images-3/#values 1.2 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+css-images-3/#image-values 2 Image Values: the <image> type
+    invalid-image.html
+# css-images-3/#url-notation 2.1 Image References: the url() notation: no page; that an image that cannot be shown is invalid is 2's, whose page shows it
+css-images-3/#ambiguous-urls 2.1.1 Ambiguous Reference-or-Image URLs
+    ambiguous-urls.html
+css-images-3/#url-metadata 2.1.2 Image Metadata
+    url-metadata.html
+css-images-3/#gradients 3 Gradients
+    gradient-box.html
+css-images-3/#linear-gradients 3.1 Linear Gradients: the linear-gradient() notation
+    linear-gradient.html
+css-images-3/#linear-gradient-syntax 3.1.1 linear-gradient() syntax
+    linear-gradient-direction.html
+    linear-gradient-corners.html
+    linear-gradient-line.html
+css-images-3/#linear-gradient-examples 3.1.2 Linear Gradient Examples
+    linear-gradient-examples.html
+# css-images-3/#radial-gradients 3.2 Radial Gradients: the radial-gradient() notation: no page; it introduces the subsections
+css-images-3/#radial-gradient-syntax 3.2.1 radial-gradient() Syntax
+    radial-gradient-shape.html
+    radial-gradient-extent.html
+    radial-gradient-extent-ellipse.html
+    radial-gradient-size.html
+css-images-3/#radial-color-stops 3.2.2 Placing Color Stops
+    radial-color-stops.html
+css-images-3/#degenerate-radials 3.2.3 Degenerate Radial Gradients
+    radial-degenerate.html
+css-images-3/#radial-gradient-examples 3.2.4 Radial Gradient Examples
+    radial-gradient-examples.html
+css-images-3/#repeating-gradients 3.3 Repeating Gradients: the repeating-linear-gradient() and repeating-radial-gradient() notations
+    repeating-gradients.html
+    repeating-average.html
+# css-images-3/#gradient-colors 3.4 Defining Gradient Color: no page; CSS Images 4's 3.5 restates it with color spaces, whose pages show it
+# css-images-3/#color-stop-syntax 3.4.1 Color Stop Lists: no page; CSS Images 4's 3.5.1 restates it, with two-position stops
+# css-images-3/#coloring-gradient-line 3.4.2 Coloring the Gradient Line: no page; CSS Images 4's 3.5.2 restates it, interpolating in Oklab where this level says premultiplied sRGB
+# css-images-3/#color-stop-fixup 3.4.3 Color Stop “Fixup”: no page; CSS Images 4's 3.5.3 restates it
+# css-images-3/#sizing 4 Sizing Images and Objects in CSS: no page; it introduces the subsections
+css-images-3/#sizing-terms 4.1 Object-Sizing Terminology
+    natural-dimensions.html
+css-images-3/#object-negotiation 4.2 CSS⇋Object Negotiation
+    object-negotiation.html
+# css-images-3/#concrete-size-resolution 4.3 Concrete Object Size Resolution: no page; it introduces 4.3.1 and 4.3.2
+css-images-3/#default-sizing 4.3.1 Default Sizing Algorithm
+    default-sizing.html
+css-images-3/#cover-contain 4.3.2 Cover and Contain Constraint Sizing
+    cover-contain.html
+css-images-3/#object-sizing-examples 4.4 Examples of CSS Object Sizing
+    object-sizing-examples.html
+# css-images-3/#the-object-fit 4.5 Sizing Objects: the object-fit property: no page; CSS Images 4's 5.1 restates it, with the scale-down flag
+css-images-3/#the-object-position 4.6 Positioning Objects: the object-position property
+    object-position.html
+# css-images-3/#image-processing 5 Image Processing: no page; it introduces the subsections
+css-images-3/#the-image-orientation 5.1 Orienting an Image on the Page: the image-orientation property
+    image-orientation.html
+    image-orientation-decorative.html
+css-images-3/#the-image-rendering 5.2 Determining How To Scale an Image: the image-rendering property
+    image-rendering.html
+# css-images-3/#interpolation 6 Interpolation: no page; CSS Images 4's 7 replaces it
+# css-images-3/#serialization 7 Serialization: no page; it is serialization
+# css-images-4/#intro 1 Introduction: no page; it introduces the level, a delta over level 3
+# css-images-4/#values 1.1 Value Definitions: no page; it defines the notation and the CSS-wide keywords
+# css-images-4/#image-values 2 2D Image Values: the <image> type: no page; as level 3's 2, whose page shows it, with the types that 2.4 to 2.7 add
+css-images-4/#image-file-formats 2.1 Image File Formats
+    image-file-formats.html
+# css-images-4/#url-notation 2.2 Image References: the url() notation: no page; no change from level 3
+# css-images-4/#fetching-images 2.3 Fetching External Images: no page; it defines a fetch, which draws nothing of its own
+css-images-4/#image-set-notation 2.4 Resolution/Type Negotiation: the image-set() notation
+    image-set.html
+    image-set-options.html
+css-images-4/#image-notation 2.5 Image Fallbacks and Annotations: the image() notation
+    image-color.html
+css-images-4/#cross-fade-function 2.6 Combining images: the cross-fade() notation
+    cross-fade.html
+css-images-4/#cross-fade-sizing 2.6.1 cross-fade() Sizing
+    cross-fade-sizing.html
+css-images-4/#cross-fade-painting 2.6.2 cross-fade() Painting
+    cross-fade-painting.html
+# css-images-4/#cross-fade-complex 2.6.3 Simplifying Complex cross-fade(): no page; it holds only issues about computed values
+css-images-4/#element-notation 2.7 Using Elements as Images: the element() notation
+    element-function.html
+    element-not-rendered.html
+css-images-4/#paint-sources 2.7.1 Paint Sources
+    paint-sources.html
+# css-images-4/#elementsources 2.7.2 Using Out-Of-Document Sources: the ElementSources interface: no page; it is object model
+css-images-4/#element-cycles 2.7.3 Cycle Detection
+    element-cycles.html
+# css-images-4/#gradients 3 Gradients: no page; as level 3's 3, whose page shows it, with conic gradients added
+css-images-4/#linear-gradients 3.1 Linear Gradients: the linear-gradient() notation
+    gradient-interpolation-method.html
+css-images-4/#color-interpolation 3.1.1 Effects of color space on interpolation: examples
+    color-interpolation-examples.html
+# css-images-4/#radial-gradients 3.2 Radial Gradients: the radial-gradient() notation: no page; it introduces 3.2.1 and 3.2.2
+css-images-4/#radial-color-interpolation 3.2.1 Adding <color-interpolation-method>
+    radial-gradient-color-space.html
+css-images-4/#radial-size 3.2.2 Expanding <radial-size>
+    radial-size-extended.html
+css-images-4/#conic-gradients 3.3 Conic Gradients: the conic-gradient() notation
+    conic-gradient.html
+css-images-4/#conic-gradient-syntax 3.3.1 conic-gradient() Syntax
+    conic-gradient-from-at.html
+css-images-4/#conic-color-stops 3.3.2 Placing Color Stops
+    conic-color-stops.html
+css-images-4/#conic-gradient-examples 3.3.3 Conic Gradient Examples
+    conic-gradient-examples.html
+css-images-4/#repeating-gradients 3.4 Repeating Gradients: the repeating-linear-gradient(), repeating-radial-gradient(), and repeating-conic-gradient() notations
+    repeating-conic-gradient.html
+# css-images-4/#gradient-colors 3.5 Defining Gradient Color: no page; it introduces color stops and transition hints, which 3.5.1 to 3.5.3 show
+css-images-4/#color-stop-syntax 3.5.1 Color Stop Lists
+    color-stop-positions.html
+css-images-4/#coloring-gradient-line 3.5.2 Coloring the Gradient Line
+    gradient-line-color.html
+    transition-hints.html
+css-images-4/#color-stop-fixup 3.5.3 Color Stop “Fixup”
+    color-stop-fixup.html
+css-images-4/#stripes 4 1D Image Values: the <image-1D> type and stripes() notation
+    stripes.html
+# css-images-4/#sizing 5 Sizing Images and Objects in CSS: no page; it introduces 5.1
+css-images-4/#the-object-fit 5.1 Sizing Objects: the object-fit property
+    object-fit.html
+    object-fit-scale-down.html
+    object-fit-svg.html
+# css-images-4/#image-processing 6 Image Processing: no page; it introduces 6.1
+css-images-4/#the-image-resolution 6.1 Overriding Image Resolutions: the image-resolution property
+    image-resolution.html
+# css-images-4/#interpolation 7 Interpolation: no page; it defines the progress t that 7.1 to 7.5 use
+css-images-4/#interpolating-images 7.1 Interpolating <image>
+    image-interpolation.html
+css-images-4/#interpolating-image-function 7.2 Interpolating image()
+    image-function-interpolation.html
+css-images-4/#interpolating-image-combinations 7.3 Interpolating cross-fade()
+    cross-fade-interpolation.html
+css-images-4/#interpolating-gradients 7.4 Interpolating <gradient>
+    gradient-interpolation.html
+    gradient-interpolation-radial.html
+    gradient-interpolation-fallbacks.html
+css-images-4/#interpolating-stripes 7.5 Interpolating stripes()
+    stripes-interpolation.html
+# css-images-4/#serialization 8 Serialization: no page; it is serialization
+# css-images-4/#deprecated A Deprecated Features and Aliases: no page; -webkit-image-set() is a parse-time alias
+# css-images-4/#privacy 9 Privacy Considerations: no page; no change from level 3
+# css-images-4/#security 10 Security Considerations: no page; no change from level 3
+# css-images-4/#changes 11 Changes: no page; it lists changes
+# css-images-4/#changes-20250930 11.1 Changes Since the 30 September 2025 Working Draft: no page; it lists changes
+# css-images-4/#changes-20230217 11.2 Changes Since the 17 February 2023 Working Draft: no page; it lists changes
+# css-images-4/#changes-20170413 11.3 Changes Since the 13 April 2017 Working Draft: no page; it lists changes
+# css-images-4/#changes-20120911 11.4 Changes Since the 11 September 2012 Working Draft: no page; it lists changes
+# css-images-4/#changes-3 11.5 Changes Since Level 3: no page; it lists the additions, which the pages above show
+# css-images-5/#intro 1 Introduction: no page; it says the level is a delta over level 4
+# css-images-5/#image-values 2 2D Image Values: the <image> type: no page; the section has no text of its own
+css-images-5/#image-notation 2.1 Image Fallbacks and Annotations: the image() notation
+    image-notation.html
+css-images-5/#image-fallbacks 2.1.1 Image Fallbacks
+    image-fallbacks.html
+css-images-5/#image-fragments 2.1.2 Image Fragments
+    image-fragments.html
+# css-images-5/#color-images 2.1.3 Solid-color Images: no page; it restates CSS Images 4's 2.5, whose page image-color.html shows it
+css-images-5/#bidi-images 2.1.4 Bidi-sensitive Images
+    bidi-images.html
+# css-images-5/#sizing 3 Sizing Images and Objects in CSS: no page; it introduces 3.1
+css-images-5/#the-object-view-box 3.1 Setting The Viewbox: the object-view-box property
+    object-view-box.html
+    object-view-box-fit.html
+# css-images-5/#privacy 4 Privacy Considerations: no page; nothing to see
+# css-images-5/#security 5 Security Considerations: no page; nothing to see

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Blend in place, then composite</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .group { position: absolute; left: 10px; top: 10px; width: 80px; height: 40px; isolation: isolate; }
+  .b { position: absolute; left: 0; top: 0; width: 80px; height: 40px; }
+  .s { position: absolute; left: 20px; top: 0; width: 40px; height: 40px; background: #ff0000; mix-blend-mode: multiply; }
+  .sw { position: absolute; left: 110px; top: 10px; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 6 General Formula for Compositing and Blending</div>
+  <h1>Blend in place, then composite</h1>
+  <p class=pr-lede><q>Apply the blend in place</q>: <code>Cs = (1 - αb) x Cs + αb x B(Cb, Cs)</code>;
+  <q>Composite</q>: <code>Co = αs x Fa x Cs + αb x Fb x Cb</code>. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#generalformula">Compositing and Blending 2 §6</a></span>
+  In each stage, in an isolated group, a red 40px square with <code>mix-blend-mode: multiply</code> lies over a lime
+  backdrop 80 by 40 of the alpha given, and composites with source-over (<code>Fa = 1</code>, <code>Fb = 1 -
+  αs</code>). Red times lime, <code>B(Cb, Cs)</code>, is black. The swatch at x 110 is the square's color by the
+  formula.</p>
+</header>
+
+<section>
+  <h2>The backdrop's alpha weighs the blend</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(0 255 0)"></div><div class=s></div></div><div class=sw style="background: black"></div></div>
+    <figcaption><code>αb = 1</code>: the blend in full, black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(0 255 0 / 0.5)"></div><div class=s></div></div><div class=sw style="background: rgb(50% 0% 0%)"></div></div>
+    <figcaption><code>αb = 0.5</code>: <code>Cs</code> = 0.5 red + 0.5 black, then source-over, opaque: <code>rgb(50%
+    0% 0%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=group><div class=b style="background: rgb(0 255 0 / 0)"></div><div class=s></div></div><div class=sw style="background: #ff0000"></div></div>
+    <figcaption><code>αb = 0</code>: no blend, red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

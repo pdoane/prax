@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-repeat-x, -y, -block, -inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='%234f81bd'/></svg>"); background-position: center; }
+  .v { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.3 Tiling Images: the background-repeat-x, background-repeat-y, background-repeat-block, and background-repeat-inline properties</div>
+  <h1>background-repeat-x, -y, -block, -inline</h1>
+  <p class=pr-lede><q>These properties specify whether and how background images are tiled along one axis after they
+  have been sized and positioned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-repeat-longhands">CSS Backgrounds 4 §2.3</a></span>
+  Each dashed box is 140 by 60, with a 20px blue dot centered, repeated in both axes unless a property says
+  otherwise.</p>
+</header>
+
+<section>
+  <h2>Physical axes</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-repeat-y: no-repeat"></div></div>
+    <figcaption><code>background-repeat-y: no-repeat</code>: one row of dots across the middle. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-repeat-x: no-repeat"></div></div>
+    <figcaption><code>background-repeat-x: no-repeat</code>: one column down the middle. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-repeat-x: space; background-repeat-y: no-repeat"></div></div>
+    <figcaption><code>space</code> in x only: seven dots across, touching the sides, in one row. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Flow-relative axes</h2>
+  <p>In the same logical property group as the physical ones; the box is <code>vertical-rl</code>, so its block axis
+  is horizontal.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-repeat-block: no-repeat"></div></div>
+    <figcaption><code>background-repeat-block: no-repeat</code>: one column down the middle. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost v" style="background-repeat-inline: no-repeat"></div></div>
+    <figcaption><code>background-repeat-inline: no-repeat</code>: one row across the middle. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Tile both ways.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

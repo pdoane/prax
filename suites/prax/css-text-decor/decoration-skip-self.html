@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-skip-self</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 5px 0; }
+  .u { text-decoration: underline #c0392b 3px; text-underline-offset: 3px; }
+  .uo { text-decoration: underline overline #c0392b 3px; text-underline-offset: 3px; }
+  .ib { display: inline-block; width: 30px; height: 14px; background: #b9cde6; }
+  .m { margin: 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.10.1 Skipping Spaces: the text-decoration-skip-self property</div>
+  <h1>text-decoration-skip-self</h1>
+  <p class=pr-lede><q>This property specifies whether any text decoration lines drawn by its ancestors are propagated to
+  or drawn across the element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-skip-self-property">CSS Text Decoration 4 §2.10.1</a></span>
+  In each stage the outer span is underlined in red, 3px; the text is monospace, 10px a character. The section is a
+  rough draft (its issue: <q>This section is a rough draft and has not yet been vetted by the CSSWG</q>): no browser is
+  flagged.</p>
+</header>
+
+<section>
+  <h2>auto and no-skip: an atomic inline</h2>
+  <p><code>auto</code>: <q>Skip this element (its entire margin box) if it is an atomic inline (such as an image or
+  inline-block).</q> <code>no-skip</code>: <q>drawn across it as if it were text if it is an atomic inline</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=u>ab<span class="ib m"></span>cd</span></div>
+    <figcaption><code>auto</code>: a blue inline block with 10px margins, x=30 to 60: the line stops at x=20 and
+    starts again at 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=u>ab<span class="ib m" style="text-decoration-skip-self: no-skip"></span>cd</span></div>
+    <figcaption><code>no-skip</code>: one line from x=0 to 90, under the block and its margins. No browser draws it: the gap of <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>skip-all and skip-underline: any element</h2>
+  <p><code>skip-all</code>: <q>Skip this element (its entire margin box) unconditionally. Don't draw across it, don't
+  propagate to it.</q> <code>skip-underline</code>: <q>Skip this element (its entire margin box) unconditionally when
+  drawing ancestor underlines.</q> The outer span has an underline and an overline.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=uo>ab<span class=m style="text-decoration-skip-self: skip-all">cd</span>ef</span></div>
+    <figcaption><code>skip-all</code> on "cd", with 10px margins, x=30 to 50: both lines stop at x=20 and start again
+    at 60. No browser has the property: both lines are drawn under "cd".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=uo>ab<span class=m style="text-decoration-skip-self: skip-underline">cd</span>ef</span></div>
+    <figcaption><code>skip-underline</code>: the overline runs on, x=0 to 80; the underline has the gap from 20 to
+    60. No browser has it: lines over and under "cd".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

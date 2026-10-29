@@ -1,0 +1,28 @@
+00-supports-1.html
+# CSS2/#the-page 13 Paged media: no page; it only heads 13.1 to 13.4
+# CSS2/#page-intro 13.1 Introduction to paged media: no page; it lists ways a user agent may transfer pages to sheets, which CSS 2 leaves to the user agent
+CSS2/#page-box 13.2 Page boxes: the @page rule
+    page-box.html
+CSS2/#page-margins 13.2.1 Page margins
+    page-margins.html
+    page-margins-content.html
+CSS2/#page-selectors 13.2.2 Page selectors: selecting left, right, and first pages
+    page-selectors.html
+    page-selectors-first.html
+# CSS2/#outside-page-box 13.2.3 Content outside the page box: no page; its principles are recommendations, which CSS Paged Media 3 repeats in 3.2, and css-page's content-outside.html shows them
+# CSS2/#page-breaks 13.3 Page breaks: no page; it introduces 13.3.1 to 13.3.5
+CSS2/#page-break-props 13.3.1 Page break properties: page-break-before, page-break-after, page-break-inside
+    page-break-before-after.html
+    page-break-left-right.html
+    page-break-inside.html
+CSS2/#break-inside 13.3.2 Breaks inside elements: orphans, widows
+    orphans-widows.html
+CSS2/#allowed-page-breaks 13.3.3 Allowed page breaks
+    allowed-page-breaks.html
+    break-margins.html
+CSS2/#forced 13.3.4 Forced page breaks
+    forced-page-breaks.html
+CSS2/#best-page-breaks 13.3.5 "Best" page breaks
+    best-page-breaks.html
+CSS2/#page-cascade 13.4 Cascading in the page context
+    page-cascade.html

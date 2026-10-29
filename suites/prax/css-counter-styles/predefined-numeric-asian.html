@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Numeric styles: Khmer, Lao, Myanmar, Thai, Tibetan and Mongolian</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 6.1 Numeric, Southeast and Central Asian</div>
+  <h1>Numeric styles: Khmer, Lao, Myanmar, Thai, Tibetan and Mongolian</h1>
+  <p class=pr-lede><q>The following stylesheet uses the @counter-style rule to redefine all of the counter styles defined in CSS 2 and CSS 2.1. This stylesheet is normative-- UAs must include it in their UA stylesheet</q>. The markers are inside; each item's text is its value in decimal. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#simple-numeric">CSS Counter Styles 3 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Digits of their own, 0 to 9</h2>
+  <p><q>Cambodian/Khmer numbering (e.g., ១, ២, ៣, ..., ៩៨, ៩៩, ១០០).</q> <code>khmer</code> extends <code>cambodian</code>.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: cambodian; font-family: "PR Noto Sans Khmer", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>cambodian</code>: <bdi dir=ltr>"១."</bdi>, <bdi dir=ltr>"២."</bdi>, <bdi dir=ltr>"៩៩."</bdi>, <bdi dir=ltr>"១០០."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: khmer; font-family: "PR Noto Sans Khmer", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>khmer</code>: <bdi dir=ltr>"១."</bdi>, <bdi dir=ltr>"២."</bdi>, <bdi dir=ltr>"៩៩."</bdi>, <bdi dir=ltr>"១០០."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: lao; font-family: "PR Noto Sans Lao", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>lao</code>: <bdi dir=ltr>"໑."</bdi>, <bdi dir=ltr>"໒."</bdi>, <bdi dir=ltr>"໙໙."</bdi>, <bdi dir=ltr>"໑໐໐."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: myanmar; font-family: "PR Noto Sans Myanmar", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>myanmar</code>: <bdi dir=ltr>"၁."</bdi>, <bdi dir=ltr>"၂."</bdi>, <bdi dir=ltr>"၉၉."</bdi>, <bdi dir=ltr>"၁၀၀."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: thai; font-family: "PR Noto Sans Thai", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>thai</code>: <bdi dir=ltr>"๑."</bdi>, <bdi dir=ltr>"๒."</bdi>, <bdi dir=ltr>"๙๙."</bdi>, <bdi dir=ltr>"๑๐๐."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: tibetan; font-family: "PR Noto Serif Tibetan", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>tibetan</code>: <bdi dir=ltr>"༡."</bdi>, <bdi dir=ltr>"༢."</bdi>, <bdi dir=ltr>"༩༩."</bdi>, <bdi dir=ltr>"༡༠༠."</bdi>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style='list-style-type: mongolian; font-family: "PR Noto Sans Mongolian", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=99>99<li>100</ol></div>
+    <figcaption><code>mongolian</code>: <bdi dir=ltr>"᠑."</bdi>, <bdi dir=ltr>"᠒."</bdi>, <bdi dir=ltr>"᠙᠙."</bdi>, <bdi dir=ltr>"᠑᠐᠐."</bdi>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

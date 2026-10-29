@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Revealing what is hidden until found</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A word to search for, written by generated content so that the search does not find the caption. */
+  .word::before { content: attr(data-word) }
+  .found { margin: 0 0 10px; padding: 0 6px; background: #f9cc9d; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.1 The hidden attribute</div>
+  <h1>Revealing what is hidden until found</h1>
+  <p class=pr-lede><q>When these features attempt to scroll to a target which is in the element's subtree, the user agent will
+  remove the hidden attribute in order to reveal the content before scrolling to it</q>: find-in-page and fragment
+  navigation, in the Hidden Until Found state.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">HTML §6.1</a></span></p>
+</header>
+<section>
+  <h2>By fragment navigation</h2>
+  <p>The ancestor revealing algorithm will <q>Fire an event named beforematch at ancestorToReveal with the bubbles
+  attribute initialized to true</q>, then <q>Remove the hidden attribute from ancestorToReveal.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">§6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <a class=pr-target id=go href="#revealed-by-link">go to #revealed-by-link</a>
+        <div class=found id=outer hidden=until-found><div id=revealed-by-link>revealed by the link</div></div>
+        <button class=pr-target id=again>hide it again</button>
+      </div>
+      <ol class=pr-log data-log="beforematch" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Nothing between the link and the button at first. Click the link: beforematch at
+    <code>outer</code>, the element with <code>hidden=until-found</code>, and then an orange line, <code>revealed by
+    the link</code>, its attribute removed. The last button puts it back.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>By find-in-page</h2>
+  <p>When find-in-page <q>chooses a new active match</q>, it queues a task <q>to run the ancestor revealing algorithm
+  on node.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#interaction-with-details-and-hidden=until-found">§6.9.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target>the word is below this line</div>
+        <div class=found id=word hidden=until-found>xyzzy</div>
+        <button class=pr-target id=again2>hide it again</button>
+      </div>
+      <ol class=pr-log data-log="beforematch" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>Open the browser's find bar (Ctrl+F, or ⌘F on a Mac) and search for <code class=word data-word="xyzzy"></code>: beforematch at
+    <code>word</code>, and the word appears on an orange line, highlighted as the match.</figcaption>
+  </figure>
+</section>
+<script>
+  // Puts the hidden attribute back, and leaves the fragment, so that the link navigates again.
+  document.getElementById("again").addEventListener("click", () => {
+      document.getElementById("outer").hidden = "until-found";
+      history.replaceState(null, "", location.pathname);
+  });
+  document.getElementById("again2").addEventListener("click", () => {
+      document.getElementById("word").hidden = "until-found";
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

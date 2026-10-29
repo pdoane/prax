@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sequential focus navigation</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.5 Sequential focus navigation</div>
+  <h1>Sequential focus navigation</h1>
+  <p class=pr-lede><q>Each Document has a sequential focus navigation order, which orders some or all of the focusable areas in the
+  Document relative to each other.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">HTML §6.6.5</a></span></p>
+</header>
+<section>
+  <h2>From where the user clicked</h2>
+  <p><q>For example, the user agent could set it to the position of the user's click if the user clicks on the
+  document contents.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#sequential-focus-navigation">§6.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=one>one</button>
+        <div style="height: 20px; margin: 0 0 10px; font-size: 12px">some text between</div>
+        <button class=pr-target id=two>two</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then the text below it, then press Tab: the focus goes to <code>two</code>,
+    from where the click was. Without a starting point it would go from the start of the page.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

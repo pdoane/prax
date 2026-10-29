@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background repeat: areas and the band</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .dots { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='%234f81bd'/></svg>"); }
+  .bordered { height: 40px; margin: 10px; padding: 10px; border: 10px dashed #9c5f22; }
+  .pendant { height: 80px; margin: 10px; background: white url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='30'><path d='M10 2 L18 14 L10 28 L2 14 Z' fill='%236aa36a'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background repeat: areas and the band</h1>
+  <p class=pr-lede><code>background-repeat</code> takes <code>repeat | repeat-x | repeat-y | no-repeat | inherit</code>.
+  The image is a 20px blue dot unless a figure says otherwise.</p>
+</header>
+
+<section>
+  <h2>Tiles cover the border area</h2>
+  <p><q>All tiling covers the content, padding and border areas of a box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>A box with a 10px brown dashed border and 10px padding, its image at the initial <code>0% 0%</code>: the top left
+  of its padding box, 10px inside the border edge.</p>
+  <figure>
+    <div class=pr-stage><div class="bordered dots"></div></div>
+    <figcaption><code>repeat</code>: the dots start at the padding box's corner and tile out under the border, showing
+    in its gaps, cut at the border edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="bordered dots" style="background-repeat: no-repeat"></div></div>
+    <figcaption><code>no-repeat</code>: one dot at the padding box's top left, and none in the border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A vertical band</h2>
+  <p>The specification's example, <code>background: white url("pendant.png"); background-repeat: repeat-y;
+  background-position: center</code>: <q>One copy of the background image is centered, and other copies are put above
+  and below it to make a vertical band behind the element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pendant pr-ghost" style="background-repeat: repeat-y; background-position: center"></div></div>
+    <figcaption>A white 180 by 80 box, 20 by 30 pendants: one centered, 25 to 55px down, others above and
+    below.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pendant pr-ghost" style="background-repeat: no-repeat; background-position: center"></div></div>
+    <figcaption>For comparison, <code>no-repeat</code>: the centered pendant alone.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

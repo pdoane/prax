@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The position property: five schemes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-narrow { height: 80px; }
+  .s { width: 60px; top: 20px; left: 20px; }
+  .scroll { overflow: auto; scrollbar-width: none; }
+  .scroll::after { content: ""; display: block; height: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 2 Choosing A Positioning Scheme: position property</div>
+  <h1>The position property: five schemes</h1>
+  <p class=pr-lede><q>The position property determines which of the positioning schemes is used to calculate the
+  position of a box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#position-property">CSS Positioned Layout 3 §2</a></span>
+  In each stage, blue A, orange B and green C are blocks in that order; B has <code>top: 20px; left: 20px</code> and
+  the <code>position</code> named.</p>
+</header>
+
+<section>
+  <h2>In flow: static, relative, sticky</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-a>A</div><div class="pr-b s" style="position: static">B</div><div class=pr-c>C</div></div>
+    <figcaption><code>static</code>: <q>The inset properties do not apply.</q> B under A, C under B.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=pr-a>A</div><div class="pr-b s" style="position: relative">B</div><div class=pr-c>C</div></div>
+    <figcaption><code>relative</code>: <q>laid out as for static, then offset</q>: B 20px right and down, over C,
+    which has not moved.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow scroll" id=sticky><div class=pr-a>A</div><div class="pr-b s" style="position: sticky; left: auto">B</div><div class=pr-c>C</div></div>
+    <figcaption><code>sticky</code>, <code>left: auto</code>, the stage scrolled 40px: B held 20px from its top; C
+    has scrolled up past it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Out of flow: absolute, fixed</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="position: relative"><div class=pr-a>A</div><div class="pr-b s" style="position: absolute">B</div><div class=pr-c>C</div></div>
+    <figcaption><code>absolute</code>, <q>taken out of flow</q>: C right under A; B 20px in from the stage's top
+    left.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><iframe class=pr-view style="width: 100px; height: 80px" srcdoc="<style>html { background: #e7eaef } body { margin: 0; height: 300px; font: 600 12px/18px sans-serif; color: white } div { border: 1px solid rgba(0,0,0,.3); padding: 0 6px } a { display: block; background: #4f81bd; padding: 0 6px; border: 1px solid #2c5a8f } b { display: block; position: fixed; top: 20px; left: 20px; width: 46px; background: #d68a3c; padding: 0 6px; border: 1px solid #9c5f22 } i { display: block; font-style: normal; background: #6aa36a; padding: 0 6px; border: 1px solid #3f7a3f }</style><a>A</a><b>B</b><i>C</i><script>scrollTo(0, 10)</script>"></iframe></div>
+    <figcaption><code>fixed</code>, in a frame scrolled 10px: B 20px in from the viewport's top left; A and C
+    scrolled up.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("sticky").scrollTop = 40;</script>
+</body>
+</html>

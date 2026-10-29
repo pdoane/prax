@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+  .holder { margin: 20px 0 0 60px; width: 120px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.6 Absolute positioning</div>
+  <h1>Absolute positioning</h1>
+  <p class=pr-lede><q>In the absolute positioning model, a box is explicitly offset with respect to its containing block.
+  It is removed from the normal flow entirely (it has no impact on later siblings).</q> Each blue box has <code>top: 0;
+  right: 0</code>.</p>
+</header>
+
+<section>
+  <h2>Its containing block</h2>
+  <p><q>The containing block for a positioned box is established by the nearest positioned ancestor (or, if none
+  exists, the initial containing block).</q> The stage is positioned; the dashed box inside it is positioned only
+  where the caption says. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#comp-abspos">CSS 2 §9.8.4</a>, <a href="https://drafts.csswg.org/css2/#containing-block-details">§10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-frame holder" style="position: relative"><div class="pr-a pr-fit abs" style="top: 0; right: 0">box</div></div></div>
+    <figcaption>The dashed box has <code>position: relative</code>: the box is at its top right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-frame holder"><div class="pr-a pr-fit abs" style="top: 0; right: 0">box</div></div></div>
+    <figcaption>The dashed box is static: the box is at the stage's top right corner. <span class="pr-flag
+    pr-since">Since CSS 2</span> a static box with a transform, among others, is a containing block too.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 20px } p { margin: 0; border: 1px dashed #6b7381; height: 50px } span { position: absolute; top: 0; right: 0; width: 60px; height: 20px; background: #4f81bd }</style><p><span></span></p>"></iframe></div>
+    <figcaption>In a frame with no positioned ancestor: the initial containing block, the frame's top right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

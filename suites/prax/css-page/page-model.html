@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The page box and the page area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 3 The Page Model</div>
+  <h1>The page box and the page area</h1>
+  <p class=pr-lede><q>As with other CSS boxes, a page box consists of margin, border, padding, and content areas.</q> <q>The content area of a page box is called the page area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#page-model">CSS Paged Media 3 §3</a></span> In each figure the root's blue background marks the page area, and the pages are printed 240 by 160. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Margin, border, padding and page area</h2>
+  <p><q>The content of the document is flowed into one or more page boxes.</q> The page background covers the page box; the document canvas, here blue, covers its border box.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px; border: 4px solid #e6b54a; padding: 6px; background: #c3d08b } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div><div>line 9</div><div>line 10</div>"></iframe>
+    <figcaption>Page 1: a 10px green margin, a 4px yellow border, 6px of padding, and a 200 by 120 page area holding lines 1 to 6. Page 2: lines 7 to 10. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No border, padding or page background: the page area is 220 by 140.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px } html { background: #8cb6c0 } .corner { position: absolute; right: 0; bottom: 0; width: 60px; height: 20px; background: #4f81bd }</style><div>line 1</div><div>line 2</div><div class=corner></div>"></iframe>
+    <figcaption><q>The edges of the page area on the first page establish the rectangle that is the initial containing block</q>: the dark box, at <code>right: 0; bottom: 0</code>, sits in the corner of page 1's page area, 20px in from the page's edges.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

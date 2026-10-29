@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containment on the root and the body</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 2 Strong Containment, the root and the body</div>
+  <h1>Containment on the root and the body</h1>
+  <p class=pr-lede><q>when any containments are active on either the HTML html or body elements, propagation of
+  properties from the body element to the initial containing block, the viewport, or the canvas background, is
+  disabled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#contain-property">CSS Containment 2 §2</a></span>
+  Each frame is a document 200 by 100; the body, dashed, is at 10, 10. For <code>overflow</code>, see <a href="../css-overflow/overflow-propagation-containment.html">Containment stops propagation from the body</a>.</p>
+</header>
+
+<section>
+  <h2>The body's background</h2>
+  <p>The body, dashed, is 180 by 30 at 10, 10, with a blue background.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; height: 30px; background: #4f81bd; outline: 1px dashed #1f2430 }</style>"></iframe></div>
+    <figcaption>No containment: the blue goes to the canvas and fills the frame; the body draws none of its
+    own.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; height: 30px; background: #4f81bd; outline: 1px dashed #1f2430; contain: paint }</style>"></iframe></div>
+    <figcaption><code>body { contain: paint }</code>: the blue stays on the body, a band 180 by 30; the rest of the
+    frame is clear.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Containment on the root</h2>
+  <p><q>Note: Propagation to the initial containing block, the viewport, or the canvas background, of properties set
+  on the HTML html element itself is unaffected.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { contain: style } body { margin: 10px; height: 30px; background: #4f81bd; outline: 1px dashed #1f2430 }</style>"></iframe></div>
+    <figcaption><code>html { contain: style }</code>: containment on the root stops it too; the blue band
+    alone.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { contain: paint; height: 40px; background: #d68a3c } body { margin: 10px; height: 20px; background: #4f81bd }</style>"></iframe></div>
+    <figcaption><code>html { contain: paint; background: orange }</code>, 40px tall: the orange fills the whole frame;
+    the body is a blue band 180 by 20.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

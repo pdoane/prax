@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Checkedness</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; white-space: nowrap; }
+  .pad input { margin: 0 4px 0 0; vertical-align: -2px; }
+  .pad button { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5 The input element</div>
+  <h1>Checkedness</h1>
+  <p class=pr-lede><q>The checked content attribute is a boolean attribute that gives the default checkedness of the
+  input element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">HTML §4.10.5</a></span></p>
+</header>
+
+<section>
+  <h2>The attribute until the user acts</h2>
+  <p><q>When the checked content attribute is added, if the control does not have dirty checkedness, the user agent
+  must set the checkedness of the element to true</q>; the flag <q>must be set to true whenever the user interacts with
+  the control in a way that changes the checkedness.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">§4.10.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input type=checkbox id=dirty>a checkbox</div>
+        <div><button onclick="dirty.toggleAttribute('checked')">toggle the checked attribute</button></div>
+      </div>
+    </div>
+    <figcaption>The button adds or removes <code>checked</code>, and the box follows it. Click the box itself, then
+    the button: the box no longer follows.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A canceled click undoes itself</h2>
+  <p>A click checks a control before it is dispatched; if it is canceled, the user agent must <q>set the element's
+  checkedness and the element's indeterminateness back</q>, or check the radio button that was checked before.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#the-input-element">§4.10.5</a></span>
+  The page's listeners log each control's checkedness at its click, then cancel it.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><input type=checkbox class=cancel id=box>a checkbox</div>
+        <div><input type=radio class=cancel name=pick id=one checked>one
+             <input type=radio class=cancel name=pick id=two>two</div>
+      </div>
+      <ol class=pr-log id=checked-log style="--pr-log-lines: 3"></ol>
+    </div>
+    <figcaption>Click the checkbox: <code>box checked</code> is logged, and it is clear again. Click "two":
+    <code>two checked</code>, and "one" is checked again. No <code>input</code> or <code>change</code> follows.</figcaption>
+  </figure>
+</section>
+<script>
+  // Logs each control's checkedness as its click is dispatched, then cancels the click.
+  const log = document.getElementById("checked-log");
+  for (const control of document.querySelectorAll(".cancel")) {
+      control.addEventListener("click", event => {
+          log.append(Object.assign(document.createElement("li"),
+              {textContent: control.id + (control.checked ? " checked" : " not checked")}));
+          while (log.children.length > 3)
+              log.firstElementChild.remove();
+          event.preventDefault();
+      });
+      for (const type of ["input", "change"])
+          control.addEventListener(type, () => log.append(Object.assign(document.createElement("li"), {textContent: type})));
+  }
+</script>
+</body>
+</html>

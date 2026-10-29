@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A fixed height across a break</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+  .sb { border: 4px solid #2c5a8f; background: #b9cde6; }
+  .sb .pr-a { break-inside: avoid; }
+  .g { display: grid; grid-template-columns: 30px 30px; grid-template-rows: 20px 20px; row-gap: 20px; }
+  .x { grid-row: span 2; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.3 Splitting Boxes</div>
+  <h1>A fixed height across a break</h1>
+  <p class=pr-lede><q>When a box breaks, its content box extends to fill any remaining fragmentainer extent</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#box-splitting">CSS Fragmentation 4 §5.3</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Progress toward a fixed height</h2>
+  <p><q>Note: The extra block size contributed by fragmenting the box (i.e. the distance from the break point to the edge of the fragmentainer) contributes progress towards any specified limits on the box’s block size.</q> The tinted box is 100px tall; its second A has <code>break-before: column</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=k style="height: 100px"><div class=pr-a>A</div><div class=pr-a style="break-before: column">A</div></div><div class=pr-c>C</div></div>
+    <figcaption>The box fills the first column, 60px, under its first A; 40px are left of it in the second, under the second A. C follows, 40px down. <span class=pr-flag>Firefox</span> No break: both As in the first column, the box going on into the second, C under it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

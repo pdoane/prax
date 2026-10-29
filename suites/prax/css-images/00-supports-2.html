@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Images 3 declaration support, &lt;image&gt;</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · Support</div>
+  <h1>CSS Images 3 declaration support, &lt;image&gt;</h1>
+  <p class=pr-lede>A declaration for each &lt;image&gt; notation's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Gradients</h2>
+  <code class=pr-decl>background-image: linear-gradient(to top right, red, blue)</code>
+  <code class=pr-decl>background-image: linear-gradient(in oklch longer hue, red, blue)</code>
+  <code class=pr-decl>background-image: radial-gradient(circle 20px at 20px 0, red, blue)</code>
+  <code class=pr-decl>background: radial-gradient(closest-side farthest-side, red, #00f)</code>
+  <code class=pr-decl>background-image: radial-gradient(circle 50%, red, blue)</code>
+  <code class=pr-decl>background-image: conic-gradient(from 45deg at 25%, red, blue)</code>
+  <code class=pr-decl>background-image: repeating-linear-gradient(red, blue 20px)</code>
+  <code class=pr-decl>background-image: repeating-conic-gradient(red 25%, blue 0 50%)</code>
+  <code class=pr-decl>background-image: linear-gradient(red 20%, 30%, blue 40% 60%)</code>
+</section>
+
+<section>
+  <h2>The other notations</h2>
+  <code class=pr-decl>background-image: image-set("a.png" 2x type("image/png"))</code>
+  <code class=pr-decl>background-image: image(#4f81bd)</code>
+  <code class=pr-decl>background-image: image("a.png", #4f81bd)</code>
+  <code class=pr-decl>background-image: image(ltr "a.png#xywh=0,0,20,20")</code>
+  <code class=pr-decl>background-image: cross-fade(url(a.png) 25%, #4f81bd)</code>
+  <code class=pr-decl>background-image: element(#source)</code>
+  <code class=pr-decl>border-color: stripes(red 1fr, blue 10px, green 20%)</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

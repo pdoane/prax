@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow: a string, and both edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; margin: 10px 50px; overflow: hidden; white-space: nowrap; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 4.1 Inline Overflow Ellipsis: the text-overflow property</div>
+  <h1>text-overflow: a string, and both edges</h1>
+  <p class=pr-lede><code>text-overflow: [ clip | ellipsis | &lt;string&gt; | fade | &lt;fade()&gt; ]{1,2}</code>.
+  <code>&lt;string&gt;</code>: <q>Render the given string to represent clipped inline content.</q> <q>If there is one
+  value, it applies only to the end line box edge. If there are two values, the first value applies to the line-left
+  edge, and the second value applies to the line-right edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#text-overflow">CSS Overflow 4 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>A string in place of the ellipsis</h2>
+  <p>Each dashed box is 100px wide, <code>overflow: hidden; white-space: nowrap</code>, and holds "a sentence too
+  long" in <code>.pr-measure</code> text, 10px a letter.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: "→"'>a sentence too long</div></div>
+    <figcaption><code>"→"</code>: "a sentenc→". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> clip it, with no string.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: " [more]"'>a sentence too long</div></div>
+    <figcaption><code>" [more]"</code>, 7 letters: three letters stay, "a s [more]". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> clip it, with no string.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: "→"' dir=rtl>a sentence too long</div></div>
+    <figcaption>One value in <code>rtl</code>: at the end, the left: "→ too long". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> clip it, with no string.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style='text-overflow: "«" "»"' dir=rtl>a sentence too long</div></div>
+    <figcaption>Two values, <code>"«" "»"</code>, in <code>rtl</code>: line-left gets "«", line-right "»"; only the
+    left is cut, so "« too long". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> clip it, with no string.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

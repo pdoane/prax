@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Style containment: counters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ex { counter-reset: foo; height: auto; }
+  .ex div { counter-increment: foo; margin: 2px; padding: 0 4px; background: rgba(31, 36, 48, 0.08); }
+  .ex div::before { content: counters(foo, "."); }
+  .k { contain: style; }
+  .c { counter-reset: n; height: auto; padding: 2px 4px; }
+  .c .inc { counter-increment: n; }
+  .c .set { counter-set: n 5; }
+  .c .show::before { content: "n=" counter(n); }
+  .c .k { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.4 Style Containment</div>
+  <h1>Style containment: counters</h1>
+  <p class=pr-lede><q>The 'counter-increment' and 'counter-set' properties must be scoped to the element's sub-tree
+  and create a new counter.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-style">CSS Containment 2 §3.4</a></span>
+  Text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>The spec's example</h2>
+  <p>Every <code>div</code> increments <code>foo</code> and shows <code>counters(foo, ".")</code> before its content;
+  the second has <code>contain: style</code>. <q>the style-contained element still interacts with the foo counter
+  normally</q>, <q>Later siblings of the style-contained element don't see anything that goes on within the
+  boundary</q>, and inside, <q>they'll create a fresh (nested) foo counter</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure ex"><div><div class=k><div></div><div></div></div><div><div></div><div></div></div></div></div>
+    <figcaption>As the spec renders it: 1, then 2 with 2.1 and 2.2 inside it, then 3 with 4 and 5
+    inside. <span class=pr-flag>Safari</span> shows 0 for the contained element, 1 and 2 inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure ex"><div><div><div></div><div></div></div><div><div></div><div></div></div></div></div>
+    <figcaption>Without containment, for comparison: 1, 2, 3, 4, 5, 6, 7, all in one counter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No principal box, no effect</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure c"><div class=k style="display: contents"><span class="inc show"></span></div><div class=show></div></div>
+    <figcaption>On a <code>display: contents</code> element: the increment inside reaches outside, n=1 after
+    it. <span class=pr-flag>Safari</span> keeps it inside: n=0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

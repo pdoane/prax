@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Media pseudo-classes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .player { padding: 10px; font-size: 11px; }
+  .player video { display: block; width: 280px; height: 140px; background: #1f2430; outline: 3px solid #b5bcc7; outline-offset: 1px; }
+  .player video:playing { outline-color: #3f9a3f; }
+  .player video:paused { outline-color: #d68a3c; }
+  .chips { margin: 8px 0 0; }
+  .chips span { display: inline-block; margin: 0 4px 4px 0; padding: 0 6px; line-height: 18px; background: var(--pr-plain); border: 1px solid #b5bcc7; color: #6b7381; }
+  /* One rule for each pseudo-class, so that one a browser lacks leaves the others in force. */
+  video:playing ~ .chips .playing { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:paused ~ .chips .paused { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:seeking ~ .chips .seeking { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:buffering ~ .chips .buffering { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:stalled ~ .chips .stalled { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:muted ~ .chips .muted { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+  video:volume-locked ~ .chips .volume-locked { background: #8fd18f; border-color: #3f9a3f; color: #1f2430; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>Media pseudo-classes</h1>
+  <p class=pr-lede><code>:playing</code> and <code>:paused</code> match media elements whose <code>paused</code> is
+  false or true; <code>:seeking</code> those that are seeking; <code>:buffering</code> those playing while loading
+  with no more than the current frame; <code>:stalled</code> those buffering whose <q>is currently stalled</q> is
+  true; <code>:muted</code> those that are muted; <code>:volume-locked</code> all of them <q>when the user agent's
+  volume locked is true</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>A video's states</h2>
+  <p>The video is outlined orange while <code>:paused</code> and green while <code>:playing</code>. Below it, each
+  pseudo-class's name lights green while the video matches it. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=player>
+        <video controls loop preload=auto>
+          <source src="support/media-states.webm" type="video/webm">
+          <source src="support/media-states.mp4" type="video/mp4">
+        </video>
+        <div class=chips><span class=playing>:playing</span><span class=paused>:paused</span><span class=seeking>:seeking</span><span class=buffering>:buffering</span><span class=stalled>:stalled</span><span class=muted>:muted</span><span class=volume-locked>:volume-locked</span></div>
+      </div>
+    </div>
+    <figcaption>At load: orange, with <code>:paused</code> lit. Play it: green, <code>:playing</code> lit. Mute it:
+    <code>:muted</code> lights too. Drag the position along the timeline: <code>:seeking</code> lights while a seek is
+    in progress. <code>:buffering</code> and <code>:stalled</code> light only while loading falls behind playback, which
+    a small local clip rarely does. <code>:volume-locked</code> is lit only where the user agent locks the volume, as
+    some phones do. <span class=pr-flag>Chrome</span> lights none, and outlines the video grey. Safari's video is
+    black until it plays; the others show its first frame.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

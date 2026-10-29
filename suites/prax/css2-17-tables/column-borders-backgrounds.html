@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Columns: borders and backgrounds</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; }
+  .collapse { border-collapse: collapse; }
+  .bordered { border: 4px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.3 Columns</div>
+  <h1>Columns: borders and backgrounds</h1>
+  <p class=pr-lede><q>In the source document cells are descendants of rows, never of columns. Nevertheless, some aspects
+  of cells can be influenced by setting properties on columns.</q> Each table has three columns of 40px cells, and the
+  middle <code>col</code> is styled.</p>
+</header>
+
+<section>
+  <h2>'border'</h2>
+  <p><q>The various border properties apply to columns only if 'border-collapse' is set to 'collapse' on the table
+  element. In that case, borders set on columns and column groups are input to the conflict resolution algorithm that
+  selects the border styles at every cell edge.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2 §17.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col><col class=bordered><col><tr><td>1<td>2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption><code>border-collapse: separate</code>: the middle column's 4px blue border is ignored; no border is
+    drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table class=collapse><col><col class=bordered><col><tr><td>1<td>2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption><code>border-collapse: collapse</code>: a 4px blue border around the middle column: around
+    cells 2 and 5 together, not between them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>'background'</h2>
+  <p><q>The background properties set the background for cells in the column, but only if both the cell and row have
+  transparent backgrounds.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#columns">CSS 2 §17.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col><col style="background: #d68a3c"><col><tr><td>1<td>2<td>3<tr><td>4<td>5<td>6</table></div>
+    <figcaption>An orange column: cells 2 and 5 are orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col><col style="background: #d68a3c"><col><tr style="background: #6aa36a"><td>1<td>2<td>3<tr><td>4<td style="background: #4f81bd">5<td>6</table></div>
+    <figcaption>The first row is green, and cell 5 blue: the row and the cell hide the column, and none of it is
+    orange.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

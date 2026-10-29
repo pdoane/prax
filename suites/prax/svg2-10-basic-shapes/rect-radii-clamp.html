@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rect: radii clamped to half the size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.2 The ‘rect’ element</div>
+  <h1>rect: radii clamped to half the size</h1>
+  <p class=pr-lede><q>Finally, apply clamping to generate the used values</q>, after <code>auto</code> has taken the
+  other radius. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">SVG 2 §10.2</a></span>
+  Each stage is an SVG 160 by 60 holding a blue rectangle 120 by 40 at 20, 10: half its width is 60, half its height
+  20.</p>
+</header>
+
+<section>
+  <h2>Each radius clamped on its own axis</h2>
+  <p><q>If the absolute ‘rx’ (after the above steps) is greater than half of the used width, then the used value of
+  ‘rx’ is half of the used width.</q> <q>If the absolute ‘ry’ (after the above steps) is greater than half of the
+  used height, then the used value of ‘ry’ is half of the used height.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="10" ry="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="10" ry="30"</code>: <code>ry</code> clamped to 20, so corners 10 across and 20 down, and
+    no straight sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="100" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="100" ry="10"</code>: <code>rx</code> clamped to 60, so corners 60 across and 10 down, and
+    no straight top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="100" ry="100" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="100" ry="100"</code>: 60 and 20, an ellipse filling the rectangle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto takes the radius before it is clamped</h2>
+  <p>The absolute value for the <code>auto</code> radius is the other's, and the clamping comes after, each against
+  its own axis.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="30"</code> alone: <code>ry</code> 30 too, clamped to 20, so corners 30 across and 20 down:
+    the top straight from 50 to 110, no straight sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" ry="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry="30"</code> alone: the same, <code>rx</code> 30 and <code>ry</code> clamped to 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="100" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="100"</code> alone: 100 each way, clamped to 60 and 20: an ellipse filling the
+    rectangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Color 5 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · Support</div>
+  <h1>CSS Color 5 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>color: color-mix(in lch, peru 40%, palegoldenrod)</code>
+  <code class=pr-decl>color: color-mix(firebrick, goldenrod)</code>
+  <code class=pr-decl>color: color-mix(in oklab, teal, olive, blue)</code>
+  <code class=pr-decl>color: color-mix(in oklab, teal 50%)</code>
+  <code class=pr-decl>color: rgb(from indianred 255 g b)</code>
+  <code class=pr-decl>color: hsl(from lightseagreen calc(h + 180) s l)</code>
+  <code class=pr-decl>color: hwb(from #d68a3c h w calc(b + 30))</code>
+  <code class=pr-decl>color: lab(from orchid l 0 0)</code>
+  <code class=pr-decl>color: oklab(from #d68a3c l calc(-1 * a) calc(-1 * b))</code>
+  <code class=pr-decl>color: lch(from peru calc(l * 0.8) c h)</code>
+  <code class=pr-decl>color: oklch(from #d68a3c l 0 h)</code>
+  <code class=pr-decl>color: alpha(from teal / 0.7)</code>
+  <code class=pr-decl>color: color(from #d68a3c srgb b g r)</code>
+  <code class=pr-decl>color: color(--swap 0.6 0 0)</code>
+  <code class=pr-decl>color: device-cmyk(0 81% 81% 30%)</code>
+  <code class=pr-decl>color: device-cmyk(0, 0.81, 0.81, 0.3)</code>
+  <code class=pr-decl>color: light-dark(#2c5a8f, #f6d7b4)</code>
+  <code class=pr-decl>color: contrast-color(navy)</code>
+  <code class=pr-decl>background-image: light-dark(linear-gradient(red, blue), none)</code>
+  <code class=pr-decl>background-image: linear-gradient(in --swap, red, blue)</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Composite fonts</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Composite"; src: url(../../../third_party/fonts/Tinos.ttf); unicode-range: U+0-7F; }
+  @font-face { font-family: "Composite"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+30-39; }
+  @font-face { font-family: "Composite"; src: url(../../../third_party/fonts/NotoSansJP.ttf); unicode-range: U+3000-9FFF; }
+  @font-face { font-family: "Unused"; src: url(../../../third_party/fonts/Cousine.ttf); unicode-range: U+0-7F; }
+  @font-face { font-family: "Unused"; src: url(../../../third_party/fonts/NotoSansJP.ttf); unicode-range: U+3000-9FFF; }
+  .pr-sample { font-size: 22px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.5.1 Using character ranges to define composite fonts</div>
+  <h1>Composite fonts</h1>
+  <p class=pr-lede><q>Multiple @font-face rules with different unicode ranges for the same family and style descriptor
+  values can be used to create composite fonts that mix the glyphs from different fonts for different scripts.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#composite-fonts">CSS Fonts 4 §4.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>The last rule is checked first</h2>
+  <p><q>If the unicode ranges overlap ... the last rule defined is the first to be checked for a given character.</q>
+  Family "Composite" is Tinos for ASCII, then Cousine for digits, then Noto Sans JP for kana and kanji.</p>
+  <figure>
+    <div class="pr-stage pr-sample pr-wide" style="font-family: Composite, sans-serif">Tokyo 2024 東京</div>
+    <figcaption>"Tokyo" serif from Tinos; "2024" monospace from Cousine, the later rule, though Tinos's range holds
+    it too; "東京" from Noto Sans JP.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the faces the text needs download</h2>
+  <p><q>Since the user agent will only pull down the fonts it needs this helps reduce page bandwidth.</q> Family
+  "Unused" has a Japanese face that no text here uses. Each face's status, once the page has loaded:</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Unused, serif">Latin only</div>
+    <figcaption>Cousine: <code id=status-latin>?</code>; Noto Sans JP: <code id=status-japanese>?</code>. Safari loads both.</figcaption>
+  </figure>
+</section>
+
+<script>
+  document.fonts.ready.then(() => {
+    for (const face of document.fonts) {
+      if (face.family !== "Unused")
+        continue;
+      const id = face.unicodeRange.includes("3000") ? "status-japanese" : "status-latin";
+      document.getElementById(id).textContent = face.status;
+    }
+  });
+</script>
+</body>
+</html>

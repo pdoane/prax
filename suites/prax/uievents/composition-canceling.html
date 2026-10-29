@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canceling a composition</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.4 Canceling Composition Events</div>
+  <h1>Canceling a composition</h1>
+  <p class=pr-lede><q>If a keydown event is canceled then any Composition Events that would have fired as a result of
+  that keydown SHOULD not be dispatched</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-canceling">UI Events §3.6.4</a></span></p>
+</header>
+<section>
+  <h2>The keydown canceled</h2>
+  <p>The page's script cancels each keydown in the field that is not part of a composition, so no key can start
+  one. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-canceling">§3.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=keys></div>
+      <ol class=pr-log data-log="keydown keyup compositionstart compositionupdate compositionend" data-fields="key data" data-on="#keys" data-lines=3></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click the field and type <code>k</code>: keydown
+    and keyup, no composition events, and nothing in the field. It is a SHOULD.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>compositionstart canceled</h2>
+  <p><q>If the initial compositionstart event is canceled then the text composition session SHOULD be terminated.
+  Regardless of whether or not the composition session is terminated, the compositionend event MUST be sent.</q>
+  The page's script cancels each compositionstart in the field. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-canceling">§3.6.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=start></div>
+      <ol class=pr-log data-log="keydown keyup compositionstart compositionupdate compositionend" data-fields="key data" data-on="#start" data-lines=3></ol>
+    </div>
+    <figcaption>With the input method on, click the field and type <code>k</code>: keydown, compositionstart,
+    compositionend, keyup, and nothing in the field, as the session SHOULD end; if it goes on, compositionend MUST
+    still come.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the keydowns that could start a composition in the first field, and every compositionstart in the second.
+  document.getElementById("keys").addEventListener("keydown", event => {
+      if (!event.isComposing)
+          event.preventDefault();
+  });
+  document.getElementById("start").addEventListener("compositionstart", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

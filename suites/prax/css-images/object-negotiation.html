@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Object size negotiation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 40px; margin: 10px; background-repeat: no-repeat; background-size: 80px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 4.2 CSS⇋Object Negotiation</div>
+  <h1>Object size negotiation</h1>
+  <p class=pr-lede><q>Using the natural dimensions, the specified size, and the default object size for the context
+  the object is used in, CSS then computes a concrete object size.</q> <q>CSS asks the object to render itself at the
+  concrete object size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#object-negotiation">CSS Images 3 §4.2</a></span>
+  Each dashed box is 140 by 40, with a background image drawn once at <code>background-size: 80px 40px</code>, at its
+  left.</p>
+</header>
+
+<section>
+  <h2>The object renders itself at that size</h2>
+  <p><q>The object may adjust itself to match the concrete object size in some way, or even render itself larger or
+  smaller than the concrete object size to satisfy sizing constraints of its own.</q> Each image is 40 by 20 at
+  its natural size.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: url(../shared/resources/flag-40x20.png)"></div></div>
+    <figcaption>A PNG: scaled to 80 by 40, the four quarters each 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 40'><rect width='40' height='40' fill='%234f81bd'/></svg>&quot;)"></div></div>
+    <figcaption>An SVG 40 by 20 whose <code>viewBox</code> is square: it keeps its drawing square in the 80 by 40
+    asked of it, a blue square 40 by 40 in the middle of that area, from 20 to 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then clipped</h2>
+  <p><q>Unless otherwise specified by CSS, the object is then clipped to the concrete object size.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background-image: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' overflow='visible'><rect x='-20' y='-10' width='120' height='40' fill='%23d68a3c'/></svg>&quot;)"></div></div>
+    <figcaption>An SVG 40 by 20 with <code>overflow="visible"</code> whose orange rectangle reaches past its edges:
+    the orange is clipped to 80 by 40, at the left of the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

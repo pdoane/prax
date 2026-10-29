@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-shape: clipping overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 60px; margin: 10px; border: 6px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 7.5.3 Interaction with Overflow and Clipping</div>
+  <h1>border-shape: clipping overflow</h1>
+  <p class=pr-lede><q>The inner 'border-shape' clips the overflow content of the element, in the same manner as 'border-radius'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shape-overflow-interaction">CSS Borders and Box Decorations 4 §7.5.3</a></span> An issue is open: <q>how should this affect clipping replaced elements?</q></p>
+</header>
+
+<section>
+  <h2>Content cut by the inner path</h2>
+  <p>Each box is 112 by 72 with a 6px blue border shaped as a diamond, <code>overflow: hidden</code>, and an orange child taller than it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="border-shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); overflow: hidden"><div style="height: 100px; background: #d68a3c"></div></div></div>
+    <figcaption>The orange is cut to the diamond. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Cut to the rectangle.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

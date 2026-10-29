@@ -1,0 +1,54 @@
+# Cases in which the engine is right and the corpus is wrong. An entry lists its cases, a key per line, as
+# <file>:<index>, or a file for every case of the file, followed by the indented reason: what the sources say and why
+# the corpus loses.
+
+component_value_list:38
+    css-syntax-3/#tokenization dropped include-match, dash-match, prefix-match, suffix-match and substring-match. `~=`
+    is two delims, and the token list has only <delim-token>.
+
+component_value_list:39
+    The same, for `^=`.
+
+component_value_list:40
+    A closer nothing opened is a token of its own (css-syntax-3/#consume-component-value). The suite wraps it in an
+    error node, which is what the 2013 draft produced.
+
+one_component_value:8
+    The same closer.
+
+one_declaration:11
+    css-syntax-3/#consume-declaration trims the whitespace around a declaration's value. The suite predates the change
+    WPT's css/css-syntax/declarations-trim-whitespace.html tests.
+
+one_declaration:12
+    A declaration's value ends at the top-level `;` (css-syntax-3/#consume-declaration). The suite runs it past one.
+
+one_declaration:14
+    The same `;`.
+
+one_declaration:15
+one_declaration:16
+one_declaration:17
+one_declaration:18
+one_declaration:19
+    Whitespace around the value, as one_declaration:11.
+
+one_declaration:21
+    css-syntax-3/#consume-declaration takes a {}-block beside anything else only for a custom property. The suite
+    predates the rule.
+
+rule_list:11
+    css-syntax-3 dropped the rule list that kept CDO and CDC as the start of a qualified rule. Every rule list is a
+    stylesheet's contents or a block's, and both discard them.
+
+rule_list:13
+    The same CDC.
+
+rule_list:4
+    There is no @charset rule. css-syntax-3/#input-byte-stream reads it while deciding the encoding and the rule
+    grammars define nothing by that name, so it is an at-rule like any other; cssparser consumes it for encoding
+    detection.
+
+stylesheet:4
+stylesheet:5
+    @charset, as rule_list:4.

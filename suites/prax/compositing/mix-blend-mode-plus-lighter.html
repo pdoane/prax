@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mix-blend-mode: plus-lighter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { height: 60px; }
+  .white { position: absolute; left: 10px; top: 10px; width: 180px; height: 40px; background: white; }
+  .container { position: absolute; left: 10px; top: 0; display: grid; }
+  .container > div { width: 40px; height: 40px; grid-area: 1 / 1; }
+  .from { background-color: rgb(100% 0% 0% / 50%); opacity: 0.5; }
+  .to { background-color: rgb(0% 0% 100% / 50%); opacity: 0.5; }
+  .sw { position: absolute; left: 70px; top: 0; width: 40px; height: 40px; }
+  .a, .b { position: absolute; top: 10px; width: 60px; height: 40px; }
+  .a { left: 30px; background: #ff8000; }
+  .b { left: 70px; background: #8080ff; mix-blend-mode: plus-lighter; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.1 The mix-blend-mode property</div>
+  <h1>mix-blend-mode: plus-lighter</h1>
+  <p class=pr-lede>The property takes <q>&lt;blend-mode&gt; | plus-lighter</q>; plus-lighter is a Porter Duff
+  operator: <code>co = min(1, αs x Cs + αb x Cb)</code>, <code>αo = min(1, αs + αb)</code>. <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#mix-blend-mode">Compositing and Blending 2 §3.4.1</a></span>
+  <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_plus_lighter">§9.1.15</a></span></p>
+</header>
+
+<section>
+  <h2>A cross-fade</h2>
+  <p>The section's example, in 40px squares over white: <code>from</code> is <code>rgb(100% 0% 0% / 50%)</code> and
+  <code>to</code> <code>rgb(0% 0% 100% / 50%)</code>, each with <code>opacity: 0.5</code>, so each 25% opaque. The
+  swatch at x 80 is the color expected over white.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=white><div class=container><div class=from></div><div class=to></div></div><div class=sw style="background: rgb(75% 56.25% 81.25%)"></div></div></div>
+    <figcaption>Source-over: <q>roughly rgb(43% 0% 57% / 44%)</q>, over white <code>rgb(75% 56% 81%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=white><div class=container style="isolation: isolate"><div class=from></div><div class=to style="mix-blend-mode: plus-lighter"></div></div><div class=sw style="background: rgb(75% 50% 75%)"></div></div></div>
+    <figcaption><code>plus-lighter</code> on <code>to</code>, in an isolated container: <q>rgb(50% 0% 50% /
+    50%)</q>, over white <code>rgb(75% 50% 75%)</code>, a little pinker.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The sum, clamped</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div style="isolation: isolate"><div class=a></div><div class=b></div></div></div>
+    <figcaption>Lavender <code>#8080ff</code>, <code>plus-lighter</code>, over orange <code>#ff8000</code>: white
+    where they overlap, x 70 to 90, in an isolated group; red, 1 + 0.5, clamped to 1, green 0.5 + 0.5, blue 0 + 1. Lavender to x 130.
+    <span class=pr-flag>Safari</span> White to x 130, the lavender added to the stage's grey outside the group.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

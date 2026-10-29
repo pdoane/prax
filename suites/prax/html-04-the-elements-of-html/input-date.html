@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Date controls</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.7 Date state (type=date)</div>
+  <h1>Date controls</h1>
+  <p class=pr-lede><q>The input element represents a control for setting the element's value to a string representing
+  a specific date.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#date-state-(type=date)">HTML §4.10.5.1.7</a></span></p>
+</header>
+
+<section>
+  <h2>A whole date, or none</h2>
+  <p><q>User agents must not allow the user to set the value to a non-empty string that is not a valid date string.</q>
+  <q>While the user interface describes input that the user agent cannot convert to a valid date string, the control
+  is suffering from bad input.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#date-state-(type=date)">§4.10.5.1.7</a></span>
+  Each control is outlined green while it is valid and red while it is not.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=date value="2026-10-25"></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>25 October 2026, green. Click into the year and press Backspace: the year is blank, and the control
+    red. Clear the month and day too: green, empty.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class="pad pr-validity">
+        <div><input type=date></div>
+      </div>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Empty, and green. Open the picker and choose a day: the control shows it, and <code>input</code> and
+    <code>change</code> are logged.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The rendering</h2>
+  <p><q>An input element whose type attribute is in the Date state is a devolvable widget expected to render as an
+  'inline-block' box depicting a date control.</q> <q>about one line high, and about as wide as necessary to show the
+  widest possible value.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-domain-specific-widgets">§15.5.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pad pr-validity">
+        <div>before <input type=date value="2026-09-30"> after</div>
+        <div>before <input type=date> after</div>
+      </div>
+    </div>
+    <figcaption>Each sits on its line like a word, one line high, and both are the same width, whether they hold a
+    date or not.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

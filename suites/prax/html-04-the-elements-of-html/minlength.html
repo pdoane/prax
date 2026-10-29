@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The minlength attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad textarea, .pad button { margin: 0 0 10px; font-size: 13px; vertical-align: top; }
+  .pad textarea { resize: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.19.4 Setting minimum input length requirements: the minlength attribute</div>
+  <h1>The minlength attribute</h1>
+  <p class=pr-lede><q>A form control minlength attribute, controlled by the dirty value flag, declares a lower bound on
+  the number of characters a user can input.</q> Each textarea here has <code>minlength=5</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute">HTML §4.10.19.4</a></span></p>
+</header>
+
+<section>
+  <h2>Too short, but not when empty</h2>
+  <p><q>If an element has a minimum allowed value length, its dirty value flag is true, its value was last changed by a
+  user edit (as opposed to a change made by a script), its value is not the empty string, and the length of the
+  element's API value is less than the element's minimum allowed value length, then the element is suffering from being
+  too short.</q> <q>The minlength attribute does not imply the required attribute.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute">§4.10.19.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=short-result>
+        <textarea name=text minlength=5 cols=20 rows=1></textarea>
+        <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=short-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Empty, click Submit: <code>text=</code>, submitted. Type "abc" and click Submit: the browser reports
+    that it is too short, and the frame stays as it was. Type "de": submitted.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not after a script</h2>
+  <p>The page's script sets this textarea's value to "ab", which is not a user edit. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#setting-minimum-input-length-requirements:-the-minlength-attribute">§4.10.19.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=scripted-result>
+        <textarea id=scripted name=text minlength=5 cols=20 rows=1></textarea>
+        <button>Submit</button>
+      </form>
+      <iframe class=pr-result name=scripted-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Click Submit: <code>text=ab</code>, submitted. Type "c" and click Submit: now it is too short, and
+    reported.</figcaption>
+  </figure>
+</section>
+<script>
+  // Sets a value shorter than minlength from script, which does not make the textarea too short.
+  document.getElementById("scripted").value = "ab";
+</script>
+</body>
+</html>

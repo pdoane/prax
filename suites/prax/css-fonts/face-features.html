@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Face features and variations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Plain"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Small Caps"; src: url(../../../third_party/fonts/Literata.ttf); font-feature-settings: "smcp"; }
+  @font-face { font-family: "Heavy"; src: url(../../../third_party/fonts/RobotoFlex.ttf); font-variation-settings: "wght" 900; }
+  @font-face { font-family: "Latin Small Caps"; src: url(../../../third_party/fonts/Literata.ttf); font-feature-settings: "smcp"; unicode-range: U+0-7F; }
+  @font-face { font-family: "Latin Small Caps"; src: url(../../../third_party/fonts/NotoSerif.ttf); unicode-range: U+370-3FF; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.6 Font features and variations: the 'font-feature-settings' and 'font-variation-settings' descriptors</div>
+  <h1>Face features and variations</h1>
+  <p class=pr-lede><q>These descriptors define initial settings that apply when the font defined by an @font-face rule
+  is rendered. They do not affect font selection.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-rend-desc">CSS Fonts 4 §4.6</a></span></p>
+</header>
+
+<section>
+  <h2>Settings on the face</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Plain">Handgloves</div>
+    <figcaption>Literata with no settings.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Small Caps'">Handgloves</div>
+    <figcaption><code>font-feature-settings: "smcp"</code>: lowercase as small capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Heavy">Handgloves</div>
+    <figcaption>Roboto Flex with <code>font-variation-settings: "wght" 900</code>: black, though 'font-weight' is
+    normal.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the glyphs of that face</h2>
+  <p><q>These descriptors set features and variation values on the font object which the @font-face rule represents,
+  rather than on an entire element.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Latin Small Caps'">abc αβγ</div>
+    <figcaption>"abc" from the Literata face with <code>"smcp"</code>, as small capitals; "αβγ" from the Noto Serif
+    face, lowercase.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

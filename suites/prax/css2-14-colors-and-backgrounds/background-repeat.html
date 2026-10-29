@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background repeat: the values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .tiled { height: 80px; margin: 10px; background-position: 40px 30px; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='8' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background repeat: the values</h1>
+  <p class=pr-lede><code>background-repeat</code> takes <code>repeat | repeat-x | repeat-y | no-repeat | inherit</code>.
+  Initial <code>repeat</code>, applies to all elements, not inherited.</p>
+</header>
+
+<section>
+  <h2>How the image is tiled</h2>
+  <p><q>If a background image is specified, this property specifies whether the image is repeated (tiled), and
+  how.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <p>Each dashed box is 180 by 80, with a 20px blue dot as its image at <code>background-position: 40px 30px</code>.
+  A tile always passes through that point, and tiling runs both ways from it.</p>
+  <figure>
+    <div class=pr-stage><div class="tiled pr-ghost" style="background-repeat: repeat"></div></div>
+    <figcaption><code>repeat</code>, the initial value: <q>The image is repeated both horizontally and
+    vertically.</q> Dots fill the box, cut at its edges.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="tiled pr-ghost" style="background-repeat: repeat-x"></div></div>
+    <figcaption><code>repeat-x</code>: <q>The image is repeated horizontally only.</q> One row of dots, 30px from the
+    top, across the whole box.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="tiled pr-ghost" style="background-repeat: repeat-y"></div></div>
+    <figcaption><code>repeat-y</code>: <q>The image is repeated vertically only.</q> One column of dots, 40px from the
+    left, top to bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="tiled pr-ghost" style="background-repeat: no-repeat"></div></div>
+    <figcaption><code>no-repeat</code>: <q>The image is not repeated: only one copy of the image is drawn.</q> One dot,
+    40px from the left and 30px from the top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

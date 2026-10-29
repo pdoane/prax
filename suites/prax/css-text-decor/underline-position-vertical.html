@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-underline-position: left and right</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.v { padding: 6px 10px; font: 20px/40px "PR Noto Sans JP"; height: 70px; }
+  .o { text-decoration: overline #2c5a8f 2px; }
+  .u { text-decoration: underline #c0392b 2px; }
+  .h { padding: 0 6px; font: 20px/40px "PR Arimo"; }
+  figure.s { margin-right: 10px; }
+  figure.s figcaption { max-width: 100px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.7 Text Underline Position: the text-underline-position property, left and right</div>
+  <h1>text-underline-position: left and right</h1>
+  <p class=pr-lede><code>left</code>: <q>In vertical typographic modes, the underline is aligned as for under, except
+  it is always aligned to the left edge of the text. If this causes the underline to be drawn on the "over" side of
+  the text, then an overline also switches sides and is drawn on the "under" side.</q> <code>right</code> is the same
+  on the right. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-underline-position-property">CSS Text Decoration 4 §2.7</a></span></p>
+</header>
+
+<section>
+  <h2>In vertical text</h2>
+  <p>Each stage is <code>vertical-rl</code>, whose over side is the right. 日本語 has a red underline and a blue
+  overline.</p>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v"><span class=o><span class=u>日本語</span></span></div>
+    <figcaption><code>auto</code>: the red underline on the left, the under side; the blue overline on the
+    right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: under"><span class=o><span class=u>日本語</span></span></div>
+    <figcaption><code>under</code>: red on the left, at the edge of the text; blue on the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: left"><span class=o><span class=u>日本語</span></span></div>
+    <figcaption><code>left</code>: red on the left; blue on the right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage pr-vertical v" style="text-underline-position: right"><span class=o><span class=u>日本語</span></span></div>
+    <figcaption><code>right</code>: red on the right; the blue overline switches to the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In horizontal text, as auto</h2>
+  <p><q>In horizontal typographic modes, both values are treated as auto.</q></p>
+  <figure>
+    <div class="pr-stage h" style="text-underline-position: left"><span class=o><span class=u>left</span></span> <span class=o><span class=u style="text-underline-position: right">right</span></span></div>
+    <figcaption>Both words: red underline below, blue overline above, as with <code>auto</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

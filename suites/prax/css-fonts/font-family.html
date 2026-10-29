@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-family: a list of alternatives</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1 Font family: the 'font-family' property</div>
+  <h1>font-family: a list of alternatives</h1>
+  <p class=pr-lede><q>A user agent iterates through the list of family names until it matches an available font that
+  contains a glyph for the character to be rendered.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-family-prop">CSS Fonts 4 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>The first family that is available</h2>
+  <p>A family that is not available is passed over, and the next one in the list sets the text.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Arimo', 'PR Tinos'">Handgloves</div>
+    <figcaption><code>'PR Arimo', 'PR Tinos'</code>: PR Arimo, a sans-serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'No Such Family', 'PR Tinos', 'PR Arimo'">Handgloves</div>
+    <figcaption><code>'No Such Family', 'PR Tinos', 'PR Arimo'</code>: no such family, so PR Tinos, a serif.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each character in the first family that has it</h2>
+  <p>The list is walked for each character, so one run of text takes characters from several families.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Architects Daughter', 'PR Tinos'">Hand αβγ</div>
+    <figcaption><code>'PR Architects Daughter', 'PR Tinos'</code>: "Hand" handwritten, and "αβγ", which the
+    handwriting lacks, in serif.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Architects Daughter', 'PR Arimo'">Hand αβγ</div>
+    <figcaption><code>'PR Architects Daughter', 'PR Arimo'</code>: "αβγ" in sans-serif.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

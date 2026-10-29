@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Clipping at the container's edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .wrap { width: 300px; }
+  figure { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 8.2 Pagination and Overflow Outside Multicol Containers, clipping</div>
+  <h1>Clipping at the container's edges</h1>
+  <p class=pr-lede><q>Content and column rules that extend outside column boxes at the edges of the multi-column
+  container are clipped according to the overflow property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#pagination-and-overflow-outside-multicol">CSS Multi-column Layout 1 §8.2</a></span>
+  Each stage has three columns of 60px and is 40px tall; it holds seven words, one to a line, and A, 90px wide,
+  under "red" in the third column.</p>
+</header>
+
+<section>
+  <h2>overflow: visible</h2>
+  <figure class=pr-erratum>
+    <div class=wrap><div class="pr-stage pr-measure" style="height: 40px">one two six ten red<div class="pr-a pr-light pr-fit" style="width: 90px">A</div> big fat</div></div>
+    <figcaption>A runs out of the third column past the stage's right edge, and a fourth column, with a rule
+    before it, holds "big" and "fat", from 210px. <span class=pr-flag>Safari</span> One line to a column, five columns past
+    the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>overflow: hidden</h2>
+  <figure class=pr-erratum>
+    <div class=wrap><div class="pr-stage pr-measure" style="height: 40px; overflow: hidden">one two six ten red<div class="pr-a pr-light pr-fit" style="width: 90px">A</div> big fat</div></div>
+    <figcaption>All cut at the stage's right edge: A ends at 200px, and the fourth column and its rule are not
+    seen. <span class=pr-flag>Safari</span> The rules of the columns past the edge are drawn, not clipped.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=wrap><div class="pr-stage pr-measure" style="height: 40px; overflow: clip">one two six ten red<div class="pr-a pr-light pr-fit" style="width: 90px">A</div> big fat</div></div>
+    <figcaption><code>overflow: clip</code>: the same. <span class=pr-flag>Chrome</span> The rule at 205px is
+    drawn past the edge. <span class=pr-flag>Safari</span> As with <code>hidden</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

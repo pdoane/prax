@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .lit { font: 36px "PR Literata"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.1 The ‘font-variant’ property</div>
+  <h1>font-variant in SVG text</h1>
+  <p class=pr-lede><q>SVG 2 supports all font-variant longhand properties (e.g. font-variant-ligatures).</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#FontVariantProperty">SVG 2 §11.10.2.1</a></span>
+  The section is not normative; nothing here is flagged. Each stage is an SVG 160 by 60 holding 36px PR Literata,
+  whose variants are its own glyphs, on a baseline at y 45 dashed in red.</p>
+</header>
+
+<section>
+  <h2>Longhands of the shorthand</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" style="font-variant-caps: small-caps">Small</text></svg></div>
+    <figcaption><code>font-variant-caps: small-caps</code>: "Small", the "mall" in small capitals, as tall as the
+    x-height or a little more. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" style="font-variant-numeric: oldstyle-nums">1890</text></svg></div>
+    <figcaption><code>font-variant-numeric: oldstyle-nums</code>: "1890" in old-style figures, the 9 dropping below
+    the baseline. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" style="font-variant-ligatures: discretionary-ligatures">Ostct</text></svg></div>
+    <figcaption><code>font-variant-ligatures: discretionary-ligatures</code>: "st" and "ct" each one glyph, joined
+    by a swash. Chrome, Safari and Firefox draw it so.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The shorthand</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=lit x="10" y="45" style="font-variant: no-common-ligatures">flow</text></svg></div>
+    <figcaption><code>font-variant: no-common-ligatures</code>: "flow" with a separate f and l. Chrome, Safari and
+    Firefox draw it so.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

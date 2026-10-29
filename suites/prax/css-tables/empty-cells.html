@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>empty-cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { empty-cells: hide; border-spacing: 0; background: #1f2430; border: 10px solid #1f2430; }
+  td { padding: 0; width: 40px; height: 30px; color-scheme: light; color: var(--pr-ink); background: white; }
+  .bordered td { border: 4px solid #d68a3c; }
+  .fl { float: left; width: 10px; height: 10px; background: #4f81bd; }
+  .ab { position: absolute; width: 10px; height: 10px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 5.2 Empty cell rendering (separated-borders mode)</div>
+  <h1>empty-cells</h1>
+  <p class=pr-lede><q>In separated-borders mode, when this property has the value hide, no borders or backgrounds are
+  drawn around/behind empty cells.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#empty-cell-rendering">CSS Table 3 §5.2</a></span>
+  Each table is the section's example, smaller: black, with a 10px black border, <code>empty-cells: hide</code>, and
+  white cells with no spacing.</p>
+</header>
+
+<section>
+  <h2>The example</h2>
+  <figure>
+    <div class=pr-stage><table><tr><td><span></span></td><td></td><td><span></span></td></tr></table></div>
+    <figcaption>Three cells, the middle one empty and the others holding an empty <code>span</code>: white, black,
+    white, the table's black showing through the middle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What is empty</h2>
+  <p>An empty cell contains neither <q>floating content, nor in-flow content (other than white space that has been
+  collapsed away by the 'white-space' property handling).</q> The middle cell holds:</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table style="width: 80px"><tr><td></td><td><div class=fl></div></td></tr></table></div>
+    <figcaption>a blue float: not empty, white.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table style="width: 80px"><tr><td></td><td><div class=ab></div></td></tr></table></div>
+    <figcaption>only a purple abspos box: empty, so black around it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><table style="width: 80px"><tr><td></td><td style="white-space: pre"> </td></tr></table></div>
+    <figcaption>a space under <code>white-space: pre</code>: kept, so not empty, white.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

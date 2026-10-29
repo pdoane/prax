@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Balancing columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .p { background: #b9cde6; }
+  .p + .p { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 7 Filling Columns</div>
+  <h1>Balancing columns</h1>
+  <p class=pr-lede><q>If columns are balanced, user agents should try to minimize variations in column height, while
+  honoring forced breaks, widows and orphans, and other properties that may affect column heights. If columns are
+  not balanced, they are filled sequentially; some columns may end up partially filled, or with no content at
+  all.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#filling-columns">CSS Multi-column Layout 1 §7</a></span>
+  Each stage has three columns of 60px, balanced, with no height set.</p>
+</header>
+
+<section>
+  <h2>Honoring orphans and widows</h2>
+  <figure>
+    <div class="pr-stage pr-measure" style="orphans: 1; widows: 1"><div class=p>one two six ten</div></div>
+    <figcaption><code>orphans: 1; widows: 1</code>: four lines in columns 40px
+    tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class=p>one two six ten</div></div>
+    <figcaption>The initial 2 and 2: no line alone at either side of a break, so two and two, and the third column
+    empty. <span class=pr-flag>Safari</span> Two, one and one.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Forced breaks and unbreakable content set the height</h2>
+  <p>Once a forced break or an unbreakable box sets the columns' height, <q>After the column height has been
+  established, columns are filled sequentially.</q> Orphans and widows are 1.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="orphans: 1; widows: 1"><div class=p style="break-after: column">one two six ten</div><div class=p>red big fat</div></div>
+    <figcaption>The shortest columns that honor the forced break are 60px: three lines of the first paragraph in
+    the first column, "ten" in the second, and the second paragraph in the third. <span class=pr-flag>Firefox</span>
+    No forced break: "red" follows "ten" in the second column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="orphans: 1; widows: 1"><div class="pr-b pr-fit" style="height: 60px; overflow: hidden">B</div><div class=p>one two six ten</div></div>
+    <figcaption>B, 60px and unbreakable (<code>overflow: hidden</code>), makes the columns 60px tall: three lines in
+    the second column, "ten" in the third. <span class=pr-flag>Safari</span> Splits B, a piece of it atop the
+    second column, and fits two lines in each column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

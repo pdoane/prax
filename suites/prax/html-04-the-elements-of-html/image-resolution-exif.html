@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>An image's own resolution</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.3.6 Preparing an image for presentation</div>
+  <h1>An image's own resolution</h1>
+  <p class=pr-lede>Where an image's EXIF gives a resolution and dimensions that agree with its pixels, those dimensions
+  are its size: <q>set req's preferred density-corrected dimensions to a struct with its width set to dimX and its
+  height set to dimY.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#preparing-an-image-for-presentation">HTML §4.8.4.3.6</a></span>
+  <q>Resolution in EXIF is equivalent to CSS points per inch, therefore 72 is the base for computing size from
+  resolution.</q> Each JPEG is a flag in quarters, 160 by 80 pixels, whose EXIF says 144 dots per inch.</p>
+</header>
+
+<section>
+  <h2>Dimensions that agree: half the pixels</h2>
+  <p>All must hold, among them <q>physicalWidth × 72 / resX is dimX</q>, <q>physicalHeight × 72 / resY is
+  dimY</q>, and <q>resUnit is 2 (Inch)</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/flag-exif-144dpi.jpg" alt=""></div>
+    <figcaption>PixelXDimension 80 and PixelYDimension 40, as 160 × 72 / 144 and 80 × 72 / 144 give: the flag at
+    80 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Dimensions that disagree: ignored</h2>
+  <figure>
+    <div class="pr-stage pr-row pic"><img src="support/flag-exif-mismatch.jpg" alt=""></div>
+    <figcaption>PixelXDimension 100, which 160 × 72 / 144 is not: the EXIF is not used, and the flag is 160 by 80, a
+    pixel to a CSS pixel.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

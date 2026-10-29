@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Foreign namespaces and private data</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.10 Foreign namespaces and private data</div>
+  <h1>Foreign namespaces and private data</h1>
+  <p class=pr-lede><q>In general, the SVG user agent must include the unknown foreign-namespaced elements in the DOM but
+  will ignore and exclude them for rendering purposes.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#ForeignNamespaces">SVG 2 §5.10</a></span>
+  <q>The SVG user agent must include unknown attributes in the DOM but should otherwise ignore unknown attributes.</q>
+  Each stage is 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Elements and attributes ignored</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><iframe src="support/foreign.svg"></iframe></div>
+    <figcaption>An SVG document with a <code>myapp:piechart</code> holding an orange rect at 20, 10: not rendered;
+    a blue rect with <code>myapp:value</code> at 90, 10, drawn.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><myapp:piechart><rect x="20" y="10" width="50" height="40" fill="#d68a3c" /></myapp:piechart><rect x="90" y="10" width="50" height="40" fill="#4f81bd" data-value="1.23" /></svg></div>
+    <figcaption>The same inline in HTML, which parses <code>myapp:piechart</code> as an unknown SVG element: the
+    orange rect not rendered either; the blue one drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

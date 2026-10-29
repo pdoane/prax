@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Extended range: groups of four digits</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding: 0; list-style-position: inside; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.1.2 Extended Implementation (optional)</div>
+  <h1>Extended range: groups of four digits</h1>
+  <p class=pr-lede><q>This entire section is normative, but optional. User-agents may ignore it and still be conformant.
+  If a user-agent implements some of the extended forms described in this section, they must be implemented as
+  described here.</q> <q>All of the Chinese, Japanese, and Korean styles are defined here for all numbers between
+  -10<sup>16</sup> and 10<sup>16</sup>, exclusive.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#extended-range-optional">CSS Counter Styles 3 §7.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Group markers</h2>
+  <p><q>Starting from the right (ones place), split the decimal number into groups of four digits.</q> <q>For each group
+  with a non-zero value, append the appropriate group marker to the group.</q> <q>For the Korean styles, insert a space
+  (" " U+0020) between each group.</q> The values are 12345, 20000 and 100000000; a browser without the extended range
+  draws them in <code>cjk-decimal</code>, which is no departure.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: simp-chinese-informal; font-family: 'PR Noto Sans SC'"><li value=12345>12345<li value=20000>20000<li value=100000000>100000000</ol></div>
+    <figcaption><code>simp-chinese-informal</code>: "一万二千三百四十五、", "二万、", "一亿、".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: trad-chinese-informal; font-family: 'PR Noto Sans TC'"><li value=12345>12345<li value=20000>20000<li value=100000000>100000000</ol></div>
+    <figcaption><code>trad-chinese-informal</code>: "一萬二千三百四十五、", "二萬、", "一億、".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: japanese-informal; font-family: 'PR Noto Sans JP'"><li value=12345>12345<li value=20000>20000<li value=100000000>100000000</ol></div>
+    <figcaption><code>japanese-informal</code>: "一万二千三百四十五、", "二万、", "一億、".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style="list-style-type: korean-hangul-formal; font-family: 'PR Noto Sans KR'"><li value=12345>12345<li value=20000>20000<li value=100000000>100000000</ol></div>
+    <figcaption><code>korean-hangul-formal</code>: "일만 이천삼백사십오,", "이만,", "일억,". <span class=pr-flag>Safari</span> Falls back to <code>decimal</code>, not <code>cjk-decimal</code>. Chrome and Firefox implement the extended range, Chrome all but Japanese.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

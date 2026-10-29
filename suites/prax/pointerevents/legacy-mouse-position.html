@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>One legacy mouse for two pointers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 120px; height: 40px; margin: 0 16px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 10.1 Tracking the effective position of the legacy mouse pointer</div>
+  <h1>One legacy mouse for two pointers</h1>
+  <p class=pr-lede><q>For compatibility with scripts relying on MouseEvents, the mouse transition events (mouseover,
+  mouseout, mouseenter and mouseleave) SHOULD simulate the movement of a single legacy mouse input.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#tracking-the-effective-position-of-the-legacy-mouse-pointer">Pointer Events §10.1</a></span></p>
+</header>
+<section>
+  <h2>A mouse and a finger</h2>
+  <p><q>Dispatch mouseover, mouseout, mouseenter and mouseleave events as per Mouse Events for a mouse moving from the
+  current effective legacy mouse pointer position to T.</q> <q>Button 1 receives no pointerout event (because the "real" mouse pointer didn't leave the button rectangle within
+  this period), but Button 1 receives a mouseout event when the effective position of the legacy mouse pointer moves to
+  Button 2 on touch tap.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#tracking-the-effective-position-of-the-legacy-mouse-pointer">§10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=one>one</div><div class=pr-target id=two>two</div></div>
+      <ol class=pr-log data-log="pointerover pointerout mouseover mouseout" data-fields="target pointerType" data-lines=5></ol>
+    </div>
+    <figcaption>Needs a touch screen and a mouse. Click <code>one</code> with the mouse and leave the mouse on it.
+    Tap <code>two</code>: <code>mouseout</code> at <code>one</code> and <code>mouseover</code> at <code>two</code>,
+    but no <code>pointerout</code> at <code>one</code>. Nudge the mouse within <code>one</code>:
+    <code>mouseover</code> at <code>one</code> again, with no <code>pointerover</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

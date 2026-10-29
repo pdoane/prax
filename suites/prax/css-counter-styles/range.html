@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The range descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style two-ranges { system: cyclic; symbols: "★"; range: 1 2, 5 infinite; suffix: " "; }
+  @counter-style below { system: extends decimal; range: infinite 0; prefix: "["; suffix: "] "; fallback: lower-alpha; }
+  @counter-style alpha-auto { system: alphabetic; symbols: "x" "y"; suffix: " "; }
+  @counter-style ext-japanese { system: extends japanese-informal; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2", "PR Noto Sans JP"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.5 Limiting the counter scope: the range descriptor</div>
+  <h1>The range descriptor</h1>
+  <p class=pr-lede><q>The 'range' descriptor defines the ranges over which the counter style is defined. If a counter
+  style is used to represent a counter value outside of its ranges, the counter style instead drops down to its
+  fallback counter style.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-range">CSS Counter Styles 3 §3.5</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>A list of ranges, and infinite</h2>
+  <p><q>This range is inclusive - it contains both the lower and upper bound numbers.</q> <q>The range of the counter
+  style is the union of all the ranges defined in the list.</q></p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: two-ranges"><li>1<li>2<li>3<li>4<li>5<li>6</ol></div>
+    <figcaption><code>range: 1 2, 5 infinite</code>: ★, ★, 3, 4, ★, ★.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: below" start=-1><li>-1<li>0<li>1<li>2</ol></div>
+    <figcaption><code>range: infinite 0</code>, falling back to <code>lower-alpha</code>: [-1], [0], [a], [b].</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto</h2>
+  <p><q>For 'alphabetic' and 'symbolic' systems, the range is 1 to positive infinity.</q> <q>For 'extends' systems, the
+  range is whatever 'auto' would produce for the extended system; if extending a complex predefined style</q> <q>the
+  range is the style's defined range.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-text"><ol style="list-style-type: alpha-auto" start=0><li>0<li>1<li>2<li>3</ol></div>
+    <figcaption>Alphabetic: 0, then x, y, xx.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: ext-japanese; list-style-position: inside; padding: 0"><li value=9999>9999<li>10000</ol></div>
+    <figcaption>Extending <code>japanese-informal</code>, range -9999 to 9999, inside: 九千九百九十九, then 一〇〇〇〇 in
+    <code>cjk-decimal</code>; or, where the optional extended range is implemented, as in Firefox, 一万.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

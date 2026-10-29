@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Global alpha and compositing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.17 Compositing</div>
+  <h1>Global alpha and compositing</h1>
+  <p class=pr-lede><q>Objects that implement the CanvasCompositing interface have a global alpha value and a current
+  compositing and blending operator value that both affect all the drawing operations on this object.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#compositing">HTML §4.12.5.1.17</a></span>
+  Each operator is walked in <a href="../compositing/canvas-composite-operation.html">Compositing and Blending's
+  pages</a>; these show that every kind of drawing takes them.</p>
+</header>
+<section>
+  <h2>Global alpha</h2>
+  <p><q>The global alpha value gives an alpha value that is applied to shapes and images before they are composited onto
+  the output bitmap.</q> Each canvas has blue and orange stripes 20 wide behind what is drawn.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=alpha></canvas></div>
+    <figcaption><code>globalAlpha</code> 0.5: a green square from (20, 10) to (80, 50), the stripes showing through
+    it; the same square at full alpha at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=alphaimage></canvas></div>
+    <figcaption>The 40 by 20 flag drawn at 120 by 40 from (40, 10), with <code>globalAlpha</code> 0.5: the stripes
+    showing through all four quarters.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The operator, for every drawing</h2>
+  <p><q>The current compositing and blending operator value controls how shapes and images are drawn onto the output
+  bitmap, once they have had the global alpha and the current transformation matrix applied.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=textout></canvas></div>
+    <figcaption>Text, 40px bold, drawn with <code>destination-out</code> on the stripes: "Out" cut from them, the stage
+    showing through its letters.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=60 data-draw=multiply></canvas></div>
+    <figcaption>The flag at 120 by 40 drawn with <code>multiply</code>: each quarter darkened by the stripes, darkest
+    where they are orange under blue or purple.</figcaption>
+  </figure>
+</section>
+<script>
+  function stripes(context) {
+    for (let x = 0; x < 200; x += 20) {
+      context.fillStyle = x % 40 ? "#d68a3c" : "#4f81bd";
+      context.fillRect(x, 0, 20, 60);
+    }
+  }
+  const flag = new Image();
+  flag.src = "../shared/resources/flag-40x20.png";
+  const draw = {
+    alpha(context) {
+      stripes(context);
+      context.fillStyle = "#6aa36a";
+      context.globalAlpha = 0.5;
+      context.fillRect(20, 10, 60, 40);
+      context.globalAlpha = 1;
+      context.fillRect(120, 10, 60, 40);
+    },
+    alphaimage(context) {
+      stripes(context);
+      context.globalAlpha = 0.5;
+      context.drawImage(flag, 40, 10, 120, 40);
+    },
+    textout(context) {
+      stripes(context);
+      context.globalCompositeOperation = "destination-out";
+      context.font = "bold 40px 'PR Noto Sans'";
+      context.fillText("Out", 60, 45);
+    },
+    multiply(context) {
+      stripes(context);
+      context.globalCompositeOperation = "multiply";
+      context.drawImage(flag, 40, 10, 120, 40);
+    },
+  };
+  Promise.all([document.fonts.load("bold 40px 'PR Noto Sans'"), new Promise(resolve => flag.onload = resolve)]).then(() => {
+    for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+      draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+  });
+</script>
+</body>
+</html>

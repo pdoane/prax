@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>scroll-behavior: auto and smooth</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .stage { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 4.1 Smooth Scrolling: the scroll-behavior Property</div>
+  <h1>scroll-behavior: auto and smooth</h1>
+  <p class=pr-lede><q>The scroll-behavior property specifies the scrolling behavior for a scroll container, when
+  scrolling happens due to navigation, scrolling APIs, or scroll snapping operations not initiated by the user.</q>
+  <code>auto</code>: <q>scrolled in an instant fashion.</q> <code>smooth</code>: <q>scrolled in a smooth fashion using
+  a user-agent-defined timing function over a user-agent-defined period of time.</q> <q>User agents may ignore this
+  property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#smooth-scrolling">CSS Overflow 3 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Where the scroll is, the moment after</h2>
+  <p>Each box holds A, B and C. A script sets <code>scrollTop = 20</code> and writes the <code>scrollTop</code> it
+  reads at once, in the same task, into the caption.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=b1 class="pr-frame sc"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>auto</code>: there at once, <code id=r1 class=pr-computed>?</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=b2 class="pr-frame sc" style="scroll-behavior: smooth"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>smooth</code>: it moves over time, so at once it reads less than 20, here <code id=r2
+    class=pr-computed>?</code>, or 20 where the browser ignores the property. The still may be taken before it arrives at B and C.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From the root, not the body</h2>
+  <p><q>When this property is specified on the root element, it applies to the viewport instead.</q> <q>Note: The
+  scroll-behavior property of the HTML body element is not propagated to the viewport.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#smooth-scrolling">CSS Overflow 3 §4.1</a></span>
+  Each frame calls <code>scrollTo(0, 40)</code> and writes the <code>scrollY</code> it reads at once on its page.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { scroll-behavior: smooth } body { margin: 0; height: 400px; background: linear-gradient(#4f81bd, #d68a3c) } p { position: fixed; margin: 10px; padding: 0 6px; background: white; font: 13px/20px 'PR Cousine' }</style><p id=o></p><script>scrollTo(0, 40); o.textContent = 'scrollY ' + scrollY</script>"></iframe></div>
+    <figcaption><code>html { scroll-behavior: smooth }</code>: the viewport scrolls smoothly, and reads less than 40
+    at once.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>body { scroll-behavior: smooth; margin: 0; height: 400px; background: linear-gradient(#4f81bd, #d68a3c) } p { position: fixed; margin: 10px; padding: 0 6px; background: white; font: 13px/20px 'PR Cousine' }</style><p id=o></p><script>scrollTo(0, 40); o.textContent = 'scrollY ' + scrollY</script>"></iframe></div>
+    <figcaption><code>body { scroll-behavior: smooth }</code>: not the viewport's; it scrolls at once, 40.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const n of [1, 2]) {
+    const box = document.getElementById("b" + n);
+    box.scrollTop = 20;
+    document.getElementById("r" + n).textContent = String(box.scrollTop);
+  }
+</script>
+</body>
+</html>

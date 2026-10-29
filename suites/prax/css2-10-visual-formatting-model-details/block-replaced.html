@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Widths: block-level, replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.4 Block-level, replaced elements in normal flow</div>
+  <h1>Widths: block-level, replaced elements</h1>
+  <p class=pr-lede>Each purple box is an <code>img</code> with <code>display: block</code>, of an SVG image 60 by 40
+  (ratio 3:2), in the 200px stage.</p>
+</header>
+
+<section>
+  <h2>The width, as for inline replaced elements</h2>
+  <p><q>The used value of 'width' is determined as for inline replaced elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-replaced-width">CSS 2
+  §10.3.4</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>With <code>width: auto</code>, the intrinsic 60px, not the stage's 200.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>height: 20px</code>: 20 × 3/2 = 30px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The margins, as for non-replaced blocks</h2>
+  <p><q>Then the rules for non-replaced block-level elements are applied to determine the margins.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#block-replaced-width">CSS 2 §10.3.4</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" style="margin: 0 auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>margin: 0 auto</code>: 70px each side, centered.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="margin-left: auto; margin-right: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>margin-left: auto; margin-right: 20px</code>: the left margin is 120px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

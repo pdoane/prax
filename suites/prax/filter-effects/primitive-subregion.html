@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The filter primitive subregion</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<!-- Each filter's region is its canvas, 160 by 40, unless a figure says otherwise. -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs>
+  <filter id="union" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="20" width="40" result="a"/>
+    <feOffset in="a" dx="20"/>
+  </filter>
+  <filter id="given" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feFlood flood-color="#d68a3c" x="20" width="40" result="a"/>
+    <feOffset in="a" dx="20" x="0" width="160"/>
+  </filter>
+  <filter id="standard" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset dx="60"/>
+  </filter>
+  <filter id="clip-result" filterUnits="userSpaceOnUse" x="0" y="0" width="160" height="40">
+    <feOffset dx="60" x="0" width="80"/>
+  </filter>
+  <filter id="clip-input" filterUnits="userSpaceOnUse" x="0" y="0" width="80" height="40">
+    <feOffset dx="-40"/>
+  </filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 9.4 Filter primitive subregion</div>
+  <h1>The filter primitive subregion</h1>
+  <p class=pr-lede><q>x, y, width and height default to the union (i.e., tightest fitting bounding box) of the
+  subregions defined for all referenced nodes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterPrimitiveSubRegion">Filter Effects 1 §9.4</a></span>
+  Each canvas is 160 by 40.</p>
+</header>
+
+<section>
+  <h2>The default subregion</h2>
+  <p>The first two filter an orange flood at x 20 to 40 wide, moved 20; the last takes the input, an orange rectangle
+  at x 0 to 40. For a standard input <q>the default subregion is 0%, 0%, 100%, 100%</q> of the filter region.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#union)"/></svg></div>
+    <figcaption>The offset's subregion is the flood's, x 20 to 60: of the moved flood, only x 40 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="160" height="40" fill="none" filter="url(#given)"/></svg></div>
+    <figcaption>The offset given <code>x</code> 0 and <code>width</code> 160: all of it, x 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#standard)"/></svg></div>
+    <figcaption>The rectangle moved 60: its subregion the filter region, so x 60 to 100.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Hard clips</h2>
+  <p><q>The filter primitive subregion acts as a hard clip clipping rectangle on the filter primitive result.</q>
+  <q>The filter region acts as a hard clip clipping rectangle on the filter primitive's input image(s).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect width="40" height="40" fill="#d68a3c" filter="url(#clip-result)"/></svg></div>
+    <figcaption>The rectangle moved 60 in a subregion 80 wide: x 60 to 80 only.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="40"><rect x="40" width="80" height="40" fill="#d68a3c" filter="url(#clip-input)"/></svg></div>
+    <figcaption>A filter region x 0 to 80 over a rectangle from 40 to 120, moved −40: its input is cut at 80, so x 0
+    to 40 only. <span class=pr-flag>Chrome</span> x 0 to 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

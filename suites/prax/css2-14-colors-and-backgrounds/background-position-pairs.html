@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background position: lengths and keywords together</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { height: 100px; background-repeat: no-repeat; background-position: 100% 50%; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='30'><rect width='50' height='30' fill='%234f81bd'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background position: lengths and keywords together</h1>
+  <p class=pr-lede>The image is a 50 by 30 banner in a box 200 by 100. Each box's style sheet gives it <code>100%
+  50%</code> first; the declaration in the caption follows.</p>
+</header>
+
+<section>
+  <h2>Horizontal first</h2>
+  <p><q>If at least one value is not a keyword, then the first value represents the horizontal position and the second
+  represents the vertical position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2 §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=m1 class=area style="background-position: 30px bottom"></div></div>
+    <figcaption><code>30px bottom</code>: 30px from the left, on the bottom edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=m2 class=area style="background-position: left 20%"></div></div>
+    <figcaption><code>left 20%</code>: on the left edge, 20% of 70px, 14px, from the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The other order: the earlier position stays</h2>
+  <p>A vertical keyword cannot come first beside a length or percentage, and a declaration that does not match the
+  grammar is ignored. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#parsing-errors">CSS 2 §4.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div id=m3 class=area style="background-position: bottom 30px"></div></div>
+    <figcaption><code>bottom 30px</code>: the banner stays where the earlier <code>100% 50%</code> puts it, at the right, 35px
+    down.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div id=m4 class=area style="background-position: 20% left"></div></div>
+    <figcaption><code>20% left</code>: the banner stays at the right, 35px down, too.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

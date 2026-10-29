@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gamut mapping: too light, too dark</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .ring { outline: 1px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 14.2 CSS Gamut Mapping to an RGB Destination, lightness</div>
+  <h1>Gamut mapping: too light, too dark</h1>
+  <p class=pr-lede><q>For colors which are out of range on the Lightness axis, white is returned in the destination
+  color space if the Lightness is greater than or equal to 1.0, while black is returned in the destination color space
+  if the Lightness is less than or equal to 0.0.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#css-gamut-mapping">CSS Color 4 §14.2</a></span> The lightness is
+  OkLCh's.</p>
+</header>
+
+<section>
+  <h2>Lightness 1 or more: white</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(1 0.3 140)"></div><div class="sw ring" style="background: white"></div></div>
+    <figcaption><code>oklch(1 0.3 140)</code>: white, beside <code>white</code>. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to a bright green.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(xyz 0.8 1.1 0.6)"></div><div class="sw ring" style="background: white"></div></div>
+    <figcaption><code>color(xyz 0.8 1.1 0.6)</code>, brighter than diffuse white (OkLCh lightness 1.017): white. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to a
+    pale green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Lightness 0 or less: black</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0 0.3 30)"></div><div class=sw style="background: black"></div></div>
+    <figcaption><code>oklch(0 0.3 30)</code>: black, beside <code>black</code>. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to a very dark red.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: lab(0% -40 30)"></div><div class=sw style="background: black"></div></div>
+    <figcaption><code>lab(0% -40 30)</code> (OkLCh lightness below 0): black. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each clips to a very dark green.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

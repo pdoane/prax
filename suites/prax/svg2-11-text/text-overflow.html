@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-overflow in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .box { inline-size: 95px; white-space: pre; }
+  .clip { text-overflow: clip; }
+  .ellipsis { text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.10 The ‘text-overflow’ property</div>
+  <h1>text-overflow in SVG text</h1>
+  <p class=pr-lede><q>In SVG text-overflow has an effect if there is a validly specified wrapping area, regardless of
+  the computed value of the overflow property on the text content block element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextOverflowProperty">SVG 2 §11.10.2.10</a></span>
+  Each stage is an SVG 160 by 60 holding "SVG is awesome", 140 long, in PR Noto Sans Mono at
+  <code>calc(50px / 3)</code>, 10 a letter, from x 20, with <code>inline-size: 95px; white-space: pre</code>: the
+  wrapping area's right edge at 115 is solid red.</p>
+</header>
+
+<section>
+  <h2>ellipsis and clip</h2>
+  <p><q>If the text-overflow property has the value ellipsis then if the text that is to be rendered overflows the
+  wrapping area an ellipsis is rendered such that it fits within the given area.</q> <q>If the text-overflow property
+  has the value clip then any text that overflows the wrapping area is clipped. Characters may be partially
+  rendered.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M115 0V60" stroke="#c0392b" /><text class="pr-measure box ellipsis" x="20" y="35">SVG is awesome</text></svg></div>
+    <figcaption><code>ellipsis</code>: "SVG is a…", the ellipsis ending at 110, within the edge.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw the
+    whole text, past the edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M115 0V60" stroke="#c0392b" /><text class="pr-measure box clip" x="20" y="35">SVG is awesome</text></svg></div>
+    <figcaption><code>clip</code>: cut at the edge, through the e, "SVG is aw" and half an e.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw the
+    whole text, past the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The column-rule shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 2; column-gap: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 4.5 Column Rule Shorthand: the column-rule property</div>
+  <h1>The column-rule shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for setting column-rule-width, column-rule-style, and column-rule-color at the same
+  place in the style sheet. Omitted values are set to their initial values.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#cr">CSS Multi-column Layout 1 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>Width, style and color in any order</h2>
+  <p>Each stage has two columns of 90px and a 20px gap.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: 4px dashed #c0392b">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule: 4px dashed #c0392b</code>: a red dashed rule, 4px wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="column-rule: #c0392b double 8px">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule: #c0392b double 8px</code>: two red lines, 8px across.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What it omits, it resets</h2>
+  <p>Each stage first declares <code>column-rule-color: #c0392b</code>, then the shorthand without a color; the text is <code>color: #3f7a3f</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="color: #3f7a3f; column-rule-color: #c0392b; column-rule: 4px solid">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule: 4px solid</code>: the color back to <code>currentcolor</code>, a green rule.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="color: #3f7a3f; column-rule-color: #c0392b; column-rule: solid">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule: solid</code>: green, and <code>medium</code>, 3px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="color: #3f7a3f; column-rule: 4px solid #c0392b; column-rule: none">one two six ten red big fat sun</div>
+    <figcaption><code>column-rule: none</code> after a red rule: no rule.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

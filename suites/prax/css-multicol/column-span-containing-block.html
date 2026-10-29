@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The spanner's containing block</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; }
+  .mc { columns: 3; column-gap: 10px; }
+  .all { column-span: all; }
+  .abs { position: absolute; top: 0; right: 0; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, containing blocks</div>
+  <h1>The spanner's containing block</h1>
+  <p class=pr-lede><q>The containing block of the spanner is the multicol container itself. Consequently, in cases
+  where the spanner itself does not establish a containing block for absolutely positioned boxes inside the spanner,
+  their containing block chain skips directly to the multicol container (skipping any ancestors between the spanner
+  and the multicol container).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each multicol container has three columns of 60px.</p>
+</header>
+
+<section>
+  <h2>Sized by the multicol container</h2>
+  <p>A spans, inside the tinted block, which has <code>margin: 0 40px</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one<div class=pr-parent style="margin: 0 40px">two<div class="pr-a all">A</div>three</div></div>
+    <figcaption>A is 200px wide, the multicol container's width, not the tinted block's 120px. <span class=pr-flag>Safari</span> "three", after A, is set half under it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure mc">one<div class=pr-parent style="margin: 0 40px">two<div class="pr-a pr-fit all" style="width: 50%">A</div>three</div></div>
+    <figcaption>A, <code>width: 50%</code>: 100px, half the multicol container, from its left edge. <span class=pr-flag>Safari</span> "three" half under A.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positioned boxes skip to the multicol container</h2>
+  <p>The tinted block has <code>position: relative</code>; inside A, B has <code>position: absolute; top: 0;
+  right: 0</code>. The multicol container is the stage, with <code>position: relative</code> and a height of
+  100px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-measure mc"><div class=pr-parent style="position: relative; margin-top: 20px">two<div class="pr-a all">A<span class="pr-b pr-fit abs">B</span></div>three</div></div>
+    <figcaption>B at the stage's top right corner: its containing block is the multicol container, not the
+    tinted block. <span class=pr-flag>Firefox</span> B at A's right end.
+    <span class=pr-flag>Safari</span> "two" above the tinted block, "three" under A.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-measure mc"><div class=pr-parent style="position: relative; margin-top: 20px">two<div class="pr-a all" style="position: relative">A<span class="pr-b pr-fit abs">B</span></div>three</div></div>
+    <figcaption>A with <code>position: relative</code> contains B: B at A's top right corner. <span
+    class=pr-flag>Safari</span> "two" and "three" as in the first.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

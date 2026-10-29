@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The position property: absolute and fixed</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.1 Choosing a positioning scheme</div>
+  <h1>The position property: absolute and fixed</h1>
+  <p class=pr-lede><code>position</code> takes <code>static | relative | absolute | fixed</code>. Every box is 20px tall;
+  the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>absolute</h2>
+  <p><q>The box's position (and possibly size) is specified with the 'top', 'right', 'bottom', and 'left' properties.
+  These properties specify offsets with respect to the box's containing block. Absolutely positioned boxes are taken
+  out of the normal flow. This means they have no impact on the layout of later siblings.</q> The stage is the
+  containing block. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#choose-position">CSS 2 §9.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=pr-a>A</div><div class=pr-b style="position: absolute; top: 60px; left: 40px; width: 120px">B: top 60, left 40</div><div class=pr-c>C</div></div>
+    <figcaption>B is 60px down and 40px in from the stage's corner, and C follows A as if B were not there.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>fixed</h2>
+  <p><q>The box's position is calculated according to the 'absolute' model, but in addition, the box is fixed with
+  respect to some reference.</q> On screen, <q>the box is fixed with respect to the viewport and does not move when
+  scrolled.</q> Each frame is a document 300px tall, scrolled down 60px. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#choose-position">CSS 2 §9.3.1</a>,
+  <a href="https://drafts.csswg.org/css2/#fixed-positioning">§9.6.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: absolute; top: 70px; left: 10px; width: 120px; height: 20px; background: #d68a3c }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>position: absolute; top: 70px</code>: it scrolls with the document, and is 10px from the
+    frame's top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 0; height: 300px } div { position: fixed; top: 70px; left: 10px; width: 120px; height: 20px; background: #d68a3c }</style><div></div><script>scrollTo(0, 60)</script>"></iframe></div>
+    <figcaption><code>position: fixed; top: 70px</code>: it stays 70px from the frame's top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

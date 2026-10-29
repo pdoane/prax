@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing tracks to non-spanning items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, step 2</div>
+  <h1>Sizing tracks to non-spanning items</h1>
+  <p class=pr-lede><q>Size tracks to fit non-spanning items: For each track with an intrinsic track sizing function
+  and not a flexible sizing function, consider the items in it with a span of 1</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Each grid has one column, its stage 150px wide, and blue holds "abcd efgh": a min-content contribution of 40px and a
+  max-content contribution of 90px.</p>
+</header>
+
+<section>
+  <h2>Minimums set the base size</h2>
+  <p><q>If the track has a min-content min track sizing function, set its base size to the maximum of the items’
+  min-content contributions</q>; for <code>max-content</code>, <q>max-content contributions</q>. A maximum of
+  <code>0px</code> is raised to the base size, so each track is its base size.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(min-content, 0px)"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>minmax(min-content, 0px)</code>: 40px, the text on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(max-content, 0px)"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>minmax(max-content, 0px)</code>: 90px, on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(min-content, 0px)"><div class=a>abcd efgh</div><div class=b>abcdef</div></div></div>
+    <figcaption>With "abcdef" in a second row: the maximum of 40 and 60px, so both are 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Maximums set the growth limit</h2>
+  <p><q>If the track has a min-content max track sizing function, set its growth limit to the maximum of the items’
+  min-content contributions.</q> For <code>max-content</code>, <q>max-content contributions. For fit-content()
+  maximums, furthermore clamp this growth limit by the fit-content() argument.</q> With a base size of 0, each track
+  then grows to its growth limit in the stage's free space <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-grow-tracks">§12.6</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(0px, min-content)"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>minmax(0px, min-content)</code>: 40px, on two lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(0px, max-content)"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>minmax(0px, max-content)</code>: 90px, on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: fit-content(60px)"><div class=a>abcd efgh</div></div></div>
+    <figcaption><code>fit-content(60px)</code>: the 90px clamped to 60px, on two lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Boxes on the other sides</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.2.5 Boxes on other sides</div>
+  <h1>Boxes on the other sides</h1>
+  <p class=pr-lede><q>The used values for @left-top, @left-middle and @left-bottom boxes are established by the same rules, with "width" replaced by "height", "left" by "top", "right" by "bottom" and "center" by "middle".</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#variable-mapping">CSS Paged Media 3 §5.3.2.5</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Heights down the left and right</h2>
+  <p>The pages have margins of 20px above and below and 40px at the sides, so the available height is 120px. Each box's content is one line, 20px tall.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px 40px; @left-top { content: '1'; background: #4f81bd } @left-middle { content: '2'; background: #6aa36a } @left-bottom { content: '3'; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Down the left, 40px wide: 1 from 20 to 60, 2 from 60 to 100, 3 from 100 to 140, as A, B and C would be across. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px 40px; @right-top { content: '1'; height: 20px; background: #4f81bd } @right-bottom { content: '3'; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Down the right: 1 is 20px tall; 3, <code>auto</code>, takes the other 100. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across the bottom</h2>
+  <p><q>The used values for @bottom-left, @bottom-center and @bottom-right page-margin boxes are established by the same rules as for @top-left, @top-center, and @top-right, respectively.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px 0 30px; @bottom-left { content: 'a'; background: #4f81bd } @bottom-center { content: 'bbbb'; background: #6aa36a } @bottom-right { content: 'cc'; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>The widths of the first figure of <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#variable-auto-sizing">§5.3.2.2</a></span>'s second page: 60, 120 and 60. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks: an inline ancestor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .host { position: relative; padding: 10px 20px; }
+  .fill { position: absolute; top: 0; right: 0; bottom: 0; left: 0; outline: 2px solid #2c5a8f; outline-offset: -2px; }
+  .past { position: absolute; top: 0; left: 100%; width: 20px; height: 20px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.1 Definition of "containing block"</div>
+  <h1>Containing blocks: an inline ancestor</h1>
+  <p class=pr-lede>An absolute box's nearest positioned ancestor here is an orange inline: relative, on one line,
+  with 10px 20px of padding and a 2px border.</p>
+</header>
+
+<section>
+  <h2>The padding boxes of the inline's boxes</h2>
+  <p><q>In the case that the ancestor is an inline element, the containing block is the bounding box around the padding
+  boxes of the first and the last inline boxes generated for that element. In CSS 2.2, if the inline element is split
+  across multiple lines, the containing block is undefined.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#containing-block-details">CSS 2 §10.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 20px 0"><span class="pr-chip host">an inline<span class=fill></span></span></div>
+    <figcaption>An absolute box with insets 0, outlined in blue, covers the inline's padding box, inside its
+    border. <span class="pr-flag pr-since">Since CSS 2</span> Its content box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 20px 0"><span class="pr-chip host">an inline<span class=past></span></span></div>
+    <figcaption>A 20px square with <code>top: 0; left: 100%</code> starts at the inline's top right padding corner.
+    <span class="pr-flag pr-since">Since CSS 2</span> Its content edges.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></div>
+  <h2>The content edges of the inline's fragments</h2>
+  <p>For an inline ancestor, <q>the containing block is formed by forming a rectangle from the start-most content edges (in both axes) of the first box fragment of the ancestor, and the
+  end-most content edges of the end-most box fragment(s) of the ancestor in each axis.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span> The padding box becomes the content box, and a split inline is defined.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="padding: 20px 0"><span class="pr-chip host">an inline<span class=fill></span></span></div>
+    <figcaption>The box with all four insets 0 covers only the text's content area, inside the padding.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each covers
+    the padding box, as CSS 2 has it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="padding: 20px 0"><span class="pr-chip host">an inline<span class=past></span></span></div>
+    <figcaption>The square starts at the end of the text, level with its top, inside the padding.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each puts it
+    at the padding corner, as CSS 2 has it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

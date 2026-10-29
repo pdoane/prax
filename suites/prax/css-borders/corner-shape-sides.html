@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-*-shape: the corners of one side</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 120px; height: 60px; margin: 10px; background: #4f81bd; border-radius: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.8.1 Shaping The Corners Of One Side</div>
+  <h1>corner-*-shape: the corners of one side</h1>
+  <p class=pr-lede><q>The 'corner-*-shape' shorthands set the two 'corner-*-*-shape' properties of the related side. If only one value is given, the second value defaults to the same value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shaping-side-shorthands">CSS Borders and Box Decorations 4 §3.8.1</a></span> Each blue box is 120 by 60 with <code>border-radius: 30px</code>.</p>
+</header>
+
+<section>
+  <h2>Physical and flow-relative sides</h2>
+  <p><q>That is, corner-top-shape: round square sets corner-top-left-shape: round; corner-top-right-shape: square;.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-top-shape: bevel"></div></div>
+    <figcaption><code>corner-top-shape: bevel</code>: both top corners bevelled, the bottom round. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-top-shape: round square"></div></div>
+    <figcaption><code>corner-top-shape: round square</code>: top left round, top right square. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-left-shape: scoop notch"></div></div>
+    <figcaption><code>corner-left-shape: scoop notch</code>: top left scooped, bottom left notched. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="writing-mode: vertical-rl; corner-block-start-shape: round square"></div></div>
+    <figcaption><code>vertical-rl</code>, <code>corner-block-start-shape: round square</code>: right side, start-start (top right) round, start-end (bottom right) square. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

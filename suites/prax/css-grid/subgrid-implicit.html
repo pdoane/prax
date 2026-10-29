@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: no implicit tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 40px 60px 80px; }
+  .s { display: grid; grid-template-columns: subgrid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, no implicit tracks</div>
+  <h1>Subgrids: no implicit tracks</h1>
+  <p class=pr-lede><q>The subgrid does not have any implicit grid tracks in the subgridded dimension(s). Hypothetical
+  implicit grid lines are used to resolve placement as usual when the explicit grid does not have enough lines;
+  however each grid item’s grid area is clamped to the subgrid’s explicit grid</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span>
+  Each parent grid has columns of 40, 60 and 80px; the tinted, outlined box is a subgrid of its columns.</p>
+</header>
+
+<section>
+  <h2>Placed outside: clamped</h2>
+  <p>To clamp, <q>If the grid area would span outside the limited grid, its span is clamped to the last line of the
+  limited grid.</q> <q>If the grid area would be placed completely outside the limited grid, its span must be
+  truncated to 1 and the area repositioned into the last grid track on that side of the grid.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overlarge-grids">§5.4</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 2 / 3"><div class=pr-a style="grid-column: 2 / span 3">A</div></div></div></div>
+    <figcaption>A <code>span 1</code> subgrid, the parent's 60px column, and A at <code>grid-column: 2 / span
+    3</code>: forced into the only track, 60px from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 1 / 3"><div class=pr-a style="grid-column: 2 / span 3">A</div><div class=pr-b style="grid-column: -4 / -3">B</div></div></div></div>
+    <figcaption>A <code>span 2</code> subgrid: A at <code>2 / span 3</code> is cut at its last line, 60px from 40px;
+    B at <code>-4 / -3</code>, before it, goes into its first track, 40px at 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto-placement wraps instead of adding columns</h2>
+  <p>The subgrid spans two columns and its rows are its own. Its items are auto-placed with
+  <code>grid-auto-flow: column</code>, which in an ordinary grid adds columns.</p>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 1 / 3; grid-template-rows: 20px 20px; grid-auto-flow: column"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div></div>
+    <figcaption>A and B fill the first column, C and D the second; E goes to a hypothetical third column, and is
+    clamped into the last track, in the first row, over C.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="grid-column: 1 / 4"><div class=pr-parent style="display: grid; grid-template-columns: subgrid; grid-column: 2 / span 3"><div class=pr-a style="grid-column: 1 / -1">A</div></div></div></div></div>
+    <figcaption>A nested subgrid at <code>2 / span 3</code> in a subgrid of three columns has room for two: it and
+    A span the 60 and 80px columns, 140px from 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

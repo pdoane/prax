@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-clip: the painting area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; padding: 10px; border: 10px dashed #2c5a8f; background-color: #b9cde6; }
+  .two {
+    background-color: transparent;
+    background-image: linear-gradient(#d68a3c, #d68a3c), linear-gradient(#b9cde6, #b9cde6);
+    background-clip: content-box, padding-box;
+  }
+  .tile {
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><circle cx='5' cy='5' r='4' fill='%234f81bd'/></svg>");
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.8 Painting Area: the background-clip property</div>
+  <h1>background-clip: the painting area</h1>
+  <p class=pr-lede><q>Determines the background painting area, which determines the area within which the background is
+  painted.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-clip">CSS Backgrounds 4 §2.8</a></span>
+  Each box has a 10px dashed border, 10px of padding and a content box 60 by 20.</p>
+</header>
+
+<section>
+  <h2>Border, padding or content box</h2>
+  <p>A light blue background color.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-clip: border-box"></div></div>
+    <figcaption><code>border-box</code>: blue to the outer edge, between and under the dashes, 100 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-clip: padding-box"></div></div>
+    <figcaption><code>padding-box</code>: blue inside the dashes, 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="background-clip: content-box"></div></div>
+    <figcaption><code>content-box</code>: blue only in the content box, 60 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Images are clipped too, each layer by its own value</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box two"></div></div>
+    <figcaption>An orange layer clipped to the content box over a light blue one clipped to the padding box; nothing
+    between the dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box tile" style="background-clip: padding-box"></div></div>
+    <figcaption>Blue dots tiled from the padding box's corner, <code>padding-box</code>: no dots between the
+    dashes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box tile"></div></div>
+    <figcaption>The same, <code>border-box</code>: the dots go on between the dashes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

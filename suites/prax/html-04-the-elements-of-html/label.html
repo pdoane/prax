@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The label element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 20px; margin: 0 0 10px; }
+  label { background: #f9cc9d; }
+  .pad a { color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.4 The label element</div>
+  <h1>The label element</h1>
+  <p class=pr-lede><q>The caption can be associated with a specific form control</q>, its labeled control, by
+  <code>for</code> or by putting the control inside the label.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-label-element">HTML §4.10.4</a></span></p>
+</header>
+
+<section>
+  <h2>Clicking a label</h2>
+  <p><q>The label element's exact default presentation and behavior, in particular what its activation behavior might
+  be, if anything, should match the platform's label behavior.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-label-element">§4.10.4</a></span>
+  Labels are tinted.</p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><label><input type=checkbox id=inside> inside the label</label></div>
+        <div><input type=checkbox id=named> <label for=named>for="named"</label></div>
+        <div><label for=text>for="text"</label> <input id=text size=6></div>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click each caption: <code>click</code> at the label, then at its control. The boxes check; the
+    field takes the caret.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><label for=para>for="para"</label> <span id=para>a span</span></div>
+        <div><label for=second>for="second" <input type=checkbox id=nested></label></div>
+        <div><input type=checkbox id=second> second</div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>A span is not labelable: clicking its label reaches nothing else. Clicking "for=second" checks the
+    bottom box, not the one inside the label.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Interactive content inside a label</h2>
+  <p><q>The activation behavior of a label element for events targeted at interactive content descendants of a label
+  element, and any descendants of those interactive content descendants, must be to do nothing.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/forms.html#the-label-element">§4.10.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><label><input type=checkbox id=agree> I agree to <a href="#terms" id=terms>the terms</a></label></div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click "the terms": one <code>click</code>, at the link; the box stays as it was. Click "I agree":
+    <code>click</code> at the label, then at the box, which checks.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Small, large and dynamic viewport units</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 6.1.2.1 The Large, Small, and Dynamic Viewport Sizes</div>
+  <h1>Small, large and dynamic viewport units</h1>
+  <p class=pr-lede>The <q>large viewport-percentage units (lv*) and default viewport-percentage units (v*)</q> assume
+  interfaces that expand and retract to be retracted, the <q>small viewport-percentage units (sv*)</q> assume them
+  expanded, and the <q>dynamic viewport-percentage units (dv*)</q> follow them. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#viewport-variants">CSS Values and Units 4 §6.1.2.1</a></span>
+  Each frame is a viewport 200 by 100.</p>
+</header>
+
+<section>
+  <h2>A frame has no such interface</h2>
+  <p>So the three sizes are one. Four bars side by side, each 40px wide.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><body style='margin: 0; display: flex; align-items: flex-start'><div style='width: 20vw; height: 50vh; background: #4f81bd'></div><div style='width: 20svw; height: 50svh; background: #d68a3c'></div><div style='width: 20lvw; height: 50lvh; background: #6aa36a'></div><div style='width: 20dvw; height: 50dvh; background: #8e44ad'></div></body>"></iframe></div>
+    <figcaption><code>vh</code>, <code>svh</code>, <code>lvh</code>, <code>dvh</code>: four bars 40px wide and 50px
+    tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><body style='margin: 0'><div style='width: 100svmax; height: 25px; background: #d68a3c'></div><div style='width: 100lvmin; height: 25px; background: #6aa36a'></div><div style='width: 50dvi; height: 25px; background: #8e44ad'></div><div style='width: 50svb; height: 25px; background: #4f81bd'></div></body>"></iframe></div>
+    <figcaption><code>100svmax</code> 200px, <code>100lvmin</code> 100px, <code>50dvi</code> 100px and
+    <code>50svb</code> 50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Scrollbars on the root</h2>
+  <p><q>if the value of 'overflow' or 'scrollbar-gutter' on the root element in either axis would cause scrollbars to
+  appear (or space to be reserved for them) unconditionally (for example, overflow: scroll, but not overflow: auto),
+  the computed values of the viewport-percentage lengths in that axis are reduced in accordance with the initial
+  containing block.</q> Each bar is <code>100vw</code> wide, and each frame's content overflows it.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><html style='overflow-y: scroll'><body style='margin: 0; height: 300px'><div style='width: 100vw; height: 40px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>overflow-y: scroll</code> on the root: the bar stops at the scrollbar, if it takes room.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><html style='overflow-y: auto'><body style='margin: 0; height: 300px'><div style='width: 100vw; height: 40px; background: #4f81bd'></div></body></html>"></iframe></div>
+    <figcaption><code>overflow-y: auto</code>: the bar is the full 200px, under any scrollbar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

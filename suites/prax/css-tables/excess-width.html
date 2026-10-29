@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Excess width: auto columns first</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; width: 200px; }
+  td { padding: 0; height: 20px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.3.2 Distributing excess width to columns, rules 1 to 3</div>
+  <h1>Excess width: auto columns first</h1>
+  <p class=pr-lede>When the table is wider than the max-content sizing-guess, the excess goes to columns by the first
+  of six rules that finds any. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">CSS Table 3 §3.9.3.2</a></span>
+  Each table is 200px; text is <code>.pr-measure</code>, no spacing.</p>
+</header>
+
+<section>
+  <h2>1. Auto columns with content, by max-content width</h2>
+  <p><q>If there are non-constrained columns that have originating cells with intrinsic percentage width of 0% and
+  with nonzero max-content width (aka the columns allowed to grow by this rule), the distributed widths of the columns
+  allowed to grow by this rule are increased in proportion to max-content width</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>a</td><td>bbb</td></tr></table></div>
+    <figcaption>"a" and "bbb", 10px and 30px: 160px more, 1:3, so 50px and 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 40px">a</td><td>bb</td><td></td></tr></table></div>
+    <figcaption>A 40px column, "bb" and an empty one: all 140px extra to "bb", 160px; the others keep 40px and 0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>2. Empty auto columns, equally</h2>
+  <p><q>Otherwise, if there are non-constrained columns that have originating cells with intrinsic percentage width of
+  0%</q>, they <q>are increased by equal amounts</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 40px">a</td><td></td><td></td></tr></table></div>
+    <figcaption>A 40px column and two empty ones: 80px each to the empty ones.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>3. Columns with widths, by max-content width</h2>
+  <p><q>Otherwise, if there are constrained columns with intrinsic percentage width of 0% and with nonzero max-content
+  width</q>, <q>in proportion to max-content width</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 20px">a</td><td style="width: 60px">b</td></tr></table></div>
+    <figcaption><code>20px</code> and <code>60px</code>: 120px more, 1:3, so 50px and 150px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

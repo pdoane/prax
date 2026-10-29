@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Nested counters: self-nesting</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .nest ol { counter-reset: item; }
+  .nest > ol { padding-left: 6px; }
+  .nest li { display: block; }
+  .nest li:before { content: counter(item) ". "; counter-increment: item; font-weight: 600; color: #2c5a8f; }
+  .nest > ol + ol { border-top: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.1 Nested counters and scope</div>
+  <h1>Nested counters: self-nesting</h1>
+  <p class=pr-lede><q>Counters are "self-nesting", in the sense that resetting a counter in a descendant element or
+  pseudo-element automatically creates a new instance of the counter.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+</header>
+
+<section>
+  <h2>Nested lists with one counter name</h2>
+  <p><q>Thus, the following suffices to number nested list items. The result is very similar to that of setting
+  'display:list-item' and 'list-style: inside' on the LI element</q>. The markup is the specification's fragment, two
+  lists, the first nested three deep. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+  <pre class=pr-source>OL { counter-reset: item }
+LI { display: block }
+LI:before { content: counter(item) ". ";
+            counter-increment: item }</pre>
+  <figure>
+    <div class="pr-stage pr-text nest"><ol>
+      <li>item</li>
+      <li>item
+        <ol>
+          <li>item</li>
+          <li>item</li>
+          <li>item
+            <ol><li>item</li></ol>
+            <ol><li>item</li></ol>
+          </li>
+          <li>item</li>
+        </ol>
+      </li>
+      <li>item</li>
+      <li>item</li>
+    </ol><ol>
+      <li>item</li>
+      <li>item</li>
+    </ol></div>
+    <figcaption>Top level 1, 2, then 3 and 4 after the nested list; inside it 1, 2, 3, 4; the two innermost lists each
+    start again at 1. Below the dashed line, the second list starts again at 1, 2.</figcaption>
+  </figure>
+  <p style="display: inline-block; vertical-align: top; width: 290px; margin: 0">In the specification's notation,
+  <q>an OL will create a counter, and all children of the OL will refer to that counter.</q> The nested lists are
+  <code>item[1]</code> and two <code>item[2]</code>, each a new instance; <code>item[0]</code> goes on counting 3 and 4
+  after them. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#scope">CSS 2 §12.4.1</a></span></p>
+</section>
+
+</body>
+</html>

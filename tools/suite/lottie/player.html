@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  A Lottie animation played by lottie-web's SVG renderer, the reference of the lottie-web suite:
+  player.html?src=<the animation's URL>. The viewer's browser pane and lottie_reference load it.
+  window.prSetFrame(frame) shows a frame, counted from the animation's in point, and
+  window.prSetTime(seconds) shows the frame the engine draws at that time: as many frames past the
+  in point as the seconds hold, looping over the animation's length. Each settles once the frame
+  is drawn with its images. window.prPlay(seconds) plays from there on the viewer's clock, drawing
+  each frame at the time elapsed since. window.prStats() reports how fast it draws and where it is.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: #fff; overflow: hidden; }
+  #player { width: 100vw; height: 100vh; }
+</style>
+<script src="../../third_party/lottie-web/lottie.min.js"></script>
+</head>
+<body>
+<div id="player"></div>
+<script>
+  var src = new URLSearchParams(location.search).get('src');
+  var animation = lottie.loadAnimation({
+    container: document.getElementById('player'),
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    path: src,
+    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
+  });
+  // Resolves once drawn with its images loaded, or gives up after three seconds.
+  var ready = new Promise(function (resolve) {
+    var waited = 0;
+    function check() {
+      var images = !animation.imagePreloader || animation.imagePreloader.loadedImages();
+      if ((animation.isLoaded && images) || waited >= 3000) {
+        resolve();
+        return;
+      }
+      waited += 20;
+      setTimeout(check, 20);
+    }
+    check();
+  });
+  function frameAt(seconds) {
+    var length = animation.totalFrames;
+    return length > 0 ? (seconds * animation.frameRate) % length : 0;
+  }
+  // The viewer's clock, which the page follows while it plays: the viewer's time and when the page
+  // was told it. So each frame it draws shows the viewer's current time, whenever the page became
+  // ready and however fast it draws.
+  var clock = null;
+  var drawn = 0;
+  function follow() {
+    if (clock === null)
+      return;
+    animation.goToAndStop(frameAt(clock.seconds + (performance.now() - clock.at) / 1000), true);
+    drawn += 1;
+    requestAnimationFrame(follow);
+  }
+  window.prSetFrame = function (frame) {
+    clock = null;
+    return ready.then(function () {
+      animation.goToAndStop(frame, true);
+      return frame;
+    });
+  };
+  window.prSetTime = function (seconds) {
+    return window.prSetFrame(frameAt(seconds));
+  };
+  // Plays from `seconds`, starting now, drawing the viewer's time at each of the page's frames.
+  window.prPlay = function (seconds) {
+    var told = { seconds: seconds, at: performance.now() };
+    return ready.then(function () {
+      var following = clock !== null;
+      clock = told;
+      if (!following)
+        requestAnimationFrame(follow);
+    });
+  };
+  // The frames drawn per second since the last call, and the frame shown now, as prSetTime gives it.
+  var since = performance.now();
+  window.prStats = function () {
+    var now = performance.now();
+    var fps = now > since ? drawn * 1000 / (now - since) : 0;
+    drawn = 0;
+    since = now;
+    return { fps: fps, frame: animation.currentFrame };
+  };
+</script>
+</body>
+</html>

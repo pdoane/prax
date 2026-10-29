@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::marker and the other pseudo-elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .pr-stage ol, .pr-stage ul { margin: 10px 0; }
+  .fl li::first-letter { color: #c0392b; font-weight: 700; }
+  .inside { list-style-position: inside; }
+  .string { list-style-type: "Note: "; }
+  .line li::first-line { color: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 4.2 List Markers: the ::marker pseudo-element</div>
+  <h1>::marker and the other pseudo-elements</h1>
+  <p class=pr-lede><q>The ::marker pseudo-element represents the automatically generated marker box of a list
+  item.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#marker-pseudo">CSS Pseudo-Elements 4 §4.2</a></span>
+  What it is and which properties apply to it are CSS Lists'; this page shows how it meets the other
+  pseudo-elements.</p>
+</header>
+
+<section>
+  <h2>Not selected by ::first-letter</h2>
+  <p><q>The contents of a ::marker are ignored (not selected) by ::first-letter.</q> Each item has
+  <code>::first-letter</code> in bold red.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=fl><li>item</ol></div>
+    <figcaption>An outside marker: "1." black; the "i" of "item" red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol class="fl inside"><li>item</ol></div>
+    <figcaption>Inside, on the same line: "1." still black, the "i" red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class="fl inside string"><li>item</ul></div>
+    <figcaption>An inside marker of letters, <code>list-style-type: "Note: "</code>: "Note: " black, the "i" red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>And ::first-line, under discussion</h2>
+  <p><q>Interaction of ::marker and ::first-line is currently under discussion in Issue 4506.</q>
+  <a href="https://github.com/w3c/csswg-drafts/issues/4506">csswg-drafts#4506</a></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol class="line inside"><li>item</ol></div>
+    <figcaption><code>li::first-line</code> red, inside marker: "item" red. The text gives no result for "1.".
+    Chrome, Safari and Firefox draw it red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

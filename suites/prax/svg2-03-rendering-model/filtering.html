@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filtering painted regions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <filter id="flood" x="0" y="0" width="1" height="1"><feFlood flood-color="#d68a3c" /><feComposite in2="SourceGraphic" operator="over" /></filter>
+  <filter id="inverse" x="-0.25" y="-0.5" width="1.5" height="2"><feComponentTransfer><feFuncA type="table" tableValues="1 0" /></feComponentTransfer></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.8 Filtering painted regions</div>
+  <h1>Filtering painted regions</h1>
+  <p class=pr-lede><q>In this case the result must be as though the paint operations had been applied to an
+  intermediate canvas initialized to transparent black, of a size determined by the rules given in Filter Effects then
+  filtered by the processes defined in Filter Effects.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#FilteringPaintRegions">SVG 2 §3.8</a></span>
+  Filter Effects walks the filters themselves. Each stage is an SVG 160 by 60 with a blue circle of radius 15 at 80,
+  30.</p>
+</header>
+
+<section>
+  <h2>An intermediate canvas of transparent black</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="15" fill="#4f81bd" filter="url(#flood)" /></svg></div>
+    <figcaption>The circle over an orange flood of its box: the box's corners orange, where the canvas was
+    transparent.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="15" fill="#4f81bd" filter="url(#inverse)" /></svg></div>
+    <figcaption>Alpha inverted over a region 45 by 60: black where the canvas was transparent, a hole where the
+    circle was. <span class=pr-flag>Safari</span> Black only in the circle's own box, 30 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

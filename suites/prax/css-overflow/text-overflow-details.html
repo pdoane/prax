@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ellipsis: rendering only</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; margin: 10px 50px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1.2 ellipsing details</div>
+  <h1>The ellipsis: rendering only</h1>
+  <p class=pr-lede><q>Ellipsing only affects rendering and must not affect layout nor dispatching of pointer
+  events</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#ellipsing-details">CSS Overflow 3 §6.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>Styled as the block</h2>
+  <p><q>The ellipsis is styled and baseline-aligned according to the block.</q> Each box is 100px wide,
+  <code>text-overflow: ellipsis</code>, in <code>.pr-measure</code> text, and the block's color is red.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="color: #c0392b"><span style="color: #2c5a8f">blue words run on</span></div></div>
+    <figcaption>The words are in a blue span; the ellipsis is the block's, red: "blue word" then a red
+    "…".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage" style="height: 50px"><div class="pr-frame pr-measure t" style="color: #c0392b; line-height: 30px"><span style="color: #2c5a8f; font-size: 30px">BIG words</span></div></div>
+    <figcaption>The span's text is 30px; the ellipsis is the block's size, small, and sits on the shared
+    baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After positioning, and too little room</h2>
+  <p><q>Ellipsing occurs after relative positioning and other graphical transformations.</q> <q>If there is
+  insufficient space for the ellipsis, then clip the rendering of the ellipsis itself (on the same side that neutral
+  characters on the line would have otherwise been clipped with the text-overflow:clip value).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#ellipsing-details">CSS Overflow 3 §6.1.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t"><span style="position: relative; left: 30px">abcdefghijkl</span></div></div>
+    <figcaption>"abcdefghijkl" moved 30px right by <code>position: relative</code>: it is ellipsed where it is drawn,
+    after 30px of space: "abcdef…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> ellipse
+    it where it was, then move it: "abcdefg", cut, the ellipsis moved past the edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t" style="width: 5px">abc</div></div>
+    <figcaption>A box 5px wide: "a", the first character, is kept and cut at the edge, and the ellipsis is
+    cut away.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

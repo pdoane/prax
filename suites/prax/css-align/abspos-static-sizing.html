@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing absolutely positioned boxes at their static position</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; line-height: 20px; }
+  .pr-stage.pr-cb { height: 80px; }
+  .lead { display: inline-block; width: 80px; height: 20px; background: #b9cde6; vertical-align: top; }
+  .ab { position: absolute; line-height: 0; outline: 1px dashed #6b7381; }
+  .c { display: inline-block; width: 30px; height: 20px; box-sizing: border-box; background: #8e44ad; border: 1px solid #5e2a75; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 6.5 Effects on Sizing of Absolutely Positioned Boxes with Static-Position Insets</div>
+  <h1>Sizing absolutely positioned boxes at their static position</h1>
+  <p class=pr-lede><q>For absolutely-positioned boxes whose inline-axis offsets are both auto, the available space for
+  calculating the inline size is also affected by alignment.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#abspos-sizing">CSS Box Alignment 3 §6.5</a></span>
+  In each stage, a blue run 80px wide puts the static position of an inline absolutely positioned box, dashed,
+  at 80px; the box holds six 30px chips that wrap.</p>
+</header>
+
+<section>
+  <h2>The space on the aligned side</h2>
+  <p>Where CSS 2 looks up 'direction', <q>instead reference the value of the 'align-self' or 'justify-self'
+  property</q>, <q>treating left-equivalent alignment as defined for ltr and right-equivalent alignment as defined for
+  rtl.</q></p>
+  <figure>
+    <div class="pr-stage pr-cb"><span class=lead></span><span class=ab><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span></span></div>
+    <figcaption><code>normal</code>, as <code>start</code>: the 120px from 80px to the edge: the box 120px wide,
+    four chips to a line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><span class=lead></span><span class=ab style="justify-self: end"><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span></span></div>
+    <figcaption><code>end</code>: the 80px before it: the box 80px wide, from 0, two chips to a line.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As <code>start</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>center</h2>
+  <p><q>In the case of center alignment, the available space for the box is double the distance between the center of
+  the static-position rectangle and the closest edge of the containing block in the relevant axis.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><span class=lead></span><span class=ab style="justify-self: center"><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span><wbr><span class=c></span></span></div>
+    <figcaption><code>center</code>: twice the 80px to the left edge: the box 160px wide, centered on 80px, from 0;
+    five chips to a line. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As
+    <code>start</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

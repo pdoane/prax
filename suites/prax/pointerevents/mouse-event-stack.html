@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mouse events on stacked elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { position: relative; height: 80px; margin: 10px 20px; }
+  .stack { position: absolute; top: 10px; left: 80px; width: 100px; height: 60px; box-sizing: border-box; }
+  #a { border: 1px solid #2c5a8f; background: #b9cde6; }
+  #b { top: -1px; left: -1px; border: 1px dashed #9c5f22; }
+  #c { top: -1px; left: -1px; border: 1px dotted #3f7a3f; font-size: 12px; text-align: center; line-height: 58px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 11.3 Mouse Event Order</div>
+  <h1>Mouse events on stacked elements</h1>
+  <p class=pr-lede><q>Sometimes elements can be visually overlapped using CSS. In the following example, three elements
+  labeled A, B, and C all have the same dimensions and absolute position on a web page. Element C is a child of B, and B
+  is a child of A in the DOM</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">Pointer Events §11.3</a></span></p>
+</header>
+<section>
+  <h2>One over, three enters</h2>
+  <p><q>When the pointing device is moved from outside the element stack to the element labeled C and then moved out
+  again, the following series of events MUST occur</q>: mouseover C, mouseenter A, mouseenter B, mouseenter C; then
+  mouseout C, mouseleave C, mouseleave B, mouseleave A. <q>The mouseover/mouseout events are only fired once, while
+  mouseenter/mouseleave events are fired three times (once to each element).</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mouse-event-order">§11.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=area><div class=stack id=a><div class=stack id=b><div class=stack id=c>a, b, c</div></div></div></div>
+      <ol class=pr-log data-log="mouseover mouseenter mouseout mouseleave" data-fields="target" data-on=".area" data-lines=8></ol>
+    </div>
+    <figcaption><code>a</code>, its child <code>b</code> and its grandchild <code>c</code> are one box, stacked.
+    Move onto it from the stage and off again: the eight events above, in that order.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

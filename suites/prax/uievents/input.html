@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>input</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.4.3.2 input</div>
+  <h1>input</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event immediately after the DOM has been updated.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-input">UI Events §3.4.3.2</a></span></p>
+</header>
+<section>
+  <h2>Too late to cancel</h2>
+  <p>input is <q>Cancelable No</q>, and has no default action: the update has happened. The page's script calls
+  <code>preventDefault()</code> on every input in the field. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-input">§3.4.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="beforeinput input" data-fields="data cancelable" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field and type <code>ab</code>: both letters stay in the field. beforeinput has
+    <code>cancelable</code>, and input does not.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only when the DOM changed</h2>
+  <p>input follows a key <q>only for keys which have updated the DOM</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-keyboard-event-order">§3.5.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=empty></div>
+      <ol class=pr-log data-log="keydown beforeinput input" data-fields="key inputType" data-on="#empty" data-lines=3></ol>
+    </div>
+    <figcaption>Click the empty field and press Backspace: keydown, and beforeinput or nothing after it, but no
+    input, since there was nothing to delete.</figcaption>
+  </figure>
+</section>
+<script>
+  // Tries to cancel every input event in the first field, after the log has read it.
+  document.getElementById("field").addEventListener("input", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

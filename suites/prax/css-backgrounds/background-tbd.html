@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-tbd: the layers without the color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-color: #c3d08b; }
+  .box {
+    background-tbd: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>") left no-repeat,
+                    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>") right no-repeat;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.11 Background Image Layers: the background-tbd shorthand property</div>
+  <h1>background-tbd: the layers without the color</h1>
+  <p class=pr-lede><q>The 'background-tbd' property is a shorthand property that sets all the same properties as the
+  'background' shorthand except for 'background-color', allowing authors to easily declare and position background
+  images while letting 'background-color' cascade through independently.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-layers">CSS Backgrounds 4 §2.11</a></span>
+  The section is <q>Not Ready For Implementation</q>, and its name is open (<a href="https://github.com/w3c/csswg-drafts/issues/9083">csswg-drafts#9083</a>).</p>
+</header>
+
+<section>
+  <h2>The color cascades through</h2>
+  <p>The box has <code>background-color: #c3d08b</code>, then <code>background-tbd</code> with two layers.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost"></div></div>
+    <figcaption>Green, with a blue square at the left and an orange one at the right. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Green alone: no layers.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-image: layers that draw nothing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 140px; height: 40px; margin: 10px; background-repeat: no-repeat; background-position: right, left; }
+  .none { background-image: none, url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"); }
+  .missing { background-image: url(no-such-image.png), url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"); }
+  .empty { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='0' height='20'></svg>"), url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"); }
+  .format { background-image: url("data:text/plain,Handgloves"), url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"); }
+  .gradient { background-image: linear-gradient(to right, #d68a3c, #8e44ad); background-size: 60px 20px; background-position: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.2 Image Sources: the background-image property</div>
+  <h1>background-image: layers that draw nothing</h1>
+  <p class=pr-lede><q>A value of none counts as a background image layer but draws nothing. An image that is empty
+  (zero width or zero height), that fails to download, or that cannot be displayed (e.g., because it is not in a
+  supported image format) likewise counts as a layer but draws nothing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-image">CSS Backgrounds 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Each still takes its place in the lists</h2>
+  <p>Each dashed box is 140 by 40, with two layers, <code>no-repeat</code>, at <code>right, left</code>. The second
+  layer is a blue 20px square, so it is drawn at the left: the first layer, whatever it is, takes the first
+  position.</p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost none"></div></div>
+    <figcaption><code>none</code> first: the blue square at the left, nothing at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost missing"></div></div>
+    <figcaption>An image that fails to download, first: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost empty"></div></div>
+    <figcaption>An SVG image of zero width, first: the same.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost format"></div></div>
+    <figcaption>A plain text file, which is not an image, first: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Any &lt;image&gt;</h2>
+  <p><q>Combination with other CSS modules may expand the definitions of these value types. For example, combining with
+  CSS Images allows for using CSS gradients as 'background-image' or 'border-image' values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#values">§1.2</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="box pr-ghost gradient"></div></div>
+    <figcaption>A gradient from orange to purple, sized 60 by 20, drawn once in the middle of the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

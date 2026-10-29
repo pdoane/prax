@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>break-inside on pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.2 Breaks Within Boxes: the break-inside property</div>
+  <h1>break-inside on pages</h1>
+  <p class=pr-lede><q>This property specifies page/column/region break behavior within the element’s principal box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-within">CSS Fragmentation 4 §3.2</a></span> Its values in columns are shown in <a href="../css-multicol/break-inside.html">break-inside in columns</a>. Each frame prints five lines, then the tinted box of three lines, which does not fit under them on a page whose content area is 140px tall.</p>
+</header>
+
+<section>
+  <h2>Avoided page breaks</h2>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<div class=k style='break-inside: avoid-page'>six<br>seven<br>eight</div>"></iframe>
+    <figcaption><code>avoid-page</code>: <q>Avoid a page break within the box.</q> The box moves whole to the second page.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<div class=k style='break-inside: avoid-column'>six<br>seven<br>eight</div>"></iframe>
+    <figcaption><code>avoid-column</code>, not in columns: no effect. The box breaks, "six" and "seven" on the first page, "eight" on the second. Safari prints larger: only
+    "six" on the first page.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A table</h2>
+  <p>The property applies to <q>all elements except inline-level boxes, internal ruby boxes, table column boxes, table column group boxes, absolutely-positioned boxes</q>. Three columns 60px tall; two Bs, then a table of two rows.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-table><div class=pr-table-row><div class=pr-table-cell>1</div></div><div class=pr-table-row><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>auto</code>: row 1 under the Bs, row 2 atop the second column. Firefox, as a UA may, keeps the table whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-table style="break-inside: avoid-column"><div class=pr-table-row><div class=pr-table-cell>1</div></div><div class=pr-table-row><div class=pr-table-cell>2</div></div></div></div>
+    <figcaption><code>break-inside: avoid-column</code> on the table: both rows in the second column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

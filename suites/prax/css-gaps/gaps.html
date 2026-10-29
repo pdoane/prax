@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gaps between boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+  .f { display: flex; flex-wrap: wrap; }
+  .f > div { width: 40px; padding: 0; box-sizing: border-box; }
+  .mc { column-count: 3; column-rule: 1px dashed #6b7381; }
+  .mcw { column-width: 60px; column-height: 20px; column-wrap: wrap; gap: 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 2 Gaps Between Boxes</div>
+  <h1>Gaps between boxes</h1>
+  <p class=pr-lede><q>The 'gap' property, and its 'row-gap' and 'column-gap' sub-properties, provide this functionality
+  for multi-column, flex, grid, and grid lanes layout.</q> <q>A gap is either a column gap or row gap, whose
+  definitions vary by type of container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#gaps">CSS Gaps 1 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Grid and flex</h2>
+  <p>In a grid, row and column gaps are <q>the gutters between grid rows and grid columns</q>. In a flex container the
+  main-axis gap acts <q>as if an additional fixed-size margin were inserted between adjacent flex items in a single
+  line</q>, and the cross-axis gap is <q>the gutter between adjacent flex lines</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="gap: 10px 20px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A grid of three columns, <code>gap: 10px 20px</code>: 10px between the rows, 20px between the
+    columns, each column 53⅓px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=f style="gap: 10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption>A wrapping flexbox of 40px items, <code>gap: 10px</code>: four to a line, 10px apart, so the line
+    is 190px and E wraps; the lines 10px apart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Multicol</h2>
+  <p>In multicol a column gap is <q>the gutter between adjacent column boxes</q>, and a row gap <q>the gutter between
+  the rows of column boxes established by 'column-height'</q>.</p>
+  <figure>
+    <div class=pr-stage><div class=mc><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption>Multicol, <code>column-gap: normal</code>: 1em, 14px, each dashed rule in the middle of one.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="mcw"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>column-height: 20px; column-wrap: wrap</code>: A, B and C in three columns of 60px, 10px apart;
+    D below A, under a 10px row gap. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> One row of
+    balanced columns, B under A: Safari puts C and D in a column each, Firefox D under C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

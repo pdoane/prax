@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment of replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 50px; }
+  .tall .pr-stage { height: 90px; }
+  img, canvas, iframe { display: block; outline: 1px dashed #c0392b; outline-offset: 0; }
+  .k { contain: size; }
+  figure.pr-narrow figcaption { max-width: 116px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, replaced elements</div>
+  <h1>Size containment of replaced elements</h1>
+  <p class=pr-lede><q>Replaced elements must be treated as having a natural width and height of 0 and no natural aspect
+  ratio.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  The purple image is an SVG 80 by 40; its box is outlined in red.</p>
+</header>
+
+<section>
+  <h2>Natural size 0, and no ratio</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption>No containment: 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img class=k alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>contain: size</code>: 0 by 0, nothing drawn.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img class=k alt="" style="width: 80px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: 80px</code>: no ratio carries it to the height: 80 by 0.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img class=k alt="" style="width: 80px; height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: 80px; height: 20px</code>: 80 by 20, the image drawn into it.</figcaption>
+  </figure>
+</section>
+
+<section class=tall>
+  <h2>aspect-ratio is honored</h2>
+  <p><q>Size containment only suppresses the natural aspect ratio, so properties like 'aspect-ratio' which affect that
+  preferred aspect ratio directly are honored.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img class=k alt="" style="width: 80px; aspect-ratio: 1/1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>width: 80px; aspect-ratio: 1/1</code>: 80 by 80.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img alt="" style="width: 80px; aspect-ratio: auto 1/1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>aspect-ratio: auto 1/1</code>, no containment: the natural 2:1 wins, 80 by 40.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><img class=k alt="" style="width: 80px; aspect-ratio: auto 1/1" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='%238e44ad'/></svg>"></div>
+    <figcaption>The same with <code>contain: size</code>: no natural ratio, so 1/1, 80 by 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

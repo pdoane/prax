@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: outlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .blk { box-sizing: border-box; width: 120px; height: 40px; padding: 0 6px; font-size: 13px; line-height: 20px; }
+  .ol { outline: 4px solid #c0392b; }
+  .p { position: absolute; box-sizing: border-box; width: 100px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: outlines</h1>
+  <p class=pr-lede>Outlines may be painted in step 7, after each element's content, or all together in step 10, at the
+  end of their stacking context. Each figure's red outline is 4px wide.</p>
+</header>
+
+<section>
+  <h2>After the blocks' backgrounds, either way</h2>
+  <p><q>Optionally, the outline of the element (see 10 below).</q> <q>Optionally, if the element is block-level, the
+  outline of the element (see 10 below).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 15px"><div class="pr-b pr-light blk ol">A</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 40px; text-align: right">B</div></div>
+    <figcaption>A's outline is over B's background, which comes later in the tree: blocks' backgrounds are painted
+    in step 4, before either place an outline may be painted. <span class="pr-flag pr-since">Since CSS 2</span> CSS UI 4 leaves the stacking of outlines to the UA.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 80px"><div class="pr-b pr-light blk ol" style="margin: 15px 0 0 15px">A</div><div class="pr-b p" style="left: 60px; top: 35px">B: auto</div></div>
+    <figcaption>B is positioned with <code>z-index: auto</code>. Under step 7 B covers A's outline; under step 10, the
+    recommended place, the outline covers B. Either is allowed. <span class="pr-flag pr-since">Since CSS 2</span> CSS UI 4 leaves the stacking of outlines to the UA.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>At the end of their own stacking context</h2>
+  <p><q>Finally, implementations that do not draw outlines in steps above must draw outlines from this stacking context
+  at this stage. (It is recommended to draw outlines in this step and not in the steps above.)</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 80px"><div class="pr-hl p" style="z-index: 1; left: 15px; top: 15px; width: 120px"><div class="blk ol" style="width: 100px; height: 30px; margin: 5px">A</div></div><div class="pr-b p" style="z-index: 2; left: 60px; top: 35px">B: 2</div></div>
+    <figcaption>A is in a stacking context at level 1, and its outline is painted in that context: B, at level 2, covers
+    it. <span class="pr-flag pr-since">Since CSS 2</span> CSS UI 4 leaves the stacking of outlines to the UA.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

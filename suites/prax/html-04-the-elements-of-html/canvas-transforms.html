@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Transformations</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.8 Transformations</div>
+  <h1>Transformations</h1>
+  <p class=pr-lede><q>The current transformation matrix is applied to coordinates when creating the current default path,
+  and when painting text, shapes, and Path2D objects</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#transformations">HTML §4.12.5.1.8</a></span></p>
+</header>
+<section>
+  <h2>In reverse order</h2>
+  <p><q>The transformations must be performed in reverse order.</q> <q>if a scale transformation that doubles the width
+  is applied to the canvas, followed by a rotation transformation that rotates drawing operations by a quarter turn, and
+  a rectangle twice as wide as it is tall is then drawn on the canvas, the actual result will be a square.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=order></canvas></div>
+    <figcaption>A 30 by 15 rectangle. Left, <code>scale(2, 1)</code> then <code>rotate(π/2)</code>: a square of 30,
+    x 20 to 50. Right, the other order: a bar 15 by 60, from y 20 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=set></canvas></div>
+    <figcaption>Squares of 20 at (10, 10). Top: <code>transform</code> moving 40 right, twice: the square at x 90.
+    Bottom, <code>setTransform</code> twice: it replaces, so at x 50.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The matrix, and strokes</h2>
+  <p><q>xnew = a x + c y + e</q>, <q>ynew = b x + d y + f</q>. The stroke <q>must itself also be subjected to the
+  current transformation matrix</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#drawing-model">§4.12.5.1.22</a></span></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=skew></canvas></div>
+    <figcaption><code>transform(1, 0, 1, 1, 0, 0)</code> on a square from (20, 20) to (80, 80): a parallelogram, its top
+    from x 40 to 100, its bottom from 100 to 160.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=stroke></canvas></div>
+    <figcaption><code>scale(4, 1)</code>, then a 2-wide stroke round a rectangle from (5, 20) to (45, 80): its sides 8
+    wide at x 20 and 180, its top and bottom 2 high.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    order(context) {
+      context.fillStyle = "#4f81bd";
+      context.translate(50, 20);
+      context.scale(2, 1);
+      context.rotate(Math.PI / 2);
+      context.fillRect(0, 0, 30, 15);
+      context.setTransform(1, 0, 0, 1, 150, 20);
+      context.rotate(Math.PI / 2);
+      context.scale(2, 1);
+      context.fillStyle = "#d68a3c";
+      context.fillRect(0, 0, 30, 15);
+    },
+    set(context) {
+      context.fillStyle = "#4f81bd";
+      context.transform(1, 0, 0, 1, 40, 0);
+      context.transform(1, 0, 0, 1, 40, 0);
+      context.fillRect(10, 10, 20, 20);
+      context.resetTransform();
+      context.fillStyle = "#d68a3c";
+      context.setTransform(1, 0, 0, 1, 40, 50);
+      context.setTransform(1, 0, 0, 1, 40, 50);
+      context.fillRect(10, 10, 20, 20);
+    },
+    skew(context) {
+      context.fillStyle = "#4f81bd";
+      context.transform(1, 0, 1, 1, 0, 0);
+      context.fillRect(20, 20, 60, 60);
+    },
+    stroke(context) {
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 2;
+      context.scale(4, 1);
+      context.strokeRect(5, 20, 40, 60);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

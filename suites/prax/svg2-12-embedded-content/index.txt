@@ -1,0 +1,29 @@
+00-supports-1.html
+SVG2/embedded.html#Overview 12.1 Overview
+    embedded-content.html
+SVG2/embedded.html#Placement 12.2 Placement of the embedded content
+    positioning-rectangle.html
+    zero-size.html
+    auto-size.html
+    object-fit.html
+    foreign-object-layout.html
+    foreign-object-scale.html
+    foreign-object-overflow.html
+    positioning-properties.html
+SVG2/embedded.html#ImageElement 12.3 The ‘image’ element
+    image-element.html
+    image-preserve-aspect-ratio.html
+    image-svg-aspect-ratio.html
+    image-svg-root.html
+    image-object-fit.html
+    image-overflow.html
+    image-separate-document.html
+    image-recursive.html
+    image-fragments.html
+SVG2/embedded.html#ForeignObjectElement 12.4 The ‘foreignObject’ element
+    foreign-object.html
+    foreign-object-svg.html
+    foreign-object-switch.html
+# SVG2/embedded.html#DOMInterfaces 12.5 DOM interfaces: no page; it is object model
+# SVG2/embedded.html#InterfaceSVGImageElement 12.5.1 Interface SVGImageElement: no page; it is object model
+# SVG2/embedded.html#InterfaceSVGForeignObjectElement 12.5.2 Interface SVGForeignObjectElement: no page; it is object model

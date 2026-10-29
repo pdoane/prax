@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: left and top</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { width: 50px; height: 30px; padding: 0 6px; border: 1px solid #d5d9e0; }
+  .or { border: 8px solid #d68a3c; }
+  .bl { border: 8px solid #4f81bd; }
+  .intro #row1 { border: 3px solid blue; }
+  .intro #row2, .intro #row3 { border: 1px solid black; }
+  .intro td { height: auto; border: 0 none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: left and top</h1>
+  <p class=pr-lede>The last tie-breaker, and the introduction's open question. All tables collapse their borders.</p>
+</header>
+
+<section>
+  <h2>4. Between elements of the same type</h2>
+  <p><q>When two elements of the same type conflict, then the one further to the left (if the table's 'direction' is
+  'ltr'; right, if it is 'rtl') and further to the top wins.</q> Orange and blue borders here are both 8px solid. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td class=or>1<td class=bl>2</table></div>
+    <figcaption>Orange cell 1 on the left of blue cell 2: the border between them is orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table style="direction: rtl"><tr><td class=or>1<td class=bl>2</table></div>
+    <figcaption><code>direction: rtl</code>: cell 1 is on the right, and the border between is orange, the
+    rightmost's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td class=bl>1<tr><td class=or>2</table></div>
+    <figcaption>Blue cell 1 above orange cell 2: the border between is blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The introduction's rows</h2>
+  <p><q>What color (black or blue) and thickness (1px or 3px) will the border between row1 and row2 be?</q> Row 1 has a
+  3px solid blue border, rows 2 and 3 1px solid black ones. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#tables-intro">CSS 2 §17.1</a>, <a href="https://drafts.csswg.org/css2/#border-conflict-resolution">§17.6.2.1</a></span></p>
+  <figure class=intro>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr id=row1><td>Cell 1<td>Cell 2<tr id=row2><td>Cell 3<td>Cell 4<tr id=row3><td>Cell 5<td>Cell 6</table></div>
+    <figcaption>Wider wins: the border between row 1 and row 2 is 3px and blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

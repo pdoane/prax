@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The Backdrop Root Image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .back { padding: 10px; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #f9cc9d 10px 20px); }
+  .parent { padding: 5px 35px; }
+  .glass { width: 100px; height: 40px; backdrop-filter: grayscale(1); }
+  .later { position: relative; width: 40px; height: 20px; margin: -30px 0 0 70px; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Filter Effects 2 · 3 Backdrop Root</div>
+  <h1>The Backdrop Root Image</h1>
+  <p class=pr-lede><q>Start at the Backdrop Root element that is the nearest ancestor of E.</q> <q>Paint all content, in
+  painting order, between (and including) the ancestor Backdrop Root element and element E.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-2/#BackdropRoot">Filter Effects 2 §3</a></span>
+  The definition is open: <q>This specification does not yet have Working Group consensus, specifically on the
+  definition of Backdrop Root.</q> (<a href="https://github.com/w3c/fxtf-drafts/issues/53">fxtf-drafts#53</a>). Each
+  stage is striped; the dashed box, 100 by 40, has <code>backdrop-filter: grayscale(1)</code>, in a parent with no
+  background.
+  Safari's and Firefox's stills show no backdrop filter, as <a href="backdrop-filter.html">backdrop-filter.html</a>
+  says.</p>
+</header>
+
+<section>
+  <h2>Up to the nearest Backdrop Root</h2>
+  <figure>
+    <div class="pr-stage back"><div class=parent><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A plain parent: the root element is the Backdrop Root, so the stripes behind are gray in the
+    box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class=parent style="opacity: 0.99"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>The parent at <code>opacity: 0.99</code>, a Backdrop Root: nothing painted inside it before the box,
+    so nothing gray; the stripes show through, colored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage back"><div class=parent style="transform: translateX(0)"><div class="glass pr-ghost"></div></div></div>
+    <figcaption>A transformed parent, a stacking context but no Backdrop Root: gray, as for a plain parent.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What paints before it, not after</h2>
+  <figure>
+    <div class="pr-stage back"><div class=parent><div class="glass pr-ghost"></div><div class=later></div></div></div>
+    <figcaption>A purple box that paints after the dashed one, over its right half: purple, not gray.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

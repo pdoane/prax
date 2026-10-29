@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D presentation attributes in SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .g { fill: none; stroke: #6b7381; stroke-dasharray: 2 2; }
+  .flip { transform-box: fill-box; transform-origin: center; transform: rotateY(180deg); }
+  .far { transform-box: fill-box; transform-origin: center; transform: translateZ(-100px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 17 The SVG transform Attribute</div>
+  <h1>3D presentation attributes in SVG</h1>
+  <p class=pr-lede><q>This specification will also introduce the new presentation attributes transform-origin,
+  perspective, perspective-origin, transform-style and backface-visibility.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#svg-transform">CSS Transforms 2 §17</a></span>
+  Each stage is an <code>svg</code>, 160 by 100; the dashed outline is where the shape would be without a
+  transform.</p>
+</header>
+
+<section>
+  <h2>backface-visibility</h2>
+  <p>A blue 80 by 40 rect at (40, 30) with <code>rotateY(180deg)</code> about its center.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><rect class=flip x=40 y=30 width=80 height=40 fill="#4f81bd" /></svg></div>
+    <figcaption>No attribute: its back shows, in place.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><rect class=flip x=40 y=30 width=80 height=40 fill="#4f81bd" style="backface-visibility: hidden" /></svg></div>
+    <figcaption>The property, <code>style="backface-visibility: hidden"</code>: hidden. <span class=pr-flag>Chrome</span>
+    shows it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><rect class=flip x=40 y=30 width=80 height=40 fill="#4f81bd" backface-visibility="hidden" /></svg></div>
+    <figcaption>The attribute, <code>backface-visibility="hidden"</code>: hidden. No browser has the attribute yet, which
+    the module says it <q>will</q> introduce.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>perspective</h2>
+  <p>A group holds the blue rect with <code>translateZ(-100px)</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><g style="perspective: 100px"><rect class=far x=40 y=30 width=80 height=40 fill="#4f81bd" /></g></svg></div>
+    <figcaption>The property on the group, <code>style="perspective: 100px"</code>: the rect half its size.
+    <span class=pr-flag>Chrome</span> full size.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=100><rect class=g x=40.5 y=30.5 width=80 height=40 /><g perspective="100px"><rect class=far x=40 y=30 width=80 height=40 fill="#4f81bd" /></g></svg></div>
+    <figcaption>The attribute, <code>perspective="100px"</code>: the same. No browser has it yet.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

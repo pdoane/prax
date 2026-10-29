@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mouse events from a pointer that hovers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 40px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 10.2 Mapping for devices that support hover</div>
+  <h1>Mouse events from a pointer that hovers</h1>
+  <p class=pr-lede><q>Whenever the user agent is to dispatch a pointer event for a device that supports hover, it SHOULD
+  run the following steps</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-support-hover">Pointer Events §10.2</a></span></p>
+</header>
+<section>
+  <h2>Prevented until the button is up</h2>
+  <p><q>If the pointer event dispatched was pointerdown and event's canceled flag is set, then set the PREVENT MOUSE
+  EVENT flag for this pointerType.</q> <q>If the pointer event dispatched was pointerup or pointercancel, clear the
+  PREVENT MOUSE EVENT flag for this pointerType.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-support-hover">§10.2</a></span>
+  A listener cancels <code>pointerdown</code> on the box.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Press, drag, release, move.</div>
+      <ol class=pr-log data-log="pointerdown pointerup mousedown mousemove mouseup" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Press the box with the mouse and drag within it: no <code>mousedown</code>, and no
+    <code>mousemove</code> while the button is down. Release: <code>pointerup</code>, and no <code>mouseup</code>.
+    Move again: <code>mousemove</code>s resume.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A canceled stream ends with a mouseup at the window</h2>
+  <p><q>pointercancel, then fire a mouseup event at the window.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-support-hover">§10.2</a></span>
+  The page logs a <code>mouseup</code> whose target is the window itself.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=drag draggable=true>Drag this box away.</div>
+      <ol class=pr-log id=log data-log="pointercancel mouseup" data-on="#drag" data-lines=2></ol>
+    </div>
+    <figcaption>Drag the box with the mouse, and drop it: <code>pointercancel</code> as the drag begins, then
+    <code>mouseup</code> at the window.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels pointerdown on the first box, and logs a mouseup at the window in the second figure's log.
+  document.getElementById("pad").addEventListener("pointerdown", event => event.preventDefault());
+  const log = document.getElementById("log");
+  window.addEventListener("mouseup", event => {
+    if (event.target !== window)
+      return;
+    const item = document.createElement("li");
+    item.textContent = "mouseup target=window";
+    log.append(item);
+    while (log.children.length > 2)
+      log.firstElementChild.remove();
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

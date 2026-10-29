@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-box: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .t { font: 40px/80px "PR Baseline Diagnostic"; background: rgba(214, 138, 60, 0.5); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 6.1 Shorthand for Text Box Trimming: the text-box property</div>
+  <h1>text-box: the shorthand</h1>
+  <p class=pr-lede><q>This property is a shorthand for setting the text-box-trim and text-box-edge properties in a
+  single declaration.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#text-box-shorthand">CSS Inline Layout 3 §6.1</a></span>
+  Each orange block is a line of 40px PR Baseline Diagnostic on 80px lines: B fills its cap height down to its
+  alphabetic baseline, and █ its ascent to its descent.</p>
+</header>
+
+<section>
+  <h2>normal</h2>
+  <p><q>If the single keyword normal is specified, it sets text-box-trim to none and text-box-edge to auto.</q></p>
+  <figure>
+    <div class=pr-stage><div class=t id=a style="text-box: normal">B█</div></div>
+    <figcaption><code>normal</code>: untrimmed, 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A value left out</h2>
+  <p><q>Otherwise, omitting the text-box-trim value sets it to trim-both (not the initial value), while omitting the
+  text-box-edge value sets it to auto (the initial value).</q></p>
+  <figure>
+    <div class=pr-stage><div class=t id=b style="text-box: cap alphabetic">B█</div></div>
+    <figcaption><code>cap alphabetic</code>: trimmed at both ends to the B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=t id=c style="text-box: trim-start">B█</div></div>
+    <figcaption><code>trim-start</code>: <code>auto</code>, the ascent, so trimmed at the top to the █.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

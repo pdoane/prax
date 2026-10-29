@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page headers</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+  iframe.pr-paged.ex { height: 90px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.4 Page-margin box examples</div>
+  <h1>Page headers</h1>
+  <p class=pr-lede><q>The following is a collection of examples of page-margin box usage.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#margin-box-ex">CSS Paged Media 3 §5.4</a></span> Each page is 240 by 90 with a 40px top margin and none at the sides; its header text is 9px, room for four lines, and each header box is tinted. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>The specification's six headers</h2>
+  <p><q>Because there are no contents defined for the top-center or the top-right page-margin boxes, the extent of the top-left page-margin box is allowed to cross the center of the page box.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-left { content: 'Header in Left Cell (top-left)'; background: #b9cde6 } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-left alone: its box spans the width, the text at its left. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-center { content: 'Header in Center Cell (top-center)'; background: #cfe3cf } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-center alone, centered. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-right { content: 'Header in Right Cell (top-right)'; background: #f6d7b4 } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-right alone: across the page, the text at its right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-left { content: 'Left Cell (top-left)'; background: #b9cde6 } @top-center { content: 'Header in Center Cell (top-center)'; background: #cfe3cf } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-left and top-center: the center one stays centered. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-center { content: 'Header in Center Cell (top-center)'; background: #cfe3cf } @top-right { content: 'Right Cell (top-right)'; background: #f6d7b4 } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-center and top-right. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged ex" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 90px; margin: 40px 0 10px; font-size: 9px; line-height: 10px; @top-left { content: 'Header in top-left with approx. twice as many words as right cell.'; background: #b9cde6 } @top-right { content: 'Right cell (top-right)'; background: #f6d7b4 } } html { background: #8cb6c0 }</style><div>line 1</div>"></iframe>
+    <figcaption>Top-left and top-right, in proportion to their content: top-left crosses the center. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>order in a grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 60px 60px 60px; }
+  .o { display: grid; grid-template-columns: 60px 60px 60px; }
+  .o > div { grid-area: 1 / 1; width: 60px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 6.3 Reordered Grid Items: the order property</div>
+  <h1>order in a grid</h1>
+  <p class=pr-lede><q>The order property also applies to grid items. It affects their auto-placement and painting
+  order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#order-property">CSS Grid Layout 2 §6.3</a></span></p>
+</header>
+
+<section>
+  <h2>Auto-placement</h2>
+  <p><q>Auto-placement takes grid items in order-modified document order.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-auto-flow-property">§7.7</a></span>
+  Each stage has three 60px columns and A, B, C in that source order.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a>A</div><div class=pr-b style="order: -1">B</div><div class=pr-c>C</div></div></div>
+    <figcaption>B has <code>order: -1</code>: B first, then A at 60px, then C at 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="order: 2">A</div><div class=pr-b>B</div><div class=pr-c style="order: 1">C</div></div></div>
+    <figcaption>A <code>order: 2</code>, C <code>order: 1</code>: B, C, A.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="order: 2">A</div><div class=pr-b style="grid-column: 1">B</div><div class=pr-c>C</div></div></div>
+    <figcaption>A <code>order: 2</code>; B placed in column 1: B at 0, C at 60px, A at 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Painting</h2>
+  <p><q>The painting order of grid items is exactly the same as inline blocks, except that order-modified document
+  order is used in place of raw document order</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#z-order">§6.5</a></span>
+  A and B, 60px wide, share a cell; B has <code>margin-left: 30px</code>, so they overlap from 30 to 60px.</p>
+  <figure>
+    <div class=pr-stage><div class=o><div class=pr-a>A</div><div class=pr-b style="margin-left: 30px">B</div></div></div>
+    <figcaption>In source order: B, painted later, covers A from 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=o><div class=pr-a style="order: 1">A</div><div class=pr-b style="margin-left: 30px">B</div></div></div>
+    <figcaption>A has <code>order: 1</code>: A is painted after B, and covers it from 30 to 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-synthesis-weight</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.8.1 Controlling synthesized bold: the 'font-synthesis-weight' property</div>
+  <h1>font-synthesis-weight</h1>
+  <p class=pr-lede><q>This property controls whether user agents are allowed to synthesize bold font faces when a
+  font family lacks bold faces.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-synthesis-weight">CSS Fonts 4 §2.8.1</a></span></p>
+</header>
+
+<section>
+  <h2>auto and none</h2>
+  <p>Each stage is <code>font-weight: bold</code> in PR Cousine, which has no bold face.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-weight: bold; font-synthesis-weight: auto">Handgloves</div>
+    <figcaption><code>auto</code>: <q>Synthesis of bold faces is allowed</q>, so thickened strokes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Cousine'; font-weight: bold; font-synthesis-weight: none">Handgloves</div>
+    <figcaption><code>none</code>: <q>Synthesis of bold faces is not allowed</q>, so the regular face.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A family with a bold face</h2>
+  <p>PR Tinos has a bold face, so nothing is synthesized and the property changes nothing.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-weight: bold; font-synthesis-weight: none">Handgloves</div>
+    <figcaption><code>none</code>: PR Tinos Bold.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos'; font-weight: bold; font-style: italic; font-synthesis-weight: none">Handgloves</div>
+    <figcaption>Bold italic with <code>none</code>: PR Tinos has no bold italic, so its italic face at its own
+    weight.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

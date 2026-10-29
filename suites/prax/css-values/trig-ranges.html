@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Trigonometric functions at their limits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-bottom: 8px; }
+  .r { height: 80px; }
+  .r div { width: 60px; height: 20px; margin: 30px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.4.1 Argument Ranges</div>
+  <h1>Trigonometric functions at their limits</h1>
+  <p class=pr-lede><q>In sin(A), cos(A), or tan(A), if A is infinite, the result is NaN.</q> <q>In asin(A) or acos(A),
+  if A is less than -1 or greater than 1, the result is NaN.</q> <q>In atan(A), if A is +∞, the result is 90deg</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#trig-infinities">CSS Values and Units 4 §10.4.1</a></span>
+  A NaN is <q>censored into a zero value</q> (<a href="https://drafts.csswg.org/css-values-4/#calc-ieee">§10.9.2</a>).</p>
+</header>
+
+<section>
+  <h2>NaN</h2>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="min-height: 20px; width: calc(100px + 100px * sin(infinity * 1deg))"></div></div>
+    <figcaption><code>width: calc(100px + 100px * sin(infinity * 1deg))</code>: NaN, so 0: no bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="min-height: 20px; width: calc(100px + 100px * cos(asin(2)))"></div></div>
+    <figcaption><code>calc(100px + 100px * cos(asin(2)))</code>: NaN, no bar.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: calc(30deg + acos(-2))">A</div></div>
+    <figcaption><code>rotate: calc(30deg + acos(-2))</code>: NaN, 0deg: level.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Infinite arguments to atan() and atan2()</h2>
+  <p>Each bar is <code>rotate()</code>d by the angle under it.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: atan(infinity)">A</div></div>
+    <figcaption><code>atan(infinity)</code>: 90deg, upright.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: atan2(infinity, -infinity)">A</div></div>
+    <figcaption><code>atan2(infinity, -infinity)</code>: 135deg.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: atan2(0, -1)">A</div></div>
+    <figcaption><code>atan2(0, -1)</code>: 180deg, A upside down.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow r"><div class="pr-a pr-fit" style="rotate: atan2(-infinity, 5)">A</div></div>
+    <figcaption><code>atan2(-infinity, 5)</code>: −90deg, A reading up.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

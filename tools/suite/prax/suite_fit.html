@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset=utf-8>
+<title>Suite fit</title>
+<!-- Loads each page that /config lists in a frame of the suite's viewport, once its fonts have loaded, and posts the
+     size of each page's document: {"pages": {url: [scrollWidth, scrollHeight]}} (tools/suite/prax/suite_fit.py). -->
+<body style="margin: 0">
+<script>
+async function measure(url) {
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "display: block; width: 600px; height: 800px; border: 0";
+    document.body.replaceChildren(frame);
+    await new Promise(resolve => { frame.onload = resolve; frame.src = url; });
+    const doc = frame.contentDocument;
+    await doc.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return [doc.documentElement.scrollWidth, doc.documentElement.scrollHeight];
+}
+
+(async () => {
+    const urls = await (await fetch("/config")).json();
+    const pages = {};
+    for (const url of urls) {
+        try {
+            pages[url] = await measure(url);
+        } catch (error) {
+            pages[url] = String(error);
+        }
+    }
+    await fetch("/results", {method: "POST", body: JSON.stringify({pages})});
+})();
+</script>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A checkout form with fieldsets, two-column rows, validation hints, and an order summary. Leans on: a grid with a narrow aside, fieldsets and legends, flex rows of unequal fields, styled text inputs and selects, error and success states, and a totals block. -->
+<title>Form</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.wrap { display:grid; grid-template-columns:1fr 190px; gap:12px; align-items:start; color:#22282f; font-size:12px }
+.card { background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:12px 14px }
+.card h2 { font-size:15px; margin:0 0 2px }
+.card .sub { font-size:11px; color:#6d7783; margin-bottom:10px }
+.steps { display:flex; gap:6px; font-size:9px; margin-bottom:10px }
+.steps span { flex:1; text-align:center; padding:3px 0; border-radius:4px; background:#eef1f4; color:#8a93a0 }
+.steps span.on { background:#3d82c4; color:#fff; font-weight:bold }
+.steps span.done { background:#dff2e6; color:#1a6b3d }
+fieldset { border:none; margin:0 0 10px }
+legend { font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:#8a93a0; margin-bottom:6px }
+.r2 { display:flex; gap:10px; margin-bottom:8px }
+.f { flex:1 }
+.f label { display:block; font-size:10px; color:#4a5561; font-weight:bold; margin-bottom:2px }
+.f input, .f select { width:100%; font:inherit; font-size:11px; color:#22282f; background:#fff; border:1px solid #ccd3da; border-radius:5px; padding:4px 7px }
+.f .hint { font-size:10px; color:#8a93a0; margin-top:2px }
+.f.bad input { border-color:#c0392b; background:#fdf3f2 }
+.f.bad .hint { color:#c0392b }
+.f.good input { border-color:#5aa06f }
+.f.grow { flex:2 }
+.check { display:flex; align-items:flex-start; gap:6px; font-size:11px; color:#4a5561; margin-top:2px }
+.aside h3 { font-size:12px; margin:0 0 6px }
+.line { display:flex; justify-content:space-between; font-size:11px; padding:3px 0; border-bottom:1px solid #eef1f4 }
+.line .q { color:#8a93a0; font-size:10px }
+.tot { display:flex; justify-content:space-between; font-weight:bold; font-size:13px; padding-top:6px }
+.aside .btn { display:block; text-align:center; background:#3d82c4; border:1px solid #2f6ba6; color:#fff; font-weight:bold; border-radius:6px; padding:6px 0; margin-top:8px; font-size:11px }
+.aside .fine { font-size:9.5px; color:#8a93a0; margin-top:6px; line-height:1.4 }
+.promo { display:flex; gap:5px; margin-top:8px }
+.promo input { flex:1; font:inherit; font-size:10px; border:1px solid #ccd3da; border-radius:5px; padding:3px 6px }
+.promo span { font-size:10px; border:1px solid #ccd3da; border-radius:5px; padding:3px 8px; color:#4a5561 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h2>Checkout</h2>
+    <div class="sub">Step 2 of 3. Your basket is held for 20 minutes.</div>
+    <div class="steps"><span class="done">Basket</span><span class="on">Delivery</span><span>Payment</span></div>
+
+    <fieldset>
+      <legend>Contact</legend>
+      <div class="r2">
+        <div class="f grow"><label for="em">Email</label>
+          <input type="email" id="em" value="m.salomon@example.org" />
+          <div class="hint">The receipt and tracking link go here.</div></div>
+        <div class="f bad"><label for="ph">Phone</label>
+          <input type="text" id="ph" value="0475 12 34" />
+          <div class="hint">Enter 9 or 10 digits, no spaces.</div></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Delivery address</legend>
+      <div class="r2">
+        <div class="f"><label for="fn">First name</label><input type="text" id="fn" value="Margit" /></div>
+        <div class="f"><label for="ln">Last name</label><input type="text" id="ln" value="Salomon" /></div>
+      </div>
+      <div class="r2">
+        <div class="f grow"><label for="st">Street and number</label><input type="text" id="st" value="Rue des Awirs 14" /></div>
+        <div class="f"><label for="bx">Box</label><input type="text" id="bx" value="" /></div>
+      </div>
+      <div class="r2">
+        <div class="f good"><label for="pc">Postcode</label><input type="text" id="pc" value="4170" />
+          <div class="hint">Delivered next day.</div></div>
+        <div class="f grow"><label for="ci">Town</label><input type="text" id="ci" value="Comblain-au-Pont" /></div>
+        <div class="f"><label for="co">Country</label>
+          <select id="co"><option>Belgium</option><option>Netherlands</option></select></div>
+      </div>
+      <div class="check"><input type="checkbox" checked="checked" id="bill" />
+        <label for="bill">Use this address for the invoice as well</label></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Delivery window</legend>
+      <div class="check"><input type="radio" name="w" checked="checked" id="w1" />
+        <label for="w1">Standard, Tuesday 18 March, free</label></div>
+      <div class="check"><input type="radio" name="w" id="w2" />
+        <label for="w2">Morning, Tuesday 18 March before 12:00, &#8364;4.50</label></div>
+      <div class="check"><input type="radio" name="w" id="w3" />
+        <label for="w3">Saturday 22 March, &#8364;6.00</label></div>
+    </fieldset>
+  </div>
+
+  <div class="card aside">
+    <h3>Order summary</h3>
+    <div class="line"><span>Wheat T65 <span class="q">25 kg &#215; 2</span></span><span>&#8364;62.00</span></div>
+    <div class="line"><span>Rye, dark <span class="q">25 kg &#215; 1</span></span><span>&#8364;34.50</span></div>
+    <div class="line"><span>Linen sack deposit</span><span>&#8364;9.00</span></div>
+    <div class="line"><span>Delivery</span><span>&#8364;0.00</span></div>
+    <div class="line"><span>VAT 6%</span><span>&#8364;6.33</span></div>
+    <div class="tot"><span>Total</span><span>&#8364;111.83</span></div>
+    <div class="promo"><input type="text" value="MILL10" /><span>Apply</span></div>
+    <span class="btn">Continue to payment</span>
+    <div class="fine">Prices in euro, VAT shown separately. Sacks are collected
+    empty on the next delivery.</div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Orthogonal flows in shrink-to-fit boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; height: 100px; }
+  .v { writing-mode: vertical-rl; height: 60px; background: #b9cde6; }
+  .wrap { background: #d68a3c; padding: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 7.3 Orthogonal Flows, shrink-to-fit</div>
+  <h1>Orthogonal flows in shrink-to-fit boxes</h1>
+  <p class=pr-lede><q>when a child box auto-sized in its block axis establishes an orthogonal flow, the used block size
+  of the child is calculated to fit its content; and this resulting content-based size is used as input to the
+  inline-axis min-content size and max-content size of the parent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#orthogonal-flows">CSS Writing Modes 4 §7.3</a></span></p>
+</header>
+
+<section>
+  <h2>The child is sized first</h2>
+  <p><q>when applying shrink-to-fit formula to a box such as an inline-block, float, or table-cell, if its child
+  establishes an orthogonal flow, the calculation dependency must be changed so that the sizing phase of the child runs
+  first and its used block size becomes an input to the inline-size shrink-to-fit formula of the parent.</q> In each
+  stage, an orange box with 4px padding holds a blue <code>vertical-rl</code> block 60px tall of "aaa bbb ccc".</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=wrap style="display: inline-block"><div class=v>aaa bbb ccc</div></div></div>
+    <figcaption>An inline-block: the blue block's two lines make it 40px wide, and the orange box wraps it.
+    <span class=pr-flag>Safari</span> takes the blue block's width as 0: the orange box is 8px wide and the blue
+    block spills out of it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=wrap style="float: left"><div class=v>aaa bbb ccc</div></div></div>
+    <figcaption>A float: the same, orange around blue. <span class=pr-flag>Safari</span> makes the float 8px
+    wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=wrap style="width: min-content"><div class=v>aaa bbb ccc</div></div></div>
+    <figcaption><code>width: min-content</code>: the same. <span class=pr-flag>Safari</span> makes it 8px
+    wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="wrap pr-table"><div class=pr-table-row><div class=pr-table-cell style="height: auto; padding: 0"><div class=v>aaa bbb ccc</div></div></div></div></div>
+    <figcaption>A table cell: the same. <span class=pr-flag>Safari</span> collapses the cell.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

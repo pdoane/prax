@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: which element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f4f5f7; }
+  td { width: 40px; height: 30px; padding: 0; border: 1px solid #d5d9e0; }
+  .k { border: 6px solid #1f2430; }
+  .bl { border: 6px solid #4f81bd; }
+  .or { border: 6px solid #d68a3c; }
+  .gr { border: 6px solid #6aa36a; }
+  .rd { border: 6px solid #c0392b; }
+  .pu { border: 6px solid #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: which element</h1>
+  <p class=pr-lede>Every border here is 6px solid, so only the color differs, and the element that sets it decides. The
+  cells' own borders are 1px light grey unless the caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>4. Cell, row, row group, column, column group, table</h2>
+  <p><q>If border styles differ only in color, then a style set on a cell wins over one on a row, which wins over a row
+  group, column, column group and, lastly, table.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2 §17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr class=or><td class=bl><td><td></table></div>
+    <figcaption>An orange row, and a blue first cell: the first cell is outlined blue, the rest of the row
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tbody class=gr><tr class=or><td style="border-style: none"><td style="border-style: none"><tr><td style="border-style: none"><td style="border-style: none"></tbody></table></div>
+    <figcaption>A green row group of two rows, the first row orange: the first row's outline is orange, the rest of
+    the group's green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><col class=rd><col><tbody class=gr><tr><td style="border-style: none"><td style="border-style: none"><tr><td style="border-style: none"><td style="border-style: none"></tbody></table></div>
+    <figcaption>A red first column in a green row group: the group's green wins on the outer edges they share; red
+    shows only between the columns.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table class=k><colgroup class=pu><col class=rd><col></colgroup><col><tr><td style="border-style: none"><td style="border-style: none"><td style="border-style: none"><tr><td style="border-style: none"><td style="border-style: none"><td style="border-style: none"></table></div>
+    <figcaption>A black table, a purple column group of the first two columns, and a red first column: red around
+    column 1, purple around the group's other edges, black elsewhere.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: floats in a positioned inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { position: relative; }
+  .f { float: left; width: 60px; height: 50px; box-sizing: border-box; }
+  .ib { display: inline-block; vertical-align: top; box-sizing: border-box; width: 80px; height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: floats in a positioned inline</h1>
+  <p class=pr-lede>Each stage forms the stacking context, and holds a relative span whose content is "a" and an orange
+  float, 60 by 50. A blue box overlaps the float.</p>
+</header>
+
+<section>
+  <h2>The inline's own floats</h2>
+  <p>A stacking context paints <q>All non-positioned floating descendants, in tree order</q> in its step 5, and a
+  positioned box at <code>auto</code> is painted <q>as if it created a new stacking context</q>: the floats inside the
+  span are its, painted with it. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb pr-stacking pr-text" style="height: 60px"><span class=r style="z-index: 1">a<span class="pr-b f"></span></span><i class=pr-a style="position: absolute; top: 0; left: 0; width: 90px; height: 30px; box-sizing: border-box"></i></div>
+    <figcaption>The span has <code>z-index: 1</code>, and the blue box is absolute at <code>auto</code>: the float, at
+    the span's level 1, covers the blue box. <span class=pr-flag>Safari</span> The blue box covers the
+    float.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-stacking pr-text" style="height: 60px"><span class=r>a<span class="pr-b f"></span></span><span class="pr-a ib" style="margin-left: -60px"></span></div>
+    <figcaption>The span is at <code>auto</code>, and the blue box is an inline block after it, pulled back over the
+    float: the span and its float, in step 8, cover the blue box. <span class=pr-flag>Safari</span> The blue box
+    covers the float.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

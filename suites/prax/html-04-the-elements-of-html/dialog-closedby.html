@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>closedby</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  .act > .pr-target { display: inline-block; width: 120px; margin: 0 10px 10px 0; }
+  dialog { font-size: 12px; }
+  dialog .pr-target { width: 140px; margin: 6px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.11.4 The dialog element</div>
+  <h1>closedby</h1>
+  <p class=pr-lede><q>The closedby content attribute is an enumerated attribute</q> that says which user actions
+  close the dialog. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">HTML §4.11.4</a></span></p>
+</header>
+<section>
+  <h2>Modal dialogs</h2>
+  <p><code>any</code>: <q>Close requests or clicks outside close the dialog.</q> <code>closerequest</code>: <q>Close
+  requests close the dialog.</q> <code>none</code>: <q>No user actions automatically close the dialog.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target data-modal=any>any</button><button class=pr-target data-modal=closerequest>closerequest</button><button class=pr-target data-modal=none>none</button><button class=pr-target data-modal=auto>no attribute</button>
+        <dialog id=any closedby=any>closedby=any <button class=pr-target>close()</button></dialog>
+        <dialog id=closerequest closedby=closerequest>closedby=closerequest <button class=pr-target>close()</button></dialog>
+        <dialog id=none closedby=none>closedby=none <button class=pr-target>close()</button></dialog>
+        <dialog id=auto>no closedby <button class=pr-target>close()</button></dialog>
+      </div>
+      <ol class=pr-log data-log="cancel close" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Each button opens its dialog with <code>showModal()</code>. Press Escape, or click outside it:
+    <code>any</code> closes on either; <code>closerequest</code> and "no attribute" on Escape only; <code>none</code>
+    on neither, only by its button.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Dialogs that are not modal</h2>
+  <p>With no attribute, the state is Auto, which is <q>Close Request</q> when the dialog is modal, and otherwise
+  <q>None</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element">§4.11.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act style="height: 70px">
+        <button class=pr-target data-show=plain>no attribute</button><button class=pr-target data-show=open-any>any</button>
+        <dialog id=plain>shown, no closedby <button class=pr-target>close()</button></dialog>
+        <dialog id=open-any closedby=any>shown, closedby=any <button class=pr-target>close()</button></dialog>
+      </div>
+      <ol class=pr-log data-log="cancel close" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Each button opens its dialog with <code>show()</code>, below the buttons. Press Escape: "no attribute"
+    stays open, <code>any</code> closes. Open them again and click the stage outside them: the same.</figcaption>
+  </figure>
+</section>
+<script>
+  // The buttons open the dialogs, modal or not, and each dialog's button closes it.
+  for (const button of document.querySelectorAll("[data-modal]"))
+    button.addEventListener("click", () => document.getElementById(button.dataset.modal).showModal());
+  for (const button of document.querySelectorAll("[data-show]"))
+    button.addEventListener("click", () => document.getElementById(button.dataset.show).show());
+  for (const dialog of document.querySelectorAll("dialog"))
+    dialog.querySelector("button").addEventListener("click", () => dialog.close());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

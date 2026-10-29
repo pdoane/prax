@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Aligning absolutely positioned boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ab { position: absolute; height: 20px; background: rgba(214, 138, 60, 0.8); }
+  .imcb { position: absolute; outline: 1px dashed #6b7381; outline-offset: -1px; }
+  .pr-stage.pr-cb { width: 160px; height: 60px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4.3 Self-Alignment of Absolutely Positioned Boxes</div>
+  <h1>Aligning absolutely positioned boxes</h1>
+  <p class=pr-lede>Three cases, in order: an auto inset, auto margins, self-alignment. <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-alignment">CSS Positioned Layout 3 §4.3</a></span>
+  Each stage is relative, 160 by 60; the dashed rectangle is an empty box with the orange box's insets. CSS Box
+  Alignment's pages show <code>justify-self</code> and <code>align-self</code> on these boxes in full. <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#justify-abspos">CSS Box Alignment 3 §6.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>First an auto inset, then auto margins</h2>
+  <p><q>If the computed value of either inset property in an axis is auto, then its margin box is aligned to the edge
+  of the inset-modified containing block corresponding to its stronger inset (even if this would overflow its
+  containing block).</q> <q>Otherwise, if either margin is auto, its position is resolved according to</q> the auto
+  margins. Each box has <code>justify-self: center</code>, which does nothing here.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=ab style="top: 20px; right: 20px; width: 60px; justify-self: center"></div></div>
+    <figcaption><code>right: 20px</code> alone: the box's right edge at 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=ab style="top: 20px; left: 120px; width: 80px; justify-self: center"></div></div>
+    <figcaption><code>left: 120px</code>, 80 wide: at 120, running 40 past the stage's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 20px"></div><div class=ab style="inset: 20px; width: 60px; justify-self: center; margin-left: auto"></div></div>
+    <figcaption><code>inset: 20px; margin-left: auto</code>: the margin takes the room, and the box is at its
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise, self-alignment in the inset-modified containing block</h2>
+  <p><q>Otherwise, the box is aligned as specified by its self-alignment property in the relevant axis (as defined by
+  the writing mode of the containing block), using its margin box as the alignment subject and the inset-modified
+  containing block as the alignment container.</q> Each box has <code>inset: 20px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb" style="direction: rtl"><div class=imcb style="inset: 20px"></div><div class=ab style="inset: 20px; width: 60px; justify-self: start"></div></div>
+    <figcaption>An <code>rtl</code> stage, <code>justify-self: start</code>: the containing block's start, the right;
+    from 80 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=imcb style="inset: 20px"></div><div class=ab style="inset: 20px; width: 60px; justify-self: end; direction: rtl"></div></div>
+    <figcaption>The box <code>rtl</code> in an <code>ltr</code> stage, <code>justify-self: end</code>: the stage's
+    end, the right; from 80 to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

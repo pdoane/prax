@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>unicode-bidi on block containers</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+  .inner { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.2 Embeddings and Overrides: the unicode-bidi property, on blocks</div>
+  <h1>unicode-bidi on block containers</h1>
+  <p class=pr-lede>For <code>bidi-override</code>: <q>For a block container, the override is applied to an anonymous
+  inline box that surrounds all of its content.</q> For <code>embed</code> and <code>isolate</code>: <q>This value has
+  no effect on boxes that are not inline.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">CSS Writing Modes 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Overrides apply to the block's lines</h2>
+  <p>Each stage is <code>direction: rtl</code> and holds "abc <span class=pr-hl>def</span> ghi".</p>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: bidi-override">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>bidi-override</code>: every letter from the right, "ihg fed cba".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: isolate-override">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>isolate-override</code>: the same, "ihg fed cba".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: embed">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>embed</code>: no effect beyond <code>rtl</code>: "abc def ghi" at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: isolate">abc <span class=pr-hl>def</span> ghi</div>
+    <figcaption><code>isolate</code>: the same, "abc def ghi" at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not into blocks inside</h2>
+  <p><q>Because the unicode-bidi property does not inherit, setting bidi-override or plaintext on a block box will not
+  affect any descendant blocks.</q></p>
+  <figure>
+    <div class=pr-stage style="direction: rtl; unicode-bidi: bidi-override">abc def<div class=inner>ghi jkl</div></div>
+    <figcaption>The first line is overridden, "fed cba"; the tinted block inside inherits <code>rtl</code> but not
+    the override: "ghi jkl" at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

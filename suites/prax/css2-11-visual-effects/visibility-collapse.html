@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The visibility property: collapsed rows and columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; }
+  td { width: 50px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.2 Visibility: the 'visibility' property</div>
+  <h1>The visibility property: collapsed rows and columns</h1>
+  <p class=pr-lede><code>collapse</code>: <q>Please consult the section on dynamic row and column effects in tables. If
+  used on elements other than rows, row groups, columns, or column groups, 'collapse' has the same meaning as
+  'hidden'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#visibility">CSS 2 §11.2</a></span></p>
+</header>
+
+<section>
+  <h2>Rows and columns</h2>
+  <p>On a row or column, <q>the row or column is removed from display, and the space normally taken up by the row or
+  column is made available for other content.</q> Each cell is 50 by 20. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#dynamic-effects">CSS 2 §17.5.5</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td class=pr-a>1</td><td class=pr-b>2</td></tr><tr style="visibility: collapse"><td class=pr-a>3</td><td class=pr-b>4</td></tr><tr><td class=pr-c>5</td><td class=pr-c>6</td></tr></table><div class=pr-expect style="width: 100px"></div></div>
+    <figcaption>The second row has <code>collapse</code>: rows 1 and 3 touch, and the table is 40px tall; the grey bar
+    under it is 100px, its width.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><col><col style="visibility: collapse"><col><tr><td class=pr-a>1</td><td class=pr-b>2</td><td class=pr-c>3</td></tr><tr><td class=pr-a>4</td><td class=pr-b>5</td><td class=pr-c>6</td></tr></table><div class=pr-expect style="width: 100px"></div></div>
+    <figcaption>The second column has <code>collapse</code>: columns 1 and 3 touch, and the table is 100px wide, as
+    the grey bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

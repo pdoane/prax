@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Web fonts are the document's own</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Page Only"; src: url(../../../third_party/fonts/Literata.ttf); }
+  iframe { display: block; width: 200px; height: 42px; border: 1px solid #b5bcc7; background: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 10.2 Web fonts</div>
+  <h1>Web fonts are the document's own</h1>
+  <p class=pr-lede><q>A Web Font must not be accessible in any other Document from the one which either is associated
+  with the @font-face rule or owns the FontFaceSet.</q> <q>Web Fonts shadow Installed Fonts, so if an Installed Font
+  has the same family name as a Web Font, the Installed Font is not accessible.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#web-fonts">CSS Fonts 4
+  §10.2</a></span></p>
+</header>
+
+<section>
+  <h2>Not shared with another document</h2>
+  <p>This page defines "Page Only" as Literata. The frame is another document, which names the same family and
+  defines none.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Page Only', monospace">Handgloves</div>
+    <figcaption>This document: Literata.</figcaption>
+  </figure>
+  <figure>
+    <iframe srcdoc="<body style='margin:0;font:24px/40px &quot;Page Only&quot;, monospace;padding:0 6px'>Handgloves"></iframe>
+    <figcaption>The frame: "Page Only" is not available there, so monospace.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not added to fallback elsewhere</h2>
+  <figure>
+    <iframe srcdoc="<body style='margin:0;font:24px/40px monospace;padding:0 6px'>Handgloves"></iframe>
+    <figcaption>The frame's monospace text is not drawn with this page's fonts, though they are loaded.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>rect: one radius from the other</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.2 The ‘rect’ element</div>
+  <h1>rect: one radius from the other</h1>
+  <p class=pr-lede><q>The used values for the x- and y-axis rounded corner radii may be determined implicitly from the
+  other dimension (using the <code>auto</code> value), and are also subject to clamping so that the lengths of the
+  straight segments of the rectangle are never negative.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">SVG 2 §10.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>A length and auto</h2>
+  <p><q>If ‘rx’ is set to a length value or a percentage, but ‘ry’ is <code>auto</code>, calculate an absolute length
+  equivalent for ‘rx’, resolving percentages against the used width of the rectangle; the absolute value for ‘ry’ is
+  the same.</q> And the other way about. The rectangles are 120 by 40 at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="15" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="15"</code> alone: <code>ry</code> is 15 too, so quarter circles of radius 15.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" ry="15" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry="15"</code> alone: <code>rx</code> is 15 too, the same quarter circles.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" rx="15" fill="#4f81bd" style="ry: auto" /></svg></div>
+    <figcaption><code>rx="15"</code> and <code>ry: auto</code> from CSS: the same.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage, against the rectangle or the viewport</h2>
+  <p>The ‘rx’ property's percentages <q>refer to the width of the current SVG viewport</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#RX">§7.4</a></span>;
+  the rect's steps resolve them <q>against the used width of the rectangle</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#RectElement">§10.2</a></span>.
+  Each caption gives both results. Chrome, Safari and Firefox use the viewport. The rectangles are 80 by 40 at 40,
+  10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="10" width="80" height="40" rx="25%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="25%"</code> of the viewport, 40, clamped to 40 by 20: an ellipse. Of the
+    rectangle, 20: half circles, the top straight from 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="10" width="80" height="40" ry="50%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry="50%"</code> of the viewport, 30, clamped to 30 by 20: the top straight from 70 to 90. Of
+    the rectangle, 20: from 60 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="40" y="10" width="80" height="40" rx="10%" ry="25%" fill="#4f81bd" /></svg></div>
+    <figcaption>Both set, <q>individually</q>: <code>rx="10%" ry="25%"</code> of the viewport, 16 by 15; of the
+    rectangle, 8 by 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

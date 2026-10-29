@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative URLs: against the style sheet</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 40px/60px "PR Baseline Diagnostic Zero", serif; }
+  iframe.pr-view { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 4.5.1 Relative URLs</div>
+  <h1>Relative URLs: against the style sheet</h1>
+  <p class=pr-lede><q>For CSS style sheets, the base URL is that of the style sheet itself, not that of the styled
+  source document. Style sheets embedded within a document have the base URL associated with their container.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#relative-urls">CSS Values and Units 4 §4.5.1</a></span>
+  Each stage sets "Bx" in PR Baseline Diagnostic Zero, from an <code>@font-face</code> whose source is a relative URL;
+  loaded, its letters are black bands.</p>
+</header>
+
+<section>
+  <h2>A linked style sheet</h2>
+  <figure>
+    <div class="pr-stage t">Bx</div>
+    <figcaption>shared/fonts.css names <code>url(../../../third_party/fonts/BaselineDiagnosticAlphabeticZero.ttf)</code>,
+    from its own folder: the font loads, two black bands, though this page is a folder away.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An embedded style sheet</h2>
+  <p>The frame's document has <code>&lt;base href="../../../third_party/fonts/"&gt;</code>, and a
+  <code>&lt;style&gt;</code> with <code>src: url(BaselineDiagnosticAlphabeticZero.ttf)</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<!doctype html><base href='../../../third_party/fonts/'><style>@font-face { font-family: Local; src: url(BaselineDiagnosticAlphabeticZero.ttf) } body { margin: 0 10px; font: 40px/60px Local, serif }</style><body>Bx</body>"></iframe></div>
+    <figcaption>The URL resolves against the document's base: the font loads, two black bands.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

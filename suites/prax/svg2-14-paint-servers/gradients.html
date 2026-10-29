@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Gradients: interpolation and the element's transform</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="gray"><stop stop-color="black" /><stop offset="1" stop-color="white" /></linearGradient>
+  <linearGradient id="hue"><stop stop-color="#ff0000" /><stop offset="1" stop-color="#0000ff" /></linearGradient>
+  <linearGradient id="halves"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="turned" gradientTransform="rotate(90 0.5 0.5)"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2 Gradients</div>
+  <h1>Gradients: interpolation and the element's transform</h1>
+  <p class=pr-lede><q>Gradients consist of smooth color transitions between points on a drawing surface.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#Gradients">SVG 2 §14.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Linear, per channel</h2>
+  <p><q>For linear and radial gradients, the color value between two stops along the gradient vector is the linear
+  interpolation, per channel, of the color for each stop, weighted by the distance from each stop.</q> Each rect is
+  120 by 40 at 20, 10; a bar 2 by 20 of the expected color sits on its middle, at x 79.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#gray)" /><rect x="79" y="20" width="2" height="20" fill="rgb(128 128 128)" /></svg></div>
+    <figcaption>Black to white: the gray bar, 128 in each channel, vanishes into the middle.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#hue)" /><rect x="79" y="20" width="2" height="20" fill="rgb(128 0 128)" /></svg></div>
+    <figcaption>Red to blue: half of each, a dull purple, 128, 0, 128; the bar vanishes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A copy in the element's geometry</h2>
+  <p><q>Any transformations applied to the graphics element geometry also apply to the copied gradient vector and
+  gradient normals. Any gradient transforms that are specified on the reference gradient are applied before any
+  graphics element transformations are applied to the gradient.</q> The gradient is blue on its left half, orange
+  on its right; each square is 40 by 40 about 80, 30.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#halves)" /></svg></div>
+    <figcaption>As it is: blue to x 80, orange after.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#halves)" transform="rotate(90 80 30)" /></svg></div>
+    <figcaption>The square turned 90° clockwise: its left half to the top, blue above y 30, orange below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#turned)" transform="skewX(45) translate(-30 0)" /></svg></div>
+    <figcaption>A gradient turned 90° by <code>gradientTransform</code>, on a square skewed 45°: blue above y 30,
+    orange below, on a shape from x 40–80 at its top to 80–120 at its bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

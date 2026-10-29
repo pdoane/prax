@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(rec2100-linear …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 8.3 rec2100-linear</div>
+  <h1>color(rec2100-linear …)</h1>
+  <p class=pr-lede><q>The color with red, green and blue all at 1.0 represents HDR Reference White with a luminance of 203 cd/m².</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#valdef-color-rec2100-linear">CSS Color HDR 1
+  §8.3</a></span></p>
+</header>
+
+<section>
+  <h2>Reference white, and stops past it</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(rec2100-linear 1 1 1)"></div><div class=sw style="background: white"></div></div>
+    <figcaption><code>color(rec2100-linear 1 1 1)</code> beside <code>white</code>: one white.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-linear …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(rec2100-linear 1 1 1)"></div><div class=sw style="background: color(rec2100-linear 2 2 2)"></div><div class=sw style="background: color(rec2100-linear 4 4 4)"></div><div class=sw style="background: color(rec2100-linear 8 8 8)"></div></div>
+    <figcaption>1, 2, 4 and 8 times reference white, a stop apart. An HDR display shows each brighter than the one
+    before, up to its headroom. An SDR display shows four whites. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-linear …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The BT.2020 primaries</h2>
+  <q>The display primaries are the same as [Rec.2020].</q>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(rec2100-linear 0 1 0)"></div><div class=sw style="background: color(rec2020 0 1 0)"></div></div>
+    <figcaption><code>color(rec2100-linear 0 1 0)</code> beside <code>color(rec2020 0 1 0)</code>: one green, the
+    primary, which lies outside sRGB and Display P3. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-linear …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

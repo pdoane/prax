@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line joins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.4 Line styles</div>
+  <h1>Line joins</h1>
+  <p class=pr-lede>A stroke replaces each join <q>with the join necessary to satisfy style's lineJoin type</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#line-styles">HTML §4.12.5.1.4</a></span>
+  In each figure the path itself is drawn over its stroke as a thin red line.</p>
+</header>
+<section>
+  <h2>Joins</h2>
+  <p><q>The "bevel" value means that this is all that is rendered at joins.</q> <q>The "round" value means that an arc
+  connecting the two aforementioned corners of the join</q> <q>must be added at joins.</q> <q>The "miter" value means that a
+  second triangle must (if it can given the miter length) be added at the join</q>. Each path runs from (20, 80) up to
+  (50, 20) and down to (80, 80), with width 16.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=100 data-draw=join data-join=miter></canvas></div>
+    <figcaption><code>miter</code>, the initial value: a sharp point above (50, 20).</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=100 data-draw=join data-join=round></canvas></div>
+    <figcaption><code>round</code>: a round top, 8 above (50, 20).</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=100 data-draw=join data-join=bevel></canvas></div>
+    <figcaption><code>bevel</code>: the top cut flat.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The miter limit</h2>
+  <p><q>The miter limit ratio is the maximum allowed ratio of the miter length to half the line width. If the miter
+  length would cause the miter limit ratio (as set by style's miterLimit attribute) to be exceeded, then this second
+  triangle must not be added.</q> The join above has a ratio of √5, about 2.24.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=100 data-draw=join data-join=miter data-limit=2.3></canvas></div>
+    <figcaption><code>miterLimit</code> 2.3: a sharp point.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><canvas width=100 height=100 data-draw=join data-join=miter data-limit=2.2></canvas></div>
+    <figcaption><code>miterLimit</code> 2.2: cut flat, as a bevel.</figcaption>
+  </figure>
+</section>
+<script>
+  function path(context, points) {
+    context.beginPath();
+    context.moveTo(...points[0]);
+    for (const point of points.slice(1))
+      context.lineTo(...point);
+  }
+  function guide(context, points) {
+    context.save();
+    context.lineWidth = 1;
+    context.lineCap = "butt";
+    context.lineJoin = "miter";
+    context.strokeStyle = "#c0392b";
+    path(context, points);
+    context.stroke();
+    context.restore();
+  }
+  const draw = {
+    widths(context) {
+      context.strokeStyle = "#4f81bd";
+      for (const [y, width] of [[20, 2], [50, 10], [80, 20]]) {
+        context.lineWidth = width;
+        path(context, [[40, y], [160, y]]);
+        context.stroke();
+        guide(context, [[40, y], [160, y]]);
+      }
+    },
+    caps(context) {
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 20;
+      for (const [y, cap] of [[20, "butt"], [50, "round"], [80, "square"]]) {
+        context.lineCap = cap;
+        path(context, [[40, y], [160, y]]);
+        context.stroke();
+        guide(context, [[40, y], [160, y]]);
+      }
+    },
+    join(context, canvas) {
+      const points = [[20, 80], [50, 20], [80, 80]];
+      context.strokeStyle = "#4f81bd";
+      context.lineWidth = 16;
+      context.lineJoin = canvas.dataset.join;
+      if (canvas.dataset.limit)
+        context.miterLimit = Number(canvas.dataset.limit);
+      path(context, points);
+      context.stroke();
+      guide(context, points);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

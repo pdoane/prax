@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cyclic percentages in replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 50px; }
+  figure.f figcaption { max-width: 152px; }
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2.1 Intrinsic Contributions of Percentage-Sized Boxes, replaced</div>
+  <h1>Cyclic percentages in replaced elements</h1>
+  <p class=pr-lede><q>If the box is replaced, a cyclic percentage in the value of any max size property or preferred
+  size property (width/max-width/height/max-height), is resolved against zero when calculating the min-content
+  contribution in the corresponding axis.</q> For the max-content contribution, the whole value is <q>treated</q> <q>as
+  that property’s initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#cyclic-percentage-contribution">CSS Box Sizing 3 §5.2.1</a></span>
+  Each image is 80 by 40 by nature, in a dashed parent whose width reads back below.</p>
+</header>
+
+<section>
+  <h2>The percentage as zero, the length kept</h2>
+  <p><q>For example, an &lt;input&gt; assigned width: calc(50% + 50px) has a min-content contribution of 50px, plus any
+  horizontal margin/border/padding.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=e1 class=pr-parent style="width: min-content"><img alt="" style="width: calc(50% + 20px)" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>width: calc(50% + 20px)</code> in a <code>min-content</code> parent: 20px, reads <code class=pr-computed data-of=e1 data-dom=offsetWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=e2 class=pr-parent style="width: max-content"><img alt="" style="width: calc(50% + 20px)" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>The same in a <code>max-content</code> parent: the width as auto, its natural 80px, reads <code class=pr-computed data-of=e2 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=e3 class=pr-parent style="width: min-content"><img alt="" style="width: 50%" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>width: 50%</code> in a <code>min-content</code> parent: 0, reads <code class=pr-computed data-of=e3 data-dom=offsetWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage maximum</h2>
+  <p><q>The min-content contribution is, as always, also floored by the minimum size in its own axis.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=e4 class=pr-parent style="width: min-content"><img alt="" style="max-width: calc(10% + 30px)" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption><code>max-width: calc(10% + 30px)</code> in a <code>min-content</code> parent: 30px, reads <code class=pr-computed data-of=e4 data-dom=offsetWidth></code>.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 0.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=e5 class=pr-parent style="width: min-content"><img alt="" style="max-width: calc(10% + 30px); padding: 5px; min-width: 20px; background: #c3d08b" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>And <code>padding: 5px; min-width: 20px</code>: 30px of content and 10px of padding, 40px, reads
+    <code class=pr-computed data-of=e5 data-dom=offsetWidth></code>. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 30px: the minimum and padding only.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

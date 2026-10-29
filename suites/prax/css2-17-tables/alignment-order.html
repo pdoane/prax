@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table height algorithms: the order of alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; font-size: 13px; line-height: 20px; }
+  td { padding: 0 4px; border: 1px solid #b5bcc7; vertical-align: baseline; }
+  .blk { width: 30px; height: 20px; background: #4f81bd; }
+  .tall { width: 30px; height: 60px; background: #8a93a1; }
+  .o { background: #f9cc9d; }
+  .zero { height: 0; overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.3 Table height algorithms</div>
+  <h1>Table height algorithms: the order of alignment</h1>
+  <p class=pr-lede><q>To avoid ambiguous situations, the alignment of cells proceeds in the following order</q>. Cells are
+  <code>baseline</code> unless the caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>Baseline and top first, then bottom and middle</h2>
+  <p><q>First the cells that are aligned on their baseline are positioned. This will establish the baseline of the
+  row. Next the cells with 'vertical-align: top' are positioned.</q> <q>If any of the remaining cells, those aligned at
+  the bottom or the middle, have a height that is larger than the current height of the row, the height of the row will
+  be increased to the maximum of those cells, by lowering the bottom.</q> <q>Cell boxes that are smaller than the
+  height of the row receive extra top or bottom padding.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td class=o>text<td style="vertical-align: bottom"><div class=tall></div></table></div>
+    <figcaption>A grey 60px <code>bottom</code> cell lowers the row's bottom to 62px; the baseline, set first, and
+    "text" stay at the top, and the orange cell gets extra bottom padding.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td class=o style="vertical-align: top"><div class=blk></div><td style="vertical-align: middle"><div class=tall></div><td class=o style="vertical-align: bottom"><div class=blk></div></table></div>
+    <figcaption>A <code>top</code> cell, a 60px <code>middle</code> one, and a <code>bottom</code> one: the row is 62px,
+    the blue blocks at its top and its bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Below the bottom border</h2>
+  <p><q>Note that the baseline of a cell may end up below its bottom border</q>: <code>div { height: 0; overflow: hidden;
+  }</code>, with <code>&lt;td>&lt;div> Test &lt;/div>&lt;/td></code>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide" style="height: 40px">text <table style="display: inline-table"><tr><td><div class=zero> Test </div></td></tr></table> text</div>
+    <figcaption>In an inline table, the cell is 2px tall, its borders only. Its baseline is the hidden line's, below
+    the border, so the table sits above the baseline "text" stands on. <span class=pr-flag>Chrome</span> puts the
+    cell's baseline at its bottom content edge, 1px down, as if it had no line box: the table straddles the
+    baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

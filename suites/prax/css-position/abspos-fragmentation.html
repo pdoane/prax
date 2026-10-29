@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolutely positioned boxes in columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .mc { columns: 2; column-gap: 20px; column-fill: auto; height: 100px; }
+  .cb { position: relative; height: 200px; background: rgba(79, 129, 189, 0.25); }
+  .ab { position: absolute; left: 10px; width: 50px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 4.4 Fragmenting Absolutely-positioned Elements</div>
+  <h1>Absolutely positioned boxes in columns</h1>
+  <p class=pr-lede><q>In a fragmented flow, an absolutely positioned box is positioned relative to its containing block
+  ignoring any fragmentation breaks (as if the flow were continuous). The box may subsequently be broken over several
+  fragmentation containers.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#abspos-breaking">CSS Positioned Layout 3 §4.4</a></span>
+  Each stage has two columns 100px tall and 90px wide; in them, a tinted relative block 200px tall, broken into the
+  two columns, is the containing block of the orange box.</p>
+</header>
+
+<section>
+  <h2>Placed as if the flow were continuous</h2>
+  <figure>
+    <div class="pr-stage mc"><div class=cb><div class=ab style="top: 120px; height: 20px"></div></div></div>
+    <figcaption><code>top: 120px</code>: 120px down the block, which is 20px into its second fragment: the box at the
+    top of the second column, 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage mc"><div class=cb><div class=ab style="bottom: 10px; height: 20px"></div></div></div>
+    <figcaption><code>bottom: 10px</code>: 10px above the end of the block, at the bottom of the second
+    column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then broken</h2>
+  <p>As the specification allows: <q>The box may subsequently be broken over several fragmentation containers.</q></p>
+  <figure>
+    <div class="pr-stage mc"><div class=cb><div class=ab style="top: 60px; height: 80px"></div></div></div>
+    <figcaption><code>top: 60px</code>, 80px tall: from 60 to 100 in the first column, and on from 0 to 40 in the
+    second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

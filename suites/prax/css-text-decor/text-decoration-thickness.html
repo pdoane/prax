@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-decoration-thickness</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 20px/36px "PR Arimo"; }
+  .t span { text-decoration-line: underline; text-decoration-color: #c0392b; text-decoration-skip-ink: none; }
+  .g { padding: 0 6px; font-size: 60px; line-height: 90px; text-decoration: underline #c0392b from-font; text-decoration-skip-ink: none; }
+  figure.n .pr-stage { width: 150px; }
+  figure.n figcaption { max-width: 150px; }
+  figure.n { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2.4 Text Decoration Line Thickness: the text-decoration-thickness property</div>
+  <h1>text-decoration-thickness</h1>
+  <p class=pr-lede>It <q>sets the stroke thickness of underlines, overlines, and line-throughs specified on the element
+  with 'text-decoration-line', and affects all decorations originating from this element even if descendant boxes
+  specify a different thickness.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-decoration-thickness-property">CSS Text Decoration 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>A length, or a percentage of the font size</h2>
+  <p><q>A percentage value specifies the thickness of text decoration lines as a percentage of the used 'font-size'.</q>
+  <q>The UA should round the actual value to the nearest integer device pixel, and ensure it is at least one device
+  pixel.</q></p>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-thickness: 2px">2px</span> <span style="text-decoration-thickness: 8px">8px</span> <span style="text-decoration-thickness: 0.1px">0.1px</span><br><span style="text-decoration-thickness: 25%">25%</span> <span style="text-decoration-thickness: 25%; font-size: 32px">32px</span></div>
+    <figcaption>Lines 2px and 8px thick; 0.1px is drawn one device pixel thick. <code>25%</code> of 20px is 5px, and under "32px",
+    8px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration-thickness: 2px">thin <b style="text-decoration-thickness: 10px; font-size: 30px">Big</b> thin</span></div>
+    <figcaption>The bold child sets 10px and draws no line: the outer span's underline is 2px under all of it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>from-font</h2>
+  <p><q>If the first available font has metrics indicating a preferred underline width, use that width, otherwise
+  behaves as auto.</q> Each says "Gag" at 60px; the underline is red.</p>
+  <figure class=n>
+    <div class="pr-stage g" style="font-family: 'PR Underline Test Thick'">Gag</div>
+    <figcaption>PR Underline Test Thick asks for 200/2048 em: a line 6px thick.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g" style="font-family: 'PR Underline Test Far'">Gag</div>
+    <figcaption>PR Underline Test Far asks for 100/2048 em: a line 3px thick.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage g" style="font-family: 'PR Architects Daughter'">Gag</div>
+    <figcaption>PR Architects Daughter records a width of 0. Chrome and Safari take it as none and draw
+    <code>auto</code>, about 5px; Firefox, a hairline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

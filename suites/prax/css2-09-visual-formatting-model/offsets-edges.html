@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box offsets: from each edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.3.2 Box offsets: 'top', 'right', 'bottom', 'left'</div>
+  <h1>Box offsets: from each edge</h1>
+  <p class=pr-lede><code>top</code>, <code>right</code>, <code>bottom</code> and <code>left</code> take <code>&lt;length&gt;
+  | &lt;percentage&gt; | auto</code>. Initial <code>auto</code>, not inherited, and they apply to positioned elements.
+  Each stage is 200 by 100 and the containing block of the absolutely positioned box in it, 60 by 20.</p>
+</header>
+
+<section>
+  <h2>From each edge</h2>
+  <p><code>top</code> <q>specifies how far an absolutely positioned box's top margin edge is offset below the top edge
+  of the box's containing block.</q> <code>right</code>, <code>bottom</code> and <code>left</code> do the same from
+  their edges, inward. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#position-props">CSS 2 §9.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="top: 20px; left: 30px">box</div></div>
+    <figcaption><code>top: 20px; left: 30px</code></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="bottom: 20px; right: 30px">box</div></div>
+    <figcaption><code>bottom: 20px; right: 30px</code>: from the bottom right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-a pr-fit abs" style="top: 20px; left: 30px; margin: 10px">box</div></div>
+    <figcaption><code>top: 20px; left: 30px; margin: 10px</code>: the offsets place the margin edge, so the box is at
+    30, 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

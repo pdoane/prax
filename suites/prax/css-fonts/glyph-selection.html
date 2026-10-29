@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Glyph selection and positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Literata'; font-size: 30px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.1 Glyph selection and positioning</div>
+  <h1>Glyph selection and positioning</h1>
+  <p class=pr-lede>In OpenType, <q>The glyph for a given character can be chosen and positioned not just based on the
+  codepoint of the character itself, but also on adjacent characters as well as the language, script, and features
+  enabled for the text.</q> The 'font-variant' subproperties <q>affect glyph selection and positioning, but do not
+  affect font selection</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#glyph-selection-positioning">CSS Fonts 4 §6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Neighbors choose the glyph</h2>
+  <p>PR Literata joins f and i, and T and h, and kerns A and V. Each stage shows the same letters together and set
+  apart.</p>
+  <figure>
+    <div class="pr-stage pr-sample">fit The AV</div>
+    <figcaption>Together: an fi ligature, a Th ligature, and AV pulled together.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample">f<span>i</span>t T<span>h</span>e A<span>V</span></div>
+    <figcaption>Split by spans with no styles: the same glyphs, as the spans change nothing that shapes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Features do not choose the font</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Tinos', 'PR Literata'; font-variant-caps: small-caps">Small</div>
+    <figcaption>PR Tinos has no small capitals and PR Literata does, but the family is chosen first: PR Tinos, with
+    small capitals synthesized.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

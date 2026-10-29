@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: block-level descendants</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .blk { box-sizing: border-box; width: 150px; height: 40px; padding: 0 6px; font-size: 13px; line-height: 20px; }
+  .pu { background: #d9c3e3; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: block-level descendants</h1>
+  <p class=pr-lede>Step 4 paints the backgrounds and borders of in-flow, non-positioned blocks, and nothing else of them;
+  their lines come in step 7. Each figure's second block has a negative top margin that pulls it up over the first.</p>
+</header>
+
+<section>
+  <h2>Every block's background before any line</h2>
+  <p><q>For all its in-flow, non-positioned, block-level descendants in tree order: If the element is a block,
+  list-item, or other block equivalent: background color of element. background image of element. border of
+  element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light blk" style="padding-top: 20px">A's text, line 2</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>B, light blue, is pulled up 20px over A, light orange, and covers A's background; A's text, a line
+    painted in step 7, is over B's background.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="blk pu" style="height: auto; padding: 10px 6px 0">P<div class="pr-b pr-light blk" style="height: 30px">C, in P</div></div><div class="pr-a pr-light blk" style="margin: -15px 0 0 30px; padding-top: 15px">S</div></div>
+    <figcaption>P, purple, then its child C, orange, then P's sibling S, blue: C covers P, and S covers C's lower
+    half. Each label is over every background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>One block at a time, and only non-positioned ones</h2>
+  <p>Each block's background, then its border, then the next block's. A positioned block waits for step 8. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light blk" style="border-bottom: 10px solid #9c5f22">A</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>A's 10px dark border is under B's background, which is painted after it: the border shows only left
+    of B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light blk" style="position: relative">A: relative</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>A is <code>position: relative</code>, so it is painted in step 8, after B: A covers B's top 20px,
+    and only B's bottom half shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

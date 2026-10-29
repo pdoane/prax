@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font matching: style, variant and weight</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 15.2 Font matching algorithm</div>
+  <h1>Font matching: style, variant and weight</h1>
+  <p class=pr-lede><q>The remaining properties are tested against the family according to the matching criteria described
+  with each property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2 §15.2</a></span></p>
+  <p class=pr-now>CSS Fonts 4 replaces this chapter. What is expected now: <a href="../css-fonts/narrowing-order.html">Width, then style, then weight</a>, <a href="../css-fonts/style-matching.html">Matching style</a>, <a href="../css-fonts/weight-matching.html">Matching weight</a>.</p>
+</header>
+
+<section>
+  <h2>font-style is tried first</h2>
+  <p><q>'Italic' will be satisfied if there is either a face in the UA's font database labeled with the CSS keyword
+  'italic' (preferred) or 'oblique'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2 §15.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia; font-style: italic">Handgloves</div>
+    <figcaption><code>Georgia</code> italic: Georgia has an italic face, with its own letter shapes: the "a" has one
+    storey, the "d" and "n" have flowing strokes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Helvetica; font-style: italic">Handgloves</div>
+    <figcaption><code>Helvetica</code> italic: Helvetica has only oblique faces, so its upright letters, slanted, are
+    used.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>font-variant next, then font-weight</h2>
+  <p><q>'Small-caps' matches (1) a font labeled as 'small-caps', (2) a font in which the small caps are synthesized,
+  or (3) a font where all lowercase letters are replaced by upper case letters.</q> <q>'font-weight' is matched next, it
+  will never fail.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#algorithm">CSS 2 §15.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Georgia, serif; font-variant: small-caps">Handgloves</div>
+    <figcaption><code>Georgia, serif</code> in small-caps: Georgia has no small-caps face but matches, with small
+    capitals made from its capitals. <span class="pr-flag pr-since">Since CSS 2</span> font-variant no longer selects
+    a face; small capitals are simulated (next page).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Apple Chancery', serif; font-weight: 900">Handgloves</div>
+    <figcaption><code>"Apple Chancery", serif</code> at weight 900: Apple Chancery has one weight, which matches, so
+    the text stays in its calligraphic hand. <span class="pr-flag pr-since">Since CSS 2</span> a synthesized bold
+    face counts as one of the family's (next page).</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

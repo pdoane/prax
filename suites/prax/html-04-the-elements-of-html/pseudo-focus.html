@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:focus</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { margin: 10px; padding: 6px; border: 3px solid #d5d9e0; background: var(--pr-plain); font-size: 11px; }
+  .box:focus { border-color: #3f9a3f; }
+  .box input { display: block; width: 130px; margin: 4px 0 0; outline: 0; border: 3px solid #d5d9e0; }
+  .box input:focus { border-color: #3f9a3f; }
+  iframe.box { display: block; width: 156px; height: 52px; padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:focus</h1>
+  <p class=pr-lede><q>For the purposes of the CSS :focus pseudo-class, an element has the focus when</q> it is not
+  itself a navigable container, and it is in the current focus chain of the top-level traversable, or its shadow root
+  is the root of an element that has the focus. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Which elements match</h2>
+  <p>Each box and field has a grey border that turns green while it matches <code>:focus</code>. Click the field in
+  each. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=box>a div<input value="a field"></div>
+    </div>
+    <figcaption>The field turns green. The <code>div</code> holding it stays grey: an ancestor is not in the focus
+    chain.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <div class=box id=host>a shadow host<template shadowrootmode=open><style>
+        input { display: block; width: 130px; margin: 4px 0 0; outline: 0; border: 3px solid #d5d9e0; }
+        input:focus { border-color: #3f9a3f; }
+      </style><slot></slot><input value="in its shadow tree"></template></div>
+    </div>
+    <figcaption>The field, in the shadow tree, and its host both turn green: the host's shadow root is the root of
+    an element that has the focus.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium">
+      <iframe class=box srcdoc="<style>body { margin: 0; padding: 0 6px; font: 11px sans-serif; } input { display: block; width: 130px; margin: 4px 0 0; outline: 0; border: 3px solid #d5d9e0; } input:focus { border-color: #3f9a3f; }</style>an iframe<input value='in its document'>"></iframe>
+    </div>
+    <figcaption>The field in the frame turns green; the <code>iframe</code>, a navigable container, stays
+    grey.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

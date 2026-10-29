@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>line: two points, never filled</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.5 The ‘line’ element</div>
+  <h1>line: two points, never filled</h1>
+  <p class=pr-lede><q>The ‘line’ element defines a line segment that starts at one point and ends at another.</q>
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#LineElement">SVG 2 §10.5</a></span> Each stage
+  is an SVG 160 by 50, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>x1, y1 to x2, y2, never filled</h2>
+  <p><q>The x- and y-axis coordinates of the start of the line.</q> <q>The x- and y-axis coordinates of the end of
+  the line.</q> Each is initially 0. <q>‘line’ elements are never filled</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="50"><line x1="20" y1="10" x2="140" y2="40" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>x1="20" y1="10" x2="140" y2="40"</code>, stroked dark blue, 4 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="50"><line x2="80" y2="40" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>Only <code>x2="80" y2="40"</code>: it starts at 0, 0, the top left corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="50"><line x1="20" y1="10" x2="140" y2="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="4" /></svg></div>
+    <figcaption>Filled blue and stroked orange: the orange line alone, with no blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its path: from the first point to the second</h2>
+  <p><q>perform an absolute moveto operation to absolute location (x1,y1)</q> <q>perform an absolute lineto operation
+  to absolute location (x2,y2)</q> One orange dash of 40, then a long gap.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="50"><line x1="140" y1="25" x2="20" y2="25" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>From 140, 25 to 20, 25: the dash at the first point, x 100 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="50"><line x1="20" y1="25" x2="140" y2="25" stroke="#d68a3c" stroke-width="6" stroke-dasharray="40 1000" /></svg></div>
+    <figcaption>From 20, 25 to 140, 25: the dash from x 20 to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

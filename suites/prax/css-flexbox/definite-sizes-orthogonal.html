@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A stretched size an orthogonal child fits</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; }
+  .item { background: #b9cde6; }
+  .words { writing-mode: vertical-rl; font-size: 0; line-height: 0; }
+  .words i { display: inline-block; width: 20px; height: 20px; background: #4f81bd; border: 1px solid #2c5a8f;
+             box-sizing: border-box; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.9 Definite and Indefinite Sizes, case 4</div>
+  <h1>A stretched size an orthogonal child fits</h1>
+  <p class=pr-lede><q>Once the cross size of a flex line has been determined, the cross sizes of items in auto-sized
+  flex containers are also considered definite for the purpose of layout</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#definite-sizes">CSS Flexible Box Layout 2 §9.9</a></span>
+  A definite size is not only for percentages: a child in a <code>vertical-rl</code> writing mode lays its lines out
+  across the item's height, and wraps them at it.</p>
+</header>
+
+<section>
+  <h2>Columns that wrap at the stretched height</h2>
+  <p>Each stage is a row container of no height. The blue item holds a <code>vertical-rl</code> child of fifteen 20px
+  squares; B, 120px tall, sets the line.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage flex"><div class=item style="max-height: 100px"><div class=words><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="pr-b pr-fit" style="width: 60px; height: 120px">B</div></div>
+    <figcaption><code>max-height: 100px</code>: the item stretches to the line and stops at 100px, definite, so its
+    child wraps at 100px into three columns of five; the item is 60px wide. <span class=pr-flag>Safari</span> The
+    item 0 wide, so B starts at 0 and covers the columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

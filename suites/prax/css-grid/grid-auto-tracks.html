@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>grid-auto-rows and grid-auto-columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; justify-content: start; grid-template-rows: 20px; }
+  .g > div { padding: 0 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.6 Implicit Track Sizing: the grid-auto-rows and grid-auto-columns properties</div>
+  <h1>grid-auto-rows and grid-auto-columns</h1>
+  <p class=pr-lede><q>The grid-auto-columns and grid-auto-rows properties specify the size of tracks not assigned a
+  size by grid-template-rows or grid-template-columns.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-tracks">CSS Grid Layout 2 §7.6</a></span></p>
+</header>
+
+<section>
+  <h2>One size</h2>
+  <p>The specification's example: <code>grid-template-columns: 20px; grid-auto-columns: 40px;
+  grid-template-rows: 20px; grid-auto-rows: 40px</code>, and A, B, C, D in the cells of two rows and two
+  columns.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 20px; grid-auto-columns: 40px; grid-auto-rows: 40px"><div class=pr-a style="grid-area: 1 / 1">A</div><div class=pr-b style="grid-area: 1 / 2">B</div><div class=pr-c style="grid-area: 2 / 1">C</div><div class=pr-d style="grid-area: 2 / 2">D</div></div></div>
+    <figcaption>One explicit 20 by 20px cell, A's; B in a 40px implicit column, C in a 40px implicit row, D 40 by
+    40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A pattern, forwards and backwards</h2>
+  <p><q>If multiple track sizes are given, the pattern is repeated as necessary to find the size of the affected
+  tracks. The first track after the last explicitly-sized track receives the first specified size, and so on
+  forwards; and the last implicit grid track before the explicit grid receives the last specified size, and so on
+  backwards.</q> Each grid has one explicit 40px column and <code>grid-auto-columns: 20px 40px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px; grid-auto-columns: 20px 40px"><div class=pr-a style="grid-column: 1">1</div><div class=pr-b style="grid-column: 2">2</div><div class=pr-c style="grid-column: 3">3</div><div class=pr-d style="grid-column: 4">4</div></div></div>
+    <figcaption>After it: column 2 is 20px, 3 is 40px, 4 is 20px again. 1 at 0, 2 at 40, 3 at 60, 4 at 100 to
+    120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px; grid-auto-columns: 20px 40px"><div class=pr-a style="grid-column: -4">x</div><div class=pr-b style="grid-column: -3">y</div><div class=pr-c style="grid-column: 1">1</div></div></div>
+    <figcaption>Before it: x at <code>-4</code> and y at <code>-3</code>. y's column, next to the explicit grid, is
+    40px, and x's 20px: x at 0, y at 20, 1 at 60 to 100px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

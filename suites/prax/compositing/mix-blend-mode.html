@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mix-blend-mode: mixing with the backdrop</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.pr-cb { height: 60px; }
+  .lime { position: absolute; left: 10px; top: 10px; width: 180px; height: 40px; background: #00ff00; }
+  .lime img { display: block; width: 80px; height: 40px; margin-left: 20px; }
+  .sw { position: absolute; left: 120px; top: 10px; width: 40px; height: 40px; }
+  .texture { height: 40px; margin: 10px; background: repeating-linear-gradient(90deg, #4f81bd 0 10px, #d68a3c 10px 20px); }
+  .texture p { margin: 0; font: bold 26px/40px "PR Arimo"; color: black; text-align: center; }
+  .stack { position: absolute; left: 10px; top: 10px; width: 80px; height: 40px; background: #00ff00; }
+  .stack .el { position: absolute; left: 20px; width: 40px; height: 40px; background: #ff0000; mix-blend-mode: screen; }
+  .stack .under { position: absolute; left: 10px; top: 10px; width: 20px; height: 20px; background: #0000ff; z-index: -1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.4.1 The mix-blend-mode property</div>
+  <h1>mix-blend-mode: mixing with the backdrop</h1>
+  <p class=pr-lede><q>The blend mode defines the formula that must be used to mix the colors with the backdrop.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#mix-blend-mode">Compositing and Blending 2 §3.4.1</a></span>
+  Each mode's formula has a page under <a href="https://drafts.csswg.org/compositing-2/#blending">§10</a>.</p>
+</header>
+
+<section>
+  <h2>The section's examples</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=lime><img src="../shared/resources/flag-40x20.png" alt=""></div></div>
+    <figcaption>The four-colored flag, 80 by 40, on lime, <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=lime><img src="../shared/resources/flag-40x20.png" style="mix-blend-mode: multiply" alt=""></div><div class=sw style="background: linear-gradient(90deg, #008100 50%, #008a00 50%) top / 100% 50% no-repeat, linear-gradient(90deg, #00a300 50%, #004400 50%) bottom / 100% 50% no-repeat"></div></div>
+    <figcaption><code>multiply</code>: each quarter's green alone, as in the swatch at x 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><svg width=200 height=60 style="display: block"><g style="isolation: isolate"><circle cx=80 cy=22 r=18 fill=red style="mix-blend-mode: screen" /><circle cx=104 cy=22 r=18 fill=lime style="mix-blend-mode: screen" /><circle cx=92 cy=40 r=18 fill=blue style="mix-blend-mode: screen" /></g></svg></div>
+    <figcaption>The three circles, each <code>screen</code>: yellow, cyan and magenta where two overlap, white where all
+    three do.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=texture><p style="mix-blend-mode: overlay">overlay</p></div></div>
+    <figcaption>Black text, <code>overlay</code>, on blue and orange stripes: each stripe darkened under
+    the letters, blue to <code>#00037b</code>, orange to <code>#ad1500</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A stacking context of its own</h2>
+  <p>A Note: <q>Applying a blendmode other than normal to the element must establish a new stacking context.</q> The
+  red square, <code>screen</code>, holds a blue 20px square with <code>z-index: -1</code>.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=stack><div class=el><div class=under></div></div></div></div>
+    <figcaption>Yellow, red screened onto lime, with a cyan square in it: the blue paints in the red square's
+    stacking context, over its red, and is screened with it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

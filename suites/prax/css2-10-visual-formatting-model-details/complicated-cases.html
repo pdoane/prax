@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Heights: the complicated cases</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; width: 40px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.6 Complicated cases</div>
+  <h1>Heights: the complicated cases</h1>
+  <p class=pr-lede>Blocks whose 'overflow' is not 'visible', inline-blocks and floats take their auto heights from 10.6.7,
+  which counts their floats. Blue boxes are 60px tall floats; the tinted, outlined box is the one measured.</p>
+</header>
+
+<section>
+  <h2>Auto margins are 0, and the height follows 10.6.7</h2>
+  <p>This section applies to: <q>Block-level, non-replaced elements in normal flow when 'overflow' does not compute to
+  'visible'</q>, <q>'Inline-block', non-replaced elements.</q> and <q>Floating, non-replaced elements.</q> <q>If
+  'margin-top', or 'margin-bottom' are 'auto', their used value is 0. If 'height' is 'auto', the height depends on the
+  element's descendants per 10.6.7.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#block-root-margin">CSS 2 §10.6.6</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class=pr-parent style="overflow: hidden; margin: auto 0">text<div class="pr-a pr-fit fl">float</div></div></div>
+    <figcaption><code>overflow: hidden</code> and <code>margin: auto 0</code>: the block is at the top, and 60px tall
+    to hold the float.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 80px">a <div class=pr-parent style="display: inline-block; width: 80px; vertical-align: top">text<div class="pr-a pr-fit fl">float</div></div></div>
+    <figcaption>An inline-block holding a float is 60px tall too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An inline-block's margin box in the line</h2>
+  <p><q>For 'inline-block' elements, the margin box is used when calculating the height of the line box.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#block-root-margin">CSS 2 §10.6.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="display: inline-block; margin: 10px 0; vertical-align: top; line-height: 16px">block</span> b<br>next line</div>
+    <figcaption>An inline-block 20px tall with 10px margins above and below: the first line is 40px, and the next
+    starts at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

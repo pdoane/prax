@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Raised and sunken caps in the block</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .prev { background: #b9cde6; }
+  .r::first-letter { initial-letter: 3 1; color: #2c5a8f; }
+  .d::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .ac::first-letter { initial-letter: 3; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.9.1 Raised and sunken caps</div>
+  <h1>Raised and sunken caps in the block</h1>
+  <p class=pr-lede><q>The margin box of an initial letter contributes to the size of its containing element. Initial
+  letters that extend above the first line of text, known as “raised caps” or “sunken caps,” do not extend up into
+  previous elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#raised-sunken-caps">CSS Inline Layout 3 §7.9.1</a></span>
+  Each stage is a blue paragraph, then one of 13px PR Literata on 20px lines whose first letter has the caption's
+  <code>initial-letter</code>. <span class=pr-flag>Safari</span> supports only <code>-webkit-initial-letter</code>
+  and <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>Text pushed down, not the letter up</h2>
+  <p>The spec's figure: <q>note that the position of the “C” is the same in both cases, but on the right all text is
+  moved down relative to the initial letter.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p prev">A paragraph before.</p><p class="p d">Cap dropped three lines, its top level with the first line.</p></div>
+    <figcaption><code>3</code>: the C's top at the first line's cap height, just under the blue paragraph.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p prev">A paragraph before.</p><p class="p r">Cap raised: the text moves down, the letter stays.</p></div>
+    <figcaption><code>3 1</code>: the C in the same place, under the blue paragraph, and the first line moved
+    down to its foot.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Accents too</h2>
+  <p><q>Since the content box for an initial letter includes all glyph ink, this also means that accents or other ink
+  above the cap height of an initial letter will not impinge on previous elements.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p prev">A paragraph before.</p><p class="p ac">Église: its accent stays below the paragraph before.</p></div>
+    <figcaption><code>3</code> on É: the accent below the blue paragraph, not over it. <span class=pr-flag>Chrome</span> The accent over the blue paragraph.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

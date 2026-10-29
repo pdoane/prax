@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; }
+  .h50 { height: 50px; column-fill: auto; }
+  .h40 { height: 40px; column-fill: auto; }
+  .boxed { border: 4px solid #2c5a8f; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 5 Column Breaks</div>
+  <h1>Column breaks</h1>
+  <p class=pr-lede><q>When content is laid out in multiple columns, the user agent must determine where column breaks
+  are placed. The problem of breaking content into columns is similar to breaking content into pages, which is
+  described in CSS 2.1, section 13.3.3 [CSS21].</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-breaks">CSS Multi-column Layout 1 §5</a></span>
+  Each stage has three columns of 60px; the rules mark the gaps.</p>
+</header>
+
+<section>
+  <h2>Between lines, not through them</h2>
+  <p>A line of text is <q>monolithic</q>, as are scrollable boxes: <q>it contains no possible break points.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#possible-breaks">CSS Fragmentation 4 §4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-measure h50">one two three four five</div>
+    <figcaption>Columns 50px tall hold two 20px lines each; the third line starts the next column, and 10px are left
+    empty at each column's foot.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure h40">one<div class="pr-b pr-fit" style="height: 30px; overflow: hidden">B</div>two</div>
+    <figcaption>B, 30px tall and <code>overflow: hidden</code>, does not fit under "one" in the 40px column, and is
+    not split: it starts the second column, and "two", with no room under it, the third. <span
+    class=pr-flag>Safari</span> Splits B: its first 20px under "one", the rest atop the second
+    column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Boxes are split at the break</h2>
+  <p>The blue box has a 4px border and holds five lines. <q>When a box breaks, its content box extends to fill any
+  remaining fragmentainer extent</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#box-splitting">CSS Fragmentation 4 §5.3</a></span>,
+  and with <code>box-decoration-break: slice</code>, the initial value, <q>no border and no padding are inserted at
+  a break</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-decoration">§5.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-measure h50"><div class=boxed>one two three four five</div></div>
+    <figcaption>The top border in the first column, the bottom border in the third, and the sides in all three; each
+    fragment fills its column's 50px down to the break.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure h50"><div class=boxed style="box-decoration-break: clone">one two three four five</div></div>
+    <figcaption><code>box-decoration-break: clone</code>: each fragment has all four borders.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

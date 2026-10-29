@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The static position: unscrolled</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .lead { height: 50px; background: #b9cde6; }
+  .ab { position: absolute; width: 60px; height: 20px; background: #d68a3c; }
+  .rest { height: 200px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.5.3 Calculating the Static Position and the “Static-Position Rectangle”</div>
+  <h1>The static position: unscrolled</h1>
+  <p class=pr-lede><q>Additionally, the containing block of fixed positioned elements is assumed to be the initial
+  containing block instead of the viewport, and all scroll containers should be assumed to be scrolled to their initial
+  scroll position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#staticpos-rect">CSS Positioned Layout 3 §3.5.3</a></span>
+  In each figure a light blue block 50px tall comes before an orange box whose insets are all <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>Scroll containers at their initial scroll position</h2>
+  <p>Each stage is relative, the box's containing block, and holds a static block that scrolls, the box in it.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=sc data-scroll=0><div class=lead></div><div class=ab></div><div class=rest></div></div></div>
+    <figcaption>Not scrolled: the box at 50, under the light blue block.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=sc data-scroll=30><div class=lead></div><div class=ab></div><div class=rest></div></div></div>
+    <figcaption>Scrolled 30px: the light blue block ends at 20, but the box stays at 50, its static position as if
+    unscrolled; its containing block is outside what scrolls.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Fixed boxes: the initial containing block</h2>
+  <p>Each frame's document is 300px tall and scrolled 30px.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0; height: 300px } p { margin: 0; height: 50px; background: #b9cde6 } i { position: absolute; width: 60px; height: 20px; background: #d68a3c }</style><p></p><i></i><script>scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>absolute</code>: at 50 in the document, scrolled with it, under the light blue block, at
+    20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { margin: 0; height: 300px } p { margin: 0; height: 50px; background: #b9cde6 } i { position: fixed; width: 60px; height: 20px; background: #d68a3c }</style><p></p><i></i><script>scrollTo(0, 30)</script>"></iframe></div>
+    <figcaption><code>fixed</code>: its static position is found in the initial containing block, unscrolled, so it
+    is 50 down the frame, and stays there as the document scrolls.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

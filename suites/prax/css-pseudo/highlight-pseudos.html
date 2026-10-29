@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The highlight pseudo-elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .t { padding: 0 10px; font: 16px/30px "PR Arimo"; }
+  .names ::highlight(a) { background-color: #d68a3c; color: white; }
+  .every ::highlight(*) { background-color: #6aa36a; color: white; }
+  .both ::highlight(a) { background-color: #d68a3c; color: white; }
+  .both ::highlight(*) { background-color: #6aa36a; color: white; }
+  .cross ::highlight(c) { background-color: #4f81bd; color: white; }
+  em { font-style: italic; }
+  b { font-weight: bold; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 3.1 Selecting Highlighted Content: the ::selection, ::search-text, ::target-text, ::spelling-error, ::grammar-error, and ::highlight() pseudo-elements</div>
+  <h1>The highlight pseudo-elements</h1>
+  <p class=pr-lede><q>The highlight pseudo-elements represent portions of a document that have been given a particular
+  status and are typically styled differently to indicate that status to the user.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#highlight-selectors">CSS Pseudo-Elements 4 §3.1</a></span>
+  The figures use custom highlights, set by a script; what ::search-text, ::target-text and the error highlights
+  select comes from find-in-page, a URL and a spell checker.</p>
+</header>
+
+<section>
+  <h2>::highlight(): by name, or every one</h2>
+  <p><q>A &lt;custom-ident&gt; argument selects the single custom highlight whose custom highlight name is that
+  identifier. The * argument selects every custom highlight, regardless of its custom highlight name.</q> Each stage
+  has two words, the first in a highlight named <code>a</code>, the second in one named <code>b</code>.</p>
+  <figure>
+    <div class="pr-stage names"><div class=t><span data-highlight=a>First</span> <span data-highlight=b>second</span></div></div>
+    <figcaption><code>::highlight(a)</code>: “First” white on orange, “second” as it was.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage every"><div class=t><span data-highlight=a>First</span> <span data-highlight=b>second</span></div></div>
+    <figcaption><code>::highlight(*)</code>: both words white on green. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Neither word highlighted.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Specificity, and crossing elements</h2>
+  <p><q>The specificity of a ::highlight() selector with a &lt;custom-ident&gt; argument is equivalent to a type
+  selector. The specificity of a ::highlight() selector with a * argument is zero.</q> <q>The highlight
+  pseudo-elements do not necessarily fit into the element tree, and can arbitrarily cross element boundaries without
+  honoring its nesting structure.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage both"><div class=t><span data-highlight=a>First</span> <span data-highlight=b>second</span></div></div>
+    <figcaption><code>::highlight(a)</code>, then <code>::highlight(*)</code> after it: “First” stays orange, as the
+    more specific; “second” green. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> “second” not highlighted.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage cross"><div class=t>One <em>tw<span data-from=c></span>o three</em> <b>fo<span data-to=c></span>ur</b></div></div>
+    <figcaption>A highlight from inside the <code>em</code> to inside the <code>b</code>: from the “o” of “two”
+    through the “fo” of “four”, white on blue.</figcaption>
+  </figure>
+</section>
+
+<script src=support/highlight.js></script>
+</body>
+</html>

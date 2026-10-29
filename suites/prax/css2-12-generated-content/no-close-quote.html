@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inserting quotes: phantom quotes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage blockquote { margin: 0; padding: 0 6px; quotes: "\201C" "\201D" "\2018" "\2019"; }
+  .pr-stage blockquote p { margin: 0 0 4px; }
+  .phantom p:before      { content: open-quote }
+  .phantom p:after       { content: no-close-quote }
+  .phantom p.last:after  { content: close-quote }
+  .naive p:before        { content: open-quote }
+  .naive p:after         { content: close-quote }
+  .qs { quotes: "<" ">" "(" ")"; }
+  .noq::before { content: no-open-quote; }
+  .oq::before { content: open-quote; }
+  .cq::after { content: close-quote; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.3.2 Inserting quotes with the 'content' property</div>
+  <h1>Inserting quotes: phantom quotes</h1>
+  <p class=pr-lede><q>The keyword 'no-close-quote' decrements the quoting level, but does not insert a quotation mark.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A quotation of several paragraphs</h2>
+  <p><q>Some typographic styles require open quotation marks to be repeated before every paragraph of a quote spanning
+  several paragraphs, but only the last paragraph ends with a closing quotation mark.</q> The specification's style
+  sheet <q>puts opening quotation marks on every paragraph in a BLOCKQUOTE, and inserts a single closing quote at the
+  end</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span></p>
+  <pre class=pr-source>blockquote p:before     { content: open-quote }
+blockquote p:after      { content: no-close-quote }
+blockquote p.last:after { content: close-quote }</pre>
+  <figure>
+    <div class="pr-stage pr-text"><blockquote class=phantom><p>First paragraph.<p>Second paragraph.<p class=last>Last one.</blockquote></div>
+    <figcaption>Each paragraph opens with “, the same double mark, and only "Last one." ends with ”.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><blockquote class=naive><p>First paragraph.<p>Second paragraph.</blockquote></div>
+    <figcaption>For contrast, <code>close-quote</code> after every paragraph: each is a closed quotation of its
+    own.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>no-open-quote</h2>
+  <p><q>For symmetry, there is also a 'no-open-quote' keyword, which inserts nothing, but increments the quotation depth
+  by one.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#quotes-insert">CSS 2 §12.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text qs"><span class=noq></span><span class="oq cq">a</span><span class=cq></span></div>
+    <figcaption>With <code>quotes: "&lt;" "&gt;" "(" ")"</code>, a <code>no-open-quote</code> first makes "a" depth 1:
+    "(a)", and a final <code>close-quote</code> shows the outer "&gt;".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

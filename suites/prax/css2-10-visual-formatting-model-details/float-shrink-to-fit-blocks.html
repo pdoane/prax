@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Float widths: a block inside an inline</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; }
+  .inner { float: left; width: 60px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.5 Floating, non-replaced elements</div>
+  <h1>Float widths: a block inside an inline</h1>
+  <p class=pr-lede>Each dashed box is a float whose width is shrink-to-fit. It holds a span, and in the span a blue
+  block, which breaks the span into lines before and after it. Text is 13px on 20px lines.</p>
+</header>
+
+<section>
+  <h2>Lines and blocks measured apart</h2>
+  <p><q>Calculate the preferred width by formatting the content without breaking lines other than where explicit line
+  breaks occur, and also calculate the preferred minimum width, e.g., by trying all possible line breaks.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#float-width">CSS 2 §10.3.5</a></span> The block ends the line
+  before it and starts the next, so each line and the block are measured on their own.</p>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 70px"><div class="pr-frame fl"><span class=pr-hl>aa<div class="pr-a pr-fit" style="width: 150px; height: 20px"></div>bb</span></div></div>
+    <figcaption>"aa", a 150px block, "bb": the float is 150px wide, the block's width, not the three side by
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 70px"><div class="pr-frame fl"><span class=pr-hl style="padding: 0 20px">x<div class="pr-a pr-fit" style="width: 100px; height: 20px"></div>y</span></div></div>
+    <figcaption>The span has 20px of padding at each side: the start padding is on the line before the block, the end
+    padding on the line after it, so the float is 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 70px"><div class="pr-frame fl"><span><span class="pr-c pr-fit inner"></span><div class="pr-a pr-fit" style="display: flow-root; width: 100px; height: 20px"></div></span></div></div>
+    <figcaption>A green 60px float in the span, then a 100px <code>flow-root</code>: the float counts on its own line,
+    so the dashed box is 100px, and the block goes below the float.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Canvas shadows</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.19 Shadows</div>
+  <h1>Canvas shadows</h1>
+  <p class=pr-lede><q>All drawing operations on an object which implements the CanvasShadowStyles interface are affected
+  by the four global shadow attributes.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#shadows">HTML §4.12.5.1.19</a></span>
+  Each shape is a blue square of 40, and the shadow color <code>rgb(0 0 0 / 0.5)</code> unless the caption says
+  otherwise.</p>
+</header>
+<section>
+  <h2>Offset, blur, and the transform</h2>
+  <p><q>Copy the alpha component of A to B, offset by shadowOffsetX in the positive x direction</q>. <q>Let σ be half the
+  value of shadowBlur.</q> The offsets <q>are not affected by the current transformation matrix.</q></p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=offset></canvas></div>
+    <figcaption>Left, offset (10, 10): a hard grey square 10 right of and below the blue one. Right, blur 10 and no
+    offset: a soft grey halo round it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=scaled></canvas></div>
+    <figcaption>With <code>scale(2, 2)</code>, a square of 20 drawn as 40 at (20, 10), offset (10, 10): the shadow
+    still 10 right and 10 down, not 20.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>When no shadow is drawn</h2>
+  <p><q>Shadows are only drawn if the opacity component of the alpha component of the shadow color is nonzero and either
+  the shadowBlur is nonzero, or the shadowOffsetX is nonzero, or the shadowOffsetY is nonzero.</q> <q>If the current
+  compositing and blending operator is "copy", then shadows effectively won't render</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=none></canvas></div>
+    <figcaption>Left, black shadow color with no offset or blur; right, offset (10, 10) with a transparent color: no
+    shadow for either.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><canvas width=200 height=70 data-draw=copy></canvas></div>
+    <figcaption>Offset (10, 10), and <code>copy</code>: the blue square alone, at (20, 10), with no shadow, and nothing
+    else of the canvas left. <span class=pr-flag>Safari</span> The shadow too.</figcaption>
+  </figure>
+</section>
+<script>
+  const draw = {
+    offset(context) {
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "rgb(0 0 0 / 0.5)";
+      context.shadowOffsetX = 10;
+      context.shadowOffsetY = 10;
+      context.fillRect(20, 10, 40, 40);
+      context.shadowOffsetX = 0;
+      context.shadowOffsetY = 0;
+      context.shadowBlur = 10;
+      context.fillRect(130, 15, 40, 40);
+    },
+    scaled(context) {
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "rgb(0 0 0 / 0.5)";
+      context.shadowOffsetX = 10;
+      context.shadowOffsetY = 10;
+      context.scale(2, 2);
+      context.fillRect(10, 5, 20, 20);
+    },
+    none(context) {
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "black";
+      context.fillRect(20, 10, 40, 40);
+      context.shadowColor = "transparent";
+      context.shadowOffsetX = 10;
+      context.shadowOffsetY = 10;
+      context.fillRect(120, 10, 40, 40);
+    },
+    copy(context) {
+      context.fillStyle = "#d68a3c";
+      context.fillRect(0, 0, 200, 70);
+      context.fillStyle = "#4f81bd";
+      context.shadowColor = "rgb(0 0 0 / 0.5)";
+      context.shadowOffsetX = 10;
+      context.shadowOffsetY = 10;
+      context.globalCompositeOperation = "copy";
+      context.fillRect(20, 10, 40, 40);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]"))
+    draw[canvas.dataset.draw](canvas.getContext("2d"), canvas);
+</script>
+</body>
+</html>

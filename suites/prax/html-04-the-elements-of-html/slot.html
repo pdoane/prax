@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The slot element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .host { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.4 The slot element</div>
+  <h1>The slot element</h1>
+  <p class=pr-lede><q>The slot element defines a slot. It is typically used in a shadow tree. A slot element represents
+  its assigned nodes, if any, and its contents otherwise.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element">HTML §4.12.4</a></span>
+  Each host's shadow tree is a blue frame; the host's own children are bold.</p>
+</header>
+<section>
+  <h2>Assigned nodes, or else its contents</h2>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px">Hi, <slot>nobody</slot>!</div></template><b>Ada</b></div>
+    </div>
+    <figcaption>A host with a child: the frame reads "Hi, <b>Ada</b>!", the child drawn in the slot's place.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px">Hi, <slot>nobody</slot>!</div></template></div>
+    </div>
+    <figcaption>A host with no children: the slot's own contents, "Hi, nobody!".</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Named slots</h2>
+  <p><q>a slot element with a name attribute creates a named slot to which any element is assigned if that element has
+  a slot attribute whose value matches that name attribute's value</q></p>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px"><slot name=last>?</slot>, <slot name=first>?</slot></div></template><b slot=first>Ada</b><b slot=last>Lovelace</b></div>
+    </div>
+    <figcaption>The children in the order of the slots, not their own: "<b>Lovelace</b>, <b>Ada</b>".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><div style="border: 3px solid #4f81bd; padding: 0 6px">[<slot name=a>?</slot>] [<slot></slot>]</div></template><b slot=a>one</b><b>two</b><b slot=b>three</b></div>
+    </div>
+    <figcaption>"[<b>one</b>] [<b>two</b>]": "one" in slot a, "two" in the unnamed slot; "three" names no slot, and
+    is not drawn.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>No box of its own</h2>
+  <p><code>slot { display: contents; }</code> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage stage pr-text">
+      <div class=host><template shadowrootmode=open><style>slot { border: 3px solid #d68a3c; background: #f6d7b4; }</style><div style="border: 3px solid #4f81bd; padding: 0 6px">Hi, <slot></slot>!</div></template><b>Ada</b></div>
+    </div>
+    <figcaption>An orange border and background on the slot draw nothing, as it has no box: "Hi, <b>Ada</b>!" plain in
+    the blue frame.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

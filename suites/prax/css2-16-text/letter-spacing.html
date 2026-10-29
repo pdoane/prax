@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The letter-spacing property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.4 Letter and word spacing: the 'letter-spacing' and 'word-spacing' properties</div>
+  <h1>The letter-spacing property</h1>
+  <p class=pr-lede><code>letter-spacing</code> takes <code>normal | &lt;length&gt;</code>. Initial <code>normal</code>,
+  inherited, applies to all elements. Computed value: <q>'normal' or absolute length</q>. Each orange span is the same
+  word.</p>
+</header>
+
+<section>
+  <h2>normal and &lt;length&gt;</h2>
+  <p><q>This property specifies spacing behavior between text characters.</q> <q>The spacing is the normal spacing for
+  the current font.</q> <q>This value indicates inter-character space in addition to the default space between
+  characters. Values may be negative, but there may be implementation-specific limits.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#spacing-props">CSS 2
+  §16.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl>spacing</span> normal<br><span class=pr-hl style="letter-spacing: 4px">spacing</span> 4px<br><span class=pr-hl style="letter-spacing: -1px">spacing</span> -1px</div>
+    <figcaption><code>normal</code>, then <code>4px</code> more after each letter, so the word is 28px wider, then 1px
+    less, so 7px narrower. <span class="pr-flag pr-since">Since CSS 2</span> none at the line's start: 26px and
+    6.5px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="letter-spacing: 0.5em"><span class=pr-hl>spacing</span><br><span class=pr-hl style="font-size: 10px">spacing</span><br><span class=pr-hl style="font-size: 10px; letter-spacing: 6.5px">spacing</span><br><span class=pr-hl style="font-size: 10px; letter-spacing: 5px">spacing</span></div>
+    <figcaption><code>0.5em</code> at 13px is 6.5px, and the 10px child, second, inherits that length, not 0.5em:
+    it is as wide as the third, set to <code>6.5px</code>, and wider than the fourth, set to
+    <code>5px</code>.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#letter-spacing-property">CSS Text 3 §7.2</a></div>
+  <h2>Half on each side, none at the line's ends</h2>
+  <p><q>Letter-spacing is applied to each typographic character unit by inserting half of the additional spacing on
+  each side; except it is not applied at the beginning or end of a line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#letter-spacing-property">CSS Text 3 §7.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text" style="text-align: right"><span class=pr-hl style="letter-spacing: 10px">abc</span></div>
+    <figcaption><code>letter-spacing: 10px</code>, right-aligned: "c" ends at the stage's right edge, with no
+    spacing after it. <span class=pr-flag>Chrome</span> adds 10px after "c", so it ends 10px short.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

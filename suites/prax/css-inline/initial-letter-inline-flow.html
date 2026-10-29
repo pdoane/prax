@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Initial letters in the line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .p::first-letter { initial-letter: 3 2; color: #2c5a8f; background: #f9cc9d; }
+  .d::first-letter { initial-letter: 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.8.1 Inline Flow Layout: Alignment, Justification, and White Space</div>
+  <h1>Initial letters in the line</h1>
+  <p class=pr-lede><q>An initial letter box is handled similar to any other inline-level content participating in its
+  originating line box, including participation in alignment, justification, and white space processing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-inline-flow">CSS Inline Layout 3 §7.8.1</a></span>
+  Each paragraph is 13px PR Literata on 20px lines. <span class=pr-flag>Safari</span> supports only
+  <code>-webkit-initial-letter</code> and <span class=pr-flag>Firefox</span> none.</p>
+</header>
+
+<section>
+  <h2>White space and letter-spacing after a sunken initial</h2>
+  <p><q>collapsible white space between a sunken initial and subsequent content on its originating line is collapsed
+  away, and any letter-spacing or justification opportunity that would normally be introduced by the juxtaposition of
+  the contents of a sunken initial and the subsequent contents of the line is suppressed.</q> Each first letter, on orange, is
+  a sunken initial, <code>3 2</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p>A space follows the letter: it collapses, so this line is flush with the next.</p></div>
+    <figcaption>A space after the A: collapsed away; the first line starts right after the orange, where the
+    second does.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p style="letter-spacing: 6px">Spaced letters: no extra space after the initial.</p></div>
+    <figcaption><code>letter-spacing: 6px</code>: none between the S and the p, so the first line starts flush
+    with the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Aligned with the line</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d" style="text-align: center">Centered text moves the letter with its first line.</p></div>
+    <figcaption><code>text-align: center</code>, <code>initial-letter: 2</code>: the C at the start of the centered
+    first line, not at the block's edge. <span class=pr-flag>Chrome</span> At the block's edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

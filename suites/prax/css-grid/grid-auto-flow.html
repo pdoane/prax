@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>grid-auto-flow: row, column, dense</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; justify-content: start; grid-auto-rows: 20px; }
+  .narrow .pr-stage { width: 120px; }
+  .narrow figcaption { max-width: 120px; }
+  .narrow figure { margin-right: 12px; }
+  .v { writing-mode: vertical-rl; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.7 Automatic Placement: the grid-auto-flow property</div>
+  <h1>grid-auto-flow: row, column, dense</h1>
+  <p class=pr-lede><q>Grid items that aren't explicitly placed are automatically placed into an unoccupied space in
+  the grid container by the auto-placement algorithm. grid-auto-flow controls how the auto-placement algorithm
+  works</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-auto-flow-property">CSS Grid Layout 2 §7.7</a></span></p>
+</header>
+
+<section class=narrow>
+  <h2>row and column</h2>
+  <p><code>row</code> places items <q>by filling each row in turn, adding new rows as necessary.</q>
+  <code>column</code> places them <q>by filling each column in turn, adding new columns as necessary.</q> And
+  <q>Auto-placement takes grid items in order-modified document order.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption><code>row</code>, three 40px columns: A, B, C across the first row, D and E the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-auto-flow: column; grid-template-rows: 20px 20px; grid-auto-columns: 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption><code>column</code>, two 20px rows: A and B down the first column, C and D the second, E alone in
+    a third, at 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="width: 80px"><div class="g v" style="grid-template-columns: 20px 20px 20px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div></div></div>
+    <figcaption style="max-width: 80px"><code>row</code>, <code>vertical-rl</code>: 20px columns run down;
+    A, B, C fill the right-hand row, D and E the next.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px 40px 40px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="order: -1">C</div></div></div>
+    <figcaption>C has <code>order: -1</code>: C first, at 0, then A and B.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Sparse and dense</h2>
+  <p>Without <code>dense</code>, <q>the placement algorithm only ever moves “forward” in the grid when placing items,
+  never backtracking to fill holes.</q> <code>dense</code> <q>attempts to fill in holes earlier in the grid if smaller
+  items come up later.</q> Four 40px columns; B has <code>grid-column: span 4</code>, and does not fit beside A.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(4, 40px)"><div class=pr-a>A</div><div class=pr-b style="grid-column: span 4">B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>row</code>: A alone in row 1, B across row 2, C and D after it in row 3.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-auto-flow: row dense; grid-template-columns: repeat(4, 40px)"><div class=pr-a>A</div><div class=pr-b style="grid-column: span 4">B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption><code>row dense</code>: C and D go back to the hole beside A, at 40 and 80px; B alone in row
+    2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

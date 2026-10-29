@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow: scroll and auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 70px; height: 40px; margin: 10px 10px 30px; }
+  .w { width: 100px; }
+  .h { width: 40px; }
+  .classic::-webkit-scrollbar { width: 12px; height: 12px; background: #cfd3da; }
+  .classic::-webkit-scrollbar-thumb { background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, scroll and auto</div>
+  <h1>overflow: scroll and auto</h1>
+  <p class=pr-lede><code>scroll</code>: <q>the content is clipped to the overflow clip edge, but can be scrolled into
+  view.</q> <code>auto</code>: <q>Like overflow/scroll when the box has scrollable overflow; like overflow/hidden
+  otherwise.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>A scroll bar whether or not there is overflow</h2>
+  <p><code>scroll</code>: a visible scrolling mechanism <q>should be displayed whether or not any of its content is
+  clipped.</q> <code>auto</code>: <q>that mechanism will only be displayed if there is overflow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span>
+  Each box holds only B, which fits.</p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame sc" style="width: 120px; margin: 10px 40px; overflow: scroll"><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>scroll</code>: classic scroll bars are drawn at the right and the bottom. All three browsers draw
+    overlay scroll bars here, which show only while the box is scrolled, so none is seen.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame sc" style="width: 120px; margin: 10px 40px; overflow: auto"><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>auto</code>: nothing overflows, so there is no scroll bar, classic or overlay.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With classic scroll bars</h2>
+  <p>The same boxes, styled with <code>::-webkit-scrollbar</code>, which Safari draws as classic scroll bars 12px
+  wide; Chrome and Firefox draw overlay ones here, not seen. The third box holds a 160px wide A as well, so
+  it overflows across.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 80px"><div class="pr-frame sc classic" style="overflow: scroll; height: 56px; margin: 10px 14px"><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>scroll</code>: both bars, though nothing overflows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 80px"><div class="pr-frame sc classic" style="overflow: auto; height: 56px; margin: 10px 14px"><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>auto</code>, nothing overflowing: no bar.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 80px"><div class="pr-frame sc classic" style="overflow: auto; height: 56px; margin: 10px 14px"><div class="pr-a pr-fit" style="width: 160px">A</div><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>auto</code>, overflowing across: a bar at the bottom only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

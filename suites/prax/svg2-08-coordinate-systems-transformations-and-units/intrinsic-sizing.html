@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic size and ratio of an SVG image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; }
+  .wide { width: 120px; }
+  .short { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.12 Intrinsic sizing properties of SVG content</div>
+  <h1>Intrinsic size and ratio of an SVG image</h1>
+  <p class=pr-lede><q>Therefore, when specified as a length, the width and height sizing properties of the ‘svg’
+  element control the intrinsic dimensions of the SVG image and the specified size that is used when placing the SVG
+  image in a host document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#SizingSVGInCSS">SVG 2 §8.12</a></span>
+  Each stage is 160 wide and holds an HTML <code>img</code> of an SVG document filled blue.</p>
+</header>
+
+<section>
+  <h2>Intrinsic dimensions</h2>
+  <p><q>‘auto’ and percentage lengths must not be used to determine an intrinsic width or intrinsic height.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='40'><rect width='100%25' height='100%25' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption><code>width="120" height="40"</code>: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium" style="overflow: hidden"><img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50%25' height='40'><rect width='100%25' height='100%25' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption><code>width="50%" height="40"</code>, no ratio: no intrinsic width, so the default 300, by
+    40; the stage cuts it off at 160.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The intrinsic aspect ratio</h2>
+  <p><q>If the width and height sizing properties on the ‘svg’ element are both absolute values: return width /
+  height</q>. <q>If the ‘viewBox’ on the ‘svg’ element is correctly specified: […] return viewbox.width /
+  viewbox.height</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><img class=short src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='20' viewBox='0 0 20 20'><rect width='100%25' height='100%25' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption><code>width="60" height="20"</code> and a square <code>viewBox</code>, <code>height: 40px</code>: the
+    ratio 3, from the attributes, so 120 by 40, the square drawn in its middle, blue from x 40 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img class=wide src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 10'><rect width='100%25' height='100%25' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption>Only <code>viewBox="0 0 30 10"</code>, <code>width: 120px</code>: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' height='40' viewBox='0 0 30 10'><rect width='100%25' height='100%25' fill='%234f81bd'/></svg>" alt=""></div>
+    <figcaption><code>height="40"</code> and <code>viewBox="0 0 30 10"</code>: 120 by 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

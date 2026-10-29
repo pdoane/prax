@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-combine-upright: the 1em square</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 20px/32px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 100px; padding: 0 6px; }
+  .tcy { text-combine-upright: all; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 9.1.2 Layout Rules</div>
+  <h1>text-combine-upright: the 1em square</h1>
+  <p class=pr-lede><q>When combining text as for text-combine-upright: all, the glyphs of the combined text are
+  bidi-isolated and composed horizontally (ignoring letter-spacing and any forced line breaks, but using the specified
+  font settings), similar to the contents of an inline-block box with a horizontal writing mode and a line-height of
+  1em.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#text-combine-layout">CSS Writing Modes 4 §9.1.2</a></span></p>
+</header>
+
+<section>
+  <h2>One square in the line</h2>
+  <p><q>The effective size of the composition is assumed to be 1em square</q>. Each stage holds 年, a combined span,
+  and 月日, in 20px text: the span takes 20px of the column, as one character does.</p>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy>12</span>月日</div>
+    <figcaption>"12" centered in a 20px square.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy style="letter-spacing: 10px">12</span>月日</div>
+    <figcaption><code>letter-spacing: 10px</code>: ignored, as the first.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy>1<br>2</span>月日</div>
+    <figcaption>A <code>br</code> between the digits: ignored, as the first.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年<span class=tcy> 12 </span>月日</div>
+    <figcaption>Spaces at both ends: removed, as at the ends of an inline block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Isolated and centered</h2>
+  <p><q>The baseline of the resulting composition must be chosen such that the square is centered between the
+  text-over and text-under baselines of its parent inline box</q>.</p>
+  <figure class=s>
+    <div class=pr-stage style="font-family: 'PR Arimo', 'PR Noto Sans JP'">年<span class=tcy>אב</span>月</div>
+    <figcaption>Hebrew combined: bidi-isolated, read right to left, א at the square's right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage>年<span class="tcy pr-hl">12</span>月</div>
+    <figcaption>The highlighted square centered across the line, as 年 and 月 are.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The alphabetic system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style go-text { system: alphabetic; symbols: "○" "●"; suffix: " "; }
+  @counter-style go { system: alphabetic; symbols: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='white' stroke='black'/></svg>") url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='black'/></svg>"); suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.4 Bijective Numerals: the alphabetic system</div>
+  <h1>The alphabetic system</h1>
+  <p class=pr-lede><q>The alphabetic counter system interprets the list of counter symbols as digits to an alphabetic
+  numbering system, similar to the default 'lower-alpha' counter style, which wraps from "a", "b", "c", to "aa", "ab",
+  "ac". Alphabetic numbering systems do not contain a digit representing 0</q>. <q>This system is defined only over
+  strictly positive counter values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#alphabetic-system">CSS Counter Styles 3 §3.1.4</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Two symbols as digits</h2>
+  <p>The example's go stones, white the digit 1 and black the digit 2, with suffix " ".</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: go-text"><li>One<li>Two<li>Three<li>Four<li>Five<li>Six<li>Seven</ol></div>
+    <figcaption>As strings ○ and ●: ○, ●, ○○, ○●, ●○, ●●, ○○○.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style="list-style-type: go"><li>One<li>Two<li>Three<li>Four</ol></div>
+    <figcaption>As images, each <q>a 1em by 1em square</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-symbols">§3.8</a></span>: a white
+    stone, a black one, two white, white and black. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> No image symbols (at risk): decimal.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero and below fall back</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: go-text" start=-1><li>-1<li>0<li>1</ol></div>
+    <figcaption>From -1: "-1" and "0" in <code>decimal</code>, with this style's suffix " ", then "○".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

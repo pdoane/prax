@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Shaping initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 18px/28px "PR Noto Sans Arabic"; margin: 0; }
+  .p::first-letter { initial-letter: 2 1; color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.5.4 Shaping and Glyph Selection</div>
+  <h1>Shaping initial letters</h1>
+  <p class=pr-lede><q>When initial-letter is not normal, an inline initial letter is isolated for glyph shaping;
+  however the text after it should shape across the inline initial letter box's boundaries, assuming its presence as
+  part of the first line’s text content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-shaping">CSS Inline Layout 3 §7.5.4</a></span></p>
+</header>
+
+<section>
+  <h2>Isolated letter, joined text</h2>
+  <p>The spec's example: <q>if the first letter of the word “يحق” were styled with initial-letter: 2 1, the first
+  letter would be styled in its isolated form “ي”, as the initial letter, followed by the medial/final-form “ﺤﻖ”,
+  which assumes it is preceded by the initial letter’s contents as normal text.</q> Each paragraph is 18px PR Noto
+  Sans Arabic, right to left.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p dir=rtl lang=ar>يحق لكل شخص أن يتعلم.</p></div>
+    <figcaption><code>initial-letter: 2 1</code>: a large ي in its isolated form at the right; حق
+    <em>should</em> join as if still after it, and Chrome gives it its initial form. <span class=pr-flag>Safari</span> Supports only <code>-webkit-initial-letter</code>: يحق joined at
+    the normal size. <span class=pr-flag>Firefox</span> Not supported.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><p class=p dir=rtl lang=ar style="font-size: 18px">ي حق</p></div>
+    <figcaption>For comparison, without initial-letter: the isolated ي, a space, and حق in its initial form.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

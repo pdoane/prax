@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Interpolated values are clamped, after addition</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .a { height: 20px; background: #4f81bd; animation: 1s cubic-bezier(0.5, -2, 0.5, -2) -0.5s infinite alternate; }
+  @keyframes w { from { width: 0; } to { width: 100px; } }
+  @keyframes pad { from { padding-left: 0; } to { padding-left: 100px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 3.1 Range Checking</div>
+  <h1>Interpolated values are clamped, after addition</h1>
+  <p class=pr-lede><q>If the final result after interpolation, addition, and accumulation is out-of-range for the
+  target context the value is being used in, it does not cause the declaration to be invalid. Instead, the value must
+  be clamped to the range allowed in the target context</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#combining-range">CSS Values and Units 4 §3.1</a></span>
+  Each bar runs an animation from 0 to 100px, running to and fro (a still shows it halfway), with the easing <code>cubic-bezier(0.5, -2, 0.5,
+  -2)</code>, whose output there is −1.375: −137.5px.</p>
+</header>
+
+<section>
+  <h2>Clamped</h2>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="animation-name: w"></div><div class=pr-plain style="width: 100px"></div></div>
+    <figcaption><code>width</code> at −137.5px is clamped to 0: no blue bar above the grey 100px one.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="width: 40px; animation-name: pad"></div></div>
+    <figcaption><code>padding-left</code> clamped to 0: the bar is its 40px width alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the final result</h2>
+  <p><q>Even if interpolation results in an out-of-range value, addition/accumulation might "correct" the result and
+  bring it back into range.</q> The bar is <code>width: 160px</code>, with the animation added.</p>
+  <figure>
+    <div class="pr-stage pr-motion"><div class=a style="width: 160px; animation-name: w; animation-composition: add"></div></div>
+    <figcaption>160px − 137.5px: a bar 22.5px wide, not 160px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

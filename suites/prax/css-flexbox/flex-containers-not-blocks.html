@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What block properties do not do in a flex container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .box { width: 40px; }
+  section figure .pr-stage { width: 150px; }
+  section figcaption { max-width: 150px; }
+  .fl::first-line { color: #c0392b; }
+  .fe::first-letter { color: #c0392b; font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 3 Flex Containers, not block containers</div>
+  <h1>What block properties do not do in a flex container</h1>
+  <p class=pr-lede><q>Flex containers are not block containers, and so some properties that were designed with the
+  assumption of block layout don't apply in the context of flex layout.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#flex-containers">CSS Flexible Box Layout 2 §3</a></span></p>
+</header>
+
+<section>
+  <h2>float, clear and vertical-align</h2>
+  <p><q>float and clear do not create floating or clearance of flex item, and do not take it out-of-flow.</q>
+  <q>vertical-align has no effect on a flex item.</q> Items 40px wide.</p>
+  <figure>
+    <div class=pr-stage style="display: flex"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box" style="float: right">B</div><div class="pr-c pr-fit box" style="clear: both">C</div></div>
+    <figcaption>B <code>float: right</code>, C <code>clear: both</code>: A, B, C side by side from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="display: flex; height: 40px; align-items: flex-start"><div class="pr-a pr-fit box">A</div><div class="pr-b pr-fit box" style="vertical-align: bottom">B</div></div>
+    <figcaption>B <code>vertical-align: bottom</code>, the stage 40px tall: B at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No first line, no first letter</h2>
+  <p><q>the ::first-line and ::first-letter pseudo-elements do not apply to flex containers, and flex containers do not
+  contribute a first formatted line or first letter to their ancestors.</q> Red marks a first line or letter. <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-text-line">CSS Pseudo-Elements 4 §2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage fl" style="display: flex"><span>Item one</span></div>
+    <figcaption><code>::first-line</code> on the container: black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage fe" style="display: flex"><span>Item one</span></div>
+    <figcaption><code>::first-letter</code> on it: the "I" small and black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage fl"><div style="display: flex"><span>Inside</span></div>Outside</div>
+    <figcaption>A block starting with a flex container: its first line would be the container's, which has none;
+    both black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

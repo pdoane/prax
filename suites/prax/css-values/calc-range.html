@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Only the top-level calculation is clamped and rounded</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { column-gap: 10px; column-rule: 1px dashed #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 10.12 Range Checking</div>
+  <h1>Only the top-level calculation is clamped and rounded</h1>
+  <p class=pr-lede><q>The clamping/rounding behavior of numeric functions is, for math functions, only performed on the
+  results of a top-level calculation. Nested math functions forming a calculation tree neither clamp nor round.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#calc-range">CSS Values and Units 4 §10.12</a></span></p>
+</header>
+
+<section>
+  <h2>Not clamped inside</h2>
+  <p>Each bar's <code>width</code> is under it; a width below 0 is not allowed.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(calc(10px - 50px) + 100px)">A</div></div>
+    <figcaption><code>calc(calc(10px - 50px) + 100px)</code>: the inner −40px is kept, so 60px, not 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: calc(150px + min(-40px, -90px))">A</div></div>
+    <figcaption><code>calc(150px + min(-40px, -90px))</code>: 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not rounded inside</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="column-count: calc(calc(1.4) + calc(1.4))">one two three four five six</div>
+    <figcaption><code>column-count: calc(calc(1.4) + calc(1.4))</code>: 2.8 rounds to three columns, not 1 + 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

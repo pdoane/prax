@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Scroll bars and sizing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: scroll; position: relative; background: #f4f5f7 linear-gradient(#d68a3c, #d68a3c) top right / 20px 20px no-repeat; }
+  .x { position: absolute; top: 0; right: 0; width: 20px; height: 20px; box-sizing: border-box; border: 2px solid #2c5a8f; }
+  .stage { height: 60px; }
+  .classic::-webkit-scrollbar { width: 12px; height: 12px; background: #cfd3da; }
+  .classic::-webkit-scrollbar-thumb { background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 5.1 Scrollbar Contributions to Sizing</div>
+  <h1>Scroll bars and sizing</h1>
+  <p class=pr-lede><q>The space reserved for the scrollbar is located between the padding area and the border area of
+  the scroll container box. However, for the purpose of the background positioning area and background painting
+  area, this reserved space is treated as part of the padding area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-sizing">CSS Overflow 3 §5.1</a></span></p>
+  <p class=pr-note>Each box is styled with <code>::-webkit-scrollbar</code>: Safari draws classic bars 12px wide;
+  Chrome and Firefox draw overlay ones here, which take no room.</p>
+</header>
+
+<section>
+  <h2>A background under the bar, a positioned box beside it</h2>
+  <p>An orange background image 20px square at the top right, and a blue square at <code>top: 0; right: 0</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame sc classic"><div class=x></div></div></div>
+    <figcaption>With classic bars, the blue square sits against the bar, and the orange image is under the bar,
+    8px of it showing. With overlay bars, blue on orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Intrinsic sizes add the bar</h2>
+  <p><q>When the box is intrinsically sized, this reserved space is added to the size of its contents. It is otherwise
+  subtracted from space allotted to the content area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-sizing">CSS Overflow 3 §5.1</a></span></p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure classic" style="float: left; overflow-y: scroll; height: 40px; margin: 10px">auto</div></div>
+    <figcaption>A float, <code>overflow-y: scroll</code>, holding "auto", 40px: with a classic bar it is 52px wide
+    inside its border, and "auto" is not wrapped; with overlay bars, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure classic" style="overflow-y: scroll; width: 80px; height: 40px; margin: 10px">auto auto</div></div>
+    <figcaption>A fixed width, 80px: the bar is taken from it, and the 68px left hold one "auto" a line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

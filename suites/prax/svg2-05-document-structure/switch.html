@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The switch element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.6.3 The ‘switch’ element</div>
+  <h1>The switch element</h1>
+  <p class=pr-lede><q>The ‘switch’ element evaluates the ‘requiredExtensions’ and ‘systemLanguage’ attributes on its
+  direct child elements in order, and then processes and renders the first child for which these attributes evaluate
+  to true. All others will be bypassed and therefore not rendered.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#SwitchElement">SVG 2 §5.6.3</a></span>
+  Each stage is an SVG 160 by 60 with a <code>switch</code> of a blue square at 20, 10, an orange one at 60, 10 and
+  a green one at 100, 10, each 40 by 40.</p>
+</header>
+
+<section>
+  <h2>The first that tests true</h2>
+  <p>An empty <code>requiredExtensions</code> tests false; with no attribute, a child tests true.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><rect x="20" y="10" width="40" height="40" fill="#4f81bd" /><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /><rect x="100" y="10" width="40" height="40" fill="#6aa36a" /></switch></svg></div>
+    <figcaption>All true: only the first, blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><rect x="20" y="10" width="40" height="40" fill="#4f81bd" requiredExtensions="" /><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /><rect x="100" y="10" width="40" height="40" fill="#6aa36a" /></switch></svg></div>
+    <figcaption>The first false: only the orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><g requiredExtensions=""><rect x="20" y="10" width="40" height="40" fill="#4f81bd" /></g><g><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /><rect x="100" y="10" width="40" height="40" fill="#6aa36a" /></g></switch></svg></div>
+    <figcaption>Groups: <q>the entire subtree is either processed/rendered or bypassed</q>; the second group, orange
+    and green.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>display and visibility do not count</h2>
+  <p><q>setting display to none on a child of a ‘switch’ element has no effect on true/false testing associated with
+  ‘switch’ element processing.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><rect x="20" y="10" width="40" height="40" fill="#4f81bd" display="none" /><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /><rect x="100" y="10" width="40" height="40" fill="#6aa36a" /></switch></svg></div>
+    <figcaption>The first <code>display="none"</code>: it is still chosen, and draws nothing; no square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><rect x="20" y="10" width="40" height="40" fill="#4f81bd" visibility="hidden" /><rect x="60" y="10" width="40" height="40" fill="#d68a3c" /><rect x="100" y="10" width="40" height="40" fill="#6aa36a" /></switch></svg></div>
+    <figcaption>The first <code>visibility="hidden"</code>: still chosen, invisible; no square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(rec2100-hlg …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .steps { display: block; width: 160px; height: 40px; margin-left: 10px; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · 8.2 rec2100-hlg</div>
+  <h1>color(rec2100-hlg …)</h1>
+  <p class=pr-lede><q>The Hybrid Log-Gamma (HLG) electro-optical transfer function is used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-hdr-1/#valdef-color-rec2100-hlg">CSS Color HDR 1
+  §8.2</a></span></p>
+</header>
+
+<section>
+  <h2>Reference white, and past it</h2>
+  <q>A value of 0.75 represents "diffuse" or "media" white while an "18% reflectance grey" card has a value of
+  0.38.</q>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(rec2100-hlg 0.75 0.75 0.75)"></div><div class=sw style="background: white"></div></div>
+    <figcaption><code>color(rec2100-hlg 0.75 0.75 0.75)</code> beside <code>white</code>: one white.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-hlg …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(rec2100-hlg 0.38 0.38 0.38)"></div><div class=sw style="background: rgb(46.632% 46.632% 46.632%)"></div></div>
+    <figcaption><code>color(rec2100-hlg 0.38 0.38 0.38)</code>, an 18% gray card, beside
+    <code>rgb(46.632% 46.632% 46.632%)</code>: one gray. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-hlg …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-row"><div class=sw style="background: white"></div><div class=sw style="background: color(rec2100-hlg 1 1 1)"></div></div>
+    <figcaption><code>white</code>, then HLG 1, the signal's peak. An HDR display shows the second brighter. An SDR
+    display shows two whites. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <code>color(rec2100-hlg …)</code> does not parse, so the swatch has no background.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

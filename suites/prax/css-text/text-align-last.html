@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-align-last</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+  .x { display: inline-block; width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.4 Last Line Alignment: the text-align-last property</div>
+  <h1>text-align-last</h1>
+  <p class=pr-lede><q>This property describes how the last line of a block or a line right before a forced line break
+  is aligned. If auto is specified, content on the affected line is aligned per 'text-align-all' unless
+  'text-align-all' is set to 'justify', in which case it is 'start'-aligned.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-align-last-property">CSS Text 4 §7.4</a></span>
+  Boxes are 30px wide, the long one 150px.</p>
+</header>
+
+<section>
+  <h2>auto</h2>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>text-align: center</code>: the last line centered too, b's left at 85px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify" dir=rtl><span class="pr-a w">a</span> <span class="pr-b w">b</span> <span class="pr-c x">c</span></div>
+    <figcaption><code>justify</code>, <code>rtl</code>: the first line justified, the last at the start, the
+    right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Its own value, at the end and before a forced break</h2>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align-last: right"><span class="pr-a x">a</span> <span class="pr-b w">b</span></div>
+    <figcaption><code>text-align-last: right</code>: the first line at the left, the last at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align-last: center"><span class="pr-a w">a</span><br><span class="pr-b w">b</span></div>
+    <figcaption><code>center</code>: the line before the <code>&lt;br&gt;</code> is centered as well as the
+    last.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align-last: justify"><span class="pr-a w">a</span> <span class="pr-b w">b</span><br><span class="pr-c w">c</span> <span class="pr-d w">d</span></div>
+    <figcaption><code>justify</code>: both lines, each before a break, justified: a and c at the left, b and d at
+    the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align-last: end" dir=rtl><span class="pr-a w">a</span></div>
+    <figcaption><code>end</code>, <code>rtl</code>: the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

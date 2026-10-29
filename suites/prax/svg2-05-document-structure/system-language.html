@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The systemLanguage attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  text { font: 700 24px "PR Arimo"; fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.6.5 The ‘systemLanguage’ attribute</div>
+  <h1>The systemLanguage attribute</h1>
+  <p class=pr-lede><q>For each tag in tags, for each user-lang in user languages: If tag is an ASCII case-insensitive
+  match for user-lang, return true. If user-lang is an ASCII case-insensitive prefix of tag and the code point in tag
+  immediately following the prefix is U+002D HYPHEN-MINUS (-), return true.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#ConditionalProcessingSystemLanguageAttribute">SVG 2 §5.6.5</a></span>
+  The captions take a reader whose preferred languages are English, <code>en-US</code> and <code>en</code>. Each stage is
+  an SVG 160 by 60 with a <code>switch</code> of texts at 20, 40, its last with no attribute.</p>
+</header>
+
+<section>
+  <h2>A match, a prefix, or none</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><text x="20" y="40" systemLanguage="fr">Bonjour</text><text x="20" y="40" systemLanguage="ja, en">Hello</text><text x="20" y="40">Other</text></switch></svg></div>
+    <figcaption><code>fr</code>, then <code>ja, en</code>: <q>Hello</q>, for <code>en</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><text x="20" y="40" systemLanguage="EN-us-x-test">Prefix</text><text x="20" y="40">Other</text></switch></svg></div>
+    <figcaption><code>EN-us-x-test</code>: <code>en-US</code> is a prefix of it, followed by a hyphen, ignoring
+    case: <q>Prefix</q>. <span class=pr-flag>Firefox</span> <q>Other</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><switch><text x="20" y="40" systemLanguage="eng">Eng</text><text x="20" y="40" systemLanguage="">Empty</text><text x="20" y="40">Other</text></switch></svg></div>
+    <figcaption><code>eng</code>, which <code>en</code> prefixes with no hyphen, then an empty value, false: neither,
+    so <q>Other</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Arimo'; line-height: 50px; }
+  .parent { font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.5 Font size: the 'font-size' property</div>
+  <h1>font-size</h1>
+  <p class=pr-lede><q>For scalable fonts, the font-size is a scale factor applied to the EM unit of the font.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-size-prop">CSS Fonts 4 §2.5</a></span></p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <p>Each stage's parent is 20px; each caption reads back the size the text is set at, which the guides cannot
+  measure. <q>A percentage value specifies an absolute font size relative to the parent
+  element's computed 'font-size'.</q></p>
+  <figure>
+    <div class=parent><div class="pr-stage pr-sample" id=s1 style="font-size: 30px">Em</div></div>
+    <figcaption><code>30px</code>: the text set at <code class=pr-computed data-of=s1 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=parent><div class="pr-stage pr-sample" id=s2 style="font-size: 150%">Em</div></div>
+    <figcaption><code>150%</code> of 20px: the text set at <code class=pr-computed data-of=s2 data-property=font-size></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=parent><div class="pr-stage pr-sample" id=s3 style="font-size: 1.5em">Em</div></div>
+    <figcaption><code>1.5em</code>, the parent's em: the text set at <code class=pr-computed data-of=s3 data-property=font-size></code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>larger and smaller</h2>
+  <p><q>A &lt;relative-size&gt; keyword is interpreted relative to the computed 'font-size' of the parent
+  element</q>: the next entry in the table of sizes, or a ratio of about 1.2 to 1.5.</p>
+  <figure>
+    <div style="font-size: medium"><div class="pr-stage pr-sample" id=s5 style="font-size: larger">Em</div></div>
+    <figcaption>Parent <code>medium</code>, <code>larger</code>: the text set at <code class=pr-computed data-of=s5
+    data-property=font-size></code>, about 'large'.</figcaption>
+  </figure>
+  <figure>
+    <div class=parent><div class="pr-stage pr-sample" id=s6 style="font-size: smaller">Em</div></div>
+    <figcaption>Parent 20px, <code>smaller</code>: the text set at <code class=pr-computed data-of=s6 data-property=font-size></code>,
+    between 13 and 17px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

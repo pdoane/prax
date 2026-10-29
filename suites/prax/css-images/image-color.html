@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image(): a solid-color image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 80px; height: 40px; margin: 10px; background-repeat: no-repeat; }
+  ul.marker { margin: 10px 0; padding-left: 30px; font-size: 20px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 2.5 Image Fallbacks and Annotations: the image() notation</div>
+  <h1>image(): a solid-color image</h1>
+  <p class=pr-lede><q>The image() function represents a solid-color image of the specified color with no natural
+  dimensions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#image-notation">CSS Images 4 §2.5</a></span>
+  Each dashed box is 80 by 40.</p>
+</header>
+
+<section>
+  <h2>A color, sized as a gradient is</h2>
+  <p>With no natural dimensions, the image takes the size its context gives it.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image(#4f81bd)"></div></div>
+    <figcaption>A background: blue over the whole 80 by 40. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image(#4f81bd); background-size: 40px 20px; background-position: 20px 10px"></div></div>
+    <figcaption><code>background-size: 40px 20px</code>: blue 40 by 20, 20px in and 10px down. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><ul class=marker style="list-style-image: image(#d68a3c)"><li></li></ul></div>
+    <figcaption>A list marker: an orange 1em square, 20 by 20. <span class=pr-flag>Safari</span> A disc.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A tint over another image</h2>
+  <p>An example: <q>one can use this as a simple way to “tint” a background image, by overlaying a
+  partially-transparent color over the top of the other image</q>, <q>equivalent to a single color stop
+  gradient</q>.</p>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: image(rgb(255 255 255 / .6)), url(../shared/resources/flag-40x20.png); background-size: auto, 80px 40px"></div></div>
+    <figcaption><code>image(rgb(255 255 255 / .6))</code> over the flag: the flag, pale. <span class=pr-flag>Safari</span> Nothing.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="box pr-ghost" style="background-image: linear-gradient(rgb(255 255 255 / .6)), url(../shared/resources/flag-40x20.png); background-size: auto, 80px 40px"></div></div>
+    <figcaption><code>linear-gradient()</code> with that one stop: the same pale flag.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

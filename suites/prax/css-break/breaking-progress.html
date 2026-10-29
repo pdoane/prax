@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fragmentainers at least 1px tall</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4 Rules for Breaking</div>
+  <h1>Fragmentainers at least 1px tall</h1>
+  <p class=pr-lede><q>A fragmented flow may be broken across fragmentainers at a number of possible break points. In the case of forced breaks, the UA is required to break the flow at that point. In the case of unforced breaks, the UA has to choose among the possible breaks that are allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#breaking-rules">CSS Fragmentation 4 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Progress</h2>
+  <p><q>To guarantee progress, fragmentainers are assumed to have a minimum block size of 1px regardless of their used size.</q> A multi-column container 0px tall (<code>height: 0; column-fill: auto</code>), three columns, holds three lines.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols" style="height: 0; margin-bottom: 20px">one two six</div>
+    <figcaption>Each column, 1px tall, takes one line, which overflows it: "one", "two" and "six" side by side, each
+    atop a column.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

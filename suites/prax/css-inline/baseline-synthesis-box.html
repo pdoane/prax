@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Synthesized baselines for atomic inlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 72px/96px "PR Baseline Diagnostic"; white-space: nowrap; padding: 0 4px; box-sizing: border-box; }
+  .sq { display: inline-block; width: 24px; height: 24px; background: #4f81bd; }
+  .t { font: 13px/24px "PR Arimo"; }
+  img { width: 20px; height: 20px; }
+  .pr-stage.n { width: 112px; }
+  figure.n figcaption { max-width: 112px; }
+  figure.n { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · A.3 A.3: Synthesizing Baselines for Atomic Inlines</div>
+  <h1>Synthesized baselines for atomic inlines</h1>
+  <p class=pr-lede><q>If an atomic inline … does not have a content-derived baseline set … then the UA must synthesize its
+  baselines</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-synthesis-box">CSS Inline Layout 3 §A.3</a></span>
+  Each stage is 72px PR Baseline Diagnostic, whose glyph fills from the named baseline to alphabetic, and an empty
+  blue inline-block with the same <code>vertical-align</code>.</p>
+</header>
+
+<section>
+  <h2>Bottom, middle, top</h2>
+  <p><q>at its line-under margin edge</q>: text-under, ideographic-under, ideographic-ink-under, alphabetic. <q>halfway
+  between its line-under and line-over margin edges</q>: central, math, x-middle. <q>at its line-over margin edge</q>:
+  text-over, ideographic-over, ideographic-ink-over, cap-height, hanging, x-height.</p>
+  <figure class=n>
+    <div class="pr-stage n">H<span class=sq style="vertical-align: alphabetic"></span></div>
+    <figcaption><code>alphabetic</code>: the square's bottom on the H's foot.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class="pr-stage n">+<span class=sq style="vertical-align: mathematical"></span></div>
+    <figcaption><code>mathematical</code>: the square's middle level with the top of the +, the math baseline. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> As alphabetic.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class="pr-stage n">H<span class=sq style="vertical-align: hanging"></span></div>
+    <figcaption><code>hanging</code>: the square's top level with the H's. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> As alphabetic.</figcaption>
+  </figure>
+  <figure class="n pr-erratum">
+    <div class="pr-stage n">I<span class=sq style="vertical-align: central"></span></div>
+    <figcaption><code>central</code>: the square centered on the I, between ideographic over and under. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> As alphabetic.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margins move it</h2>
+  <p><q>Authors can use margins (positive or negative) to adjust the alignment of replaced content within a line.</q>
+  The red line is the baseline.</p>
+  <figure>
+    <div class="pr-stage t"><span class=pr-baseline></span>Text <img alt="" style="height: 1em; width: 1em; margin-bottom: -0.2em" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10' fill='%238e44ad'/><rect y='8' width='10' height='2' fill='%23f9cc9d'/></svg>"> text</div>
+    <figcaption>A 13px image with <code>margin-bottom: -0.2em</code>: its orange bottom fifth below the red
+    baseline, like a descender.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

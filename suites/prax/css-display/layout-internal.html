@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout-internal display types</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .cell { display: table-cell; padding: 0 6px; background: #b9cde6; border: 1px solid #2c5a8f; }
+  .float { float: left; width: 30px; height: 40px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.4 Layout-Internal Display Types</div>
+  <h1>Layout-internal display types</h1>
+  <p class=pr-lede><q>This section defines those “layout-internal” 'display' values, which only have meaning within
+  that particular layout mode.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#layout-specific-display">CSS Display 4 §2.4</a></span></p>
+</header>
+
+<section>
+  <h2>Wrapped when misparented</h2>
+  <p><q>Boxes with layout-specific display types generate anonymous wrapper boxes around themselves when placed in an
+  incompatible parent</q>: <q>block box └anonymous table box └anonymous table-row-group box └anonymous table-row box
+  └table-cell box</q>.</p>
+  <figure>
+    <div class=pr-stage>before <div class=cell>cell</div> after</div>
+    <figcaption>A cell in a block, between two runs of text: its anonymous table is block-level, a line of its own, as
+    wide as "cell".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table-row><div class=cell>one</div><div class=cell>two</div></div><div class=pr-table-row><div class=cell>three</div></div></div>
+    <figcaption>Two rows in a block: one anonymous table round both, so "one" and "three" share a column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Their inner display types</h2>
+  <p><q>table-cell boxes have a flow-root inner display type.</q> <q>table-caption boxes have a flow-root inner display
+  type.</q> Each holds a 40px orange float and a word.</p>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=cell style="vertical-align: top"><div class=float></div>cell</div></div></div>
+    <figcaption>The cell is 40px tall, round its float.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-caption style="background: #f6d7b4"><div class=float></div>caption</div><div class=cell>cell</div></div></div>
+    <figcaption>The caption is 40px tall, round its float, above the cell.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

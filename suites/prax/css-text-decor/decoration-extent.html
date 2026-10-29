@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What a line decoration crosses</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 2px 0; }
+  .u { text-decoration: underline #c0392b 2px; text-underline-offset: 4px; }
+  .box { border: 0 solid transparent; outline: 1px dashed #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 2 Line Decoration: Underline, Overline, and Strike-Through</div>
+  <h1>What a line decoration crosses</h1>
+  <p class=pr-lede><q>Underlines, overlines, and line-throughs are drawn only for non-replaced inline boxes, and are
+  drawn across all text (including white space, letter spacing, and word spacing) except spacing (white space, letter
+  spacing, and word spacing) at the beginning and end of a line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#line-decoration">CSS Text Decoration 4 §2</a></span>
+  Monospace, 10px a character; red underlines.</p>
+</header>
+
+<section>
+  <h2>Across spacing, not at the ends of a line</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class="pr-measure u" style="word-spacing: 20px">ab cd ef</span></div>
+    <figcaption><code>word-spacing: 20px</code>: one line from x=0 to 120, across both 30px gaps. <span class=pr-flag>Safari</span> Leaves the 20px of word spacing in each gap bare.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class="pr-measure u" style="letter-spacing: 10px">abcde</span></div>
+    <figcaption><code>letter-spacing: 10px</code>: from x=0 to 90, across the spacing between letters, not the 10px
+    after the last.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="white-space: pre"><span class=u>   abc   </span></div>
+    <figcaption>Preserved spaces at both ends of the line: the line is under "abc" only, x=30 to 60.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> start it at x=0.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The decorating box's margins, borders and padding are skipped; a descendant's are not</h2>
+  <p><q>Margins, borders, and padding of the decorating box are always skipped, however the margins, border, and
+  padding of descendant inline boxes are not.</q></p>
+  <figure>
+    <div class=pr-stage><span class="pr-measure u box" style="margin-left: 10px; padding: 0 20px; border-width: 0 10px">abc</span></div>
+    <figcaption>The underlined span, dashed, has a 10px margin, 10px borders and 20px padding: the line is under "abc" only,
+    x=40 to 70.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class="pr-measure u">ab<span class=box style="margin-left: 10px; padding: 0 20px; border-width: 0 10px">c</span>d</span></div>
+    <figcaption>The same box inside the underlined span: one line from x=0 to 110, across its margin, borders and
+    padding. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Skip them: lines under "ab", "c" and "d" only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

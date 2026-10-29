@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto heights of formatting context roots</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .root { display: flow-root; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.7 'Auto' heights for block formatting context roots</div>
+  <h1>Auto heights of formatting context roots</h1>
+  <p class=pr-lede><q>In certain cases (see, e.g., sections 10.6.4 and 10.6.6 above), the height of an element that
+  establishes a block formatting context is computed as follows</q>. The tinted, outlined box in each stage is such a
+  root, <code>display: flow-root</code>.</p>
+</header>
+
+<section>
+  <h2>Inline-level children: the line boxes</h2>
+  <p><q>If it only has inline-level children, the height is the distance between the top of the topmost line box and
+  the bottom of the bottommost line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#root-height">CSS 2 §10.6.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-parent root pr-text">first line<br>second line</div></div>
+    <figcaption>Two 20px lines: 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-parent root pr-text">a <span class=pr-chip style="display: inline-block; height: 36px; vertical-align: top">40</span> b<br>next line</div></div>
+    <figcaption>A first line made 40px by an inline-block, then a 20px line: 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block-level children: their margin edges</h2>
+  <p><q>If it has block-level children, the height is the distance between the top margin-edge of the topmost
+  block-level child box and the bottom margin-edge of the bottommost block-level child box.</q> <q>Absolutely
+  positioned children are ignored, and relatively positioned boxes are considered without their offset.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#root-height">CSS 2 §10.6.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-parent root"><div class=pr-a style="margin-top: 10px">A: mt 10</div><div class=pr-b style="margin-bottom: 20px">B: mb 20</div></div></div>
+    <figcaption>A's 10px top margin and B's 20px bottom margin stay inside the root: 10 + 20 + 20 + 20 =
+    70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 80px"><div class="pr-parent root"><div class=pr-a style="position: relative; top: 30px">A: top 30</div><div class=pr-b style="position: absolute; top: 50px; left: 100px">abs</div></div></div>
+    <figcaption>A relative child moved down 30px and an absolute one below it: the root is 20px, from A unmoved.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

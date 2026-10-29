@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pragma directives</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.5.3 Pragma directives</div>
+  <h1>Pragma directives</h1>
+  <p class=pr-lede><q>When a meta element is inserted into the document, if its http-equiv attribute is present and
+  represents one of the above states, then the user agent must run the algorithm appropriate for that state</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#pragma-directives">HTML §4.2.5.3</a></span></p>
+</header>
+<section>
+  <h2>content-language and default-style</h2>
+  <p>The first <q>sets the pragma-set default language</q>, the language of an element when neither it nor an ancestor
+  has a lang attribute. The second <q>sets the name of the default CSS style sheet set.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<meta http-equiv=content-language content=fr><link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><style>div:lang(fr) { background: #6aa36a; color: white }</style><div>:lang(fr)</div>"></iframe></div>
+    <figcaption><code>content=fr</code>, and no lang attribute: the box matches <code>:lang(fr)</code>,
+    green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<meta http-equiv=default-style content=Orange><link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet title=Green href=support/green.css><link rel='alternate stylesheet' title=Orange href=support/orange.css><div class=styled>default-style: Orange</div>"></iframe></div>
+    <figcaption>The sheets titled Green and Orange, an alternative one; <code>content=Orange</code> chooses it:
+    orange.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>content-security-policy</h2>
+  <p><q>If the meta element is not a child of a head element, return.</q> Otherwise its policy is enforced on the
+  document. Each frame has <code>img-src 'none'</code> and an image with <code>alt=blocked</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<head><meta http-equiv=content-security-policy content=&quot;img-src 'none'&quot;><style>body { margin: 10px; font: 13px/20px sans-serif } img { display: block }</style></head><img src=../shared/resources/flag-40x20.png alt=blocked>"></iframe></div>
+    <figcaption>In the head: the image is not loaded, and its alt text "blocked" is drawn instead, after a
+    broken-image icon in Chrome.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<head><style>body { margin: 10px; font: 13px/20px sans-serif } img { display: block }</style></head><body><meta http-equiv=content-security-policy content=&quot;img-src 'none'&quot;><img src=../shared/resources/flag-40x20.png alt=blocked>"></iframe></div>
+    <figcaption>In the body: no policy, and the flag, 40 by 20.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

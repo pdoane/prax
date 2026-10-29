@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Assigning slots by hand</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .host { display: block; margin: 0 0 10px; }
+  .host b { padding: 0 3px; }
+  .buttons { display: flex; gap: 6px; margin: 0 0 10px; }
+  .buttons button { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.4 The slot element</div>
+  <h1>Assigning slots by hand</h1>
+  <p class=pr-lede><q>The slot element has manually assigned nodes, which is an ordered set of slottables set by
+  assign().</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element">HTML §4.12.4</a></span></p>
+</header>
+<section>
+  <h2>The nodes that assign() gives</h2>
+  <p><code>slot.assign(...nodes)</code> <q>Sets slot's manually assigned nodes to the given nodes.</q> The host's
+  shadow root has <code>slotAssignment: "manual"</code>; its tree is a blue frame, "Pick:" and one slot, whose own
+  contents are "none". The host's children are the bold words <b>red</b>, <b>green</b> and <b>blue</b>. Each button
+  calls <code>assign()</code> on the slot.</p>
+  <figure>
+    <div class="pr-stage stage pr-wide pr-text">
+      <div class=host id=host><b>red</b><b>green</b><b>blue</b></div>
+      <div class=buttons>
+        <button id=pick-green>green</button>
+        <button id=pick-both>blue, red</button>
+        <button id=pick-none>nothing</button>
+      </div>
+    </div>
+    <figcaption>At first nothing is assigned: "Pick: none". Click "green": "Pick: <b>green</b>". Click "blue, red":
+    "Pick: <b>blue</b> <b>red</b>", in the order given. Click "nothing": "Pick: none" again.</figcaption>
+  </figure>
+</section>
+<script>
+  const host = document.getElementById("host");
+  const root = host.attachShadow({mode: "open", slotAssignment: "manual"});
+  root.innerHTML = '<div style="border: 3px solid #4f81bd; padding: 0 6px">Pick: <slot>none</slot></div>';
+  const slot = root.querySelector("slot");
+  const [red, green, blue] = host.children;
+  document.getElementById("pick-green").onclick = () => slot.assign(green);
+  document.getElementById("pick-both").onclick = () => slot.assign(blue, red);
+  document.getElementById("pick-none").onclick = () => slot.assign();
+</script>
+</body>
+</html>

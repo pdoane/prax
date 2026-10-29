@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed positioning</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.6.1 Fixed positioning</div>
+  <h1>Fixed positioning</h1>
+  <p class=pr-lede><q>Fixed positioning is a subcategory of absolute positioning. The only difference is that for a fixed
+  positioned box, the containing block is established by the viewport. For continuous media, fixed boxes do not move
+  when the document is scrolled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-positioning">CSS 2 §9.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>The viewport, whatever the ancestors</h2>
+  <p>A fixed box ignores positioned ancestors. In each frame, a dashed box with <code>position: relative</code> holds a
+  box with <code>bottom: 0; right: 0</code>. The guides are 10px apart.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px } p { position: relative; margin: 0; width: 120px; height: 50px; border: 1px dashed #6b7381 } span { position: absolute; bottom: 0; right: 0; width: 50px; height: 20px; background: #4f81bd }</style><p><span></span></p>"></iframe></div>
+    <figcaption><code>position: absolute</code>: at the dashed box's bottom right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px } p { position: relative; margin: 0; width: 120px; height: 50px; border: 1px dashed #6b7381 } span { position: fixed; bottom: 0; right: 0; width: 50px; height: 20px; background: #d68a3c }</style><p><span></span></p>"></iframe></div>
+    <figcaption><code>position: fixed</code>: at the frame's bottom right. <span class="pr-flag pr-since">Since CSS
+    2</span> an ancestor may be instead.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></div>
+  <h2>An ancestor may take the viewport's place</h2>
+  <p><q>If no ancestor establishes one, the box's fixed positioning containing block is the initial fixed containing
+  block</q>; <q>Properties that can cause a box to establish a fixed positioning containing block include transform,
+  will-change, contain…</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#def-cb">CSS Positioned Layout 3 §2.1</a></span> The viewport is now only the fallback. In
+  each frame, a static dashed box holds a box with <code>position: fixed; bottom: 0; right: 0</code>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px } p { transform: translateX(0); margin: 0; width: 120px; height: 50px; border: 1px dashed #6b7381 } span { position: fixed; bottom: 0; right: 0; width: 50px; height: 20px; background: #d68a3c }</style><p><span></span></p>"></iframe></div>
+    <figcaption><code>transform: translateX(0)</code>: at the dashed box's bottom right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef linear-gradient(to bottom, rgba(31, 36, 48, 0.15) 1px, transparent 1px) 0 0 / 10px 10px } body { margin: 10px } p { contain: layout; margin: 0; width: 120px; height: 50px; border: 1px dashed #6b7381 } span { position: fixed; bottom: 0; right: 0; width: 50px; height: 20px; background: #d68a3c }</style><p><span></span></p>"></iframe></div>
+    <figcaption><code>contain: layout</code>: the same.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

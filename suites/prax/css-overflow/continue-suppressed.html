@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>continue: collapse, not scrollable</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 0; background: #f4f5f7; max-lines: 2; }
+  .stage { height: 120px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.3 Handling of Excess Content, suppressed content</div>
+  <h1>continue: collapse, not scrollable</h1>
+  <p class=pr-lede><code>continue: normal | discard | collapse</code>. <q>The continue property gives authors the
+  ability to truncate/interrupt the content inside a box, either by visually suppressing the remaining content, or by
+  turning the box into a fragmentation container and discarding the content after the fragmentation break.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#continue">CSS Overflow 4 §5.3</a></span></p>
+</header>
+
+<section>
+  <h2>Suppressed, as by clip</h2>
+  <p><q>Visually suppressed content is treated as content hidden by overflow: clip</q>: <q>it is not painted, and like
+  ink overflow, does not affect layout or otherwise extend the scrollable overflow area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#continue">CSS Overflow 4 §5.3</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 60px"><div id=sh class="pr-frame pr-measure c" style="continue: collapse; overflow: auto; height: 40px; margin: 10px 40px">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption>Lines three and four are not scrollable overflow: nothing to scroll, <code>scrollHeight</code> <code class=pr-computed data-of=sh data-dom=scrollHeight></code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> do not clamp: 80.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

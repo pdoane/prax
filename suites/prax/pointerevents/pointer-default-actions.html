@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Default actions of pointer events</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .scroller { height: 80px; margin: 10px 20px; overflow: auto; background: var(--pr-plain);
+              border: 1px solid var(--pr-stage-border); font-size: 12px; }
+  .scroller p { height: 300px; margin: 0; padding: 0 6px; }
+  .text { margin: 10px 20px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1.3.1 Attributes and default actions</div>
+  <h1>Default actions of pointer events</h1>
+  <p class=pr-lede>pointerdown: <q>Varies: when the pointer is primary, all default actions of the mousedown event</q>.
+  pointermove: <q>Varies: when the pointer is primary, all default actions of mousemove</q>.
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#attributes-and-default-actions">Pointer Events §3.1.3.1</a></span></p>
+</header>
+<section>
+  <h2>Canceling pointerdown</h2>
+  <p><q>Many implementations use the mousedown event to begin a variety of contextually dependent default actions.</q>
+  <q>Some of these default actions could include: beginning a drag/drop interaction with an image or link, starting
+  text selection, etc.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mousedown">§11.4.5</a></span>
+  A listener cancels <code>pointerdown</code> on the lower paragraph.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <p class=text id=free>Drag across this line to select it.</p>
+      <p class=text id=held>Dragging across this line selects nothing.</p>
+    </div>
+    <figcaption>Drag the mouse across the first line: it is selected. Across the second, whose
+    <code>pointerdown</code> is canceled: no selection starts, as no <code>mousedown</code> default action
+    runs.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Panning is not a default action</h2>
+  <p><q>Viewport manipulations (panning and zooming) — generally, as a result of a direct manipulation interaction — are
+  intentionally NOT a default action of pointer events, meaning that these behaviors (e.g. panning a page as a result of
+  moving a finger on a touchscreen) cannot be suppressed by canceling a pointer event.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#attributes-and-default-actions">§3.1.3.1</a></span>
+  Listeners cancel every <code>pointerdown</code> and <code>pointermove</code> in the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class=scroller id=box><p>Drag a finger up here.</p></div>
+      <ol class=pr-log data-log="pointerdown pointermove pointercancel" data-fields="pointerType cancelable" data-on="#box" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen. Drag a finger up the box: it scrolls, though its pointer events are
+    canceled, and the stream ends in <code>pointercancel</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels pointerdown on the second line, and every pointerdown and pointermove in the scroller.
+  document.getElementById("held").addEventListener("pointerdown", event => event.preventDefault());
+  for (const type of ["pointerdown", "pointermove"])
+    document.getElementById("box").addEventListener(type, event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

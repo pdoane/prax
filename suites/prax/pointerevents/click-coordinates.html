@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Whole coordinates for a click</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { height: 60px; margin: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.3.12.2 Event coordinates</div>
+  <h1>Whole coordinates for a click</h1>
+  <p class=pr-lede><q>However, this change — when applied only to PointerEvent, but not to regular MouseEvent — has
+  proven to lead to web compatibility issues with legacy code in the case of click, auxclick, and contextmenu.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-coordinates">Pointer Events §3.3.12.2</a></span></p>
+</header>
+<section>
+  <h2>Rounded down</h2>
+  <p><q>For this reason, user agents that have implemented the proposed change in [CSSOM View Module] only for
+  PointerEvent MUST convert the various coordinate properties for the click, auxclick, and contextmenu to long values (as
+  defined in the original Mouse Events) using Math.floor [ECMASCRIPT].</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#event-coordinates">§3.3.12.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=pad>Click here, several times.</div>
+      <ol class=pr-log data-log="pointerup click" data-fields="clientX clientY" data-on="#pad" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box at a few places, on a display with more than one device pixel to a CSS pixel, or
+    zoomed in: a <code>pointerup</code> may have a fraction, such as <code>clientX=153.5</code>; the
+    <code>click</code> after it has none, rounded down: <code>clientX=153</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

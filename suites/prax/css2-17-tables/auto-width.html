@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixed table layout: when the width is auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { table-layout: fixed; border-spacing: 0; background: #f4f5f7; font-size: 12px; line-height: 18px; }
+  td { height: 20px; padding: 0 4px; box-sizing: border-box; border: 1px solid #2c5a8f; white-space: nowrap; }
+  .set { background: #d68a3c; color: white; font-weight: 600; }
+  .blk { height: 18px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2.1 Fixed table layout</div>
+  <h1>Fixed table layout: when the width is auto</h1>
+  <p class=pr-lede>Every table here is <code>table-layout: fixed</code>. Orange marks a first-row cell with a width
+  set; cells have a 1px border and 4px of padding at the sides.</p>
+</header>
+
+<section>
+  <h2>auto means automatic</h2>
+  <p><q>A value of 'auto' (for both 'display: table' and 'display: inline-table') means use the automatic table layout
+  algorithm. However, if the table is a block-level table ('display: table') in normal flow, a UA may (but does not
+  have to) use the algorithm of 10.3.3 to compute a width and apply fixed table layout even if the specified width is
+  'auto'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#fixed-table-layout">CSS 2 §17.5.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><div class=blk style="width: 120px"></div><td>2</table></div>
+    <figcaption><code>width: auto</code>: the automatic algorithm sizes the columns to their content, the first
+    130px. A UA <q>may</q> instead give a block-level table the width of <a href="https://drafts.csswg.org/css2/#blockwidth">§10.3.3</a> and lay it out fixed. <span
+    class="pr-flag pr-since">Since CSS 2</span> CSS Tables 3 requires the automatic algorithm.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#table-layout-property">CSS Table 3 §3.5.1</a>, <a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">§3.9.3.2</a></div>
+  <h2>Fixed mode needs a width; extra width by proportion</h2>
+  <p><q>A table-root is said to be laid out in fixed mode whenever the computed value of the table-layout property is
+  equal to fixed, and the specified width of the table root is not auto or max-content.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#table-layout-property">CSS Table 3 §3.5.1</a></span> The option to lay out an auto-width table fixed is gone. Extra width, which CSS 2 only said
+  <q>should be distributed</q>, now goes <q>proportionally to width</q> when every column has one. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">CSS Table 3 §3.9.3.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<tr><td><div class=blk style="width: 120px"></div><td></table></div>
+    <figcaption><code>table-layout: fixed</code>, but the width is auto:
+    the table is in auto mode, and the second row's 120px block widens the first column to 130px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><tr><td class=set style="width: 20px">20<td class=set style="width: 80px">80</table></div>
+    <figcaption><code>width: 200px</code>, columns of 20 and 80: the 100px of extra space goes 1 to 4, and the
+    columns are 40 and 160.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

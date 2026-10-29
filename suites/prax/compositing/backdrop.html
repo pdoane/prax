@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The backdrop: everything composited before</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { height: 60px; }
+  .p { position: absolute; top: 10px; height: 40px; }
+  .src { position: absolute; left: 30px; top: 20px; width: 140px; height: 20px; background: #ff0000; mix-blend-mode: multiply; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 7 Backdrop calculation</div>
+  <h1>The backdrop: everything composited before</h1>
+  <p class=pr-lede><q>The backdrop is the content behind the element and is what the element is composited with. This
+  means that the backdrop is the result of compositing all previous elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#backdropCalc">Compositing and Blending 2 §7</a></span>
+  In each stage a red bar 140 by 20 at (30, 20), <code>mix-blend-mode: multiply</code>, blends with what was painted
+  before it.</p>
+</header>
+
+<section>
+  <h2>All previous elements, composited</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=p style="left: 10px; width: 100px; background: #ffff00"></div><div class=p style="left: 70px; width: 40px; background: rgb(0 0 255 / 0.5)"></div><div class=src></div><div class=p style="left: 70px; top: 50px; width: 40px; height: 10px; background: rgb(50% 0% 0%)"></div></div>
+    <figcaption>Yellow to x 110, and blue at 0.5 over it from x 70: there the two composite to grey 50%, and the
+    bar is <code>rgb(50% 0% 0%)</code>, as the swatch below it; over the yellow alone, red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=p style="left: 10px; width: 180px; background: #ffff00"></div><div class=src></div><div class=p style="left: 110px; width: 40px; top: 25px; height: 10px; background: #0000ff"></div></div>
+    <figcaption>Over yellow, red; a blue bar painted after the red one, at x 110, is not in its backdrop, and lies
+    over it unblended.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

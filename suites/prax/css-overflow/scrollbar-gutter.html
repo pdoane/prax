@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>scrollbar-gutter: auto, stable, both-edges</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; background: #b9cde6; }
+  .stage { height: 60px; }
+  .kid { height: 20px; background: #f4f5f7; }
+  .classic::-webkit-scrollbar { width: 12px; height: 12px; background: #cfd3da; }
+  .classic::-webkit-scrollbar-thumb { background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 5.2 Reserving space for the scrollbar: the scrollbar-gutter property</div>
+  <h1>scrollbar-gutter: auto, stable, both-edges</h1>
+  <p class=pr-lede><code>scrollbar-gutter: auto | stable &amp;&amp; both-edges?</code> <q>The space between the inner
+  border edge and the outer padding edge which user agents may reserve to display the scrollbar is called the
+  scrollbar gutter.</q> <q>In the case of overlay scrollbars, no scrollbar gutter is present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>A gutter with nothing to scroll</h2>
+  <p>Each box is 120 by 40, <code>overflow: auto</code>, tinted blue, and holds a white child 20px tall that fits, so
+  there is no scroll bar. A gutter <q>must be painted as an extension of the padding</q>, so it shows blue beside the
+  child. The boxes are styled with <code>::-webkit-scrollbar</code>: Safari draws classic scroll bars 12px wide;
+  Firefox draws overlay ones, which make no gutter, so its children all fill the box; Chrome draws none in these
+  stills, its bars taking no room, yet reserves a 12px gutter for <code>stable</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame sc classic"><div class=kid></div></div></div>
+    <figcaption><code>auto</code>: no gutter while nothing overflows; the child fills the box.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame sc classic" style="scrollbar-gutter: stable"><div class=kid></div></div></div>
+    <figcaption><code>stable</code>, classic bars: a 12px blue gutter at the right, the child 108px wide. <span
+    class=pr-flag>Safari</span> leaves no gutter.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame sc classic" style="scrollbar-gutter: stable both-edges"><div class=kid></div></div></div>
+    <figcaption><code>stable both-edges</code>: a gutter at each side, the child 96px wide, centered. <span
+    class=pr-flag>Safari</span> leaves none.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame sc classic" style="scrollbar-gutter: stable" dir=rtl><div class=kid></div></div></div>
+    <figcaption><code>stable</code> in <code>rtl</code>: a gutter on the side the bar would take, which is the
+    browser's to choose. <span class=pr-flag>Safari</span> leaves none.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

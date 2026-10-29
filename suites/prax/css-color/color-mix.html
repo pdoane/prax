@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3 Mixing Colors: the color-mix() Function</div>
+  <h1>color-mix()</h1>
+  <p class=pr-lede><q>the color-mix() function takes a list of one or more &lt;color&gt; specifications and returns the result
+  of mixing them, in a given &lt;color-space&gt;, in the specified amounts.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix">CSS Color 5
+  §3</a></span></p>
+</header>
+
+<section>
+  <h2>Two colors, in LCH</h2>
+  <p><q>This example produces a mixture of 40% peru and 60% palegoldenrod</q>,
+  <code>color-mix(in lch, peru 40%, palegoldenrod)</code>: <q>the mixed result is lch(79.7256% 40.448 84.771)</q>.
+  Each pair is the mix, then its result written out.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: peru"></div><div class=sw style="background: palegoldenrod"></div></div>
+    <figcaption><code>peru</code> and <code>palegoldenrod</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in lch, peru 40%, palegoldenrod)"></div><div class=sw style="background: lch(79.7256% 40.448 84.771)"></div></div>
+    <figcaption>The mix, beside <code>lch(79.7256% 40.448 84.771)</code>: one light tan.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color-mix(in lch, teal 65%, olive)"></div><div class=sw style="background: rgb(7.7377% 52.5730% 37.3213%)"></div></div>
+    <figcaption><code>color-mix(in lch, teal 65%, olive)</code>: <q>a slightly-blueish green</q>, <code>rgb(7.7377% 52.5730% 37.3213%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving flexible lengths: min violations</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; }
+  .w { padding: 0; border: 0; color: white; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.8 Resolving Flexible Lengths, min violations</div>
+  <h1>Resolving flexible lengths: min violations</h1>
+  <p class=pr-lede><q>If the item's target main size was made larger by this, it's a min violation.</q> If the total
+  violation is <q>Positive: Freeze all the items with min violations.</q> If it is <q>Zero: Freeze all items.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#resolve-flexible-lengths">CSS Flexible Box Layout 2 §9.8</a></span></p>
+</header>
+
+<section>
+  <h2>Shrinking past a minimum</h2>
+  <p>Each stage is 200px; A and B are 150px, shrinking: 100px over, 50px each.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="width: 150px; min-width: 120px">A</div><div class="pr-b pr-fit" style="width: 150px">B</div></div>
+    <figcaption>A with <code>min-width: 120px</code>: 100px, clamped to 120px, +20, frozen. B loses the 70px
+    left: 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=w style="width: 150px">abcdefghijkl</div><div class="pr-b pr-fit" style="width: 150px">B</div></div>
+    <figcaption>Blue's <code>min-width: auto</code> is its word, 120px: the same, 120px and 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Growing past a minimum, and violations that cancel</h2>
+  <p>Each item has <code>flex: 1 1 0</code>: 100px each at first.</p>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 0; min-width: 120px">A</div><div class="pr-b pr-fit" style="flex: 1 1 0; min-width: 0">B</div></div>
+    <figcaption>A with <code>min-width: 120px</code>: clamped up, +20, frozen; B gets the 80px left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="pr-a pr-fit" style="flex: 1 1 0; max-width: 60px">A</div><div class="pr-b pr-fit" style="flex: 1 1 0; min-width: 140px">B</div></div>
+    <figcaption>A at most 60px, −40; B at least 140px, +40: the total is zero, so both are frozen as clamped, 60px
+    and 140px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column measures: cells spanning columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td[colspan] { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.3 Computing Column Measures, cells of span N</div>
+  <h1>Column measures: cells spanning columns</h1>
+  <p class=pr-lede>A cell of colSpan N adds to each column it spans a share of what it needs beyond the columns'
+  measures from cells of span up to N-1. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a></span>
+  Blue "aa bbb" (min-content 30px, max-content 60px) and orange "cccc" (40px, 40px): baselines of 70px and 100px. A
+  green cell spans both.</p>
+</header>
+
+<section>
+  <h2>The min-content contribution</h2>
+  <p>A column's min-content width grows by <q>the ratio of: the max-content width … minus the min-content width …
+  of the column, to the baseline max-content width minus the baseline min-content width</q> times <q>the outer
+  min-content width of the cell minus the baseline min-content width and the baseline border spacing, clamped to be at
+  least 0 and at most the difference between the baseline max-content width and the baseline min-content width</q>, plus a share, in proportion to max-content widths, of what the cell
+  needs beyond the baseline max-content width.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 10px"><tr><td colspan=2>eeeeeeeee</td></tr><tr><td>aa bbb</td><td>cccc</td></tr></table></div>
+    <figcaption>Green min-content 90px, table <code>width: 10px</code>: 20px beyond 70px; blue has all the slack
+    (30 − 0), so it takes it all: blue 50px, still two lines, orange 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="width: 10px"><tr><td colspan=2>eeeeeeeeeeee</td></tr><tr><td>aa bbb</td><td>cccc</td></tr></table></div>
+    <figcaption>Green 120px: 30px fills blue's slack, and the 20px beyond 100px goes 60:40: blue 30 + 30 + 12 = 72px,
+    orange 40 + 8 = 48px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The max-content contribution</h2>
+  <p>A column's max-content width grows by <q>the ratio of the max-content width … of the column to the baseline
+  max-content width</q> times <q>the outer max-content width of the cell minus the baseline max-content width and the
+  baseline border spacing, or 0 if this is negative</q>. These tables have room.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td colspan=2>eeeeeeeee</td></tr><tr><td>aa bbb</td><td>cccc</td></tr></table></div>
+    <figcaption>Green 90px is less than 100px: the max-content widths stay 60px and 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td colspan=2>eeeeeeeeeeeeeeee</td></tr><tr><td>aa bbb</td><td>cccc</td></tr></table></div>
+    <figcaption>Green 160px: 60px more, 60:40, blue 96px and orange 64px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

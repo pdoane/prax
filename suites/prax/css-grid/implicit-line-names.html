@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line names from named areas</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; grid-template-columns: 40px 40px 40px; grid-auto-rows: 20px; justify-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.3.2 Implicitly-Assigned Line Names</div>
+  <h1>Line names from named areas</h1>
+  <p class=pr-lede><q>For each named grid area foo, four implicitly-assigned line names are created: two named
+  foo-start, naming the row-start and column-start lines of the named grid area, and two named foo-end, naming the
+  row-end and column-end lines of the named grid area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#implicit-named-lines">CSS Grid Layout 2 §7.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>main-start and main-end</h2>
+  <p>Three 40px columns and <code>grid-template-areas: ". main ."</code>: the area main is the middle column of the
+  first row. The names <q>behave just like any other line names, except that they do not appear in the value of
+  grid-template-rows/grid-template-columns.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: '. main .'"><div class=pr-a style="grid-column: main-start / main-end">A</div><div class=pr-b style="grid-column-start: main-end; grid-row: 2">B</div></div></div>
+    <figcaption>A, <code>grid-column: main-start / main-end</code>, from 40 to 80px; B, starting at
+    <code>main-end</code> in row 2, from 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-areas: '. main .'"><div class=pr-a style="grid-row: main-end; grid-column: 2">A</div></div></div>
+    <figcaption>The row names too: A at <code>grid-row: main-end</code> starts on the line under the area, in row 2.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>More lines with the same name</h2>
+  <p><q>Even if an explicitly-assigned line name with the same name is defined, the implicitly-assigned line names are
+  just more lines with the same name.</q> Here line 1 is also named main-start, by
+  <code>grid-template-columns: [main-start] 40px 40px 40px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: [main-start] 40px 40px 40px; grid-template-areas: '. main .'"><div class=pr-a style="grid-column: main">A</div><div class=pr-b style="grid-column: main-start 2 / main-end">B</div></div></div>
+    <figcaption>A, <code>grid-column: main</code>, takes the first line named main-start, line 1: from 0 to 80px.
+    B, from the second main-start, the area's own: from 40 to 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: [main-start] 40px 40px 40px; grid-template-areas: '. main .'"><div class=pr-a style="grid-column: main-start -1">A</div></div></div>
+    <figcaption>A, at the last line named main-start, <code>main-start -1</code>: line 2, from 40 to 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

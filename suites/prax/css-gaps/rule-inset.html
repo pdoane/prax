@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rule insets at caps and junctions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .rules { column-rule: 4px solid #c0392b; row-rule: 4px solid #1f2430; rule-break: intersection; }
+  .g { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 20px; gap: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 3.3 Adjusting gap decoration endpoints</div>
+  <h1>Rule insets at caps and junctions</h1>
+  <p class=pr-lede><q>These properties can be used to offset the start and end points of gap decorations relative to
+  the segment endpoints which would normally determine where decorations start and end.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#inset">CSS Gaps 1 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Caps and junctions</h2>
+  <p><q>A junction segment endpoint is a segment endpoint at a gap junction where one or more other gap decoration
+  segments are also present.</q> <q>A cap segment endpoint is any segment endpoint that is not a junction segment
+  endpoint.</q> A start inset moves its end toward the gap's end; an end inset toward its start; a negative inset the
+  other way. Each grid has <code>rule-break: intersection</code>; column rules are red, row rules black.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset-cap-start: 10px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset-cap-start: 10px</code>: the red rules start 10px below the top edge, and are
+    as before everywhere else. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No
+    rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="column-rule-inset-junction-start: -5px; column-rule-inset-junction-end: -5px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div></div></div>
+    <figcaption><code>column-rule-inset-junction-start</code> and <code>-end: -5px</code>: each red rule reaches 5px
+    into the junction from either side, so the two meet in its middle. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="g rules" style="rule-visibility-items: between; column-rule-inset-cap-end: 8px"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>Only D in the second row, and <code>rule-visibility-items: between</code>: no black rule under B and
+    C. With <code>column-rule-inset-cap-end: 8px</code>, the second red rule, alone at its junction, ends 8px above
+    the row gap; the first, which meets the black rule over D, reaches it. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

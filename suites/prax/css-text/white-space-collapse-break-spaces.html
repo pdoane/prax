@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>white-space-collapse: break-spaces</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { background: #f9cc9d; }
+  .ib { display: inline-block; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.1 White Space Collapsing: the white-space-collapse property</div>
+  <h1>white-space-collapse: break-spaces</h1>
+  <p class=pr-lede><code>break-spaces</code>: <q>The behavior is identical to that of 'preserve', except that: Any
+  sequence of preserved white space or other space separators always takes up space, including at the end of the
+  line. A soft wrap opportunity exists after every preserved white space character and after every other space
+  separator (including between adjacent spaces).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-collapsing">CSS Text 4 §4.1</a></span>
+  Letters are 10px wide, and the text is highlighted to show its spaces. Each pair compares
+  <code>white-space: break-spaces</code> with <code>pre-wrap</code>.</p>
+</header>
+
+<section>
+  <h2>A break between spaces</h2>
+  <p>Each stage is 40px wide, and holds "aa", three spaces, "bb".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 40px; white-space: break-spaces"><span class=t>aa   bb</span></div>
+    <figcaption><code>break-spaces</code>: "aa" and two spaces fill the first line; the third space starts the
+    second, before "bb".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 40px; white-space: pre-wrap"><span class=t>aa   bb</span></div>
+    <figcaption><code>pre-wrap</code>: the three spaces stay on the first line and hang past its end; "bb" starts
+    the second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Spaces at the end take room</h2>
+  <p>Each stage is 60px wide, right-aligned, and holds "aa", two spaces, "bbbbbb".</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; text-align: right; white-space: break-spaces"><span class=t>aa  bbbbbb</span></div>
+    <figcaption><code>break-spaces</code>: the spaces are inside the line, so "aa" ends 20px from the right
+    edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="width: 60px; text-align: right; white-space: pre-wrap"><span class=t>aa  bbbbbb</span></div>
+    <figcaption><code>pre-wrap</code>: they hang, so "aa" is flush with the right edge and the spaces past
+    it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class="pr-frame ib" style="white-space: break-spaces"><span class=t>aa  </span></span></div>
+    <figcaption>A shrink-to-fit box of "aa" and two spaces, <code>break-spaces</code>: the spaces count, and the
+    box is 40px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

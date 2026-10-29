@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative hsl()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.4 Relative HSL Colors</div>
+  <h1>Relative hsl()</h1>
+  <p class=pr-lede><q>h is a &lt;number&gt; that corresponds to the origin color's HSL hue, in degrees</q>; <q>s and l are
+  &lt;number&gt;s that correspond to the origin color's HSL saturation and lightness</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-HSL">CSS Color 5
+  §4.4</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>A complementary color</h2>
+  <p><q>This adds 180 degrees to the hue angle, giving a complementary color.</q>
+  lightseagreen is <code>hsl(176.71 69.52% 41.18%)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lightseagreen"></div><div class=sw style="background: hsl(from lightseagreen calc(h + 180) s l)"></div><div class=sw style="background: hsl(356.71 69.52% 41.18%)"></div></div>
+    <figcaption>lightseagreen, then its complement beside <code>hsl(356.71 69.52% 41.18%)</code>: one crimson.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: hsl(from lightseagreen h s calc(l + 30))"></div><div class=sw style="background: hsl(176.71 69.52% 71.18%)"></div></div>
+    <figcaption><code>calc(l + 30)</code>: lighter, as <code>hsl(176.71 69.52% 71.18%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

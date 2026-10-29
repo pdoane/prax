@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table layers: missing and empty cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 6px; background: #f2e394; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0 6px; box-sizing: border-box; border: 1px solid rgba(0, 0, 0, 0.2); }
+  .blue { background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.1 Table layers and transparency</div>
+  <h1>Table layers: missing and empty cells</h1>
+  <p class=pr-lede>Yellow tables, <code>border-spacing: 6px</code>, transparent cells 40 by 20.</p>
+</header>
+
+<section>
+  <h2>Row groups, missing cells and hidden empty cells</h2>
+  <p><q>Each row group extends from the top left corner of its topmost cell in the first column to the bottom right
+  corner of its bottommost cell in the last column.</q> <q>Missing cells are rendered as if an anonymous table-cell box
+  occupied their position in the grid.</q> With <code>empty-cells: hide</code>, empty cells <q>are transparent through
+  the cell, row, row group, column and column group backgrounds, letting the table background show through.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layers">CSS 2 §17.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tbody class=blue><tr><td>1<td>2<td>3<tr><td>4</tbody></table></div>
+    <figcaption>A blue row group: it runs to the bottom right of the last column's cell in its last row, a missing
+    cell, so the two missing cells are blue too. <span class="pr-flag pr-since">Since CSS 2</span> CSS Tables 3 paints
+    no background in missing cells.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table style="empty-cells: hide"><tr class=blue><td>1<td><td>3</table></div>
+    <figcaption><code>empty-cells: hide</code>, a blue row: the empty middle cell has no border, and is yellow: the
+    table shows through the row. <span class=pr-flag>Chrome</span> paints the row's blue behind the empty cell, without
+    its border.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-tables-3/#drawing-cell-backgrounds">CSS Table 3 §5.3.2</a></div>
+  <h2>Missing cells paint no background</h2>
+  <p>Cells paint their rows' and columns' backgrounds, but not the cells that fill out a short row: <q>Anonymous
+  table-cells added by the missing cells fixup step do not render any of their backgrounds.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#drawing-cell-backgrounds">CSS Table 3 §5.3.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tbody class=blue><tr><td>1<td>2<td>3<tr><td>4</tbody></table></div>
+    <figcaption>The blue row group of the figure above: cells 1 to 4 are blue, and the two missing cells show the
+    table's yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td>1<td>2<td>3<tr class=blue><td>4</table></div>
+    <figcaption>A blue second row with one cell, under a row of three: only cell 4 is blue; the rest of the row is
+    yellow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containment on the body and the writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 2 Strong Containment, the writing mode</div>
+  <h1>Containment on the body and the writing mode</h1>
+  <p class=pr-lede><q>when any containments are active on either the HTML html or body elements, propagation of
+  properties from the body element to the initial containing block, the viewport, or the canvas background, is
+  disabled.</q> <q>Notably, this affects: 'writing-mode', 'direction', and 'text-orientation'</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#contain-property">CSS Containment 2 §2</a></span>
+  Each frame is a document 200 by 100.</p>
+</header>
+
+<section>
+  <h2>The body's writing mode</h2>
+  <p>The root draws an orange square 50 by 50 before the body, which is <code>vertical-rl</code>, 100 by 50. The
+  initial containing block takes the body's writing mode, and the root is placed at its block-start, unless
+  containment stops it.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html::before { content: ''; display: block; width: 50px; height: 50px; background: #d68a3c } body { margin: 0; width: 100px; height: 50px; writing-mode: vertical-rl; outline: 1px dashed #1f2430 }</style>"></iframe></div>
+    <figcaption>No containment: the containing block is <code>vertical-rl</code>, so the root is at its right, and
+    the square at the upper right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html::before { content: ''; display: block; width: 50px; height: 50px; background: #d68a3c } body { margin: 0; width: 100px; height: 50px; writing-mode: vertical-rl; outline: 1px dashed #1f2430; contain: layout }</style>"></iframe></div>
+    <figcaption><code>body { contain: layout }</code>: the containing block stays horizontal, and the square is at the
+    upper left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

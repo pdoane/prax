@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Resolving color schemes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  iframe.pr-view { width: 100px; height: 40px; }
+  .pr-stage { padding: 10px; width: auto; }
+  .pr-stage iframe { display: inline-block; vertical-align: top; }
+  .pr-stage iframe + iframe { margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color Adjustment 1 · 2.3 Resolving Color Schemes</div>
+  <h1>Resolving color schemes</h1>
+  <p class=pr-lede><q>To determine the used color scheme, given a color scheme support support and a color scheme
+  preference preference</q>. Each frame's document has a <code>color-scheme</code> on its root and a
+  <code>Canvas</code> background; the frame has <code>color-scheme: light</code> or <code>dark</code>, which the
+  document takes as the preference. <span class=pr-cite>
+  <a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-resolution">CSS Color Adjustment 1
+  §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A supported preference wins</h2>
+  <p><q>If preference's color scheme is in support and supported by the UA, return that color scheme.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: light dark; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>light dark"></iframe><iframe class=pr-view style="color-scheme: dark" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: light dark; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>light dark"></iframe></div>
+    <figcaption><code>light dark</code>, preferring light, then dark: light, then dark. <span
+    class=pr-flag>Safari</span> Light in both: the frame's scheme is not the preference.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: dark light; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>dark light"></iframe><iframe class=pr-view style="color-scheme: dark" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: dark light; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>dark light"></iframe></div>
+    <figcaption><code>dark light</code>: the same. The order decides only where there is no preference. <span
+    class=pr-flag>Safari</span> Light in both.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Otherwise the first supported scheme, or the default</h2>
+  <p><q>If support is flagged as sole support, return the first supported color scheme in support.</q> <q>If support is
+  null, or none of the color schemes in support are supported by the UA, return the UA default color scheme</q>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: dark; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>dark"></iframe><iframe class=pr-view style="color-scheme: light" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: only dark; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>only dark"></iframe></div>
+    <figcaption><code>dark</code> and <code>only dark</code>, preferring light: dark, both. <code>only</code> forbids an
+    override of the scheme, which the reader's preference does not ask for here.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="color-scheme: dark" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: sepia; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>sepia"></iframe><iframe class=pr-view style="color-scheme: dark" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { color-scheme: normal; background: Canvas; color: CanvasText } body { margin: 10px; font: 15px/20px 'PR Arimo' }</style>normal"></iframe></div>
+    <figcaption><code>sepia</code> and <code>normal</code> with no supported schemes for the page, preferring dark:
+    light, the default, both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

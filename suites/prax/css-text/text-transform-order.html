@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The order of transforms</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 2.3 Order of Operations</div>
+  <h1>The order of transforms</h1>
+  <p class=pr-lede><q>When multiple transformations need to be applied, they are applied in the following order:
+  'word-space-transform', 'capitalize', 'uppercase', and 'lowercase', 'full-width', 'full-size-kana'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#text-transform-order">CSS Text 4 §2.3</a></span>
+  Text is 20px PR Noto Sans JP.</p>
+</header>
+
+<section>
+  <h2>Case before width</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="text-transform: uppercase full-width">abc</div>
+    <figcaption><code>uppercase full-width</code> of "abc": uppercased first, then widened, "ＡＢＣ", 60px. <span class=pr-flag>Chrome</span> "ABC", narrow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="text-transform: full-width full-size-kana">ｧｨｩ</div>
+    <figcaption><code>full-width full-size-kana</code> of the small half-width "ｧｨｩ": "アイウ", wide and large,
+    60px. <span class=pr-flag>Chrome</span> leaves them small and narrow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>After collapsing, before trimming</h2>
+  <p><q>Word space transformation and text transformation happen after Phase I: Collapsing and Transformation but
+  before Phase II: Trimming and Positioning. This means for instance that 'full-width' only transforms spaces (U+0020)
+  to U+3000 IDEOGRAPHIC SPACE within preserved white space.</q> <q>White space that was not removed or collapsed due to white space
+  processing is called preserved white space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-collapsing">§4.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="text-transform: full-width">A&#32;&#32;&#32;B</div>
+    <figcaption>"A", three spaces, "B": the two collapsed spaces are gone, and only the one preserved white
+    space that remains becomes U+3000: "Ａ　Ｂ", 60px, not 100px. <span class=pr-flag>Chrome</span> "A B",
+    narrow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" style="text-transform: full-width; white-space: pre">A&#32;B</div>
+    <figcaption><code>pre</code>, one preserved space: "Ａ　Ｂ", the space an ideographic one, 20px, so "Ｂ" ends at
+    60px. <span class=pr-flag>Chrome</span> "A B", narrow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

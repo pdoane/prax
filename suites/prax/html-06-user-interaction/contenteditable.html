@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The contenteditable attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { margin: 0 0 10px; padding: 0 6px; min-height: 20px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  .ed .ed { margin: 0; background: #f6d7b4 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.1 Making document regions editable</div>
+  <h1>The contenteditable attribute</h1>
+  <p class=pr-lede><q>The contenteditable content attribute is an enumerated attribute</q> whose keywords are
+  <code>true</code>, <code>false</code> and <code>plaintext-only</code>. In the last state, <q>Only the element's raw
+  text content is editable; rich formatting is disabled.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#contenteditable">HTML §6.8.1</a></span></p>
+</header>
+<section>
+  <h2>True, and the empty value</h2>
+  <p><q>The attribute's empty value default is the True state.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#contenteditable">§6.8.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <div class=ed contenteditable=true>contenteditable=true</div>
+      <div class=ed contenteditable>contenteditable, empty</div>
+    </div>
+    <figcaption>Click either line: a caret, and typing goes in. Select a word and press Ctrl+B (⌘B on a Mac): it
+    turns bold.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <div class=ed contenteditable=plaintext-only>contenteditable=plaintext-only</div>
+    </div>
+    <figcaption>Click the line and type: the text goes in. Select a word and press Ctrl+B (⌘B): it stays as it was,
+    since rich formatting is disabled.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Inherit, and False within</h2>
+  <p><q>The attribute's missing value default and invalid value default are both the Inherit state. The inherit state
+  indicates that the element is editable (or not) based on the parent element's state.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#contenteditable">§6.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="padding: 10px 20px 0; width: 260px">
+      <div class=ed contenteditable=true>
+        editable, then
+        <div class=ed>a child with no attribute</div>
+        <div class=ed contenteditable=false>a child, contenteditable=false</div>
+        <div class=ed contenteditable=bogus>a child, contenteditable=bogus</div>
+      </div>
+    </div>
+    <figcaption>In the grey box, click the first and third orange children and type: the text goes in, each inheriting
+    the parent's state. Click the second: no caret, and nothing typed goes in.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

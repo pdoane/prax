@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Line height calculations: the line box</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8 Line height calculations: the 'line-height' and 'vertical-align' properties</div>
+  <h1>Line height calculations: the line box</h1>
+  <p class=pr-lede><q>The height of a line box is determined as follows</q>: each box's height, then their alignment, then
+  the distance from the highest top to the lowest bottom. Each stage's text is 13px on 20px lines.</p>
+</header>
+
+<section>
+  <h2>The height of each inline-level box</h2>
+  <p><q>For replaced elements, inline-block elements, and inline-table elements, this is the height of their margin
+  box; for inline boxes, this is their 'line-height'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="line-height: 40px">span</span> b<br>next line</div>
+    <figcaption>A span with <code>line-height: 40px</code>: its box is 40px, so is the first line, and the next starts
+    at 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <img alt="" style="margin: 5px 0" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"> b<br>next line</div>
+    <figcaption>An image 40px tall with 5px margins, aligned at the top: its margin box makes the first line
+    50px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Aligned, then measured, with the strut</h2>
+  <p><q>The inline-level boxes are aligned vertically according to their 'vertical-align' property.</q> <q>The line box
+  height is the distance between the uppermost box top and the lowermost box bottom. (This includes the strut, as
+  explained under 'line-height' below.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#line-height">CSS 2 §10.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="vertical-align: 20px">raised 20px</span> b<br>next line</div>
+    <figcaption>A span raised 20px: the first line reaches 20px higher, so it is 40px, and the next starts at
+    40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="font-size: 13px; line-height: 40px"><span class=pr-chip style="font-size: 10px; line-height: 10px">10px lines</span><br><span class=pr-chip style="font-size: 10px; line-height: 10px">10px lines</span></div>
+    <figcaption>The block has <code>line-height: 40px</code>; its spans have 10px. Each line keeps the strut's 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

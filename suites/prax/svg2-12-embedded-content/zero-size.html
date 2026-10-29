@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Zero width or height: nothing drawn</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .flat { height: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>Zero width or height: nothing drawn</h1>
+  <p class=pr-lede><q>A value of zero for either width or height disables rendering of the element and its embedded
+  content.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60. Each element has <code>overflow: visible</code>, so that, were it drawn, what it
+  holds would show outside its empty rectangle.</p>
+</header>
+
+<section>
+  <h2>An image</h2>
+  <p>The PNG flag, 40 by 20 in quarters, with <code>preserveAspectRatio="xMidYMid slice"</code>, which would scale
+  it to cover the rectangle's other side.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="80" y="10" width="0" height="40" preserveAspectRatio="xMidYMid slice" style="overflow: visible" /></svg></div>
+    <figcaption><code>width="0" height="40"</code> at 80, 10: nothing. Drawn, the flag would be 80 by 40, from 40
+    to 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=flat href="../shared/resources/flag-40x20.png" x="20" y="30" width="120" preserveAspectRatio="xMidYMid slice" style="overflow: visible" /></svg></div>
+    <figcaption><code>width="120"</code> at 20, 30, and from a style sheet <code>height: 0</code>: nothing. Drawn,
+    the flag would be 120 by 60, filling the stage's height.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A foreignObject</h2>
+  <p>The <code>foreignObject</code> holds the HTML boxes A and B, each a line 20 tall.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="120" height="0" style="overflow: visible"><div class=pr-a>A</div><div class=pr-b>B</div></foreignObject></svg></div>
+    <figcaption><code>width="120" height="0"</code> at 20, 10: nothing. Drawn, A and B would be from 10 to 50.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> A and B drawn.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject x="20" y="10" width="0" height="40" style="overflow: visible"><div class="pr-a pr-fit" style="width: 120px">A</div></foreignObject></svg></div>
+    <figcaption><code>width="0" height="40"</code>, holding A 120 wide: nothing. Drawn, A would be from 20 to
+    140. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> A drawn.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

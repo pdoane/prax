@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The picture element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.1 The picture element</div>
+  <h1>The picture element</h1>
+  <p class=pr-lede><q>The picture element is a container which provides multiple sources to its contained img element
+  to allow authors to declaratively control or give hints to the user agent about which image resource to use</q>
+  <q>It represents its children.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-picture-element">HTML §4.8.1</a></span>
+  The img's own <code>src</code> is a blue image 80 by 40; the sources offer an orange one, 160 by 80 at
+  <code>2x</code>, so 80 by 40 too.</p>
+</header>
+
+<section>
+  <h2>The img draws, from a source's image</h2>
+  <p><q>The image given by the src and srcset attributes, and any previous sibling source elements' srcset attributes
+  if the parent is a picture element, is the embedded content</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element">§4.8.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source srcset="support/orange-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>A source, then the img: orange, 80 by 40 at 10, 10. The source's image, not the img's blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>No source: the img's own blue, 80 by 40 at 10, 10.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The picture draws nothing of its own</h2>
+  <p><q>the picture element itself does not display anything; it merely provides a context for its contained img
+  element that enables it to choose from multiple URLs.</q> The source element <q>does not represent anything on its
+  own.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/embedded-content.html#the-source-element">§4.8.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source srcset="support/orange-160x80.png 2x"><source srcset="support/green-160x80.png 2x"></picture></div>
+    <figcaption>Two sources and no img: nothing is drawn, the stage 20 tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pic"><picture><source srcset="support/orange-160x80.png 2x"><source srcset="support/green-160x80.png 2x"><img src="support/blue-80x40.png" alt=""></picture></div>
+    <figcaption>The same two sources and an img: one image, orange, 80 by 40. The sources offer the img a choice and
+    add nothing beside it.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

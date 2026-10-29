@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Isolated groups: a transparent black start</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage.pr-cb { height: 60px; }
+  .lime { position: absolute; left: 10px; top: 10px; width: 140px; height: 40px; background: #00ff00; }
+  .group { position: absolute; left: 10px; top: 0; width: 50px; height: 40px; }
+  .sq { width: 50px; height: 40px; }
+  .sw { position: absolute; left: 80px; top: 10px; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 8.2 Isolated Groups</div>
+  <h1>Isolated groups: a transparent black start</h1>
+  <p class=pr-lede><q>In an isolated group, the initial backdrop shall be black and fully transparent.</q> <q>The only
+  interaction with the group backdrop shall occur when the group's computed color, shape and alpha are composited with
+  it.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#isolatedgroups">Compositing and Blending 2 §8.2</a></span>
+  Each stage has a lime band 140 by 40 under a square 50 by 40 at x 20 in a <code>div</code>; the swatch at x 80 is
+  its color by the formulas.</p>
+</header>
+
+<section>
+  <h2>Blending with nothing</h2>
+  <p>With <code>αb = 0</code>, <code>Cs = (1 - αb) x Cs + αb x B(Cb, Cs)</code> is the source.</p>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group><div class=sq style="background: #ff0000; mix-blend-mode: difference"></div></div></div><div class=sw style="background: #ffff00"></div></div>
+    <figcaption>Red, <code>difference</code>, in a plain <code>div</code>: the difference of red and lime, yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group style="isolation: isolate"><div class=sq style="background: #ff0000; mix-blend-mode: difference"></div></div></div><div class=sw style="background: #ff0000"></div></div>
+    <figcaption>The <code>div</code> isolated: the red's difference with transparent black is red.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then composited once</h2>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group><div class=sq style="background: rgb(255 0 0 / 0.5); mix-blend-mode: multiply"></div></div></div><div class=sw style="background: rgb(0% 50% 0%)"></div></div>
+    <figcaption>Red at 0.5, <code>multiply</code>, not isolated: the blend, black, at 0.5 over lime,
+    <code>rgb(0% 50% 0%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-medium"><div class=lime><div class=group style="isolation: isolate"><div class=sq style="background: rgb(255 0 0 / 0.5); mix-blend-mode: multiply"></div></div></div><div class=sw style="background: rgb(50% 50% 0%)"></div></div>
+    <figcaption>Isolated: red at 0.5 in the group, laid on the lime normally, <code>rgb(50% 50% 0%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

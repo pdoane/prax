@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Input method key values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 3.8 IME and Composition Keys</div>
+  <h1>Input method key values</h1>
+  <p class=pr-lede><q>"Dead"</q>: <q>A dead key combining key. It may be any combining key from any keyboard layout.</q> <q>"Process"</q>: <q>The Process key.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-composition">UI Events KeyboardEvent key Values §3.8</a></span></p>
+</header>
+<section>
+  <h2>Keys of input methods</h2>
+  <p>Japanese and Korean keyboards have keys for their input methods, each with its own value. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-composition">§3.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Click the box. On a Japanese keyboard, press 変換, 無変換 and カタカナ/ひらがな: <code>"Convert"</code>, <code>"NonConvert"</code>, <code>"KanaMode"</code> (on a Mac, 英数 gives <code>"Eisu"</code>). On a Korean keyboard, 한/영 gives <code>"HangulMode"</code> and 한자 <code>"HanjaMode"</code>. A dead key, such as ^ on a French layout, gives <code>"Dead"</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

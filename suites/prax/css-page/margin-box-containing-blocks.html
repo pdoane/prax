@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The containing blocks of page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.1 Page-Margin Box Layout Terminology</div>
+  <h1>The containing blocks of page-margin boxes</h1>
+  <p class=pr-lede><q>For a corner page-margin box, it is the rectangle defined by the intersection of the two page margins meeting at that corner. For all other page-margin boxes, the containing block is the rectangle formed by the encapsulating page margin minus the containing blocks of the adjacent corners' page-margin boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#margin-box-terms">CSS Paged Media 3 §5.3.1</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Between the page's border edges</h2>
+  <p>The <q>available width</q> is <q>the distance between the page box's left right border edges</q>: the page area with the page's padding and border. These pages have margins of 40px above and below and 30px at the sides, a 4px yellow border and 6px of padding.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px 30px; border: 4px solid #e6b54a; padding: 6px; @top-left { content: 'A'; background: #4f81bd } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption><code>@top-left</code>, the only box on its side, fills the available width: from 30px to 210px, 180 wide, over the border's width. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px 30px; border: 4px solid #e6b54a; padding: 6px; @top-left-corner { content: ''; background: #d68a3c } @bottom-right-corner { content: ''; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>Each corner box fills its corner, the 30 by 40 intersection of two margins. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

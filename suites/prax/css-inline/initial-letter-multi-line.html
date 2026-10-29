@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Multi-line initial letters</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .il { initial-letter: 2; color: #2c5a8f; }
+  .pr-stage { width: 140px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.8.4 Multi-line Initial Letters</div>
+  <h1>Multi-line initial letters</h1>
+  <p class=pr-lede><q>If an initial letter is too long to fit on one line, it wraps (according to the usual
+  text-wrapping rules), each line filled and formatted exactly as if it were the first line and the initial letter too
+  long to fit any subsequent normal text. Any normal text after the initial letter starts on its last line, affected
+  exactly as if that line were the first line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#initial-letter-multi-line">CSS Inline Layout 3 §7.8.4</a></span></p>
+</header>
+
+<section>
+  <h2>An initial letter that wraps</h2>
+  <p>The paragraph is 13px PR Literata on 20px lines; its first span, blue, is two words with <code>initial-letter:
+  2</code>, too wide for one line.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class=p><span class=il>Once upon</span> a time the text went on beside the last line of the initial.</p></div>
+    <figcaption>"Once" two lines tall on its own line, "upon" two lines tall below it, and the text beside "upon".
+    <span class=pr-flag>Chrome</span> Only a <code>::first-letter</code> becomes one: plain text. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Plain text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: preserved white space stretched</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .mono { font: 13px/20px ui-monospace, Menlo, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: preserved white space stretched</h1>
+  <p class=pr-lede>Every stage here has <code>text-align: justify</code>. CSS 2 keeps preserved white space as it is; a later specification lets it stretch.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></div>
+  <h2>Preserved white space may be stretched</h2>
+  <p><q>If an element’s white space is not collapsible, then the UA is not required to adjust its text for the purpose
+  of justification and may instead treat the text as having no justification opportunities. If the UA chooses to
+  adjust the text, then it must ensure that tab stops continue to line up as required by the white space processing
+  rules.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify; white-space: pre-wrap">The lines of this text are made flush with both sides.</div>
+    <figcaption><code>white-space: pre-wrap</code>: the first line either reaches both edges, its spaces stretched,
+    or ends short of the right edge. Both are allowed.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: justify; white-space: pre-wrap"><span class=pr-a style="display: inline-block; width: 30px">a</span> <span class=pr-a style="display: inline-block; width: 30px">b</span> <span class=pr-a style="display: inline-block; width: 30px">c</span></div>
+    <figcaption>Three 30px boxes in 100px, <code>pre-wrap</code>: the space between a and b stretches, b ends at the
+    right edge, and the space after it hangs. <span class=pr-flag>Firefox</span> b sticks out past the edge.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage mono"><div>x&#9;y one two three four five six</div><div style="text-align: justify">x&#9;y one two three four five six</div></div>
+    <figcaption>Monospace <code>pre-wrap</code>, a tab after "x", the second copy justified: both "y"s are at the
+    tab stop, in the ninth column. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The
+    justified "y" is past it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

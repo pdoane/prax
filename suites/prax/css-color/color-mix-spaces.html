@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix(): the space changes the mix</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 3.4 Effect of Mixing Color Space on color-mix</div>
+  <h1>color-mix(): the space changes the mix</h1>
+  <p class=pr-lede><q>The choice of mixing color space can have a large effect on the end result.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#color-mix-color-space-effect">CSS Color 5
+  §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>White and black</h2>
+  <p><q>The mix in LCH gives an L value of 50%, a perfect mid gray, exactly as expected</q>;
+  <q>The mix in XYZ gives a result that is too light</q>; <q>The mix in sRGB gives a result that is a bit too
+  light</q>. Each pair is the mix, then the gray it is.</p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: color-mix(in lch, white, black)"></div><div class=sw style="background: lch(50% 0 0)"></div><div class=sw style="background: color-mix(in xyz, white, black)"></div><div class=sw style="background: rgb(73.5% 73.5% 73.5%)"></div><div class=sw style="background: color-mix(in srgb, white, black)"></div><div class=sw style="background: rgb(50% 50% 50%)"></div></div>
+    <figcaption><code>in lch</code>, as <code>lch(50% 0 0)</code>: mid gray. <code>in xyz</code>, as <code>rgb(73.5% …)</code>: much lighter. <code>in srgb</code>, as <code>rgb(50% …)</code>: a little lighter.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>White and blue</h2>
+  <p><q>mix in lch is lch(64.7841% 65.6008 301.364) which is quite purple</q>; <q>mix in oklch is
+  oklch(72.601% 0.15661 264.052)</q>; <q>mix in srgb is rgb(50% 50% 100%) which is also a bit purple</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class=sw style="background: color-mix(in lch, white, blue)"></div><div class=sw style="background: lch(64.7841% 65.6008 301.364)"></div><div class=sw style="background: color-mix(in oklch, white, blue)"></div><div class=sw style="background: oklch(72.601% 0.15661 264.052)"></div><div class=sw style="background: color-mix(in srgb, white, blue)"></div><div class=sw style="background: rgb(50% 50% 100%)"></div></div>
+    <figcaption><code>in lch</code>: a purple. <code>in oklch</code>: a clear mid blue. <code>in srgb</code>: a lavender. Each as its result.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

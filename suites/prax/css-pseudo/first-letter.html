@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>::first-letter: a letter, number or symbol</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 10px; }
+  .fl::first-letter { background: #d68a3c; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.2 First-Letter Text: ::first-letter pseudo-element and its ::prefix and ::suffix children</div>
+  <h1>::first-letter: a letter, number or symbol</h1>
+  <p class=pr-lede><q>The ::first-letter pseudo-element represents the first Letter, Number, or Symbol (Unicode category
+  L*, N*, or S*) typographic character unit on the first formatted line of its originating element (the first letter)
+  as well as its associated punctuation.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-letter-pseudo">CSS Pseudo-Elements 4 §2.2</a></span>
+  In each stage the first letter is white on orange; every character is 10px wide.</p>
+</header>
+
+<section>
+  <h2>Letters, numbers, symbols</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">Hand</p></div>
+    <figcaption>A letter, <code>L</code>: the H, 10px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">67 m</p></div>
+    <figcaption><q>The first letter may in fact be a digit</q>, <code>N</code>: the 6 alone.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">$5 a</p></div>
+    <figcaption>A currency symbol, <code>Sc</code>: the $ alone.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">→ go</p></div>
+    <figcaption>An arrow, <code>Sm</code>: the → alone.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other symbols</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">© 2026</p></div>
+    <figcaption>A sign, <code>So</code>: the © alone; the space after it is a word separator, which stays out.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><p class="fl pr-measure">+1 or</p></div>
+    <figcaption>A plus sign, <code>Sm</code>: the + alone, not the 1 after it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

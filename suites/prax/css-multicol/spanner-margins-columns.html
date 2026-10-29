@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanner margins and the columns</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+  .m20 { margin: 20px 0; }
+  .m10 { margin: 10px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 1 · 6.1 Spanning An Element Across Columns, margins in columns</div>
+  <h1>Spanner margins and the columns</h1>
+  <p class=pr-lede><q>As column boxes establish a new block formatting context, margins on elements inside a column
+  box will not collapse with the margin of a spanner.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-1/#column-span">CSS Multi-column Layout 1 §6.1</a></span>
+  Each stage has three columns of 60px. A has <code>margin: 20px 0</code>, B <code>margin: 10px 0</code>; both
+  span.</p>
+</header>
+
+<section>
+  <h2>Not with margins inside the columns</h2>
+  <p>"one", above A, is in a block with <code>margin-bottom: 30px</code>; "two", below B, in one with
+  <code>margin-top: 30px</code>. At a forced break, <q>adjoining margins before the break are truncated, but margins
+  after the break are preserved.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-margins">CSS Fragmentation 4 §5.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="margin-bottom: 30px">one</div><div class="pr-a all m20">A</div><div class="pr-b all m10">B</div><div style="margin-top: 30px">two</div></div>
+    <figcaption>Below B, its 10px and the 30px of "two"'s block, not collapsed: 40px down to "two". Above A,
+    only A's 20px: the 30px under "one" adjoins the break A forces, and is truncated.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

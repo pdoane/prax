@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Hue interpolation: longer</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.5.2 longer</div>
+  <h1>Hue interpolation: longer</h1>
+  <p class=pr-lede><q>Hue angles are interpolated to take the <em>longer</em> of the two arcs between the starting and ending hues.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#hue-longer">CSS Color 4
+  §13.5.2</a></span> Bars are <code>linear-gradient(in oklch longer hue to right, A, B)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>).</p>
+</header>
+
+<section>
+  <h2>Red to yellow, the long way</h2>
+  <p>The same red and yellow: <q>the midpoint [...] would be at a hue angle of (30 + 360 + 90) * 0.5 = 240 degrees, along the longer arc between the two colors, giving a sky blue</q>.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch longer hue to right, oklch(0.6 0.24 30), oklch(0.8 0.15 90))"></div></div>
+    <figcaption>Red, magenta, violet, blue, cyan, green, yellow.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch longer hue to right, oklch(0.6 0.24 30), oklch(0.8 0.15 90))"></div><div class=sw style="background: oklch(0.7 0.195 240)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.7 0.195 240)</code>: one sky blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across 180</h2>
+  <p>From hue 350 to 10, the long way: 340 degrees, through 180.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in oklch longer hue to right, oklch(0.7 0.12 350), oklch(0.7 0.12 10))"></div></div>
+    <figcaption>Rose, violet, blue, teal, green, olive, coral: nearly every hue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(in oklch longer hue to right, oklch(0.7 0.12 350), oklch(0.7 0.12 10))"></div><div class=sw style="background: oklch(0.7 0.12 180)"></div></div>
+    <figcaption>The middle, beside <code>oklch(0.7 0.12 180)</code>: one teal.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

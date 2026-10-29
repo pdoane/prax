@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tagged images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw, .pr-stage img { display: inline-block; vertical-align: top; width: 60px; height: 60px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.4 Color Space of Tagged Images</div>
+  <h1>Tagged images</h1>
+  <p class=pr-lede><q>Tagged RGB images, and tagged images using a transformation of RGB such as YCbCr, if the color
+  profile or other identifying information is valid, must be treated as being in the specified color space.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#tagged-images">CSS Color 4 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>The profile decides the color</h2>
+  <p>The image <code>swap-990000-iCCP.png</code> stores the pixel values of <code>#990000</code>, a dark red, and
+  embeds an ICC profile that is sRGB with its red and green colorants swapped. In that space the pixels are
+  <code>#009900</code>, a green. <q>It must not treat the [...] values as if they were [another space's] values,
+  which would produce incorrect colors.</q></p>
+  <figure>
+    <div class=pr-stage><img alt="" src="../../../third_party/wpt/css/css-color/support/swap-990000-iCCP.png"><div class=sw style="background: #009900"></div></div>
+    <figcaption>The image, as an <code>img</code>, beside a box of <code>background: #009900</code>: two
+    squares of the same green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=sw style="background: url(../../../third_party/wpt/css/css-color/support/swap-990000-iCCP.png) center / cover"></div><div class=sw style="background: #009900"></div></div>
+    <figcaption>The same image as a <code>background-image</code>: the same green twice.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

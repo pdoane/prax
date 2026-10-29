@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Step 3: the flex base size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .flex { display: flex; }
+  .t { background: #b9cde6; outline: 1px solid #2c5a8f; outline-offset: -1px; }
+  figure { margin-bottom: 8px; }
+  section { padding-bottom: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.2 Line Length Determination, step 3</div>
+  <h1>Step 3: the flex base size</h1>
+  <p class=pr-lede>The first of five cases that applies sets an item's flex base size; this page shows A to D, and <a href=algo-flex-base-size-content.html>the next</a> E. Items here neither grow nor
+  shrink, so the flex base size is the size they show. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#line-sizing">CSS Flexible Box Layout 2 §9.2</a></span></p>
+</header>
+
+<section>
+  <h2>A: a definite flex basis, and B: a ratio and a definite cross size</h2>
+  <p>A: <q>If the item has a definite used flex basis, that's the flex base size.</q> B: <q>If the flex item has a
+  preferred aspect ratio, a used flex basis of content, and a definite cross size, then the flex base size is
+  calculated from its used cross size and the flex item’s aspect ratio.</q></p>
+  <figure>
+    <div class="pr-stage flex pr-measure"><div class=t style="flex: 0 0 70px">aaaaaaaaaa</div></div>
+    <figcaption>A, <code>flex-basis: 70px</code>: 70px wide, its 100px word overflowing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex" style="align-items: flex-start"><div class="pr-a pr-fit" style="flex: none; aspect-ratio: 3; height: 30px">A</div></div>
+    <figcaption>B, <code>aspect-ratio: 3; height: 30px</code>: 90px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>C: under a constraint, and D: an orthogonal item in infinite space</h2>
+  <p>C: <q>If the used flex basis is content or depends on its available space, and the flex container is being sized
+  under a min-content or max-content constraint [...], size the item under that constraint.</q> D: <q>Otherwise, if
+  [...] the available main size is infinite, and the flex item's inline axis is parallel to the main axis, lay the
+  item out using the rules for a box in an orthogonal flow. The flex base size is the item's max-content main
+  size.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="flex" style="width: min-content; background: #f6d7b4; height: 30px"><div class=t style="flex: none; height: 20px">aa bbbb</div></div></div>
+    <figcaption>C: a container of <code>width: min-content</code>, orange below its item. Under that constraint
+    the item's flex base size is its min-content size, so the container is 40px. Laid out in it, the item is its
+    max-content 70px, overflowing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="flex" style="flex-direction: column; align-items: flex-start"><div class=t style="writing-mode: vertical-rl">aaa bbb ccc</div></div></div>
+    <figcaption>D: a column container of auto height, and a <code>vertical-rl</code> item of "aaa bbb ccc": its
+    max-content height, one column 110px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

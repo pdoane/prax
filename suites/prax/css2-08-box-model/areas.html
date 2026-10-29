@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box dimensions: the four areas</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.1 Box dimensions</div>
+  <h1>Box dimensions: the four areas</h1>
+  <p class=pr-lede><q>Each box has a content area (e.g., text, an image, etc.) and optional surrounding padding, border,
+  and margin areas.</q> Each figure draws a box's areas in the colors browsers' inspectors use.</p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin<span class="pr-swatch pr-border"></span>border<span
+class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>The four areas</h2>
+  <p>Content in the middle, then padding, border and margin around it, each with its own width on each side.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#box-dimensions">CSS 2 §8.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pr-margin-area><div class=pr-box style="margin: 20px; border-width: 10px; padding: 20px"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption><code>margin: 20px; border-width: 10px; padding: 20px</code>: bands of 20, 10 and 20px on every side
+    of a 200 by 20px content area.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=pr-margin-area><div class=pr-box style="margin: 0 40px 10px 10px; border-width: 10px 0 20px 30px; padding: 10px 20px 0 0"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption>Each side on its own: margins <code>0 40 10 10</code>, borders <code>10 0 20 30</code>, padding
+    <code>10 20 0 0</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

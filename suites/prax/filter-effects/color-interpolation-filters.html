@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-interpolation-filters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage { padding: 10px 0; }
+  .box { width: 60px; height: 30px; margin: 0 10px; background: white; }
+  .bar { width: 60px; height: 10px; margin: 0 10px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position: absolute">
+  <filter id="half"><feComponentTransfer><feFuncR type="linear" slope="0.5" /><feFuncG type="linear" slope="0.5" /><feFuncB type="linear" slope="0.5" /></feComponentTransfer></filter>
+  <filter id="half-srgb" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="linear" slope="0.5" /><feFuncG type="linear" slope="0.5" /><feFuncB type="linear" slope="0.5" /></feComponentTransfer></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 10 The color-interpolation-filters property</div>
+  <h1>color-interpolation-filters</h1>
+  <p class=pr-lede><q>The color-interpolation-filters property specifies the color space for imaging operations
+  performed via filter effects.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#ColorInterpolationFiltersProperty">Filter Effects 1 §10</a></span>
+  Each box is 60 by 30 and white before its filter, which halves each channel; the bar under it is the color
+  expected.</p>
+</header>
+
+<section>
+  <h2>linearRGB by default, or sRGB</h2>
+  <p><q>linearRGB: Indicates that filter effects color operations should occur in the linear-light sRGB color
+  space.</q> <q>Initial: linearRGB</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: url(#half)"></div><div class=bar style="background: rgb(188 188 188)"></div></div>
+    <figcaption>The initial value: half the light, a light gray, <code>rgb(188 188 188)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="filter: url(#half-srgb)"></div><div class=bar style="background: rgb(128 128 128)"></div></div>
+    <figcaption><code>sRGB</code> on the <code>filter</code>: half the encoded value, <code>rgb(128 128 128)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not filter functions</h2>
+  <p><q>color-interpolation-filters has no affect for Filter Functions. Filter Functions must operate in the sRGB color
+  space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#FilterProperty">§5</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class=box style="color-interpolation-filters: linearRGB; filter: brightness(0.5)"></div><div class=bar style="background: rgb(128 128 128)"></div></div>
+    <figcaption><code>brightness(0.5)</code> with <code>linearRGB</code> on the box: still <code>rgb(128 128 128)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

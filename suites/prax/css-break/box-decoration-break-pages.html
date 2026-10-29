@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>box-decoration-break on pages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .chip { border: 2px solid #d68a3c; padding: 0 10px; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 5.4 Fragmented Borders and Backgrounds: the box-decoration-break property</div>
+  <h1>box-decoration-break on pages</h1>
+  <p class=pr-lede><q>When a break (page/column/region/line) splits a box, the box-decoration-break property controls</q> how its decorations wrap the broken edges. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#break-decoration">CSS Fragmentation 4 §5.4</a></span></p>
+</header>
+
+<section>
+  <h2>Pages</h2>
+  <p>The box has a 4px border, 6px of padding and 12px radii, and holds nine lines.</p>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .r { border: 4px solid #2c5a8f; border-radius: 12px; padding: 6px; background: #b9cde6 }</style><body class=pr-measure><div class=r>one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight<br>nine</div>"></iframe>
+    <figcaption><code>slice</code>: the top border and rounded top on the first page, the bottom ones on the second; open at the break.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .r { border: 4px solid #2c5a8f; border-radius: 12px; padding: 6px; background: #b9cde6 }</style><body class=pr-measure><div class=r style='box-decoration-break: clone'>one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight<br>nine</div>"></iframe>
+    <figcaption><code>clone</code>: on each page a whole rounded box with its padding. <span class=pr-flag>Safari</span> Slices it, as above.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Breaks a block imposes on an inline</h2>
+  <p><q>UAs should also apply box-decoration-break to control rendering at bidi-imposed breaks</q> <q>and/or at display-type–imposed breaks</q>. <q>Otherwise such breaks must be handled as slice.</q> The span has a 2px border and 10px of padding at each side, and holds a block, B, between two words. Bidi breaks are shown in <a href="../css-writing-modes/bidi-fragment-edges.html">box model of reordering-induced box fragments</a>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><span class=chip>one<div class=pr-b>B</div>two</span></div>
+    <figcaption><code>slice</code>: the fragment of "one" open at its end, that of "two" open at its start.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span class=chip style="box-decoration-break: clone">one<div class=pr-b>B</div>two</span></div>
+    <figcaption><code>clone</code>: as the UA should, both fragments closed, with padding and border at both ends. <span class=pr-flag>Safari</span> Slices them, as at left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

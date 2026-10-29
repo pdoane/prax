@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ethiopic-numeric</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 7.2 Ethiopic Numeric Counter Style: ethiopic-numeric</div>
+  <h1>ethiopic-numeric</h1>
+  <p class=pr-lede><q>The ethiopic-numeric counter style is defined for all positive non-zero numbers.</q> <q>the 'range' is '1 infinite', the 'suffix' is "/ " (U+002F SOLIDUS followed by a U+0020 SPACE)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#ethiopic-numeric-counter-style">CSS Counter Styles 3 §7.2</a></span></p>
+</header>
+
+<section>
+  <h2>Groups of two digits</h2>
+  <p><q>The decimal number 100, in ethiopic, is ፻ U+137B</q> <q>The decimal number 78010092, in ethiopic, is ፸፰፻፩፼፺፪</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style='list-style-type: ethiopic-numeric; font-family: "PR Noto Sans Ethiopic", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=1>1<li>2<li value=10>10<li>11<li value=100>100</ol></div>
+    <figcaption><code>ethiopic-numeric</code>: <bdi dir=ltr>"፩/"</bdi>, <bdi dir=ltr>"፪/"</bdi>, <bdi dir=ltr>"፲/"</bdi>, <bdi dir=ltr>"፲፩/"</bdi>, <bdi dir=ltr>"፻/"</bdi>. <span class=pr-flag>Firefox</span> No "/ " suffix.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style='list-style-type: ethiopic-numeric; font-family: "PR Noto Sans Ethiopic", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=101>101<li value=1000>1000<li value=10000>10000<li value=78010092>78010092</ol></div>
+    <figcaption><code>ethiopic-numeric</code>: <bdi dir=ltr>"፻፩/"</bdi>, <bdi dir=ltr>"፲፻/"</bdi>, <bdi dir=ltr>"፼/"</bdi>, <bdi dir=ltr>"፸፰፻፩፼፺፪/"</bdi>. <span class=pr-flag>Firefox</span> No "/ " suffix.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol style='list-style-type: ethiopic-numeric; font-family: "PR Noto Sans Ethiopic", "PR Noto Sans"; list-style-position: inside; padding: 0'><li value=-1>-1<li>0<li>1</ol></div>
+    <figcaption><code>ethiopic-numeric</code>, below 1, in decimal with the style's suffix: <bdi dir=ltr>"-1/"</bdi>, <bdi dir=ltr>"0/"</bdi>, <bdi dir=ltr>"፩/"</bdi>. <span class=pr-flag>Firefox</span> No "/ " suffix.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

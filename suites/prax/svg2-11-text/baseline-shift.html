@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline-shift</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .diag { font: 30px "PR Baseline Diagnostic Zero"; }
+  .tall { line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.7 The ‘baseline-shift’ property</div>
+  <h1>baseline-shift</h1>
+  <p class=pr-lede><q>The dominant baseline can be temporarily shifted (as needed for superscripts or subscripts) by
+  using either the shorthand vertical-align property (preferred) or the longhand baseline-shift property.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphsMetrics">SVG 2 §11.1.3</a></span>
+  The property is defined in CSS Inline Layout, <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#BaselineShiftProperty">SVG 2 §11.10.2.7</a></span>, where a percentage raises the text <q>by the specified percentage of the line-height</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-shift-property">CSS Inline Layout 3 §4.2.3</a></span>.
+  Each stage is an SVG 160 by 80 holding "HH" in 30px PR Baseline Diagnostic Zero, whose H stands on its baseline,
+  at <code>x="20" y="45"</code>, the y dashed in red; the second H, orange, is a <code>tspan</code> with the caption's
+  shift.</p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 45H160 M0 30H160" class=pr-baseline /><text class=diag x="20" y="45">H<tspan fill="#d68a3c" baseline-shift="15">H</tspan></text></svg></div>
+    <figcaption><code>baseline-shift="15"</code>: the orange H raised 15, standing on y 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 45H160 M0 60H160" class=pr-baseline /><text class=diag x="20" y="45">H<tspan fill="#d68a3c" style="baseline-shift: -15px">H</tspan></text></svg></div>
+    <figcaption><code>baseline-shift: -15px</code>: lowered 15, standing on y 60.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 45H160 M0 25H160" class=pr-baseline /><text class=diag x="20" y="45">H<tspan class=tall fill="#d68a3c" style="baseline-shift: 50%">H</tspan></text></svg></div>
+    <figcaption><code>baseline-shift: 50%</code> with <code>line-height: 40px</code>: raised half the line-height, 20,
+    standing on y 25. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Raised 15, half
+    the font size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>super and sub</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=diag x="20" y="45">H<tspan fill="#d68a3c" baseline-shift="super">H</tspan></text></svg></div>
+    <figcaption><code>super</code>: raised by the offset for superscripts, its foot above y 45.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 45H160" class=pr-baseline /><text class=diag x="20" y="45">H<tspan fill="#d68a3c" baseline-shift="sub">H</tspan></text></svg></div>
+    <figcaption><code>sub</code>: lowered by the offset for subscripts, its foot below y 45.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

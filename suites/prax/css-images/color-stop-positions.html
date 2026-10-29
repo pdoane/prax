@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color stop lists: positions</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  figure { margin-right: 10px; }
+  .bar { height: 10px; }
+  .bar + .bar { margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 4 · 3.5.1 Color Stop Lists</div>
+  <h1>Color stop lists: positions</h1>
+  <p class=pr-lede><q>Lengths are measured along the gradient line from the starting point in the direction of the
+  ending point.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-4/#color-stop-syntax">CSS Images 4 §3.5.1</a></span>
+  Each bar is <code>to right</code> and 200px wide, so 10% is one guide.</p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, #4f81bd 60px, #d68a3c 60px)"></div><div class=bar style="background: linear-gradient(to right, #4f81bd 30%, #d68a3c 30%)"></div></div>
+    <figcaption><code>blue 60px, orange 60px</code> above, <code>30%</code> twice below: both change at x 60.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to left, #4f81bd 60px, #d68a3c 60px)"></div><div class=bar style="background: linear-gradient(to right, #4f81bd -20%, #d68a3c 120%)"></div></div>
+    <figcaption><code>to left</code>: at x 140. Below, <code>-20%</code> to <code>120%</code>: the bar shows the
+    line's middle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two positions, two stops</h2>
+  <p><q>A color stop with two positions is equivalent to specifying two color stops with the same color, one for each
+  position.</q></p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, #4f81bd 0 60px, #d68a3c 60px 140px, #6aa36a 140px)"></div><div class=bar style="background: linear-gradient(to right, #4f81bd 0, #4f81bd 60px, #d68a3c 60px, #d68a3c 140px, #6aa36a 140px)"></div></div>
+    <figcaption><code>blue 0 60px, orange 60px 140px, green 140px</code>, then each stop written twice: stripes
+    to x 60, 140 and 200.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right in hsl longer hue, red 40px 160px)"></div></div>
+    <figcaption><q>using a longer &lt;color-interpolation-method&gt; will instead create a "rainbow"</q>: red to x 40,
+    every hue round to red at x 160, red after.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Positions left out</h2>
+  <p><q>it's assigned the position halfway between the two surrounding stops. If multiple stops in a row lack a
+  position, they space themselves out equally between the surrounding positioned stops.</q></p>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, white 40px, #d68a3c, white 160px)"></div></div>
+    <figcaption><code>white 40px, orange, white 160px</code>: orange is brightest at x 100, halfway.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=bar style="background: linear-gradient(to right, white, #d68a3c, #4f81bd, #6aa36a, white)"></div></div>
+    <figcaption>Five stops, none placed: white at 0 and 200, orange at x 50, blue at 100, green at 150.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

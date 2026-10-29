@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Find-in-page reveals closed content</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A word to search for, written by generated content so that the search does not find the caption. */
+  .word::before { content: attr(data-word) }
+  .line { margin: 0 0 10px; padding: 0 6px; background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  details { margin: 0 0 10px; font-size: 12px; line-height: 20px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.9.2 Interaction with details and hidden=until-found</div>
+  <h1>Find-in-page reveals closed content</h1>
+  <p class=pr-lede><q>When find-in-page begins searching for matches, all details elements in the page which do not have their
+  open attribute set should have the skipped contents of their second slot become accessible, without modifying the
+  open attribute, in order to make find-in-page able to search through it.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#interaction-with-details-and-hidden=until-found">HTML §6.9.2</a></span></p>
+</header>
+<section>
+  <h2>Revealed when it becomes the active match</h2>
+  <p><q>When find-in-page chooses a new active match</q>, it queues a task <q>to run the ancestor revealing algorithm on
+  node.</q> For a closed <code>details</code>, that will <q>Set ancestorToReveal's open attribute to the empty
+  string.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#interaction-with-details-and-hidden=until-found">§6.9.2</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-hidden-attribute">§6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0" id=area>
+        <details id=details><summary>a closed details</summary><div class=line>in the details: zorkmid one</div></details>
+        <div class=line id=until hidden=until-found>hidden until found: zorkmid two</div>
+        <div class=line>just text: zorkmid three</div>
+      </div>
+      <ol class=pr-log data-log="toggle beforematch" data-fields="target newState" data-lines=3></ol>
+    </div>
+    <figcaption>Search for <code class=word data-word="zorkmid"></code> (Ctrl+F, or ⌘F): three matches, though two are
+    not drawn. The first active match opens the details, with a toggle to <code>open</code>. Advance: beforematch at
+    <code>until</code>, which appears. Click the details' summary to close it and reload to start over.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

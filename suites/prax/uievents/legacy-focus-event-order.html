@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus events with the legacy ones</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.2.2 Legacy FocusEvent event order</div>
+  <h1>Focus events with the legacy ones</h1>
+  <p class=pr-lede><q>The following is the typical sequence of events when a focus is shifted between elements,
+  including the deprecated DOMFocusIn and DOMFocusOut events.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-focusevent-event-order">UI Events §8.2.2</a></span></p>
+</header>
+<section>
+  <h2>The order of Focus Event Order</h2>
+  <p>This section's table puts focusin first, <q>Sent before first target element receives focus</q>: focusin, focus,
+  DOMFocusIn; then focusout, focusin, blur, DOMFocusOut, focus, DOMFocusIn. <span class=pr-cite><a href="https://w3c.github.io/uievents/#legacy-focusevent-event-order">§8.2.2</a></span>
+  That was UI Events' order until its group resolved to specify the order that every browser ships
+  (<a href="https://github.com/w3c/uievents/issues/88">uievents#88</a>), which Focus Event Order now gives: focus,
+  focusin; then blur, focusout, focus, focusin; and DOMFocusIn and DOMFocusOut come after focus and blur.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-focusevent-event-order">§3.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=one tabindex=0>one</div><div class=pr-target id=two tabindex=0>two</div>
+      </div>
+      <ol class=pr-log data-log="focus blur focusin focusout DOMFocusIn DOMFocusOut" data-fields="target" data-lines=6></ol>
+    </div>
+    <figcaption>Click <code>one</code>, then <code>two</code>: blur, focusout and DOMFocusOut at <code>one</code>,
+    then focus, focusin and DOMFocusIn at <code>two</code>, as Chrome gives. Safari gives the same order without the
+    legacy events.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

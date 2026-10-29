@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>When there are too few break points</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 4.4 Unforced Breaks</div>
+  <h1>When there are too few break points</h1>
+  <p class=pr-lede><q>If the above doesn’t provide enough break points to keep content from overflowing the fragmentainer, then rule 3 is dropped to provide more break points.</q> <q>If that still does not lead to sufficient break points, then rules 1, 2 and 4 are dropped in order to find additional breakpoints.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#unforced-breaks">CSS Fragmentation 4 §4.4</a></span> Each stage has three columns 60px tall.</p>
+</header>
+
+<section>
+  <h2>Rule 3 goes first</h2>
+  <p>B has <code>break-after: avoid</code>; the tinted paragraph of three lines has <code>orphans: 3</code>. Breaking before the paragraph breaks rule 1; breaking inside it, rule 3.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b style="break-after: avoid">B</div><div class=k style="orphans: 3">one two six</div></div>
+    <figcaption>Rule 3 is dropped, rule 1 kept: "one" and "two" under B, "six" atop the second column. <span class=pr-flag>Safari</span> Breaks before the paragraph: its three lines atop the second column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then rules 1, 2 and 4</h2>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a style="break-after: avoid">1</div><div class=pr-a style="break-after: avoid">2</div><div class=pr-a style="break-after: avoid">3</div><div class=pr-a style="break-after: avoid">4</div><div class=pr-a>5</div></div>
+    <figcaption>Five blocks, each with <code>break-after: avoid</code> but the last: no break is allowed, so the avoids are dropped. 1 to 3 in the first column, 4 and 5 in the second.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

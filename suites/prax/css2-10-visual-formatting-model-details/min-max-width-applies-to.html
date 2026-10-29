@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-width and max-width: what they apply to</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.4 Minimum and maximum widths: 'min-width' and 'max-width'</div>
+  <h1>Min-width and max-width: what they apply to</h1>
+  <p class=pr-lede>Both apply to <q>all elements but non-replaced inline elements, table rows, and row groups</q>.</p>
+</header>
+
+<section>
+  <h2>Not to non-replaced inline elements</h2>
+  <p>The width of an inline, non-replaced element is that of its content, and neither property changes it. <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">a <span class=pr-chip style="min-width: 150px">span</span> b</div>
+    <figcaption>A <code>span</code> with <code>min-width: 150px</code> is as wide as its word.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text">a <img alt="" style="min-width: 100px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"> b</div>
+    <figcaption>An inline image, 60 by 40, is replaced: <code>min-width: 100px</code> makes it 100px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

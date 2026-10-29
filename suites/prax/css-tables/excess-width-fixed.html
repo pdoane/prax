@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Excess width in fixed mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; width: 200px; table-layout: fixed; }
+  td { padding: 0; height: 20px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.3.2 Distributing excess width to columns, fixed mode</div>
+  <h1>Excess width in fixed mode</h1>
+  <p class=pr-lede><q>These rules do not apply when the table is laid out in fixed mode. In this case, the simpler
+  rules that follow apply instead</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">CSS Table 3 §3.9.3.2</a></span>
+  Each table is <code>table-layout: fixed; width: 200px</code>, one row; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>The four rules</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 40px">aaaa</td><td>b</td><td>bbbbb</td></tr></table></div>
+    <figcaption><q>If there are any columns with no width specified, the excess width is distributed in equally to
+    such columns</q>: 40px, then 80px and 80px, whatever their content.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 20px">a</td><td style="width: 60px">b</td></tr></table></div>
+    <figcaption><q>otherwise, if there are columns with non-zero length widths from the base assignment, the excess
+    width is distributed proportionally to width among those columns</q>: 20px and 60px become 50px and 150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 10%">a</td><td style="width: 30%">b</td></tr></table></div>
+    <figcaption><q>otherwise, if there are columns with non-zero percentage widths from the base assignment, the excess
+    width is distributed proportionally to percentage width among those columns</q>: 20px and 60px become 50px and
+    150px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 0">a</td><td style="width: 0">b</td></tr></table></div>
+    <figcaption><q>otherwise, the excess width is distributed equally to the zero-sized columns</q>: two
+    <code>width: 0</code> columns, 100px each.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

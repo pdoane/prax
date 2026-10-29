@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-stretch, the legacy name</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Roboto Flex'; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.3.1 Font width: the 'font-stretch' legacy name alias</div>
+  <h1>font-stretch, the legacy name</h1>
+  <p class=pr-lede><q>For historical reasons, a 'font-stretch' property exists which is a legacy name alias and
+  functions in the identical way to the 'font-width'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-stretch-prop">CSS Fonts 4 §2.3.1</a></span></p>
+</header>
+
+<section>
+  <h2>One property, two names</h2>
+  <p>Setting either name sets the one property.</p>
+  <figure>
+    <div class="pr-stage pr-sample" id=s1 style="font-stretch: condensed">Handgloves</div>
+    <figcaption><code>font-stretch: condensed</code>: narrow.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" id=s2 style="font-width: condensed">Handgloves</div>
+    <figcaption><code>font-width: condensed</code>: the same narrow face. <span class=pr-flag>Chrome</span> draws
+    the normal width.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" id=s3 style="font-stretch: condensed; font-width: expanded">Handgloves</div>
+    <figcaption><code>font-stretch: condensed; font-width: expanded</code>: the later declaration wins, so
+    wide. <span class=pr-flag>Chrome</span> draws it narrow.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

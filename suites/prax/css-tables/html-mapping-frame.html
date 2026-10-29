@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>HTML's attributes: frame</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  td { background: #f4f5f7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 10.1 Mapping between CSS &amp; HTML attributes, frame</div>
+  <h1>HTML's attributes: frame</h1>
+  <p class=pr-lede>The style sheet maps <code>frame</code> to the table's border styles. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#mapping">CSS Table 3 §10.1</a></span> Each table has two rows of two cells, <code>cellspacing=0</code>; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>frame</h2>
+  <p>A <code>frame</code> gives the table <q>border: 1px solid inset</q>, then <q>border-style: outset</q>, with the
+  sides it leaves out <q>hidden</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table frame=hsides cellspacing=0><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></div>
+    <figcaption><code>frame=hsides</code>: 1px lines above and below the table, none at its sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table frame=vsides cellspacing=0><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table></div>
+    <figcaption><code>frame=vsides</code>: lines at the left and right only.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

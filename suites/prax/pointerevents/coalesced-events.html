@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Coalesced events</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; margin: 10px 20px; touch-action: none; background: var(--pr-plain);
+           border: 1px solid var(--pr-accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 9.1 Coalesced events</div>
+  <h1>Coalesced events</h1>
+  <p class=pr-lede><q>For performance reasons, user agents may choose not to send a pointermove event every time a
+  measurable property (such as coordinates, pressure, tangential pressure, tilt, twist, or contact geometry) of a pointer
+  is updated.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#coalesced-events">Pointer Events §9.1</a></span></p>
+</header>
+<section>
+  <h2>The moves inside a move</h2>
+  <p><q>For trusted pointermove and pointerrawupdate events, the list is a sequence of all PointerEvents that were
+  coalesced into this event.</q> <q>As a result, the coalesced events lists for these events always contain at least
+  one event.</q> <q>The coalesced events list MUST be chronologically sorted by timeStamp, so the first event will have
+  the smallest timeStamp.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#coalesced-events">§9.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <canvas id=canvas width=258 height=180></canvas>
+      <ol class=pr-log data-log="pointermove" data-fields="coalesced" data-on="#canvas" data-lines=2></ol>
+    </div>
+    <figcaption>Press and drag quickly in a curve. A grey dot marks each <code>pointermove</code>; a red ring each of
+    its coalesced events, joined in order by a red line. Between the dots there are often several rings, so the red
+    line follows the hand more closely than the dots do. The log gives how many coalesced events each
+    <code>pointermove</code> holds: always one or more.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws each pointermove as a grey dot, and its coalesced events as red rings joined by a line.
+  const canvas = document.getElementById("canvas"), context = canvas.getContext("2d");
+  let last = null;
+  canvas.addEventListener("pointerdown", event => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    const box = canvas.getBoundingClientRect();
+    last = [event.clientX - box.left - 1, event.clientY - box.top - 1];
+  });
+  // Runs before the log's listener, which listens on the canvas itself.
+  document.addEventListener("pointermove", event => {
+    if (event.target !== canvas)
+      return;
+    const list = event.getCoalescedEvents ? event.getCoalescedEvents() : [];
+    event.coalesced = list.length;
+    if (!event.buttons || !last)
+      return;
+    const box = canvas.getBoundingClientRect();
+    context.strokeStyle = "#c0392b";
+    for (const item of list) {
+      const point = [item.clientX - box.left - 1, item.clientY - box.top - 1];
+      context.beginPath();
+      context.moveTo(...last);
+      context.lineTo(...point);
+      context.stroke();
+      context.beginPath();
+      context.arc(...point, 3.5, 0, 2 * Math.PI);
+      context.stroke();
+      last = point;
+    }
+    context.fillStyle = "#6b7381";
+    context.beginPath();
+    context.arc(event.clientX - box.left - 1, event.clientY - box.top - 1, 2, 0, 2 * Math.PI);
+    context.fill();
+  }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

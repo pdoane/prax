@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>visibility: collapse in a multi-line container</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { height: 60px; width: 150px; }
+  figcaption { max-width: 150px; }
+  .fx { display: flex; flex-wrap: wrap; align-items: flex-start; width: 100px; }
+  .w60 { width: 60px; }
+  .w40 { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.4 Collapsed Items, multi-line</div>
+  <h1>visibility: collapse in a multi-line container</h1>
+  <p class=pr-lede><q>Flex line wrapping is re-done after collapsing, however, so the cross size of a flex container
+  with multiple lines might or might not change.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#visibility-collapse">CSS Flexible Box Layout 2 §4.4</a></span></p>
+</header>
+
+<section>
+  <h2>The items wrap again</h2>
+  <p>Each dashed container is 100px wide and wraps, <code>align-items: flex-start</code>. A is 60px wide; B 60px
+  wide and 40px tall; C 40px wide.</p>
+  <figure>
+    <div class=pr-stage><div class="fx pr-frame"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w60" style="height: 40px">B</div><div class="pr-c pr-fit w40">C</div></div></div>
+    <figcaption>As is: A alone on a line 20px tall, B and C on a second line 40px tall; the container is 60px
+    tall.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="fx pr-frame"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w60" style="height: 40px; visibility: collapse">B</div><div class="pr-c pr-fit w40">C</div></div></div>
+    <figcaption>B <code>collapse</code>: wrapped again with B taking no room, A and C share one line, C from 60px.
+    B's strut, the 40px of the line it was on, holds that line 40px tall. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> lay B out hidden: as is, with a gap.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="fx pr-frame"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w60" style="height: 40px; display: none">B</div><div class="pr-c pr-fit w40">C</div></div></div>
+    <figcaption>B <code>display: none</code>: A and C on one line 20px tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The cross size may stay</h2>
+  <p>Now B is 40px wide, on A's line, and C 60px wide, on a line of its own.</p>
+  <figure>
+    <div class=pr-stage><div class="fx pr-frame"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="height: 40px">B</div><div class="pr-c pr-fit w60">C</div></div></div>
+    <figcaption>As is: A and B on a line 40px tall, C on a second from 40px; 60px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="fx pr-frame"><div class="pr-a pr-fit w60">A</div><div class="pr-b pr-fit w40" style="height: 40px; visibility: collapse">B</div><div class="pr-c pr-fit w60">C</div></div></div>
+    <figcaption>B <code>collapse</code>: C still cannot join A, and B's strut keeps the first line 40px: C from
+    40px, the container 60px tall, unchanged.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

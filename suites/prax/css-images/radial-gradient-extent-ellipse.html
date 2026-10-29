@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radial-gradient(): an ellipse's size by keyword</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .g { width: 160px; height: 80px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.2.1 radial-gradient() Syntax</div>
+  <h1>radial-gradient(): an ellipse's size by keyword</h1>
+  <p class=pr-lede>closest-side: <q>If the shape is an ellipse, it exactly meets the closest side in each
+  dimension.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#radial-gradient-syntax">CSS Images 3 §3.2.1</a></span>
+  Each box is 160 by 80, orange inside the ending shape, light blue beyond it. Each gradient is an ellipse <code>at
+  40px 30px</code>: 40 from the left, 30 from the top, 50 from the bottom, 120 from the right.</p>
+</header>
+
+<section>
+  <h2>Sides</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse closest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>closest-side</code>: radii 40 and 30, meeting the left side and the top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse farthest-side at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>farthest-side</code>: radii 120 and 50, meeting the right side and the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Corners, in the sides' proportions</h2>
+  <p>closest-corner: <q>If the shape is an ellipse, the ending shape is given the same aspect-ratio it would have if
+  closest-side were specified.</q> farthest-corner: <q>If the shape is an ellipse, the ending shape is given the same
+  aspect ratio it would have if farthest-side were specified.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse closest-corner at 40px 30px, #d68a3c 100%, #b9cde6 100%, #b9cde6 200%)"></div></div>
+    <figcaption><code>closest-corner</code>: 4 to 3, through the top left corner: radii 57 and 42, to 97
+    across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=g style="background: radial-gradient(ellipse farthest-corner at 40px 30px, #d68a3c 50%, #b9cde6 50%, #b9cde6 100%)"></div></div>
+    <figcaption><code>farthest-corner</code>: 12 to 5, through the bottom right corner, radii 170 and 71; the edge
+    here is at 50%, radii 85 and 35, to 125 across.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

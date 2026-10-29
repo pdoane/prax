@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focusable areas</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Focusable areas</h1>
+  <p class=pr-lede><q>The term focusable area is used to refer to regions of the interface that can further become the target of
+  such keyboard input.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>Which elements</h2>
+  <p>An element is a focusable area if <q>the element's tabindex value is non-null, or the element is determined by
+  the user agent to be focusable</q>, is <q>not actually disabled</q>, is <q>not inert</q>, and is <q>either being
+  rendered, delegating its rendering to its children, or being used as relevant canvas fallback content.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <a class=pr-target id=link href="#data-model">a link with href</a>
+        <a class=pr-target id=nohref>a link without href</a>
+        <button class=pr-target id=disabled disabled>a disabled button</button>
+        <div class=pr-target id=plain>a div</div>
+        <div class=pr-target id=minus tabindex=-1>a div, tabindex=-1</div>
+        <button class=pr-target id=button>a button</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the link with <code>href</code>, then press Tab: the focus goes to the button. The link
+    without <code>href</code>, the disabled button and the plain div are not focusable areas; the div with
+    <code>tabindex=-1</code> is one, but not in the order Tab follows. Click it: it takes the focus.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

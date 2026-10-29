@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paint containment: clipped to the overflow clip edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 80px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 5px solid #2c5a8f; background: #b9cde6; }
+  .k { contain: paint; }
+  .big { width: 140px; height: 70px; background: rgba(214, 138, 60, 0.85); }
+  .ink { width: 60px; height: 20px; margin: 10px; background: #d68a3c; box-shadow: 30px 15px 0 #6aa36a; outline: 4px solid #8e44ad; }
+  .sc { overflow: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.5 Paint Containment</div>
+  <h1>Paint containment: clipped to the overflow clip edge</h1>
+  <p class=pr-lede><q>The contents of the element including any ink or scrollable overflow must be clipped to the
+  overflow clip edge of the paint containment box, taking corner clipping into account.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-paint">CSS Containment 2 §3.5</a></span>
+  Each blue box is 100 by 40 inside a 5px dark border, at 10, 10, and holds an orange box 140 by 70.</p>
+</header>
+
+<section>
+  <h2>The edge, and its margin</h2>
+  <p>The overflow clip edge is the padding edge, moved out by <code>overflow-clip-margin</code>, <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-clip-margin">CSS Overflow 3 §3.2</a></span>
+  <q>allowing an element with paint containment to still slightly overflow its normal bounds.</q></p>
+  <figure>
+    <div class=pr-stage><div class=box><div class=big></div></div></div>
+    <figcaption>No containment: the orange box runs out of the blue one, over its border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box k"><div class=big></div></div></div>
+    <figcaption><code>contain: paint</code>: the orange is cut at the padding edge, 100 by 40, and the whole border
+    shows.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class="box k" style="overflow-clip-margin: 10px"><div class=big></div></div></div>
+    <figcaption><code>overflow-clip-margin: 10px</code>: cut 10px out from the padding edge, 5px past the
+    border. <span class=pr-flag>Safari</span> cuts at the padding edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Corners, ink, and scrolling</h2>
+  <figure>
+    <div class=pr-stage><div class="box k" style="border-radius: 25px"><div class=big></div></div></div>
+    <figcaption><code>border-radius: 25px</code>: the orange is cut round at the corners, inside the curved
+    border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box k"><div class=ink></div></div></div>
+    <figcaption>Ink overflow is cut too: a child's purple outline and green shadow stop at the padding
+    edge.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="box k sc" id=sc><div class=big style="border-top: 20px solid #6aa36a"></div></div></div>
+    <figcaption><q>nor does it inhibit the creation of any such mechanism through other properties</q>: with
+    <code>overflow: auto</code> the box scrolls; a script has scrolled it 20px, and the green band atop the orange is out of view.</figcaption>
+  </figure>
+</section>
+
+<script>document.getElementById("sc").scrollTop = 20;</script>
+</body>
+</html>

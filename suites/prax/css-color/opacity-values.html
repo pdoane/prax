@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>opacity: numbers and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin: 10px 0 10px 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.3 Transparency: the opacity property, values</div>
+  <h1>opacity: numbers and percentages</h1>
+  <p class=pr-lede><q>Represented as a &lt;number&gt;, the useful range of the value is 0 (representing full
+  transparency) to 1 (representing full opacity).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Numbers and percentages, clamped</h2>
+  <p>A percentage <q>computes to the equivalent &lt;number&gt;</q>; values outside [0,1] <q>are clamped to the range [0,
+  1] in computed values.</q></p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="opacity: 0.4"></div><div class=sw style="opacity: 40%"></div><div class=sw style="opacity: 1.5"></div><div class=sw style="opacity: -1"></div></div>
+    <figcaption><code>0.4</code> and <code>40%</code>: the same pale blue. <code>1.5</code>: solid blue, as
+    <code>1</code>. <code>-1</code>: nothing, as <code>0</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

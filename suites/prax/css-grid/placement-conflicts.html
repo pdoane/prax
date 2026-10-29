@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Placement conflicts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; grid-template-columns: repeat(5, 40px); grid-auto-rows: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 8.3.1 Grid Placement Conflict Handling</div>
+  <h1>Placement conflicts</h1>
+  <p class=pr-lede>Placements that contradict themselves are repaired, not dropped. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#grid-placement-errors">CSS Grid Layout 2 §8.3.1</a></span>
+  Each grid has five 40px columns; rows are 20px.</p>
+</header>
+
+<section>
+  <h2>Two lines</h2>
+  <p><q>If the placement for a grid item contains two lines, and the start line is further end-ward than the end line,
+  swap the two lines. If the start line is equal to the end line, remove the end line.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: 4 / 2">A</div></div></div>
+    <figcaption><code>grid-column: 4 / 2</code>: swapped to 2 / 4, A from 40 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="grid-column: 3 / 3">A</div></div></div>
+    <figcaption><code>3 / 3</code>: the end removed, a span of 1, A from 80 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="grid-column: 4 / 2">A</div></div></div>
+    <figcaption><code>4 / 2</code> in <code>rtl</code>: lines 2 to 4 from the right, A from 80 to 160px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two spans, or a named span alone</h2>
+  <p><q>If the placement contains two spans, remove the one contributed by the end grid-placement property.</q> <q>If
+  the placement contains only a span for a named line, replace it with a span of 1.</q> Each item is auto-placed
+  after a first item, 1, in column 1.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-c>1</div><div class=pr-a style="grid-column: span 2 / span 3">A</div></div></div>
+    <figcaption><code>span 2 / span 3</code>: <code>span 3</code> removed; A spans two columns, from 40 to
+    120px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(5, [C] 40px)"><div class=pr-c>1</div><div class=pr-a style="grid-column: span C / span C">A</div></div></div>
+    <figcaption><code>span C / span C</code>, every line named C: the end span removed, and the span for a name
+    becomes <code>span 1</code>, A from 40 to 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-c>1</div><div class=pr-a style="grid-column: span foo">A</div></div></div>
+    <figcaption><code>span foo</code> alone: <code>span 1</code>, A from 40 to 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

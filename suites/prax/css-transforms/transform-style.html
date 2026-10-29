@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>transform-style</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .x { width: 100px; height: 60px; margin: 10px 0 0 10px; }
+  .k { position: relative; z-index: -1; width: 40px; height: 40px; margin: 10px 0 0 30px; background: #8e44ad; }
+  .d { width: 100px; height: 60px; margin: 10px 0 0 10px; }
+  .abs { position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 7 The transform-style Property</div>
+  <h1>transform-style</h1>
+  <p class=pr-lede><q>A computed value of preserve-3d for transform-style on a transformable element establishes both a
+  stacking context and a containing block for all descendants. If the used value is preserve-3d then it also
+  establishes or extends a 3D rendering context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#transform-style-property">CSS Transforms 2 §7</a></span>
+  What a 3D rendering context does is on <a href="3d-rendering-contexts.html">its own page</a>; this one shows the
+  rest, which follows the computed value, so a grouping property that makes the used value <code>flat</code> does not
+  undo it.</p>
+</header>
+
+<section>
+  <h2>A stacking context</h2>
+  <p>Each stage is a stacking context; a blue box holds a purple child with <code>z-index: -1</code>, which goes behind
+  the box's background unless the box is a stacking context.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x"><div class=k></div></div></div>
+    <figcaption><code>flat</code>: behind, hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="transform-style: preserve-3d"><div class=k></div></div></div>
+    <figcaption><code>preserve-3d</code>: over the box's background.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-stacking"><div class="pr-a pr-fit x" style="transform-style: preserve-3d; overflow: hidden"><div class=k></div></div></div>
+    <figcaption><code>preserve-3d</code> and <code>overflow: hidden</code>, used <code>flat</code>: over it
+    still.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A containing block for all descendants</h2>
+  <p>Each stage is a containing block; a dashed box, not positioned, holds an orange box with <code>position: absolute;
+  right: 0; bottom: 0</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost d"><div class="pr-b pr-fit abs"></div></div></div>
+    <figcaption><code>flat</code>: at the stage's corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost d" style="transform-style: preserve-3d"><div class="pr-b pr-fit abs"></div></div></div>
+    <figcaption><code>preserve-3d</code>: at the dashed box's corner, 90 to 110 across, 50 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost d" style="transform-style: preserve-3d; opacity: 0.99"><div class="pr-b pr-fit abs"></div></div></div>
+    <figcaption><code>preserve-3d</code> and <code>opacity: 0.99</code>, used <code>flat</code>: at the dashed box's
+    corner still.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>&lt;position&gt;: where in its area</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .img { height: 100px; background: linear-gradient(#4f81bd, #4f81bd) no-repeat; background-size: 40px 40px; }
+  figure { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Values and Units 4 · 8.3 2D Positioning</div>
+  <h1>&lt;position&gt;: where in its area</h1>
+  <p class=pr-lede><q>The &lt;position&gt; value specifies the position of a object area (e.g. background image) inside
+  a positioning area (e.g. background positioning area). It is computed and interpreted as specified for
+  'background-position'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-values-4/#position">CSS Values and Units 4 §8.3</a></span>
+  Each stage is 200 by 100 with a blue 40px background square, placed by the <code>background-position</code> under it.</p>
+</header>
+
+<section>
+  <h2>One, two and four components</h2>
+  <figure>
+    <div class="pr-stage img" style="background-position: left"></div>
+    <figcaption><code>left</code>: the other axis is <code>center</code>: at the left, 30px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: 30px"></div>
+    <figcaption><code>30px</code>: 30px in, centered down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: bottom right"></div>
+    <figcaption><code>bottom right</code>, keywords either way round: the lower right corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: 25% 75%"></div>
+    <figcaption><code>25% 75%</code>: 25% of the 160px to spare across, 40px, and 75% of the 60px down, 45px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: right 10px bottom 20px"></div>
+    <figcaption><code>right 10px bottom 20px</code>: 10px from the right edge, 20px from the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage img" style="background-position: bottom 10px left 50%"></div>
+    <figcaption><code>bottom 10px left 50%</code>: centered across, 10px from the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

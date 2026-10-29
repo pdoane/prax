@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Distributed alignment</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 40px 40px 40px; height: 20px; }
+  .st { display: grid; grid-template-columns: auto auto; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.3 Distributed Alignment</div>
+  <h1>Distributed alignment</h1>
+  <p class=pr-lede><q>The distributed alignment values are used by 'justify-content' and 'align-content' to disperse a
+  container’s extra space among its alignment subjects.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#distribution-values">CSS Box Alignment 3 §4.3</a></span>
+  Each stage is a grid of three 40px columns, so 80px to share.</p>
+</header>
+
+<section>
+  <h2>space-between, space-around, space-evenly</h2>
+  <p><q>space-between</q>: <q>the first alignment subject is placed flush with the start edge</q>, <q>the last
+  alignment subject is placed flush with the end edge</q>. <q>space-around</q>: <q>the spacing before the first and
+  after the last alignment subject is half the size of the other spacing.</q> <q>space-evenly</q>: all spacing
+  <q>is the same.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-between"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>space-between</code>: 40px between; A at 0, B at 80, C at 160px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-around"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>space-around</code>: 13⅓px at each end, 26⅔px between; B at 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="justify-content: space-evenly"><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c>C</div></div></div>
+    <figcaption><code>space-evenly</code>: 20px each; A at 20, B at 80, C at 140px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>stretch: equally, not in proportion</h2>
+  <p><q>any auto-sized alignment subjects have their size increased equally (not proportionally), while still
+  respecting the constraints imposed by 'max-height'/'max-width'</q>. Two <code>auto</code> columns hold A, 20px wide
+  at least, and B, 60px.</p>
+  <figure>
+    <div class=pr-stage><div class=st style="justify-content: start"><div class="pr-a pr-fit" style="min-width: 20px">A</div><div class="pr-b pr-fit" style="min-width: 60px">B</div></div></div>
+    <figcaption><code>start</code>: the columns 20 and 60px, B from 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=st style="justify-content: stretch"><div class="pr-a pr-fit" style="min-width: 20px">A</div><div class="pr-b pr-fit" style="min-width: 60px">B</div></div></div>
+    <figcaption><code>stretch</code>: each 60px wider, 80 and 120px; B from 80px, not 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

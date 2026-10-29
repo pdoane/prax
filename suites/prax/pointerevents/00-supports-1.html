@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Pointer Events support</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-api, .pr-decl { margin: 0 6px 6px 0; padding: 2px 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · Support</div>
+  <h1>Pointer Events support</h1>
+  <p class=pr-lede>One declaration for each value, and one interface or member for each feature, that the
+  specification's pages use. This checks that the engine parses and exposes them, not what they do; the other pages
+  show that.</p>
+</header>
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>touch-action: auto</code>
+  <code class=pr-decl>touch-action: none</code>
+  <code class=pr-decl>touch-action: pan-x</code>
+  <code class=pr-decl>touch-action: pan-y</code>
+  <code class=pr-decl>touch-action: pan-left</code>
+  <code class=pr-decl>touch-action: pan-right</code>
+  <code class=pr-decl>touch-action: pan-up</code>
+  <code class=pr-decl>touch-action: pan-down</code>
+  <code class=pr-decl>touch-action: pan-x pan-down</code>
+  <code class=pr-decl>touch-action: pan-y pan-left</code>
+  <code class=pr-decl>touch-action: manipulation</code>
+  <code class=pr-decl>pointer-events: none</code>
+  <code class=pr-decl>user-select: none</code>
+  <code class=pr-decl>transform: rotate(90deg)</code>
+  <code class=pr-decl>top: 0</code>
+  <code class=pr-decl>bottom: 0</code>
+  <code class=pr-decl>left: 50%</code>
+  <code class=pr-decl>content: ""</code>
+  <code class=pr-decl>stroke-linecap: round</code>
+  <code class=pr-decl>align-items: flex-start</code>
+  <code class=pr-decl>flex: 1</code>
+  <p class=pr-note>green is a declaration that this engine parses, grey is one it drops</p>
+</section>
+<section>
+  <h2>Interface support</h2>
+  <code class=pr-api>PointerEvent</code>
+  <code class=pr-api>PointerEvent.prototype.pointerId</code>
+  <code class=pr-api>PointerEvent.prototype.width</code>
+  <code class=pr-api>PointerEvent.prototype.height</code>
+  <code class=pr-api>PointerEvent.prototype.pressure</code>
+  <code class=pr-api>PointerEvent.prototype.tangentialPressure</code>
+  <p class=pr-note>green is an interface or member that this engine exposes, grey is one it does not; the rest are on
+  the next page</p>
+</section>
+<script src=../shared/supports.js></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>display: list-item</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .li { background: #b9cde6; }
+  .float { float: left; width: 30px; height: 40px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.3 Generating Marker Boxes: the list-item keyword</div>
+  <h1>display: list-item</h1>
+  <p class=pr-lede><q>The list-item keyword causes the element to generate a ::marker pseudo-element with the content
+  specified by its list-style properties together with a principal box of the specified type for its own
+  contents.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#list-items">CSS Display 4 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>A marker and a principal box</h2>
+  <p><q>If no inner display type value is specified, the principal box's inner display type defaults to flow. If no
+  outer display type value is specified, the principal box's outer display type defaults to block.</q> Each blue box
+  is a <code>span</code>.</p>
+  <figure>
+    <div class=pr-stage style="padding-left: 30px">before <span id=l1 class=li style="display: list-item; list-style: decimal">item</span> after</div>
+    <figcaption><code>list-item</code>: a block, a line of its own, with the marker "1." outside it to the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>before <span id=l2 class=li style="display: inline list-item; list-style: square inside">item</span> after</div>
+    <figcaption><code>inline list-item</code>: on the line between the words, its square marker inside it. <span class=pr-flag>Safari</span> draws a plain inline box: no
+    marker.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>flow or flow-root inside</h2>
+  <p>Each list item holds a 40px orange float and a word.</p>
+  <figure>
+    <div class=pr-stage style="height: 50px; padding-left: 30px"><div class=li style="display: list-item"><div class=float></div>item</div></div>
+    <figcaption><code>list-item</code>: <code>flow</code> inside, a 20px block the float sticks out of.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding-left: 30px"><div id=l4 class=li style="display: list-item flow-root"><div class=float></div>item</div></div>
+    <figcaption><code>list-item flow-root</code>: a flow root, 40px tall round its float. <span class=pr-flag>Safari</span> draws a block with no marker, the float
+    sticking out of it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

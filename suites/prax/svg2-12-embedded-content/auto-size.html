@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>auto: an image sized from its resource</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .tall { width: auto; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>auto: an image sized from its resource</h1>
+  <p class=pr-lede><q>The 'auto' value for width or height is used to size the corresponding element automatically
+  based on the intrinsic dimensions or intrinsic aspect ratio of the referenced resource.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  It is the initial value. The flag is 40 by 20 in quarters, blue, orange, green, purple.</p>
+</header>
+
+<section>
+  <h2>A natural size, a natural ratio</h2>
+  <p>By <q>the Default Sizing Algorithm defined for replaced elements in CSS layout</q>. Each stage is an SVG 160 by
+  60, each <code>image</code> at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" /></svg></div>
+    <figcaption>The PNG flag with neither attribute: its own 40 by 20, from 20 to 60 across and 10 to 30 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="80" /></svg></div>
+    <figcaption><code>width="80"</code>: the height from the ratio, 40, so 80 by 40, the seams at x 60 and y
+    30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=tall href="../shared/resources/flag-ratio.svg" x="20" y="10" /></svg></div>
+    <figcaption>An SVG flag with only a <code>viewBox</code>, 40 by 20, and <code>width: auto; height:
+    40px</code>: 80 by 40.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No natural size: 300 by 150</h2>
+  <p><q>when the referenced resource does not have an intrinsic size (such as image types with no defined
+  dimensions), it is assumed to have a width of 300px and a height of 150px.</q> Each stage is an SVG 160 by 80 with
+  <code>viewBox="0 0 320 160"</code>, user units of half a pixel; each <code>image</code> at 0, 0 has neither
+  attribute.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" viewBox="0 0 320 160"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%234f81bd'/></svg>" /></svg></div>
+    <figcaption>No size, no <code>viewBox</code>, filled blue: 300 by 150, 150 by 75 on the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" viewBox="0 0 320 160"><image href="../shared/resources/flag-ratio.svg" /></svg></div>
+    <figcaption>Only a ratio, 2 to 1, from a <code>viewBox</code>: the largest 2 to 1 in 300 by 150, so 150 by 75
+    on the stage. <span class=pr-flag>Safari</span> The <code>viewBox</code>'s 40 by 20, 20 by 10 on the
+    stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" viewBox="0 0 320 160"><image href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40'><rect width='100%' height='100%' fill='%234f81bd'/></svg>" /></svg></div>
+    <figcaption><code>width="40"</code> alone, filled blue: 40 by the default 150, 20 by 75 on the stage.
+    <span class=pr-flag>Safari</span> 300 by 150, its width ignored.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

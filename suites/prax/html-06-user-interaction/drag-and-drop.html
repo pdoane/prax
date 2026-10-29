@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drag and drop</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fruit { margin: 0 0 4px; padding: 0 6px; background: #f6d7b4; font-size: 12px; line-height: 20px; cursor: grab }
+  .zone { min-height: 60px; margin: 0 0 10px; padding: 0 0 0 6px; outline: 1px dashed var(--pr-line);
+          background: var(--pr-plain); font-size: 12px; line-height: 20px }
+  .zone.over { background: #dcefd6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.11.1 Introduction</div>
+  <h1>Drag and drop</h1>
+  <p class=pr-lede><q>To make an element draggable, give the element a draggable attribute, and set an event listener for
+  dragstart that stores the data being dragged.</q> <q>To accept a drop, the drop target has to listen to the following
+  events</q>: dragenter, dragover and drop. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#event-drag">HTML §6.11.1</a></span></p>
+</header>
+<section>
+  <h2>A list to drag from, a list to drop on</h2>
+  <p>The page's script is the section's example: the drop zone cancels dragenter and dragover for its own type, sets
+  <code>dropEffect</code> to <code>move</code>, and adds a fruit on drop; dragend removes the source after a move. The
+  zone turns green while it is the current target. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/dnd.html#event-drag">§6.11.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 400px">
+      <div style="padding: 10px 20px 0; display: flex; gap: 20px">
+        <ol id=source style="flex: 1; margin: 0 0 10px; padding: 0; list-style: none">
+          <li class=fruit draggable=true data-value=fruit-apple id=apple>Apples</li>
+          <li class=fruit draggable=true data-value=fruit-orange id=orange>Oranges</li>
+          <li class=fruit draggable=true data-value=fruit-pear id=pear>Pears</li>
+        </ol>
+        <ol class=zone id=zone style="flex: 1; list-style: none"></ol>
+      </div>
+      <ol class="pr-log drag-log" data-log="dragstart dragenter dragleave drop dragend" data-fields="target dataTransfer.dropEffect" data-lines=5></ol>
+    </div>
+    <figcaption>Drag Apples onto the dashed box: dragstart at <code>apple</code>, dragenter at <code>zone</code>,
+    which turns green; release: drop, Apples is added to the box, and dragend with <code>dropEffect=move</code>
+    removes it from the list. Drag Oranges and press Esc before releasing: dragend with <code>dropEffect=none</code>,
+    and Oranges stays.</figcaption>
+  </figure>
+</section>
+<script>
+  // The example of HTML's section: the source stores the fruit; the zone accepts it and adds it; a move removes the
+  // source.
+  const type = "text/x-example";
+  const source = document.getElementById("source"), zone = document.getElementById("zone");
+  source.addEventListener("dragstart", event => {
+      event.dataTransfer.setData(type, event.target.dataset.value);
+      event.dataTransfer.effectAllowed = "move";
+  });
+  source.addEventListener("dragend", event => {
+      if (event.dataTransfer.dropEffect === "move")
+          event.target.remove();
+  });
+  zone.addEventListener("dragenter", event => {
+      if ([...event.dataTransfer.items].some(item => item.kind === "string" && item.type === type)) {
+          event.preventDefault();
+          zone.classList.add("over");
+      }
+  });
+  zone.addEventListener("dragover", event => {
+      event.dataTransfer.dropEffect = "move";
+      event.preventDefault();
+  });
+  zone.addEventListener("dragleave", event => {
+      if (event.target === zone)
+          zone.classList.remove("over");
+  });
+  zone.addEventListener("drop", event => {
+      event.preventDefault();
+      zone.classList.remove("over");
+      const li = document.createElement("li");
+      li.textContent = {"fruit-apple": "Apples", "fruit-orange": "Oranges", "fruit-pear": "Pears"}[event.dataTransfer.getData(type)] || "Unknown Fruit";
+      zone.append(li);
+  });
+</script>
+<script src=support/drag-log.js></script>
+</body>
+</html>

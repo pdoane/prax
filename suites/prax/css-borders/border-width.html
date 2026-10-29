@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-width: none and hidden draw no width</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; background: #f9cc9d; border-color: #2c5a8f; }
+  .img { border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%236aa36a'/></svg>") 10; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.3 Line Thickness: the border-width properties</div>
+  <h1>border-width: none and hidden draw no width</h1>
+  <p class=pr-lede><q>If the 'border-style' corresponding to a given 'border-width' is none or hidden, then the used
+  width is 0.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span>
+  Each orange box is 60 by 20, with <code>border-width: 20px</code>.</p>
+</header>
+
+<section>
+  <h2>No room taken</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-width: 20px; border-style: solid"></div></div>
+    <figcaption><code>solid</code>: a blue border 20px wide, the box 100 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-width: 20px; border-style: none"></div></div>
+    <figcaption><code>none</code>: no border, the box 60 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-width: 20px; border-style: hidden solid"></div></div>
+    <figcaption><code>hidden solid</code>: 20px sides only; the box 100 by 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A border image's width follows</h2>
+  <p>A note at <q>none</q>: <q>Note this means that the initial value of 'border-image-width' will also resolve to
+  zero.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-style">§2.2</a></span> Each box has a green border image.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box img" style="border-width: 20px; border-style: solid"></div></div>
+    <figcaption><code>solid</code>: the green image fills the 20px border.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box img" style="border-width: 20px; border-style: none"></div></div>
+    <figcaption><code>none</code>: no green: the image's width is 1 × 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

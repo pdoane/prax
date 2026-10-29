@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The collapsing border model: top and bottom</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f2e394; outline: 1px dashed #c0392b; font-size: 12px; line-height: 18px; }
+  td { width: 40px; height: 20px; padding: 0; border: 2px solid #2c5a8f; background: #8cb6c0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2 The collapsing border model</div>
+  <h1>The collapsing border model: top and bottom</h1>
+  <p class=pr-lede>Each table is outlined in dashed red at its border box, and its stage has 30px of padding on the left
+  and top. Cells have 2px blue borders unless the caption says otherwise.</p>
+</header>
+
+<section>
+  <h2>Top and bottom: the widest</h2>
+  <p><q>The top border width of the table is equal to half of the maximum collapsed top border. The bottom border width
+  is computed by examining all cells whose bottom borders collapse with the bottom of the table.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-borders">CSS 2 §17.6.2</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 30px 0 10px 30px; width: 170px"><table><tr><td style="border-top-width: 4px"><td style="border-top-width: 16px"><td></table></div>
+    <figcaption>Top borders of 4, 16 and 2px: the table's top border is 8px, half of 16, so the outline is 8px above
+    the grid line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 30px 0 10px 30px; width: 170px"><table><tr><td><td><tr><td style="border-bottom-width: 12px"><td></table></div>
+    <figcaption>A 12px bottom border in the last row: the table's bottom border is 6px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

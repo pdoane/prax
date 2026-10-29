@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paint: none, a color or a paint server</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><linearGradient id="across"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></linearGradient><rect id="plain" width="10" height="10" fill="#8e44ad" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.2 Specifying paint</div>
+  <h1>Paint: none, a color or a paint server</h1>
+  <p class=pr-lede><q>A paint specification describes a way of putting color values on to the canvas and is composed
+  of one or more paint layers.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#SpecifyingPaint">SVG 2 §13.2</a></span>
+  Each stage is an SVG 160 by 60 holding a rectangle 120 by 40 at 20, 10, outlined dark blue, whose
+  <code>fill</code> is the paint shown.</p>
+</header>
+
+<section>
+  <h2>The values</h2>
+  <p><b>none</b>: <q>No paint is applied in this layer.</q> A <b>&lt;color&gt;</b>: <q>A solid color paint.</q> A
+  <b>&lt;url&gt;</b>: <q>A URL reference to a paint server element, which is an element that defines a paint server
+  […], optionally followed by a fall-back value that is used if the paint server reference cannot be
+  resolved.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="none" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>none</code>: only the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#6aa36a" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>#6aa36a</code>: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#across) #6aa36a" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>url(#across) #6aa36a</code>, a linear gradient: blue at x 20 to orange at x 140, and no
+    green under it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A reference that fails</h2>
+  <p><q>the &lt;color&gt; value or the value none is a fallback value to use if the paint server reference in the
+  layer is invalid (due to pointing to an element that does not exist or which is not a valid paint server).</q>
+  <q>If a paint server reference in a &lt;paint&gt; is invalid, and no fall-back value is given, no paint is rendered
+  for that layer.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#nowhere) #6aa36a" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>url(#nowhere) #6aa36a</code>, no such element: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#plain) #6aa36a" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>url(#plain) #6aa36a</code>, a purple <code>rect</code>, not a paint server: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#nowhere)" stroke="#2c5a8f" stroke-width="2" /></svg></div>
+    <figcaption><code>url(#nowhere)</code>, no fallback: only the outline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

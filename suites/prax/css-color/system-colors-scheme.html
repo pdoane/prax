@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System colors and the color scheme</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0 0; font: 15px/20px "PR Arimo"; }
+  .chip { display: inline-block; vertical-align: top; height: 40px; line-height: 40px; padding: 0 8px; margin: 0 0 10px 10px; box-sizing: border-box; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin: 0 0 10px 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 6.2 System Colors, color schemes and accent-color</div>
+  <h1>System colors and the color scheme</h1>
+  <p class=pr-lede><q>To maintain legibility, the &lt;system-color&gt; keywords also respond to the element color
+  scheme.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#css-system-colors">CSS Color 4
+  §6.2</a></span></p>
+</header>
+
+<section>
+  <h2>Light and dark</h2>
+  <p>Each stage is <code>background: Canvas</code> with text in <code>CanvasText</code> and <code>LinkText</code>;
+  the second has <code>color-scheme: dark</code> (<a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-prop">CSS Color Adjustment 1 §2.2</a>).</p>
+  <figure>
+    <div class=pr-stage style="color-scheme: light; background: Canvas"><span class=chip style="color: CanvasText">Text</span><span class=chip style="color: LinkText">Link</span></div>
+    <figcaption><code>color-scheme: light</code>: dark text and a blue link on a light canvas.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="color-scheme: dark; background: Canvas"><span class=chip style="color: CanvasText">Text</span><span class=chip style="color: LinkText">Link</span></div>
+    <figcaption><code>color-scheme: dark</code>: light text and a lighter blue link on a dark canvas.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>AccentColor follows accent-color</h2>
+  <p><q>To maintain consistency with widget accent color styling, AccentColor takes its value from 'accent-color',
+  unless Forced Colors Mode is enabled. AccentColorText takes its value from the contrasting foreground color to
+  AccentColor</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="accent-color: #d68a3c"><span class=chip style="background: AccentColor; color: AccentColorText">Accent</span><span class=sw style="background: #d68a3c"></span></div>
+    <figcaption><code>accent-color: #d68a3c</code>: <code>AccentColor</code> is that orange, beside a box of
+    <code>#d68a3c</code>, with text that reads on it. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each keeps its own bright blue.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="accent-color: #2c5a8f"><span class=chip style="background: AccentColor; color: AccentColorText">Accent</span><span class=sw style="background: #2c5a8f"></span></div>
+    <figcaption><code>accent-color: #2c5a8f</code>: <code>AccentColor</code> is that dark blue. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The same bright blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

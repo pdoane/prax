@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The root element's box</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.8 The Root Element’s Principal Box</div>
+  <h1>The root element's box</h1>
+  <p class=pr-lede><q>The root element’s display type is always blockified, and its principal box always establishes
+  an independent formatting context. This box’s containing block is the initial containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#root">CSS Display 4 §2.8</a></span></p>
+</header>
+
+<section>
+  <h2>Blockified</h2>
+  <p>Each frame holds a document whose root has a dashed border, round a line of text.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 44px" srcdoc="<!doctype html><html id=r style='display: inline; border: 2px dashed #2c5a8f'><body style='margin: 0; font: 13px/20px sans-serif'>the root's text</body></html>"></iframe></div>
+    <figcaption>A root with <code>display: inline</code>: its border spans the frame, round the line, as a
+    block's does.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 44px" srcdoc="<!doctype html><html id=r style='display: inline-flex; border: 2px dashed #2c5a8f'><body style='margin: 0; font: 13px/20px sans-serif'>the root's text</body></html>"></iframe></div>
+    <figcaption><code>display: inline-flex</code>: the border as wide as the frame, as a block-level flex
+    container's is.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>contents, and an independent formatting context</h2>
+  <p><q>Additionally, a 'display' of contents computes to block on the root element.</q> In the second, the body holds only a 40px float, and the root is <code>display: inline</code>; blockified, it still establishes
+  a formatting context.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 44px" srcdoc="<!doctype html><html id=r style='display: contents; border: 2px dashed #2c5a8f'><body style='margin: 0; font: 13px/20px sans-serif'>the root's text</body></html>"></iframe></div>
+    <figcaption>A root with <code>display: contents</code> has a box, as a block does: its dashed border is
+    drawn round the line, across the frame.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view style="height: 60px" srcdoc="<!doctype html><html style='display: inline; border: 2px dashed #2c5a8f'><body style='margin: 0'><div style='float: left; width: 40px; height: 40px; background: #d68a3c'></div></body></html>"></iframe></div>
+    <figcaption>The root's border goes round the float: the root is 40px tall inside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

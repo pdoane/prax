@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.1 Clear</div>
+  <h1>The clear operator</h1>
+  <p class=pr-lede><q>With the clear compositing operator, no regions are enabled.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_clear">Compositing and Blending 2 §9.1.1</a></span>
+  On white, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code> at (10, 10), then the source, orange
+  <code>rgb(100% 60% 0% / 0.6)</code> at (60, 30), each 90 by 60, the source with <code>"clear"</code>.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = 0; Fb = 0
+co = 0
+αo = 0</pre>
+  <figure class=pr-erratum>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op="clear"></canvas></div>
+    <figcaption>Source only: nothing. Both, (60, 30) to (100, 70): nothing. Destination only: nothing. The formula has no term for either shape, so the blue goes where the source does not reach too, as the operators with no destination term take it away there. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> The blue stays left of and above the overlap.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: transparent">source</div><div class=pd-swatch style="background: transparent">both</div><div class=pd-swatch style="background: transparent">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

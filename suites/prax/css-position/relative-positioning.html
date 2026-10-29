@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative positioning: which inset wins, by the containing block's writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .st { width: 160px; height: 80px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+  .r { position: relative; width: 40px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.3 Relative Positioning</div>
+  <h1>Relative positioning: which inset wins, by the containing block's writing mode</h1>
+  <p class=pr-lede><q>For a relatively positioned box, the inset properties move the box inward from the respective
+  edge, without changing its size.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#relpos-insets">CSS Positioned Layout 3 §3.3</a></span>
+  CSS 2's pages show the cases with one inset <code>auto</code> or both.</p>
+</header>
+
+<section>
+  <h2>Over-constrained: the start side wins</h2>
+  <p><q>If neither is auto, the position is over-constrained; (with respect to the writing mode of its containing
+  block) the computed end side value is ignored, and its used value becomes the negation of the start side.</q> Each
+  orange box, 40 by 40, has <code>left: 20px; right: 50px</code>.</p>
+  <figure>
+    <div class="pr-stage st" style="writing-mode: vertical-lr"><div class="pr-b pr-fit r" style="left: 20px; right: 50px"></div></div>
+    <figcaption>In a <code>vertical-lr</code> stage, whose block start is the left: <code>left</code> wins, and the
+    box moves 20px right, from 0 to 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage st" style="writing-mode: vertical-rl"><div class="pr-b pr-fit r" style="left: 20px; right: 50px"></div></div>
+    <figcaption>In a <code>vertical-rl</code> stage, whose block start is the right: <code>right</code> wins, and the
+    box moves 50px left, from 120 to 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage st"><div class="pr-b pr-fit r" style="direction: rtl; left: 20px; right: 50px"></div></div>
+    <figcaption>The box <code>rtl</code> in an <code>ltr</code> stage: the stage's writing mode decides, so
+    <code>left</code> wins, from 0 to 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In the vertical axis</h2>
+  <p>Each box has <code>top: 20px; bottom: 30px</code>.</p>
+  <figure>
+    <div class="pr-stage st"><div class="pr-b pr-fit r" style="top: 20px; bottom: 30px"></div></div>
+    <figcaption>Horizontal: <code>top</code>, the block start, wins.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage st" style="writing-mode: vertical-rl"><div class="pr-b pr-fit r" style="top: 20px; bottom: 30px"></div></div>
+    <figcaption><code>vertical-rl</code>: <code>top</code>, the inline start, wins.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage st" style="writing-mode: sideways-lr"><div class="pr-b pr-fit r" style="top: 20px; bottom: 30px"></div></div>
+    <figcaption><code>sideways-lr</code>, whose inline start is the bottom: <code>bottom</code> wins; the box
+    moves up 30px, from 40 to 10.
+    <span class=pr-flag>Safari</span> <code>top</code> wins: down 20px, to 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

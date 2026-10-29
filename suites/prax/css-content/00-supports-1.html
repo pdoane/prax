@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Generated Content 3 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Generated Content 3 · Support</div>
+  <h1>CSS Generated Content 3 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>content: none</code>
+  <code class=pr-decl>content: url(image.svg)</code>
+  <code class=pr-decl>content: linear-gradient(red, blue)</code>
+  <code class=pr-decl>content: "a" "b" "c"</code>
+  <code class=pr-decl>content: "A " url(image.svg) counter(n)</code>
+  <code class=pr-decl>content: "★ " / "New!"</code>
+  <code class=pr-decl>content: url(image.svg) / "New!"</code>
+  <code class=pr-decl>content: "Chapter " counter(chapter) / "Chapter " counter(chapter)</code>
+  <code class=pr-decl>content: "[" attr(data-ref) "] "</code>
+  <code class=pr-decl>content: " [" contents "]"</code>
+  <code class=pr-decl>content: leader(dotted) "9"</code>
+  <code class=pr-decl>content: leader(solid) "9"</code>
+  <code class=pr-decl>content: leader(space) "9"</code>
+  <code class=pr-decl>content: leader(". ") "9"</code>
+  <code class=pr-decl>content: target-counter("#ch1", sec)</code>
+  <code class=pr-decl>content: target-counter("#ch1", sec, upper-roman)</code>
+  <code class=pr-decl>content: target-counters("#ch1", sec, ".")</code>
+  <code class=pr-decl>content: target-text("#ch1")</code>
+  <code class=pr-decl>content: target-text("#ch1", first-letter)</code>
+  <code class=pr-decl>content: disc "Fed"</code>
+  <code class=pr-decl>content: disclosure-closed</code>
+  <code class=pr-decl>quotes: auto</code>
+  <code class=pr-decl>quotes: bikeshed-this</code>
+  <code class=pr-decl>quotes: "1" "1" "2" "2" "3" "3"</code>
+  <code class=pr-decl>white-space: pre</code>
+  <code class=pr-decl>counter-reset: sec</code>
+  <code class=pr-decl>counter-increment: sec</code>
+  <code class=pr-decl>direction: rtl</code>
+  <code class=pr-decl>list-style-position: inside</code>
+  <code class=pr-decl>list-style-type: none</code>
+  <code class=pr-decl>font-family: "PR Noto Sans Arabic"</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

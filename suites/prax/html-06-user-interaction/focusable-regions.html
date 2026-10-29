@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focusable areas that are not elements</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Focusable areas that are not elements</h1>
+  <p class=pr-lede><q>Focusable areas can be elements, parts of elements, or other regions managed by the user agent.</q>
+  <q>Each focusable area has a DOM anchor, which is a Node object that represents the position of the focusable area in
+  the DOM.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>The shapes of an image map</h2>
+  <p><q>The shapes of area elements in an image map associated with an img element that is being rendered and is not
+  inert.</q> Their DOM anchor is <q>The img element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=before>before</button>
+        <img src=../shared/resources/flag-40x20.png width=160 height=40 usemap=#quarters alt="a flag in quarters" style="display: block; margin: 0 0 10px">
+        <map name=quarters>
+          <area id=left shape=rect coords="0,0,80,40" href="#left-half" alt="the left half">
+          <area id=right shape=rect coords="80,0,160,40" href="#right-half" alt="the right half">
+        </map>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>before</code> and press Tab: the left half of the flag, 80 by 40, takes the focus ring, then the
+    right half. Each is logged as its <code>area</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A scrollable region</h2>
+  <p><q>The scrollable regions of elements that are being rendered and are not inert.</q> <q>The CSS 'overflow'
+  property's 'scroll' value typically creates a scrollable region.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 10px">
+        <button class=pr-target id=start>start</button>
+        <div id=scroller style="height: 40px; overflow: scroll; background: var(--pr-plain); font-size: 12px; line-height: 20px; padding: 0 6px">
+          one<br>two<br>three<br>four<br>five<br>six<br>seven<br>eight
+        </div>
+      </div>
+    </div>
+    <figcaption>The box holds text and nothing focusable. Click <code>start</code> and press Tab: the box takes the
+    focus, and the down arrow key scrolls it. Whether either is reached by Tab is the user agent's choice: Safari's
+    Tab alone reaches neither.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

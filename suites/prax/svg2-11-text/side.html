@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>textPath: side</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs><defs><path id="ring" d="M 110 45 A 30 30 0 0 1 50 45 A 30 30 0 0 1 110 45 Z" /><path id="line" d="M 20 40 H 140" /></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8.2 Attributes</div>
+  <h1>textPath: side</h1>
+  <p class=pr-lede><q>Determines the side of the path the text is placed on (relative to the path direction).
+  Specifying a value of right effectively reverses the path.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextPathAttributes">SVG 2 §11.8.2</a></span>
+  The working group kept it in 2026, as <a href="https://github.com/w3c/svgwg/issues/1068">svgwg#1068</a> records.
+  The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>, 10 a letter, on paths dashed in red.</p>
+</header>
+
+<section>
+  <h2>A line</h2>
+  <p>A line from 20, 40 to 140, 40, 120 long, its start marked.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" side="left">abcdef</textPath></text></svg></div>
+    <figcaption><code>side="left"</code>, the initial value: "abcdef" standing on the line from 20 to 80.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M20 40H140 M20 30V50" class=pr-baseline /><text class=pr-measure><textPath href="#line" side="right">abcdef</textPath></text></svg></div>
+    <figcaption><code>side="right"</code>: the line reversed, "abcdef" upside down, hanging from it, from 140 back
+    to 80. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> As <code>left</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A circle</h2>
+  <p>A closed path, a circle of radius 30 at 80, 45, starting at its right and going clockwise.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><text class=pr-measure><textPath href="#ring" side="left">abcdefghij</textPath></text></svg></div>
+    <figcaption><code>side="left"</code>: from the right, clockwise, outside the circle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><use href="#ring" class=pr-baseline /><text class=pr-measure><textPath href="#ring" side="right">abcdefghij</textPath></text></svg></div>
+    <figcaption><code>side="right"</code>: from the right, counterclockwise, up and over, inside the circle.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> As <code>left</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

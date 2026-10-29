@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky and transient activation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* A lamp: lit green while the state it names holds, grey otherwise. The page's script lights it. */
+  .lamp { display: block; height: 20px; margin: 0 0 10px; padding: 0 6px; background: #c9ced6; color: #1f2430;
+          font-size: 12px; line-height: 20px }
+  .lamp.on { background: #6aa36a; color: white }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.4.1 Data model</div>
+  <h1>Sticky and transient activation</h1>
+  <p class=pr-lede><q>For the purpose of tracking user activation, each Window W has two relevant values</q>, a last activation
+  timestamp and a last history-action activation timestamp, from which its activation states follow.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#user-activation-data-model">HTML §6.4.1</a></span></p>
+</header>
+<section>
+  <h2>Sticky stays, transient expires</h2>
+  <p>Sticky activation is <q>W's historical activation state, indicating whether the user has ever interacted in
+  W.</q> Transient activation is <q>W's current activation state, indicating whether the user has interacted in W
+  recently. This starts with a false value, and remains true for a limited time after every activation
+  notification W gets.</q> <q>The transient activation duration is expected be at most a few seconds</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#user-activation-data-model">§6.4.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <span class=lamp id=sticky>sticky activation</span>
+        <span class=lamp id=transient>transient activation</span>
+        <div class=pr-target tabindex=0>click here</div>
+      </div>
+    </div>
+    <figcaption>At load, both lamps are grey. Click the box: both turn green. A few seconds later, the transient lamp
+    goes grey again, and the sticky one stays green until the page is reloaded. Each click lights the transient
+    lamp anew.</figcaption>
+  </figure>
+</section>
+<script>
+  // Lights each lamp while its state holds, read from navigator.userActivation on every frame.
+  const sticky = document.getElementById("sticky"), transient = document.getElementById("transient");
+  function update() {
+      sticky.classList.toggle("on", navigator.userActivation.hasBeenActive);
+      transient.classList.toggle("on", navigator.userActivation.isActive);
+      requestAnimationFrame(update);
+  }
+  update();
+</script>
+</body>
+</html>

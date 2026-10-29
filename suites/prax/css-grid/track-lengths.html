@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track sizes: lengths and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, lengths and percentages</div>
+  <h1>Track sizes: lengths and percentages</h1>
+  <p class=pr-lede><q>&lt;percentage&gt; values are relative to the inner inline size of the grid container in column
+  grid tracks, and the inner block size of the grid container in row grid tracks.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Lengths and percentages of columns</h2>
+  <p>A <q>non-negative length or percentage</q>; a percentage is of the content box, inside the padding.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 50px 25% calc(20% + 10px)"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div><div class="pr-c pr-fit">C</div></div></div>
+    <figcaption><code>50px 25% calc(20% + 10px)</code>: A 50px, B 50px, C 50px, 150px in all.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="grid-template-columns: 50% 50%; padding: 0 19px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption>With 19px of padding and a 1px border each side, the content box is 160px: <code>50%</code> is
+    80px, A from 20 to 100px, B from 100 to 180px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages of rows</h2>
+  <p>Rows take percentages of the grid container's block size; each grid here is <code>height: 80px</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="height: 80px; grid-template-rows: 25% 50%"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>25% 50%</code>: A 20px tall, B 40px tall from 20px; the last 20px are empty.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 100px"><div class=g style="width: 80px; grid-template-rows: 25% 50%; grid-template-columns: 50% 50%"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption>In <code>vertical-rl</code>, 80px wide: rows of 20 and 40px from the right, columns of 50px down
+    the 100px height: A top right, B under it, both 20px wide.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

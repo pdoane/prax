@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: the list-item counter</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage ol { padding-left: 6px; list-style-position: inside; }
+  .by-two > li { counter-increment: list-item 2; }
+  .no-inc > li { counter-increment: none; }
+  .shown > li::after { content: " (" counter(list-item) ")"; color: #2c5a8f; }
+  .reset { counter-reset: list-item 9; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-type property: the list-item counter</h1>
+  <p class=pr-lede><q>CSS 2.2 does not define how the list numbering is reset and incremented. This is expected to be
+  defined in the CSS List Module</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span> Markers here are
+  <code>inside</code>.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-lists-3/#list-item-counter">CSS Lists and Counters 3 §4.6</a></div>
+  <h2>The list-item counter</h2>
+  <p><q>list items automatically increment a special list-item counter, which is used when generating the default
+  marker string on list items</q>, <q>unless the counter-increment property explicitly specifies a different increment
+  for the list-item counter</q>. <q>In all other respects, the list-item counter behaves like any other counter and
+  can be used and manipulated by authors to adjust list item styling or for other purposes.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-item-counter">CSS Lists and Counters 3 §4.6</a></span> The numbering CSS 2 left undefined is now a counter.</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=by-two><li>one<li>two<li>three</ol></div>
+    <figcaption><code>li { counter-increment: list-item 2 }</code>: 2, 4, 6.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=no-inc><li>one<li>two<li>three</ol></div>
+    <figcaption><code>counter-increment: none</code> does not name <code>list-item</code>, so the items still count:
+    1, 2, 3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol class=shown><li>one<li>two</ol></div>
+    <figcaption><code>:after { content: " (" counter(list-item) ")" }</code>: each item ends with its own number in
+    blue, "one (1)", "two (2)".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol class=reset><li>one<li>two</ol></div>
+    <figcaption><code>ol { counter-reset: list-item 9 }</code>: the items are 10 and 11. <span
+    class=pr-flag>Chrome</span> ignores the reset for the markers: 1 and 2.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

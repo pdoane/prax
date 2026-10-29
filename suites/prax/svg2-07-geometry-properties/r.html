@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>r: the radius</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { r: 30px; }
+  .percent { r: 20%; }
+  /* To and fro between 10 and 30 over 4 seconds; a still shows it a quarter of the way, at 15. */
+  .grow { animation: grow 4s linear -1s infinite alternate both; }
+  @keyframes grow { from { r: 10px; } to { r: 30px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.3 Radius: The ‘r’ property</div>
+  <h1>r: the radius</h1>
+  <p class=pr-lede><q>The ‘r’ property describes the radius of the ‘circle’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#R">SVG 2 §7.3</a></span></p>
+</header>
+
+<section>
+  <h2>A property, from CSS, and animated</h2>
+  <p>A style sheet's <code>r: 30px</code> over <code>r="10"</code>. Its animation type is <q>by computed
+  value</q>. Each stage is an SVG 160 by 70.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="70"><circle class=styled cx="80" cy="35" r="10" fill="#4f81bd" /></svg></div>
+    <figcaption>About 80, 35: radius 30, from x 50 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-motion"><svg width="160" height="70"><circle class=grow cx="80" cy="35" r="0" fill="#4f81bd" /></svg></div>
+    <figcaption>From <code>r: 10px</code> to <code>30px</code> over 4 seconds: a quarter of the way, radius 15,
+    from x 65 to 95. It grows and shrinks.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A percentage, of the normalized diagonal</h2>
+  <p>Percentages <q>refer to the normalized diagonal of the current SVG viewport</q>, which <q>must be calculated with
+  <code>sqrt((width)**2 + (height)**2)/sqrt(2)</code></q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#Units">§8.9</a></span>.
+  Each stage is an SVG 170 by 70, whose normalized diagonal is 130; each circle is about 85, 35 with <code>r:
+  20%</code>. The dashed square is 52 across, the circle's bounds for 26.</p>
+  <figure>
+    <div class=pr-stage><svg width="170" height="70"><circle class=percent cx="85" cy="35" r="0" fill="#4f81bd" /><rect class=pr-ghost x="59" y="9" width="52" height="52" /></svg></div>
+    <figcaption>20% of 130, 26: the circle fills the square, from x 59 to 111. Of the width, it would be 34; of the
+    height, 14.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><svg width="170" height="70"><svg width="170" height="70" viewBox="0 0 340 140"><circle class=percent cx="170" cy="70" r="0" fill="#4f81bd" /></svg><rect class=pr-ghost x="59" y="9" width="52" height="52" /></svg></div>
+    <figcaption>In a nested <code>svg</code> whose <code>viewBox</code> is 340 by 140, user units of half a
+    pixel: 20% of 260, 52 units, so the same square.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

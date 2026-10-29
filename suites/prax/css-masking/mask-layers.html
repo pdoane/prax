@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layering multiple mask images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; mask-repeat: no-repeat; }
+  .halves { mask-image: linear-gradient(to right, black 50%, transparent 50%), linear-gradient(to left, black 50%, transparent 50%), linear-gradient(black 50%, transparent 50%); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 7.10.2 Layering Multiple Mask Images</div>
+  <h1>Layering multiple mask images</h1>
+  <p class=pr-lede><q>The mask of a box can have multiple layers. The number of layers is determined by the number of
+  comma-separated values for the mask-image property. A value of none in a list of values with other
+  &lt;mask-reference&gt;s still creates a layer.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#layering">CSS Masking 1 §7.10.2</a></span>
+  Each box is 140 by 60 and blue.</p>
+</header>
+
+<section>
+  <h2>none is a layer, and a list's extra values are unused</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: none, linear-gradient(black, black); mask-size: 40px 60px; mask-position: right, left"></div></div>
+    <figcaption><code>none, &lt;opaque&gt;</code>, 40 by 60 at <code>right, left</code>: the opaque layer is the second,
+    so it takes <code>left</code>: the blue from x 10 to 50. <span class=pr-flag>Firefox</span>
+    Nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: linear-gradient(black, black), linear-gradient(black, black); mask-size: 20px 60px, 40px 20px, 140px 60px"></div></div>
+    <figcaption>Two layers, three sizes: the third unused, so a bar 20 by 60 and one 40 by 20 at the top
+    left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>mask-composite's list, repeated</h2>
+  <p><q>If a property doesn’t have enough comma-separated values to match the number of layers, the UA must calculate its
+  used value by repeating the list of values until there are enough.</q> Three layers, top first: left half, right
+  half, top half.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box halves" style="mask-composite: subtract, add"></div></div>
+    <figcaption><code>subtract, add</code> repeats to <code>subtract, add, subtract</code>; the bottom one is
+    ignored. The top half, <code>add</code> the right half, then the left half <code>subtract</code> them: the bottom
+    left quarter, 70 by 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box halves" style="mask-composite: intersect"></div></div>
+    <figcaption><code>intersect</code> for each: the top half within the right half within the left half: nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

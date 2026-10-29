@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>backface-visibility: hidden</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 10px; width: 80px; height: 40px; }
+  .pr-stage.short { height: 60px; }
+  .hide { backface-visibility: hidden; }
+  .ctx { position: absolute; inset: 0; }
+  .d { width: 100px; height: 60px; margin: 10px 0 0 10px; }
+  .abs { position: absolute; right: 0; bottom: 0; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 10 The backface-visibility Property</div>
+  <h1>backface-visibility: hidden</h1>
+  <p class=pr-lede><q>If the component of the matrix in row 3, column 3 is negative, then the element should be
+  hidden.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#backface-visibility-property">CSS Transforms 2 §10</a></span>
+  Under perspective it cannot tell (<a href="https://github.com/w3c/csswg-drafts/issues/917">csswg-drafts#917</a>);
+  these figures have none. Each blue box, on the dashed outline, "AB" at its top left, is
+  <code>hidden</code>.</p>
+</header>
+
+<section>
+  <h2>Row 3, column 3</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb short"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotateY(60deg)">AB</div></div>
+    <figcaption><code>rotateY(60deg)</code>, m33 0.5: visible, 40 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb short"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotateY(120deg)">AB</div></div>
+    <figcaption><code>rotateY(120deg)</code>, m33 −0.5: hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb short"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotateY(180deg)">AB</div></div>
+    <figcaption><code>rotateY(180deg)</code>, m33 −1: hidden.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb short"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotate(180deg)">AB</div></div>
+    <figcaption><code>rotate(180deg)</code>, m33 1: visible, upside down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb short"><div class="pr-ghost g"></div><div class="pr-a pr-fit p hide" style="transform: rotateY(180deg) rotateX(180deg)">AB</div></div>
+    <figcaption>Then <code>rotateX(180deg)</code> too, m33 1: the front.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a 3D rendering context, a stacking context and a containing block</h2>
+  <p><q>A computed value of hidden for backface-visibility on a transformable element that participates in a 3D
+  rendering context establishes both a stacking context and a containing block</q>. A dashed <code>hidden</code> box
+  holds an orange box, <code>absolute; right: 0; bottom: 0</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-cb"><div class=ctx style="transform-style: preserve-3d"><div class="pr-ghost d hide"><div class="pr-b pr-fit abs"></div></div></div></div>
+    <figcaption>Its parent <code>preserve-3d</code>: at the dashed box's corner. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> put it at the
+    stage's.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class=ctx><div class="pr-ghost d hide"><div class="pr-b pr-fit abs"></div></div></div></div>
+    <figcaption>Its parent flat, no context: at the stage's corner.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

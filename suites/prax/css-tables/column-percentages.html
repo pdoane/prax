@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Column measures: intrinsic percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; width: 200px; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+  td + td + td { background: #c3d08b; }
+  td[colspan] { background: #e6b54a; }
+  td[colspan] + td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.3 Computing Column Measures, percentages</div>
+  <h1>Column measures: intrinsic percentages</h1>
+  <p class=pr-lede>A column's <dfn>intrinsic percentage width</dfn> is <q>the percentage of the table width the column
+  desires to get, and could end up overriding its max-content width</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-column-measures">CSS Table 3 §3.8.3</a></span>
+  Each table is 200px; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>No more than 100%, counted from the left</h2>
+  <p>It is the smaller of the column's percentage and <q>100% minus the sum of the intrinsic percentage width of all
+  prior columns in the table (further left when direction is "ltr" (right for "rtl"))</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 70%">a</td><td style="width: 50%">b</td></tr></table></div>
+    <figcaption>70% and 50%: the second gets the 30% left, so 140px and 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="direction: rtl"><tr><td style="width: 70%">a</td><td style="width: 50%">b</td></tr></table></div>
+    <figcaption>The same in <code>rtl</code>: blue, first from the right, keeps 70%, 140px at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A spanning cell's percentage, shared</h2>
+  <p>For a cell spanning columns of 0%: <q>Start with the percentage contribution of the cell.</q> <q>Subtract the
+  intrinsic percentage width of the column based on cells of span up to N-1 of all columns that the cell spans.</q>
+  <q>Multiply by the ratio of the column's non-spanning max-content width to the sum of the non-spanning max-content
+  widths of all columns spanned by the cell that have an intrinsic percentage width of the column based on cells of span
+  up to N-1 equal to 0%.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td colspan=2 style="width: 60%">60%</td><td>c</td></tr><tr><td>a</td><td>bbb</td><td>c</td></tr></table></div>
+    <figcaption>A yellow cell of 60% over "a" and "bbb", 10px and 30px: 15% and 45%, 30px and 90px; green takes the
+    other 80px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

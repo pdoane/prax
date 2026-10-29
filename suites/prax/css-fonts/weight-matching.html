@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Matching weight</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: Weights; src: url(../../../third_party/fonts/Tinos.ttf); font-weight: 300; }
+  @font-face { font-family: Weights; src: url(../../../third_party/fonts/Cousine.ttf); font-weight: 500; }
+  @font-face { font-family: Weights; src: url(../../../third_party/fonts/Arimo.ttf); font-weight: 700; }
+  @font-face { font-family: Gap; src: url(../../../third_party/fonts/Tinos.ttf); font-weight: 300; }
+  @font-face { font-family: Gap; src: url(../../../third_party/fonts/Arimo.ttf); font-weight: 600; }
+  .pr-sample { font-size: 20px; line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 4.3</div>
+  <h1>Matching weight</h1>
+  <p class=pr-lede>Between 400 and 500, <q>weights greater than or equal to the target weight are checked in
+  ascending order until 500 is hit</q>, then lighter, then heavier than 500. Below 400, lighter first; above 500,
+  heavier first. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>Faces at 300, 500 and 700</h2>
+  <p>"Weights" has Tinos (serif) at 300, Cousine (monospace) at 500 and Arimo (sans-serif) at 700, each declared,
+  so none is emboldened.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Weights">
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 450">450 Handgloves</div>
+      <div style="font-weight: 350">350 Handgloves</div>
+      <div style="font-weight: 600">600 Handgloves</div>
+      <div style="font-weight: 200">200 Handgloves</div>
+      <div style="font-weight: 900">900 Handgloves</div>
+    </div>
+    <figcaption>400 and 450: up to 500, Cousine. 350: lighter, Tinos. 600: heavier, Arimo. 200: nothing lighter,
+    Tinos. 900: nothing heavier, Arimo.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Faces at 300 and 600</h2>
+  <p>"Gap" has Tinos at 300 and Arimo at 600.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Gap">
+      <div style="font-weight: 400">400 Handgloves</div>
+      <div style="font-weight: 500">500 Handgloves</div>
+    </div>
+    <figcaption>400 and 500: nothing from the target to 500, so lighter: Tinos, though 600 is nearer to
+    500.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

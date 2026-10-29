@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Matching family names</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Mixed Case Face"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Straße"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: "Ångström"; src: url(../../../third_party/fonts/Literata.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.1 Localized name matching</div>
+  <h1>Matching family names</h1>
+  <p class=pr-lede><q>User agents must match these names case insensitively, using the "Default Caseless Matching"
+  algorithm</q>, <q>without normalizing the strings involved and without applying any language-specific
+  tailorings.</q> A font's names in every language it carries match. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#localized-name-matching">CSS Fonts 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Case-insensitive</h2>
+  <p>Each family below is Literata; each stage names it, then <code>monospace</code>.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'MIXED case FACE', monospace">Handgloves</div>
+    <figcaption><code>"MIXED case FACE"</code> matches "Mixed Case Face": Literata.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-sample" style="font-family: 'STRASSE', monospace">Handgloves</div>
+    <figcaption><code>"STRASSE"</code> matches "Straße": full case folding maps ß to ss. Literata. <span class=pr-flag>Safari</span> folds only one-to-one case mappings: monospace.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not normalized</h2>
+  <p>The family is "Ångström" with a precomposed Å, U+00C5.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Ångström', monospace">Handgloves</div>
+    <figcaption>Precomposed, as defined: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'A&#x30A;ngström', monospace">Handgloves</div>
+    <figcaption>A and a combining ring, U+0041 U+030A, which looks the same: <strong>not</strong> a match, so
+    monospace.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

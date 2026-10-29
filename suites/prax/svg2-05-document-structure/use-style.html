@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>use: style scoping and inheritance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #dot { stroke-opacity: 0.5; }
+  .special #dot { stroke: #6aa36a; }
+  .seen { visibility: visible; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <g id="eyes"><rect width="60" height="40" fill="#4f81bd" /><circle class=seen cx="30" cy="20" r="10" fill="#d68a3c" /></g>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.5.3 Style Scoping and Inheritance</div>
+  <h1>use: style scoping and inheritance</h1>
+  <p class=pr-lede><q>This means that elements in the shadow tree inherit styles from its host ‘use’ element, but that
+  style rules defined in the outer document do not match the elements in the shadow tree.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#UseStyleInheritance">SVG 2 §5.5.3</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Which rules match the instance</h2>
+  <p><q>if a CSS rule uses a complex selector to match an element based on its ancestors or siblings, and those
+  ancestors or siblings are not cloned</q>, <q>that rule would no longer match the element instance.</q> The circle, radius 14, is stroked 8 wide by its attribute and at half opacity by <code>#dot</code>;
+  <code>.special #dot</code> strokes it green; its fill is not set.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g class=special><circle id="dot" cx="40" cy="30" r="14" stroke-width="8" /></g><use href="#dot" x="80" stroke="#8e44ad" fill="#d68a3c" /></svg></div>
+    <figcaption>Left, the original: green stroke, black fill. Right, a <code>use</code> of it:
+    the attribute's width and <code>#dot</code>'s opacity, but stroke and fill from the host, purple and
+    orange. <span class=pr-flag>Safari</span> A green stroke: <code>.special #dot</code> matched.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>visibility, which a use does not take itself</h2>
+  <p><q>If any graphics elements in the shadow tree have ‘visibility:visible’ specified, then that element will be
+  visible even if the ‘use’ element specifies ‘visibility:hidden’.</q> A blue rect 60 by 40 with an orange dot whose
+  class sets <code>visibility: visible</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><use href="#eyes" x="50" y="10" visibility="hidden" /><rect class=pr-ghost x="50" y="10" width="60" height="40" /></svg></div>
+    <figcaption>The <code>use</code> <code>visibility="hidden"</code>: the rect hidden, the dot still drawn at 80,
+    30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

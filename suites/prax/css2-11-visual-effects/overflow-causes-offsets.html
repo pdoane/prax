@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overflow: boxes moved outside</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; margin: 10px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1 Overflow and clipping</div>
+  <h1>Overflow: boxes moved outside</h1>
+  <p class=pr-lede>Content can also lie outside a box because it is placed there. Each dashed box is 120px wide, 40px from
+  the stage's left, with <code>overflow: visible</code>, the initial value.</p>
+</header>
+
+<section>
+  <h2>Absolute positioning and negative margins</h2>
+  <p><q>A descendant box is positioned absolutely, partly outside the box.</q> <q>A descendant box has negative
+  margins, causing it to be positioned partly outside the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame box1" style="position: relative; height: 40px"><div class="pr-a pr-fit" style="position: absolute; top: 30px; left: 80px; width: 70px">abs</div></div></div>
+    <figcaption>The dashed box is <code>position: relative</code>; its child is at <code>top: 30px; left: 80px</code>,
+    70px wide: it hangs 30px past the right edge and 10px below the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame box1"><div class=pr-a style="margin: 0 -30px">margin: 0 -30px</div></div></div>
+    <figcaption>A child with <code>margin: 0 -30px</code>: 30px outside the dashed box on each side, from 10 to
+    190.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>text-indent</h2>
+  <p><q>The 'text-indent' property causes an inline box to hang off either the left or right edge of the block
+  box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow-clipping">CSS 2 §11.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame pr-text box1" style="text-indent: -30px">Hanging first line, and then more text.</div></div>
+    <figcaption><code>text-indent: -30px</code>: the first line starts 30px left of the dashed box, at 10.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><div class="pr-frame pr-text box1" style="text-indent: 100px"><span class=pr-a>hangs right</span></div></div>
+    <figcaption><code>text-indent: 100px</code>, and an unbreakable span: it starts 100px into the box, at 140, and
+    runs past the right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

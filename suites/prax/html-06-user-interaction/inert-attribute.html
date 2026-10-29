@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The inert attribute and the flat tree</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.3.2 The inert attribute</div>
+  <h1>The inert attribute and the flat tree</h1>
+  <p class=pr-lede><q>The inert attribute is a boolean attribute that indicates, by its presence, that the element and all its flat
+  tree descendants which don't otherwise escape inertness (such as modal dialogs) are to be made inert by the user
+  agent.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-inert-attribute">HTML §6.3.2</a></span></p>
+</header>
+<section>
+  <h2>Slotted into an inert element</h2>
+  <p>The shadow tree of the host holds <code>&lt;div inert&gt;&lt;slot&gt;&lt;/slot&gt;&lt;/div&gt;</code>, faded.
+  The button <code>slotted</code> is the host's child, not a descendant of the inert <code>div</code>, but it is
+  one in the flat tree. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-inert-attribute">§6.3.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=before>before</button>
+        <div id=host><button class=pr-target id=slotted>slotted</button></div>
+        <button class=pr-target id=after>after</button>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click <code>slotted</code>: no click at it and no focus. Click <code>before</code> and press Tab: the
+    focus goes to <code>after</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Removing the attribute</h2>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <label class=pr-target><input type=checkbox id=toggle checked> inert on the box below</label>
+        <div id=box inert style="opacity: 0.5"><button class=pr-target id=inner>a button in the box</button></div>
+      </div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2 data-on="#box"></ol>
+    </div>
+    <figcaption>Click the button: nothing. Uncheck the checkbox, which removes <code>inert</code> and the fading,
+    and click it: a click at <code>inner</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // The host's shadow tree slots its child into an inert div; the checkbox sets and removes inert on the box.
+  document.getElementById("host").attachShadow({mode: "open"}).innerHTML = '<div inert style="opacity: 0.5"><slot></slot></div>';
+  const box = document.getElementById("box");
+  document.getElementById("toggle").addEventListener("change", event => {
+      box.inert = event.target.checked;
+      box.style.opacity = event.target.checked ? 0.5 : 1;
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

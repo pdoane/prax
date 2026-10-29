@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>white-space: a shorthand of three</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 100px; }
+  figure { margin-right: 8px; }
+  .clip { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 3 White Space and Wrapping: the white-space property</div>
+  <h1>white-space: a shorthand of three</h1>
+  <p class=pr-lede><q>This property is a shorthand for 'white-space-collapse', 'text-wrap-mode', and
+  'white-space-trim'.</q> <q>Unless otherwise specified, any omitted longhand is set to its initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#white-space-property">CSS Text 4 §3</a></span>
+  CSS 2's five keywords are on <a href="../css2-16-text/white-space-values.html">their own pages</a>. Each stage is
+  100px wide, of 10px letters, and its source is <code>a&nbsp;&nbsp;&nbsp;b</code>, a newline, then
+  <code>cc&nbsp;dd&nbsp;ee&nbsp;ff</code>.</p>
+</header>
+
+<section>
+  <h2>Longhand values in the shorthand</h2>
+    <figure class=pr-narrow>
+    <div class="pr-stage pr-measure clip" style="white-space: preserve-breaks nowrap">a   b
+cc dd ee ff</div>
+    <figcaption><code>preserve-breaks nowrap</code>: "a b", one space, a break at the newline, and "cc dd ee ff" on
+    one line, clipped at the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure clip" style="white-space: collapse nowrap">a   b
+cc dd ee ff</div>
+    <figcaption><code>collapse nowrap</code>, the same as <code>nowrap</code>: all on one line, "a b cc dd ee
+    ff".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space: preserve">a   b
+cc dd ee ff</div>
+    <figcaption><code>preserve</code> alone: wrapping is reset to <code>wrap</code>, so as <code>pre-wrap</code>,
+    "cc dd ee" and "ff" on two lines.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space: break-spaces">a   b
+cc dd ee ff</div>
+    <figcaption><code>break-spaces</code>, a value of <code>white-space-collapse</code>: "a   b", then "cc dd
+    ee", whose space after "ee" takes the line's last 10px, then "ff".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Omitted longhands are reset</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="text-wrap-mode: nowrap; white-space: preserve-breaks">a   b
+cc dd ee ff</div>
+    <figcaption><code>text-wrap-mode: nowrap</code>, then <code>white-space: preserve-breaks</code>: the
+    shorthand resets <code>text-wrap-mode</code> to <code>wrap</code>, so "cc dd ee" wraps before "ff".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="white-space: nowrap; text-wrap-mode: wrap">a   b
+cc dd ee ff</div>
+    <figcaption><code>white-space: nowrap</code>, then <code>text-wrap-mode: wrap</code>: the longhand undoes
+    the shorthand's <code>nowrap</code>, and the text wraps, collapsed: "a b cc dd", "ee ff".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

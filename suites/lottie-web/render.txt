@@ -1,0 +1,5 @@
+# How the suite renders (tools/suite/suite_render.h): over white, as lottie-web's page shows an animation, with text set
+# in the system's fonts, which the page's browser has, and Times where a family is missing, as the browser's default.
+background white
+system
+default Times

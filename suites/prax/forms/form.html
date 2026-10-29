@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>A whole form</title>
+<link rel=stylesheet href=support/gallery.css>
+<style>
+fieldset { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>A whole form</h1>
+  <p>Change anything, then submit: the submit event is canceled, and the entry list is shown below. Reset returns every control to its default.</p>
+</header>
+
+<section>
+  <h2>Order</h2>
+<form id=order oninput="total.value = (qty.valueAsNumber * 12).toFixed(2)">
+  <fieldset>
+    <legend>Order</legend>
+    <div class=strip>
+      <label>Quantity <input type=range name=qty id=qty min=1 max=10 value=2></label>
+      <span>Total <output name=total id=total for=qty>24.00</output> EUR</span>
+    </div>
+    <div class=strip>
+      <label class=inline><input type=radio name=ship value=standard checked> Standard</label>
+      <label class=inline><input type=radio name=ship value=express> Express</label>
+      <label class=inline><input type=checkbox name=gift value=yes> Gift wrap</label>
+      <label class=inline><input type=checkbox name=news value=yes checked> Newsletter</label>
+      <input type=color name=ribbon value=#c0477a>
+    </div>
+  </fieldset>
+  <div class=strip>
+    <input type=submit name=action value=Order>
+    <button name=action value=quote>Get a quote</button>
+    <input type=reset>
+  </div>
+</form>
+<p id=entries class=log>Nothing submitted yet.</p>
+</section>
+
+<script>
+const order = document.getElementById('order');
+order.addEventListener('submit', event => {
+  event.preventDefault();
+  document.getElementById('entries').textContent =
+    [...new FormData(order, event.submitter)].map(([name, value]) => name + ' = ' + value).join('\n');
+});
+order.addEventListener('reset', () => { document.getElementById('entries').textContent = 'Reset.'; });
+</script>
+</body>
+</html>

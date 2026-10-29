@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-height and spanners</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; column-fill: auto; gap: 10px; column-rule: 1px dashed #c0392b; }
+  .all { column-span: all; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.2 The Block Size of Columns, spanners</div>
+  <h1>column-height and spanners</h1>
+  <p class=pr-lede><q>If a spanner is introduced that is taller than the set size, the row geometry will be
+  maintained, and the spanner will overflow into the next row, crossing any row-gap.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#ch">CSS Multi-column Layout 2 §4.2</a></span>
+  Each stage has <code>column-height: 40px</code>, <code>gap: 10px</code>, <code>column-fill: auto</code> and red
+  rules: rows of 40px, 10px apart.</p>
+</header>
+
+<section>
+  <h2>A spanner taller than the row</h2>
+  <p>The stage has <code>columns: 2</code>; A, 50px tall, spans the columns. A multicol row <q>contains at least one multicol line or spanning
+  element</q>, so a spanner starts a row of its own.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="columns: 2; column-height: 40px"><div>one</div><div>two</div><div class="pr-a pr-light pr-fit all" style="height: 50px">A</div><div>six</div><div>ten</div></div>
+    <figcaption>"one" and "two" balanced in the first row; A starts the second, at 50px, and runs on to 100px,
+    over the gap after that row; "six" and "ten" in the third row, from 100px, filled in order. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rows: A at 20px, "six" and "ten" under
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

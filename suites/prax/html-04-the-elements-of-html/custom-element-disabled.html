@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Disabled form-associated custom elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px 20px 0; }
+  .act fieldset { margin: 0 0 10px; padding: 6px 10px 0; border: 1px dashed var(--pr-line); }
+  x-toggle:disabled { border-style: dashed; color: #7b8494; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.3 Core concepts</div>
+  <h1>Disabled form-associated custom elements</h1>
+  <p class=pr-lede><q>The disabled attribute is used to make the form-associated custom element non-interactive</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-core-concepts">HTML §4.13.3</a></span>
+  The page's <code>x-toggle</code> is form-associated, with <code>tabindex=0</code>; a click toggles it "off" and "on".
+  <code>:disabled</code> makes it dashed and grey.</p>
+</header>
+<section>
+  <h2>Not focused, and not clicked</h2>
+  <p><q>A form control that is disabled must prevent any click events that are queued on the user interaction
+  task source from being dispatched on the element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#enabling-and-disabling-form-controls:-the-disabled-attribute">§4.10.19.5</a></span>
+  An actually disabled element is not focusable. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#disabled-elements">§4.15</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <x-toggle class=pr-target tabindex=0 id=enabled>off</x-toggle>
+        <x-toggle class=pr-target tabindex=0 id=disabled disabled>off</x-toggle>
+        <fieldset id=set disabled><x-toggle class=pr-target tabindex=0 id=fielded>off</x-toggle></fieldset>
+      </div>
+      <ol class=pr-log data-log="focus click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The second, <code>disabled</code>, and the third, in a disabled fieldset, are dashed and grey. Click
+    each: only the first logs <code>focus</code> and <code>click</code> and turns "on". Tab from it: the focus leaves
+    the stage.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Told when that changes</h2>
+  <p><q>When the disabled state of a form-associated custom element is changed, its formDisabledCallback is called,
+  given the new state as an argument.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-element-reactions">§4.13.6</a></span>
+  Its callback here writes "disabled" or "enabled".</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=flip>disable or enable the fieldset</button>
+        <fieldset id=flipped><x-toggle class=pr-target id=told data-report>off</x-toggle></fieldset>
+      </div>
+    </div>
+    <figcaption>Click the button: the element reads "disabled", dashed and grey. Click again: "enabled", solid.</figcaption>
+  </figure>
+</section>
+<script>
+  customElements.define("x-toggle", class extends HTMLElement {
+    static formAssociated = true;
+    constructor() {
+      super();
+      this.addEventListener("click", () => this.textContent = this.textContent === "on" ? "off" : "on");
+    }
+    formDisabledCallback(disabled) {
+      if ("report" in this.dataset)
+        this.textContent = disabled ? "disabled" : "enabled";
+    }
+  });
+  document.getElementById("flip").onclick = () => document.getElementById("flipped").toggleAttribute("disabled");
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>:valid and :invalid</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .rows { padding: 10px; font-size: 12px; }
+  .rows input { display: block; box-sizing: border-box; width: 100%; margin: 0 0 8px; font-size: 12px; border: 3px solid #b5bcc7; }
+  .rows form, .rows fieldset { margin: 0; padding: 6px; border: 3px solid #b5bcc7; }
+  .rows fieldset { margin: 6px 0 0; }
+  .rows :valid { border-color: #3f9a3f; }
+  .rows :invalid { border-color: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.16.3 Pseudo-classes</div>
+  <h1>:valid and :invalid</h1>
+  <p class=pr-lede><code>:valid</code> matches <q>elements that are candidates for constraint validation and that
+  satisfy their constraints</q>, and <code>:invalid</code> those that do not; a form or a fieldset matches
+  <code>:invalid</code> when one of its controls does, and <code>:valid</code> otherwise. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">HTML §4.16.3</a></span></p>
+</header>
+<section>
+  <h2>Controls</h2>
+  <p>Borders: green <code>:valid</code>, orange <code>:invalid</code>, grey neither. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics-other.html#pseudo-classes">§4.16.3</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <input required placeholder="required">
+        <input type=email value="not an address">
+        <input value="no constraints">
+        <input required readonly placeholder="required, readonly">
+      </div>
+    </div>
+    <figcaption>Orange, orange, green, grey: a readonly field is barred from constraint validation. Type into the first,
+    or make the second <code>a@b</code>: each turns green.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=rows>
+        <form onsubmit="return false">form
+          <input value="valid">
+          <fieldset>fieldset<input required placeholder="required"></fieldset>
+        </form>
+      </div>
+    </div>
+    <figcaption>The empty required field makes it, its fieldset and its form orange. Type into it: all three turn
+    green.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outlines and the focus</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f:focus { outline: thick solid black }
+  .f:active { outline: thick solid red }
+  .f { display: block; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px; box-sizing: border-box;
+       font-size: 12px; text-align: left; background: #f4f5f7; border: 1px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4.1 Outlines and the focus</div>
+  <h1>Outlines and the focus</h1>
+  <p class=pr-lede><q>Graphical user interfaces may use outlines around elements to tell the user which element on the
+  page has the focus.</q> The page's script gives the focus to a control in the first figure when it loads.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><q>For example, to draw a thick black line around an element when it has the focus, and a thick red line when it
+  is active, the following rules can be used:</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#outline-focus">CSS 2 §18.4.1</a></span></p>
+  <pre class=pr-source>:focus  { outline: thick solid black }
+:active { outline: thick solid red }</pre>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=f>one</button><button class=f id=focused>two, focused</button><button class=f>three</button>
+    </div>
+    <figcaption>Three buttons, 30px apart. The second has the focus: a thick black outline round it. Pressing a button
+    makes it active, and its outline red. Tab moves the outline to the next. <span class="pr-flag pr-since">Since CSS 2</span> the example now
+    uses <code>:focus-visible</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px 20px 0">
+      <button class=f>one</button><button class=f>two</button><button class=f>three</button>
+    </div>
+    <figcaption>The same buttons with none focused: every button is in the same place as in the first
+    figure.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In addition to borders, without reflow</h2>
+  <p><q>These outlines are in addition to any borders, and switching outlines on and off should not cause the document
+  to reflow.</q> <q>User agents supporting the interactive media group must keep track of where the focus lies and must
+  also represent the focus.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#outline-focus">CSS 2 §18.4.1</a></span></p>
+  <ul class=pr-points>
+    <li>The focused button keeps its 1px blue border; the outline is drawn outside it.</li>
+    <li>The third button of each figure is at the same height: the outline moved nothing.</li>
+  </ul>
+</section>
+
+<script>
+  document.getElementById("focused").focus();
+</script>
+</body>
+</html>

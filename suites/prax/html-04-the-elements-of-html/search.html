@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The search element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 10px/20px "PR Noto Sans"; }
+  .tint { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.4.15 The search element</div>
+  <h1>The search element</h1>
+  <p class=pr-lede><q>The search element represents a part of a document or application that contains a set of form controls or other content related to performing a search or filtering operation.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/grouping-content.html#the-search-element">HTML §4.4.15</a></span></p>
+</header>
+<section>
+  <h2>A block</h2>
+  <p>The user agent's style sheet makes it a block: <q>address, blockquote, center, dialog, div, figure, figcaption,
+  footer, form, header, hr, legend, listing, main, p, plaintext, pre, search, xmp { display: block; }</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span></p>
+  <figure>
+    <div class="pr-stage t">Before<search class=tint>Search: <input size=8></search>After</div>
+    <figcaption>Three lines: "Before", the tinted search element, holding a field across the stage's width, and "After".</figcaption>
+  </figure>
+</section>
+</body>
+</html>

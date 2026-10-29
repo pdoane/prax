@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>radialGradient: a start circle outside, or on the edge</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <radialGradient id="cone" gradientUnits="userSpaceOnUse" cx="60" cy="30" r="20" fx="120" fy="30" fr="5"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="covered" gradientUnits="userSpaceOnUse" cx="80" cy="30" r="10" fr="20"><stop offset="0" stop-color="#4f81bd" /><stop offset="1" stop-color="#d68a3c" /></radialGradient>
+  <radialGradient id="edge" gradientUnits="userSpaceOnUse" cx="70" cy="30" r="20" fx="90" fy="30" spreadMethod="repeat"><stop offset="0" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="white" /><stop offset="1" stop-color="white" /></radialGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.3.2 Notes on radial gradients</div>
+  <h1>radialGradient: a start circle outside, or on the edge</h1>
+  <p class=pr-lede><q>If the start circle defined by ‘fx’, ‘fy’ and ‘fr’ lies outside the end circle defined by ‘cx’,
+  ‘cy’, and ‘r’, effectively a cone is created, touched by the two circles. Areas outside the cone stay untouched by
+  the gradient (transparent black).</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#RadialGradientNotes">SVG 2 §14.2.3.2</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10; dashed circles mark the start and end
+  circles.</p>
+</header>
+
+<section>
+  <h2>Outside, covering, or on the edge</h2>
+  <p><q>If the start circle fully overlaps with the end circle, no gradient is drawn. The area stays untouched
+  (transparent black).</q> Blue at the start circle, orange at the end.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#cone)" /><circle class=pr-ghost cx="60" cy="30" r="20" /><circle class=pr-ghost cx="120" cy="30" r="5" /></svg></div>
+    <figcaption>A start circle of radius 5 at 120, 30, outside the end circle of radius 20 at 60, 30: a cone
+    between them, narrowing to the right; the guides show above and below it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#covered)" /><circle class=pr-ghost cx="80" cy="30" r="10" /><circle class=pr-ghost cx="80" cy="30" r="20" /></svg></div>
+    <figcaption>A start circle of radius 20 about the end circle's center, radius 10: nothing, the guides
+    bare. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Painted: an orange disc of radius 10 in blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#edge)" /><circle class=pr-ghost cx="70" cy="30" r="20" /></svg></div>
+    <figcaption>Blue then white, <code>repeat</code>, the focus at 90, 30 on the end circle: a figure's caption,
+    not normative, gives <q>the weighted average</q> right of it, light blue. Chrome and Firefox: nothing there;
+    Safari: white, and a blue disc at the focus.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

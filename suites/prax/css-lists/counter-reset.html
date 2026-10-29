@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>counter-reset: reversed counters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .rev4 { counter-reset: reversed(list-item) 4; }
+  .revn { counter-reset: reversed(n) 10; }
+  .revn div { counter-increment: n -2; }
+  .revn div::before { content: counter(n) " "; }
+  .plain { counter-reset: list-item 4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4.1 Creating Counters: the counter-reset property</div>
+  <h1>counter-reset: reversed counters</h1>
+  <p class=pr-lede><q>The 'counter-reset' property instantiates new counters on an element and sets them to the
+  specified integer values.</q> <code>reversed(&lt;counter-name&gt;) &lt;integer&gt;?</code> <q>Instantiates a reversed
+  counter of the given &lt;counter-name&gt; with a starting value of the given &lt;integer&gt;, or no starting value if
+  not given.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#counter-reset">CSS Lists and Counters 3 §4.1</a></span></p>
+</header>
+
+<section>
+  <h2>A reversed list-item counter counts down</h2>
+  <p>A list item increments the <code>list-item</code> counter <q>by -1 on every list item</q> where the counter is
+  reversed. <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#list-item-counter">§4.6</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol class=rev4><li>one<li>two<li>three</ol></div>
+    <figcaption><code>counter-reset: reversed(list-item) 4</code> on the <code>ol</code>: "3.", "2.", "1.". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> "1.", "2.", "3.".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text"><ol class=plain><li>one<li>two<li>three</ol></div>
+    <figcaption>For contrast, <code>counter-reset: list-item 4</code>: "5.", "6.", "7.". <span class=pr-flag>Chrome</span> Ignores the reset for the markers: "1.", "2.", "3.".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only the implicit increment is reversed</h2>
+  <p>An explicit <code>counter-increment</code> is used as written.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text revn"><div>a</div><div>b</div><div>c</div></div>
+    <figcaption><code>counter-reset: reversed(n) 10</code> and <code>counter-increment: n -2</code> on each: "8 a",
+    "6 b", "4 c". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Have no reversed counter of another name: "-2 a", "-4 b", "-6 c".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

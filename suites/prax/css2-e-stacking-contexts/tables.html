@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: tables</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { margin: 10px; border-spacing: 4px; background: #b5bcc7; }
+  td { width: 40px; height: 20px; padding: 0; }
+  .collapse { border-collapse: collapse; background: none; }
+  .collapse td { width: 50px; height: 30px; border: 8px solid white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: tables</h1>
+  <p class=pr-lede>A table is painted layer by layer, the same whether it forms the stacking context (step 2) or is one of
+  its block-level descendants (step 4), as the tables here are.</p>
+</header>
+
+<section>
+  <h2>Six layers of backgrounds</h2>
+  <p><q>table backgrounds (color then image). column group backgrounds (color then image). column backgrounds (color
+  then image). row group backgrounds (color then image). row backgrounds (color then image). cell backgrounds (color
+  then image).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table><colgroup style="background: #8e44ad"><col><col style="background: #d68a3c"><col style="background: #d68a3c"></colgroup><thead><tr><td></td><td></td><td></td></tr></thead><tbody style="background: #4f81bd"><tr><td></td><td></td><td></td></tr><tr style="background: #6aa36a"><td></td><td></td><td style="background: #c0392b"></td></tr></tbody></table></div>
+    <figcaption>Grey table between the cells; a purple group of all three columns under orange columns 2
+    and 3; a blue group of rows 2 and 3 over them; a green row 3 over that; a red last cell on top.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><colgroup style="background: #8e44ad"><col><col><col></colgroup><tbody><tr><td></td><td></td><td></td></tr><tr><td></td><td style="background: #c0392b"></td><td></td></tr><tr><td></td><td></td><td></td></tr></tbody></table></div>
+    <figcaption>Only the column group and one cell have backgrounds: purple in every cell, red in the middle one,
+    and the grey table only between the cells.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Borders after every background</h2>
+  <p><q>all table borders (in tree order for separated borders).</q> In the collapsing border model, a cell's border is
+  shared with its neighbor, half in each cell. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table class=collapse><tr><td style="background: #4f81bd"></td><td style="background: #d68a3c"></td></tr><tr><td style="background: #d68a3c"></td><td style="background: #4f81bd"></td></tr></table></div>
+    <figcaption>Collapsed 8px white borders, whole and 8px wide: painted after both cells'
+    backgrounds.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

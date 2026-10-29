@@ -1,0 +1,75 @@
+00-supports-1.html
+# css-counter-styles-3/#intro 1 Introduction: no page; it introduces the @counter-style rule, which 3 shows
+css-counter-styles-3/#counter-styles 2 Counter Styles
+    generating-representation.html
+css-counter-styles-3/#the-counter-style-rule 3 Defining Custom Counter Styles: the @counter-style rule
+    counter-style-rule.html
+css-counter-styles-3/#counter-style-system 3.1 Counter algorithms: the system descriptor
+    system.html
+css-counter-styles-3/#cyclic-system 3.1.1 Cycling Symbols: the cyclic system
+    cyclic.html
+css-counter-styles-3/#fixed-system 3.1.2 Exhaustible Symbols: the fixed system
+    fixed.html
+css-counter-styles-3/#symbolic-system 3.1.3 Repeating Symbols: the symbolic system
+    symbolic.html
+css-counter-styles-3/#alphabetic-system 3.1.4 Bijective Numerals: the alphabetic system
+    alphabetic.html
+css-counter-styles-3/#numeric-system 3.1.5 Positional Numerals: the numeric system
+    numeric.html
+css-counter-styles-3/#additive-system 3.1.6 Accumulating Numerals: the additive system
+    additive.html
+css-counter-styles-3/#extends-system 3.1.7 Building from Existing Counter Styles: the extends system
+    extends.html
+css-counter-styles-3/#counter-style-negative 3.2 Formatting negative values: the negative descriptor
+    negative.html
+css-counter-styles-3/#counter-style-prefix 3.3 Symbols before the marker: the prefix descriptor
+    prefix.html
+css-counter-styles-3/#counter-style-suffix 3.4 Symbols after the marker: the suffix descriptor
+    suffix.html
+css-counter-styles-3/#counter-style-range 3.5 Limiting the counter scope: the range descriptor
+    range.html
+css-counter-styles-3/#counter-style-pad 3.6 Zero-Padding and Constant-Width Representations: the pad descriptor
+    pad.html
+css-counter-styles-3/#counter-style-fallback 3.7 Defining fallback: the fallback descriptor
+    fallback.html
+css-counter-styles-3/#counter-style-symbols 3.8 Marker characters: the symbols and additive-symbols descriptors
+    symbols-descriptor.html
+# css-counter-styles-3/#counter-style-speak-as 3.9 Speech Synthesis: the speak-as descriptor: no page; it says how a counter is spoken, which nothing draws
+css-counter-styles-3/#symbols-function 4 Defining Anonymous Counter Styles: the symbols() function
+    symbols-function.html
+css-counter-styles-3/#extending-css2 5 Extending list-style-type, counter(), and counters()
+    extending-css2.html
+# css-counter-styles-3/#predefined-counters 6 Simple Predefined Counter Styles: no page; it introduces the normative style sheet, whose styles 6.1 to 6.4 show
+css-counter-styles-3/#simple-numeric 6.1 Numeric: decimal, decimal-leading-zero, arabic-indic, armenian, upper-armenian, lower-armenian, bengali, cambodian, khmer, cjk-decimal, devanagari, georgian, gujarati, gurmukhi, hebrew, kannada, lao, malayalam, mongolian, myanmar, oriya, persian, lower-roman, upper-roman, tamil, telugu, thai, tibetan
+    predefined-numeric.html
+    predefined-additive-scripts.html
+    predefined-numeric-indic.html
+    predefined-numeric-asian.html
+css-counter-styles-3/#simple-alphabetic 6.2 Alphabetic: lower-alpha, lower-latin, upper-alpha, upper-latin, lower-greek, hiragana, hiragana-iroha, katakana, katakana-iroha
+    predefined-alphabetic.html
+css-counter-styles-3/#simple-symbolic 6.3 Symbolic: disc, circle, square, disclosure-open, disclosure-closed
+    predefined-symbolic.html
+css-counter-styles-3/#simple-fixed 6.4 Fixed: cjk-earthly-branch, cjk-heavenly-stem
+    predefined-fixed.html
+# css-counter-styles-3/#complex-predefined-counters 7 Complex Predefined Counter Styles: no page; it introduces 7.1 and 7.2, whose pages show the negative signs it gives them
+css-counter-styles-3/#complex-cjk 7.1 Longhand East Asian Counter Styles
+    cjk-longhand.html
+css-counter-styles-3/#limited-range-required 7.1.1 Limited-range Implementation (required)
+    limited-range.html
+css-counter-styles-3/#limited-japanese 7.1.1.1 Japanese: japanese-informal and japanese-formal
+    japanese.html
+css-counter-styles-3/#limited-korean 7.1.1.2 Korean: korean-hangul-formal, korean-hanja-informal, and korean-hanja-formal
+    korean.html
+css-counter-styles-3/#limited-chinese 7.1.1.3 Chinese: simp-chinese-informal, simp-chinese-formal, trad-chinese-informal, and trad-chinese-formal
+    chinese.html
+css-counter-styles-3/#extended-range-optional 7.1.2 Extended Implementation (optional)
+    extended-range.html
+css-counter-styles-3/#ethiopic-numeric-counter-style 7.2 Ethiopic Numeric Counter Style: ethiopic-numeric
+    ethiopic-numeric.html
+css-counter-styles-3/#additional-predefined 8 Additional “Ready-made” Counter Styles
+    ready-made.html
+# css-counter-styles-3/#apis 9 APIs: no page; object model
+# css-counter-styles-3/#extensions-to-cssrule-interface 9.1 Extensions to the CSSRule interface: no page; object model
+# css-counter-styles-3/#the-csscounterstylerule-interface 9.2 The CSSCounterStyleRule interface: no page; object model
+css-counter-styles-3/#ua-stylesheet 10 Sample style sheet for HTML
+    details-summary.html

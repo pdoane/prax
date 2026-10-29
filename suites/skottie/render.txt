@@ -1,0 +1,12 @@
+# How the suite renders (tools/suite/suite_render.h): over white, as Skottie's page shows an animation, with text set in
+# these fonts alone, which Skottie's page reads and hands Skottie (tools/suite/lottie/skottie.html), because Skottie
+# reads no system fonts. They are static faces, so that both choose a face by its style rather than an instance of a
+# variable font. Every family that an animation names falls back to them.
+background white
+font third_party/resvg-tests/fonts/NotoSans-Regular.ttf
+font third_party/resvg-tests/fonts/NotoSans-Italic.ttf
+font third_party/resvg-tests/fonts/NotoSans-Thin.ttf
+font third_party/resvg-tests/fonts/NotoSans-Light.ttf
+font third_party/resvg-tests/fonts/NotoSans-Bold.ttf
+font third_party/resvg-tests/fonts/NotoSans-Black.ttf
+default Noto Sans

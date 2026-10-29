@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>gradientTransform and the transform property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  #styled { transform: rotate(90deg); }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <linearGradient id="rotated" gradientTransform="rotate(90)"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="skewed" gradientTransform="skewX(45)" gradientUnits="userSpaceOnUse" x1="40" x2="120"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="styled" gradientTransform="skewX(45)"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <linearGradient id="stretched" gradientTransform="rotate(45)"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 14.2.2.1 Attributes</div>
+  <h1>gradientTransform and the transform property</h1>
+  <p class=pr-lede><q>This additional transformation matrix is post-multiplied to (i.e., inserted to the right of) any
+  previously defined transformations, including the implicit transformation necessary to convert from object
+  bounding box units to user coordinate system.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/pservers.html#LinearGradientAttributes">SVG 2 §14.2.2.1</a></span>
+  Each stage is an SVG 160 by 60. Each gradient is blue to its halfway point and orange after.</p>
+</header>
+
+<section>
+  <h2>Inside the box's units</h2>
+  <p>Squares 40 by 40 about 80, 30, and a rect 120 by 40 at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#rotated)" /></svg></div>
+    <figcaption><code>rotate(90)</code> about the box's top left: the vector runs down, blue above y 30, orange
+    below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#stretched)" /></svg></div>
+    <figcaption><code>rotate(45)</code> in a box 3 times as wide as tall, stretched by the box after it turns: blue in
+    the top left, the edge from 105, 10 to 20, 38, far from 45°.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#skewed)" /></svg></div>
+    <figcaption><code>userSpaceOnUse</code> from x 40 to 120, <code>skewX(45)</code>: the edge leans, from x 90 at
+    the top to 130 at the bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A presentation attribute for transform</h2>
+  <p><q>‘gradientTransform’ gets mapped to the transform CSS property</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#PresentationAttributes">§6.6</a></span>,
+  so a style sheet's <code>transform</code> wins over it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="60" y="10" width="40" height="40" fill="url(#styled)" /></svg></div>
+    <figcaption><code>gradientTransform="skewX(45)"</code> and a style sheet's <code>transform: rotate(90deg)</code>:
+    blue above y 30, orange below. <span class=pr-flag>Safari</span> The skew: blue left of an edge from 80, 10 to 100, 30, and all
+    below it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

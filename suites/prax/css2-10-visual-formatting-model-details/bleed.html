@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Leading: backgrounds that bleed</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-chip, .blue { padding: 6px 0; }
+  .blue { background: #dbe6f3; border: 2px solid #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.8.1 Leading and half-leading</div>
+  <h1>Leading: backgrounds that bleed</h1>
+  <p class=pr-lede>Margins, borders and padding of inline boxes are drawn but take no room in the line box. Each stage's
+  text is 13px on 20px lines.</p>
+</header>
+
+<section>
+  <h2>Into adjoining line boxes, in document order</h2>
+  <p><q>Although margins, borders, and padding of non-replaced elements do not enter into the line box calculation,
+  they are still rendered around inline boxes. This means that if the height specified by 'line-height' is less than the
+  content height of contained boxes, backgrounds and colors of padding and borders may "bleed" into adjoining line
+  boxes. User agents should render the boxes in document order. This will cause the borders on subsequent lines to
+  paint over the borders and text of previous lines.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#leading">CSS 2 §10.8.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 8px 0"><span class=pr-chip>an orange span that runs on over three lines of the stage, from one to the next</span></div>
+    <figcaption>One span over three lines, with 6px of padding: each line's padding and border overlaps the next
+    line's, which paints over it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="padding: 8px 0"><span class=pr-chip>first</span><br><span class=blue>second, later</span><br><span class=pr-chip>third, last</span></div>
+    <figcaption>Three spans, one per line: the blue second paints over the bottom of the first, and the third over the
+    blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

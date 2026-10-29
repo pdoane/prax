@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .fl { float: left; width: 60px; height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: line boxes</h1>
+  <p class=pr-lede><q>An inline formatting context is established by a block container box that contains no block-level
+  boxes.</q> <q>The rectangular area that contains the boxes that form a line is called a line box.</q></p>
+</header>
+
+<section>
+  <h2>Horizontally, one after the other</h2>
+  <p><q>In an inline formatting context, boxes are laid out horizontally, one after the other, beginning at the top of
+  a containing block. Horizontal margins, borders, and padding are respected between these boxes.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">one <span class=pr-chip style="margin: 0 10px; padding: 0 10px">two</span> three</div>
+    <figcaption>"two" has a 10px margin and 10px of padding on each side, which keep "one" and "three" away.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A line box's height and width</h2>
+  <p><q>A line box is always tall enough for all of the boxes it contains.</q> <q>The width of a line box is determined
+  by a containing block and the presence of floats.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text">short <span class=pr-chip style="display: inline-block; height: 50px; vertical-align: top">50px</span> line<br>next line</div>
+    <figcaption>A 54px inline-block makes its line that tall, and the next line starts below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class="pr-a pr-fit fl">float</div>Lines beside the float are shorter than those below it, which take the whole width.</div>
+    <figcaption>Beside the 60px float, each line is 140px wide; below it, 200px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

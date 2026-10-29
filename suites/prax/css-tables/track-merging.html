@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track merging</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; height: 20px; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.3.2 Track merging</div>
+  <h1>Track merging</h1>
+  <p class=pr-lede><q>As long as there exists an eligible track in the obtained row/column grid such that there is no
+  table-column/table-row box defining the said track explicitly, and both the said track and the previous one are
+  spanned by the exact same set of cells, those two tracks must be merged into one single track for the purpose of
+  computing the layout of the table.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#dimensioning-the-row-column-grid--step2">CSS Table 3 §3.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>Columns spanned by the same cells become one</h2>
+  <p>Each grey table has <code>border-spacing: 10px</code> and one row: a blue cell with <code>colspan=10</code> and
+  <code>width: 20px</code>, and an orange cell with <code>width: 40px</code>. Kept apart, the blue cell's ten columns
+  would hold nine spacings between them, 90px.</p>
+  <figure>
+    <div class=pr-stage><table><tr><td colspan=10 style="width: 20px"></td><td style="width: 40px"></td></tr></table></div>
+    <figcaption>Auto mode: <q>every track is an eligible track</q>, so the ten columns merge into one: blue is 20px,
+    and the table 90px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table style="table-layout: fixed; width: 200px"><tr><td colspan=10 style="width: 10px"></td><td style="width: 40px"></td></tr></table></div>
+    <figcaption>Fixed mode, 200px, blue <code>width: 10px</code>: <q>only rows are eligible</q>, so eleven columns and
+    twelve spacings; blue's columns are 0px, and it is its nine spacings, 90px; orange takes the other 80px.
+    <span class=pr-flag>Safari</span> merges the columns: blue 34px, orange 136px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

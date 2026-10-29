@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>writing-mode in SVG text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .jp { font: 20px "PR Noto Sans JP"; }
+  .htb { writing-mode: horizontal-tb; }
+  .vrl { writing-mode: vertical-rl; }
+  .vlr { writing-mode: vertical-lr; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.2.3 The ‘writing-mode’ property</div>
+  <h1>writing-mode in SVG text</h1>
+  <p class=pr-lede><q>This property sets the block-flow direction; or in-other-words, the direction in which lines of
+  text are stacked. As a consequence it also determines if the text has a horizontal or vertical orientation.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#WritingModeProperty">SVG 2 §11.10.2.3</a></span>
+  The section is not normative; nothing here is flagged. Each stage is an SVG 160 by 90 holding "縦書きA" in 20px PR
+  Noto Sans JP at <code>x="80" y="20"</code>, dashed in red.</p>
+</header>
+
+<section>
+  <h2>Horizontal and vertical</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path d="M80 0V90 M0 20H160" class=pr-baseline /><text class="jp htb" x="80" y="20">縦書きA</text></svg></div>
+    <figcaption><code>horizontal-tb</code>, the initial value: a row from x 80 on the baseline at y 20. Chrome,
+    Safari and Firefox draw it so.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path d="M80 0V90 M0 20H160" class=pr-baseline /><text class="jp vrl" x="80" y="20">縦書きA</text></svg></div>
+    <figcaption><code>vertical-rl</code>: a column down from y 20, centered on x 80, the A turned on its side.
+    Chrome, Safari and Firefox draw a column so.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="90" fill="#2c5a8f"><path d="M80 0V90 M0 20H160" class=pr-baseline /><text class="jp vlr" x="80" y="20">縦書きA</text></svg></div>
+    <figcaption><code>vertical-lr</code>: the same column; with one line, it stacks no other. Chrome, Safari and
+    Firefox draw it so.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

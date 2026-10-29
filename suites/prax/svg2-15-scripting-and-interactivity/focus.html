@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Focus in SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg :focus { outline: none; stroke: #2c5a8f; stroke-width: 4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.7 Focus</div>
+  <h1>Focus in SVG</h1>
+  <p class=pr-lede><q>SVG uses the same focus model as HTML, modified for SVG as described in this section.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#Focus">SVG 2 §15.7</a></span>
+  Each focusable shape is stroked dark blue while it has the focus. The logs list the <code>focus</code> and
+  <code>click</code> events that reach the stage.</p>
+</header>
+
+<section>
+  <h2>Focusable, in one order with HTML</h2>
+  <p>Focusable are <q>any directly rendered element with a valid integer ‘tabindex’ attribute</q> and <q>all ‘a’ elements
+  that are valid links</q>. <q>For documents that contain a mix of inline HTML and SVG, focus is handled for the document
+  as a whole (with a combined sequential focus order)</q>. An HTML button <code>#html</code>, then an SVG with
+  <code>#rect</code> (<code>tabindex="0"</code>), a link <code>#link</code>, and <code>#plain</code>, with neither.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <button class=pr-target id=html style="margin: 10px 10px 0; width: 280px">html button</button>
+      <svg width="300" height="40"><rect id=rect tabindex="0" x="20" y="5" width="70" height="30" fill="#b9cde6" /><a id=link href="#html"><rect x="115" y="5" width="70" height="30" fill="#b9cde6" /></a><rect id=plain x="210" y="5" width="70" height="30" fill="#b9cde6" /></svg>
+      <ol class=pr-log data-log="focus click" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click the button, then press Tab: <code>focus target=rect</code>, then on to the link; never
+    <code>#plain</code>. With <code>#rect</code> focused, press Enter: <q>an element that is only focusable because of
+    its ‘tabindex’ attribute will fire a click event</q>, <code>click target=rect</code>.</figcaption>
+  </figure>
+</section>
+
+
+<script src=../shared/events.js></script>
+</body>
+</html>

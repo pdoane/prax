@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The content language</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; line-break: normal; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 1.3 Languages and Typesetting</div>
+  <h1>The content language</h1>
+  <p class=pr-lede><q>In CSS, language-specific typographic tailorings are only applied when the content language is
+  known (declared).</q> <q>untagged content ... is considered to have an unknown content language.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#languages">CSS Text 4 §1.3</a></span> Each pair is the
+  same text, tagged and untagged (<code>lang=""</code>).</p>
+</header>
+
+<section>
+  <h2>Hyphenation needs a language</h2>
+  <p><q>The UA must therefore only automatically hyphenate text for which the content language is known and for which
+  it has an appropriate hyphenation resource.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#hyphens-property">§6.3.1</a></span>
+  Each stage is 100px wide, of 10px letters, with <code>hyphens: auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-measure" lang=en style="hyphens: auto">hyphenation</div>
+    <figcaption><code>lang=en</code>: the word is hyphenated, its first part and a hyphen on the first line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-measure" lang="" style="hyphens: auto">hyphenation</div>
+    <figcaption>Untagged: not hyphenated. The word stays whole and runs 10px past the edge.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Breaking rules for Japanese need Japanese</h2>
+  <p>Under <code>line-break: normal</code>, a break before U+301C WAVE DASH is allowed <q>if the writing system is
+  Chinese or Japanese, and are otherwise forbidden</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#line-break-property">§6.2</a></span>
+  Each stage is 100px wide, five 20px characters; the wave dash is the sixth.</p>
+  <figure>
+    <div class="pr-stage pr-narrow ja" lang=ja>あいうえお〜か</div>
+    <figcaption><code>lang=ja</code>: the line breaks before the wave dash, after five characters.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow ja" lang="">あいうえお〜か</div>
+    <figcaption>Untagged: no break before it, so お goes down with it, and the first line holds four.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

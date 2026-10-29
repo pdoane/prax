@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>lighting-color</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+  #styled feDiffuseLighting { lighting-color: #6aa36a; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <filter id="initial" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feDistantLight elevation="90"/></feDiffuseLighting></filter>
+  <filter id="orange" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting lighting-color="#d68a3c"><feDistantLight elevation="90"/></feDiffuseLighting></filter>
+  <filter id="orange-half" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting lighting-color="#d68a3c"><feDistantLight elevation="30"/></feDiffuseLighting></filter>
+  <filter id="styled" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting lighting-color="#d68a3c"><feDistantLight elevation="90"/></feDiffuseLighting></filter>
+  <filter id="current" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB" style="color: #8e44ad"><feDiffuseLighting lighting-color="currentColor"><feDistantLight elevation="90"/></feDiffuseLighting></filter>
+  <filter id="specular" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feSpecularLighting lighting-color="#d68a3c" specularExponent="10"><fePointLight x="80" y="30" z="40"/></feSpecularLighting></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 11.5 The lighting-color property</div>
+  <h1>lighting-color</h1>
+  <p class=pr-lede><q>The lighting-color property defines the color of the light source for filter primitives
+  feDiffuseLighting and feSpecularLighting.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#LightingColorProperty">Filter Effects 1 §11.5</a></span>
+  Each stage is an SVG 160 by 60 filled by one flat, opaque rectangle; its filter lights it in sRGB, by default with
+  a distant light from straight in front, which a flat surface returns in full.</p>
+</header>
+
+<section>
+  <h2>The light's color</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#initial)"/></svg></div>
+    <figcaption>None given: <q>Initial: white</q>, so white.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#orange)"/></svg></div>
+    <figcaption><code>lighting-color="#d68a3c"</code>: the surface that orange exactly.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#orange-half)"/><rect x="70" y="42" width="20" height="14" fill="#6b451e" stroke="white"/></svg></div>
+    <figcaption>From 30° up, half the light: half the orange, <code>#6b451e</code>, as the swatch.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#specular)"/></svg></div>
+    <figcaption>On feSpecularLighting, a point light at (80, 30), 40 up: an orange highlight there, transparent
+    away from it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A property, as well as an attribute</h2>
+  <p><q>The lighting-color property is a presentation attribute for SVG elements.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#styled)"/></svg></div>
+    <figcaption>The attribute says orange; the rule <code>#styled feDiffuseLighting { lighting-color: #6aa36a }</code>
+    wins: green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#current)"/></svg></div>
+    <figcaption><code>currentColor</code>, with <code>color: #8e44ad</code> on the filter: purple.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

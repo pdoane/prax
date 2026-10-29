@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The lighter operator</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=support/porter-duff.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 9.1.13 Lighter</div>
+  <h1>The lighter operator</h1>
+  <p class=pr-lede><q>With the lighter compositing operator, the sum of the source image and destination image is displayed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#porterduffcompositingoperators_plus">Compositing and Blending 2 §9.1.13</a></span>
+  On white, the destination, blue <code>rgb(0% 40% 80% / 0.8)</code> at (10, 10), then the source, orange
+  <code>rgb(100% 60% 0% / 0.6)</code> at (60, 30), each 90 by 60, the source with <code>"lighter"</code>.</p>
+</header>
+
+<section>
+  <h2>In a canvas</h2>
+  <pre class="pr-source pd-formula">Fa = 1; Fb = 1
+co = αs x Cs + αb x Cb;
+αo = αs + αb</pre>
+  <figure>
+    <div class="pr-stage pd-stage"><canvas class=pd data-op="lighter"></canvas></div>
+    <figcaption>Source only: <code>rgb(100% 60% 0% / 0.6)</code>. Both, (60, 30) to (100, 70): <code>rgb(60% 68% 64% / 1)</code>. Destination only: <code>rgb(0% 40% 80% / 0.8)</code>.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pd-swatches"><div class=pd-swatch style="background: rgb(100% 60% 0% / 0.6)">source</div><div class=pd-swatch style="background: rgb(60% 68% 64% / 1)">both</div><div class=pd-swatch style="background: rgb(0% 40% 80% / 0.8)">destination</div></div>
+    <figcaption>The same colors from the formula, each over white.</figcaption>
+  </figure>
+</section>
+
+<script src=support/porter-duff.js></script>
+</body>
+</html>

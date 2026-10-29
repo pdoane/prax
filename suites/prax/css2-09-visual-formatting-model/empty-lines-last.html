@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline formatting contexts: the last line</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.4.2 Inline formatting contexts</div>
+  <h1>Inline formatting contexts: the last line</h1>
+  <p class=pr-lede>A forced break ends a line; what comes after the last one makes a line of its own, or a line that is zero high. Text is 13px on 20px lines; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>After the last forced break</h2>
+  <p><q>Line boxes are created as needed to hold inline-level content within an inline formatting context.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#inline-formatting">CSS 2 §9.4.2</a></span> Content after a
+  final <code>&lt;br&gt;</code> goes on a last line, which is empty or not by the same rules.</p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame>one<br><span style="padding-left: 5px"></span></div><div class=pr-b>B</div></div>
+    <figcaption>"one", a break, and an empty span with <code>padding-left: 5px</code>: a second line, 20px, so the
+    dashed block is 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-frame>one<br><span style="padding-top: 5px"></span></div><div class=pr-b>B</div></div>
+    <figcaption>With <code>padding-top: 5px</code> instead: the last line is zero high, and the block is 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="height: 50px"><div class=pr-frame>one<br><span class="pr-a pr-fit f"></span></div></div>
+    <figcaption>A float after the break goes on that last line: below "one", at 20px, not beside it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>linear-gradient(): toward a corner</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box { width: 140px; height: 40px; margin: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Images 3 · 3.1.1 linear-gradient() syntax</div>
+  <h1>linear-gradient(): toward a corner</h1>
+  <p class=pr-lede><q>If the argument instead specifies a corner of the box such as to top left, the gradient line
+  must be angled such that it points into the same quadrant as the specified corner, and is perpendicular to a line
+  intersecting the two neighboring corners of the gradient box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#linear-gradient-syntax">CSS Images 3 §3.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The 50% line joins the neighboring corners</h2>
+  <p><q>This causes a color-stop at 50% to intersect the two neighboring corners</q>. Each dashed box is 140 by 40,
+  blue to 50% of its gradient line, then orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to top right, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>to top right</code>: the edge from the top left corner to the bottom right one; blue below
+    it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to bottom right, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>to bottom right</code>: the edge from the bottom left corner to the top right one; blue
+    above it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to left top, #4f81bd 50%, #d68a3c 50%)"></div></div>
+    <figcaption><code>to left top</code>: the edge from the top right corner to the
+    bottom left one; blue below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost" style="background: linear-gradient(to top right, #4f81bd 0 20%, #d68a3c 20%)"></div></div>
+    <figcaption><code>to top right</code>, blue to 20%: the edge parallel to the diagonal from the top left
+    corner, not across the line to the corner, cutting a blue triangle 56px along the bottom and 16px up the
+    left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

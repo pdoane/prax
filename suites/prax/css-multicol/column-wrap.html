@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>column-wrap</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-fill: auto; gap: 10px; column-rule: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.4 The overflow direction: the column-wrap property</div>
+  <h1>column-wrap</h1>
+  <p class=pr-lede><q>The column-wrap property controls the behavior of overflow columns.</q> <code>nowrap</code>:
+  <q>Overflow columns are created in the inline direction.</q> <code>wrap</code>: <q>Overflow columns create a new
+  multicol row in the block direction.</q> <code>auto</code>: <q>If column-height is not auto behaves as the value
+  wrap otherwise acts as nowrap.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#cwr">CSS Multi-column Layout 2 §4.4</a></span>
+  Each stage has three columns of 60px, <code>gap: 10px</code> and eight words, one to a line.</p>
+</header>
+
+<section>
+  <h2>With column-height: 40px</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-height: 40px; column-wrap: wrap">one two six ten red big fat sun</div>
+    <figcaption><code>wrap</code>: "fat" and "sun" in a second row, 10px below the first; the stage 90px tall.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> As with <code>nowrap</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="column-height: 40px; column-wrap: nowrap">one two six ten red big fat sun</div>
+    <figcaption><code>nowrap</code>: one row, 40px tall; "fat" and "sun" in a fourth column past the stage's right
+    edge, <q>even if there is room in the multicol container.</q> <span class=pr-flag>Safari</span> Three
+    balanced columns. <span class=pr-flag>Firefox</span> One column.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A height, and no column-height</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="height: 40px; column-wrap: wrap; margin-bottom: 50px">one two six ten red big fat sun</div>
+    <figcaption><code>height: 40px; column-wrap: wrap</code>: the height defines the overflow, so a second row of
+    columns, "fat" and "sun", is made below the stage. <span class=pr-flag>Safari</span> makes the overflow columns
+    in the inline direction, a word each. <span class=pr-flag>Firefox</span> puts "fat" and "sun" in a fourth column
+    past the stage's right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

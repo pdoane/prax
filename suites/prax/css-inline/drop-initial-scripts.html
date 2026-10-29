@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Drop initials in other scripts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { font: 13px/20px "PR Literata"; margin: 0; }
+  .d2::first-letter { initial-letter: 2; color: #2c5a8f; }
+  .d3::first-letter { initial-letter: 3; color: #2c5a8f; }
+  .rule { display: inline-block; width: 200px; height: 0; margin-right: -200px; border-top: 1px dashed #c0392b; vertical-align: text-top; }
+  .deva { font: 15px/24px "PR Noto Sans Devanagari"; }
+  .jp { font: 14px/22px "PR Noto Sans JP"; }
+  .pr-stage.pr-vertical { height: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 7.1.1 Drop Initial, other scripts</div>
+  <h1>Drop initials in other scripts</h1>
+  <p class=pr-lede><q>A dropped initial (or “drop cap”) is a larger-than-usual letter at the start of a paragraph, with a
+  baseline at least one line lower than the first baseline of the paragraph. The size of the drop initial is usually
+  indicated by how many lines it occupies.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#drop-initial">CSS Inline Layout 3 §7.1.1</a></span>
+  Each paragraph's <code>::first-letter</code>, in blue, has the caption's <code>initial-letter</code>.</p>
+</header>
+
+
+<section>
+  <h2>Other scripts</h2>
+  <p><q>In Han-derived scripts, the initial letter extends from the block-start edge of the glyphs on the first line to
+  the block-end edge of the glyphs on the Nth line.</q> <q>In certain Indic scripts, the top alignment point is the
+  hanging baseline, and the bottom alignment point is the text-after-edge.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-vertical"><p class="p d2 jp" lang=ja>頭文字は二行にわたって大きく組まれ、本文はその下に続きます。</p></div>
+    <figcaption>Japanese, vertical: 頭 spans two lines, from the top of the first column's characters to the bottom
+    of the second's. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A plain
+    頭.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><p class="p d2 deva" lang=hi>कमल का फूल पानी में खिलता है और उसकी पंखुड़ियाँ सुंदर होती हैं।</p></div>
+    <figcaption>Devanagari, <code>lang=hi</code>: क two lines tall, aligned by <code>initial-letter-align:
+    hanging</code> from the UA style sheet; the font has no hanging baseline, and a UA may take one from the
+    headstroke. Chrome aligns its top by the cap height. <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> A plain क.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

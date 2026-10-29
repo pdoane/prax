@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border width: the shorthand</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.1 Border width</div>
+  <h1>Border width: the shorthand</h1>
+  <p class=pr-lede><code>border-*-width</code> and <code>border-width</code> take <code>thin | medium | thick | &lt;length&gt;</code>. Every figure's border is solid unless it says otherwise.</p>
+</header>
+
+<section>
+  <h2>The shorthand</h2>
+  <p><q>If there is only one component value, it applies to all sides. If there are two values, the top and bottom
+  borders are set to the first value and the right and left are set to the second. If there are three values, the top
+  is set to the first, the left and right are set to the second, and the bottom is set to the third. If there are four
+  values, they apply to the top, right, bottom, and left, respectively.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-width-properties">CSS 2 §8.5.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 10px"></div></div>
+    <figcaption><code>border-width: 10px</code></figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 2px 20px"></div></div>
+    <figcaption><code>border-width: 2px 20px</code>: 2 top and bottom, 20 right and left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 2px 20px 10px"></div></div>
+    <figcaption><code>border-width: 2px 20px 10px</code>: 2 top, 20 right and left, 10 bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: 2px 10px 20px 30px"></div></div>
+    <figcaption><code>border-width: 2px 10px 20px 30px</code>: top, right, bottom, left.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-plain style="border-style: solid; border-width: thin thick"></div></div>
+    <figcaption><code>border-width: thin thick</code>: keywords take the same places.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

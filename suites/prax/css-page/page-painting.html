@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page backgrounds and painting order</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 3.1 Page Backgrounds and Painting Order</div>
+  <h1>Page backgrounds and painting order</h1>
+  <p class=pr-lede><q>In the page model, the page background behaves similar to the root background: its background painting area is the bleed area, which covers the entire page box, including its margins (regardless of 'background-clip').</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#painting">CSS Paged Media 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>The page background</h2>
+  <p><q>Page backgrounds are anchored within the page box's padding area by default</q> <q>However if 'background-attachment' is 'fixed' then the image is positioned relative to the page box including its margins</q> The image is a 40 by 20 blue rectangle.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; padding: 10px; background: #f9cc9d url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%234f81bd'/></svg>&quot;) no-repeat; background-clip: content-box }</style><div>text 1</div><div>text 2</div>"></iframe>
+    <figcaption>Orange over the whole page despite <code>background-clip: content-box</code>; the image at the padding area's corner, 20px in. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page background or padding.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; background: #f9cc9d url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='%234f81bd'/></svg>&quot;) no-repeat fixed }</style><div>text 1</div><div>text 2</div>"></iframe>
+    <figcaption>With <code>background-attachment: fixed</code>, the image is at the page's own top left corner, in the margin. <span class=pr-flag>Chrome</span> Prints no page. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page background.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The canvas, then the content, then the page-margin boxes</h2>
+  <p><q>The document canvas background is drawn as the page box's background: by default its background painting area covers the page box's border box</q>. Page-margin boxes paint in order from <code>@top-left-corner</code> clockwise, and <q>The 'z-index' property applies to page-margin boxes.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; background: #f9cc9d; border: 4px solid #e6b54a } html { background: #8cb6c0 }</style><div>text 1</div><div>text 2</div>"></iframe>
+    <figcaption>The blue canvas covers the border box, under the yellow border; orange in the margins. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page border or page background.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 0; @top-left { content: 'top-left'; width: 140px; background: #4f81bd } @top-right { content: 'top-right'; width: 140px; background: #d68a3c } @bottom-left { content: 'bottom-left'; width: 140px; background: #4f81bd } @bottom-right { content: 'bottom-right'; width: 140px; background: #d68a3c; z-index: 1 } }</style><div>text 1</div><div>text 2</div>"></iframe>
+    <figcaption>The 140px boxes overlap. Top-right paints after top-left, over it; bottom-left would paint after bottom-right, but <code>z-index: 1</code> puts bottom-right over it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

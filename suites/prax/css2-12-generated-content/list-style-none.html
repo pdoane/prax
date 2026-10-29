@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style shorthand: none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage ul { list-style-type: circle; }
+  ul.n1 { list-style: none }
+  ul.n2 { list-style: none square }
+  ul.n3 { list-style: none url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><rect width='10' height='10' fill='%23d68a3c'/></svg>") }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style shorthand: none</h1>
+  <p class=pr-lede>Every list first has <code>list-style-type: circle</code>, then the <code>list-style</code> declaration
+  shown.</p>
+</header>
+
+<section>
+  <h2>none sets what is not otherwise specified</h2>
+  <p><q>A value of 'none' within the 'list-style' property sets whichever of 'list-style-type' and 'list-style-image'
+  are not otherwise specified to 'none'.</q> <q>For example, a value of 'none' for the 'list-style' property sets both
+  'list-style-type' and 'list-style-image' to 'none'</q>. <q>The result is that no list-item marker is displayed.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=n1><li>none</ul></div>
+    <figcaption><code>none</code>: no marker, neither the circle nor an image.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=n2><li>none square</ul></div>
+    <figcaption><code>none square</code>: <code>none</code> is the image, and the marker is a square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ul class=n3><li>none url(...)</ul></div>
+    <figcaption><code>none url(...)</code>: <code>none</code> is the type, and the marker is the orange
+    image.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

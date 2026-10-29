@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The defs element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .shown { display: inline !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 5.3.2 The ‘defs’ element</div>
+  <h1>The defs element</h1>
+  <p class=pr-lede><q>Elements that are descendants of a ‘defs’ are not rendered directly; the display value for the
+  ‘defs’ element must always be set to none by the user agent style sheet, and this declaration must have importance
+  over any other CSS rule or presentation attribute.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/struct.html#DefsElement">SVG 2 §5.3.2</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Not rendered, and referenced</h2>
+  <p><q>the descendants of a ‘defs’ are always present in the source tree and thus can always be referenced by other
+  elements</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><defs><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></defs></svg></div>
+    <figcaption>A rect in a <code>defs</code>: nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><defs class=shown display="inline"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" /></defs></svg></div>
+    <figcaption>The <code>defs</code> with <code>display="inline"</code> and <code>display: inline
+    !important</code>: still nothing.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><defs><rect id="kept" width="120" height="40" fill="#4f81bd" /></defs><use href="#kept" x="20" y="10" /></svg></div>
+    <figcaption>A <code>use</code> of the rect in the <code>defs</code>, at 20, 10: the rect.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

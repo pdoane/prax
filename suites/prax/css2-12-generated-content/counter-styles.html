@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counter styles</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { font-weight: 600; color: #2c5a8f; }
+  .r { counter-reset: chno 3 section 4 bq 2 notecntr 1 p 5 v 4; }
+  .h1x:before        { content: counter(chno, upper-latin) ". " }
+  .h2x:before        { content: counter(section, upper-roman) " - " }
+  .bqx:after         { content: " [" counter(bq, lower-greek) "]" }
+  .notex:before      { content: counter(notecntr, disc) " " }
+  .px:before         { content: counter(p, none) }
+  .styles div { display: inline-block; width: 150px; }
+  .styles div::before { font-weight: 600; color: #2c5a8f; }
+  .s-decimal::before { content: counter(v, decimal) " "; }
+  .s-dlz::before { content: counter(v, decimal-leading-zero) " "; }
+  .s-lr::before { content: counter(v, lower-roman) " "; }
+  .s-ur::before { content: counter(v, upper-roman) " "; }
+  .s-lg::before { content: counter(v, lower-greek) " "; }
+  .s-ll::before { content: counter(v, lower-latin) " "; }
+  .s-ul::before { content: counter(v, upper-latin) " "; }
+  .s-la::before { content: counter(v, lower-alpha) " "; }
+  .s-ua::before { content: counter(v, upper-alpha) " "; }
+  .s-ar::before { content: counter(v, armenian) " "; }
+  .s-ge::before { content: counter(v, georgian) " "; }
+  .s-disc::before { content: counter(v, disc) " "; }
+  .s-circle::before { content: counter(v, circle) " "; }
+  .s-square::before { content: counter(v, square) " "; }
+  .s-none::before { content: "[" counter(v, none) "] "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.4.2 Counter styles</div>
+  <h1>Counter styles</h1>
+  <p class=pr-lede><q>By default, counters are formatted with decimal numbers, but all the styles available for the
+  'list-style-type' property are also available for counters.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counter-styles">CSS 2 §12.4.2</a></span> Generated
+  text in blue.</p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p>The notation is <code>counter(name, &lt;'list-style-type'&gt;)</code>. <q>All the styles are allowed, including
+  'disc', 'circle', 'square', and 'none'.</q> Here <code>chno</code> is 3, <code>section</code> 4, <code>bq</code> 2,
+  <code>p</code> 5. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counter-styles">CSS 2 §12.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text r"><div class=h1x>H1</div><div class=h2x>H2</div><div class=bqx>BLOCKQUOTE</div><div class=notex>DIV.note</div><div class=px>P</div></div>
+    <figcaption>"C. H1"; "IV - H2"; "BLOCKQUOTE [β]"; a bullet, then "DIV.note"; and "P" alone: the
+    <code>none</code> style generates nothing.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Every style, at 4</h2>
+  <p>A counter at 4 in each <code>list-style-type</code> style. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#counter-styles">CSS 2 §12.4.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text r styles"><div class=s-decimal>decimal</div><div class=s-dlz>decimal-leading-zero</div><div class=s-lr>lower-roman</div><div class=s-ur>upper-roman</div><div class=s-lg>lower-greek</div><div class=s-ll>lower-latin</div><div class=s-la>lower-alpha</div><div class=s-ul>upper-latin</div><div class=s-ua>upper-alpha</div><div class=s-ar>armenian</div><div class=s-ge>georgian</div><div class=s-disc>disc</div><div class=s-circle>circle</div><div class=s-square>square</div><div class=s-none>none</div></div>
+    <figcaption>4, 04, iv, IV, δ, d, d, D, D, Դ, დ; a filled disc, a hollow circle and a square; and
+    <code>none</code> empty between its brackets.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

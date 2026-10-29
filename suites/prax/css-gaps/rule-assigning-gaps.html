@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which gaps take a value</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .collapse { display: grid; grid-template-columns: 30px repeat(auto-fit, 30px) 30px 30px; gap: 10px; column-rule: 6px solid; column-rule-color: red, blue, green; }
+  .frag { column-count: 2; column-fill: auto; height: 50px; column-gap: 20px; }
+  .g { display: grid; grid-auto-rows: 20px; row-gap: 10px; row-rule: 6px solid; row-rule-color: red, blue, green; }
+  .lanes { display: grid-lanes; grid-template-columns: repeat(3, 1fr); gap: 10px; row-rule: 6px solid; row-rule-color: red, blue, green; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · 4.6 Assigning gap decoration values to gaps, more</div>
+  <h1>Which gaps take a value</h1>
+  <p class=pr-lede><q>Gap decorations are assigned after gutter collapsing has been applied. A given set of collapsed
+  gutters consume exactly one gap decoration</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-gaps-1/#assigning">CSS Gaps 1 §4.6</a></span></p>
+</header>
+
+<section>
+  <h2>Collapsed gutters take one value; a broken gap takes one too</h2>
+  <p>The rules are 6px wide, colored <code>red, blue, green</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=collapse><div class=pr-a style="grid-column: 1">A</div><div class=pr-b style="grid-column: -3">B</div><div class=pr-c style="grid-column: -2">C</div></div></div>
+    <figcaption><code>30px repeat(auto-fit, 30px) 30px 30px</code>: the empty tracks collapse, and their three
+    gutters are one, red, between A and B; then blue. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=frag><div class=g><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-c>3</div><div class=pr-d>4</div></div></div></div>
+    <figcaption>A grid in a multicol container 50px tall: between 1 and 2, red; the gap at the break takes
+    blue and draws nothing; between 3 and 4, green. <span class=pr-flag>Safari</span> No rules, and the gap kept.
+    <span class=pr-flag>Firefox</span> No rules.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Each lane of grid lanes starts over</h2>
+  <p><q>In the stacking axis of a grid lanes container, values are assigned independently in each grid track,
+  restarting the value list and expanding 'repeat()' for that track.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=lanes><div class=pr-a style="height: 70px">A</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div><div class=pr-a>E</div><div class=pr-b>F</div><div class=pr-c>G</div></div></div>
+    <figcaption>D and F under B, E and G under C: in each of those lanes, red, then blue. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No rules; Chrome and Firefox, no grid lanes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

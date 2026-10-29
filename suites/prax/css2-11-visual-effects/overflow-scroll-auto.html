@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: scroll and auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .box1 { width: 120px; height: 40px; margin: 10px 40px; }
+  .wide-child { width: 150px; }
+  .half { width: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: scroll and auto</h1>
+  <p class=pr-lede><code>overflow</code> takes <code>visible | hidden | scroll | auto</code>. Each dashed box is 120 by 40.
+  Where it overflows, it holds a 150px wide A and two 60px wide boxes; where it does not, one 60px box.</p>
+</header>
+
+<section>
+  <h2>scroll</h2>
+  <p><q>The content is clipped and that if the user agent uses a scrolling mechanism that is visible on the screen
+  (such as a scroll bar or a panner), that mechanism should be displayed for a box whether or not any of its content is
+  clipped.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame box1" style="overflow: scroll"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption>Clipped as with <code>hidden</code>: A is cut at the right edge and C is not seen; the box scrolls, in
+    both directions, to them.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame box1" style="overflow: scroll"><div class="pr-b pr-fit half">B</div></div></div>
+    <figcaption>Nothing overflows, and the scroll bars are displayed all the same. <span class="pr-flag
+    pr-since">Since CSS 2</span> Overlay scroll bars may show only while scrolling.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>auto</h2>
+  <p><q>The behavior of the 'auto' value is user agent-dependent, but should cause a scrolling mechanism to be provided
+  for overflowing boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#overflow①">CSS 2 §11.1.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame box1" style="overflow: auto"><div class="pr-a pr-fit wide-child">A</div><div class="pr-b pr-fit half">B</div><div class="pr-c pr-fit half">C</div></div></div>
+    <figcaption>Clipped, and the box scrolls to A's end and to C.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame box1" style="overflow: auto"><div class="pr-b pr-fit half">B</div></div></div>
+    <figcaption>Nothing overflows: no scroll bar.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

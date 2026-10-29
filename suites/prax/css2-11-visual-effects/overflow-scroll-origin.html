@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property: where scrolling starts and ends</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .long { width: 300px; height: 20px; background: linear-gradient(to right, #4f81bd, #d68a3c); color: white;
+          font-size: 12px; font-weight: 600; line-height: 20px; direction: ltr; }
+  .long span { padding: 0 6px; }
+  .long span + span { float: right; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 11.1.1 Overflow: the 'overflow' property</div>
+  <h1>The overflow property: where scrolling starts and ends</h1>
+  <p class=pr-lede>Each dashed box is 120 by 40 with <code>overflow: auto</code>, and holds a bar 300px wide, blue
+  at its left end and orange at its right.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></div>
+  <h2>From the start corner</h2>
+  <p><q>The scroll origin is the anchor coordinate of the scrollable overflow rectangle, from which the scrollable
+  overflow rectangle expands. Unless otherwise specified, it is the block-start inline-start corner of the scrollable
+  overflow rectangle.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-frame sc" dir=rtl><div class=long><span>left end</span><span>right end</span></div></div></div>
+    <figcaption><code>dir=rtl</code>: the bar starts at the right, and the box shows its right end, from where it
+    scrolls.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=r1 class="pr-frame sc" dir=rtl><div class=long><span>left end</span><span>right end</span></div></div></div>
+    <figcaption>The same, scrolled by script as far as it goes, to the left end, which it now
+    shows.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></div>
+  <h2>The padding at the end</h2>
+  <p>The scrollable overflow area includes <q>Additional padding added to the scrollable overflow rectangle</q>,
+  which <q>represents ... the box’s own padding so that when its content is scrolled to its end, there is padding
+  between the edge of its in-flow (or floated) content and the border edge of the box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=p1 class="pr-frame sc" style="padding: 0 20px; width: 80px"><div class=long><span>left end</span><span>right end</span></div></div></div>
+    <figcaption>With 20px of padding at each side, scrolled by script to the right end: 20px of padding shows after
+    the bar.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div id=p2 class="pr-frame sc" dir=rtl style="padding: 0 20px; width: 80px"><div class=long><span>left end</span><span>right end</span></div></div></div>
+    <figcaption>The same in <code>dir=rtl</code>, scrolled to the left end: the padding shows before the
+    bar.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const id of ["r1", "p2"]) document.getElementById(id).scrollLeft = -10000;
+  document.getElementById("p1").scrollLeft = 10000;
+</script>
+</body>
+</html>

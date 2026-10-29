@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>System font names</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1.3 Syntax of &lt;system-font-family-name&gt;</div>
+  <h1>System font names</h1>
+  <p class=pr-lede>The system fonts are <code>caption</code>, <code>icon</code>, <code>menu</code>,
+  <code>message-box</code>, <code>small-caption</code> and <code>status-bar</code>. A system font <q>may not be used
+  with the 'font-family' property, but can be used with the 'font' shorthand.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-family-prop">CSS Fonts 4
+  §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>In the font shorthand: the platform's font</h2>
+  <p>Each sets every longhand of 'font' to the platform's font for that use.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: caption">Caption Aa</div>
+    <figcaption><code>font: caption</code>: the font of captioned controls, such as buttons.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: menu">Menu Aa</div>
+    <figcaption><code>font: menu</code>: the font of menus.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: message-box">Message Aa</div>
+    <figcaption><code>font: message-box</code>: the font of dialog boxes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font: status-bar">Status Aa</div>
+    <figcaption><code>font: status-bar</code>: the font of window status bars.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In font-family: a name like any other</h2>
+  <p>An unquoted <code>caption</code> in 'font-family' is a family name, not the system font, and no family has that
+  name.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: caption, 'PR Tinos'">Caption Aa</div>
+    <figcaption><code>font-family: caption, 'PR Tinos'</code>: PR Tinos, a serif.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-anchor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .start { text-anchor: start; }
+  .middle { text-anchor: middle; }
+  .end { text-anchor: end; }
+  .rtl { direction: rtl; }
+  .vertical { writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.1.1 Text alignment, the ‘text-anchor’ property</div>
+  <h1>text-anchor</h1>
+  <p class=pr-lede><q>The text-anchor property is used to align (start-, middle- or end-alignment) a string of
+  pre-formatted text or auto-wrapped text where the wrapping area is determined from the inline-size property relative
+  to a given point.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextAnchoringProperties">SVG 2 §11.10.1.1</a></span>
+  Each stage is an SVG 160 by 60 holding "abcdef" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, 60 long, at
+  <code>x="80" y="35"</code>; the anchor is solid red, the baseline dashed.</p>
+</header>
+
+<section>
+  <h2>Left to right</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class="pr-measure start" x="80" y="35">abcdef</text></svg></div>
+    <figcaption><code>start</code>: <q>the left side of the text is rendered at the initial text position</q>,
+    80 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class="pr-measure middle" x="80" y="35">abcdef</text></svg></div>
+    <figcaption><code>middle</code>: <q>the geometric middle of the resulting rendered text</q> at the point, 50 to
+    110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class="pr-measure end" x="80" y="35">abcdef</text></svg></div>
+    <figcaption><code>end</code>: the right side at the point, 20 to 80.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Right to left, and vertical</h2>
+  <p><q>For an element with a direction property value of "rtl" (typical for Arabic and Hebrew), the right side of the
+  text is rendered at the initial text position.</q> <q>For an element with a vertical primary text direction (often
+  typical for Asian text), the top side of the text is rendered at the initial text position.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class="pr-measure start rtl" x="80" y="35">abcdef</text></svg></div>
+    <figcaption><code>direction: rtl</code>, <code>start</code>: the right side at the point, 20 to 80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M80 0V60" stroke="#c0392b" /><path d="M0 35H160" class=pr-baseline /><text class="pr-measure end rtl" x="80" y="35">abcdef</text></svg></div>
+    <figcaption><code>direction: rtl</code>, <code>end</code>: the left side at the point, 80 to 140.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 40H160" stroke="#c0392b" /><path d="M80 0V80" class=pr-baseline /><text class="pr-measure middle vertical" x="80" y="40">abcd</text></svg></div>
+    <figcaption><code>vertical-rl</code>, <code>middle</code>, at <code>y="40"</code>: "abcd", turned, centered on
+    y 40, from 20 to 60. <span class=pr-flag>Safari</span> About 7 higher, from 13 to 53.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

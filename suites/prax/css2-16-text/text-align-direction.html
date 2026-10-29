@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: initial value and inheritance</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: initial value and inheritance</h1>
+  <p class=pr-lede><code>text-align</code> takes <code>left | right | center | justify</code>. Its initial value has no
+  name, and it is inherited.</p>
+</header>
+
+<section>
+  <h2>The initial value follows direction</h2>
+  <p>Initial: <q>a nameless value that acts as 'left' if 'direction' is 'ltr', 'right' if 'direction' is 'rtl'</q>.
+  Computed value: <q>the initial value or as specified</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: ltr"><span class=pr-a>box</span> line</div>
+    <figcaption><code>direction: ltr</code>: the line is at the left. <span class="pr-flag pr-since">Since CSS
+    2</span> the initial value is named <code>start</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl"><span class=pr-a>box</span> line</div>
+    <figcaption><code>direction: rtl</code>: the same initial value, and the line is at the right. <span
+    class="pr-flag pr-since">Since CSS 2</span> <code>start</code>.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></div>
+  <h2>The initial value is start</h2>
+  <p><code>text-align</code> is now a shorthand of <code>text-align-all</code> and <code>text-align-last</code>, with
+  <q>Initial: start</q>: <q>Inline-level content is aligned to the start edge of the line box.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#text-align-property">CSS Text 3 §6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: ltr"><span class=pr-a>box</span> line</div>
+    <figcaption><code>direction: ltr</code>: at the start edge, the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="direction: rtl"><span class=pr-a>box</span> line</div>
+    <figcaption><code>direction: rtl</code>: at the start edge, the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited, and aligned in the line box</h2>
+  <p><q>Note that since 'text-align' is inherited, all block-level elements inside DIV elements with a class name of
+  'important' will have their inline content centered.</q> <q>Alignment is not with respect to the viewport.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center"><div class=pr-frame style="width: 120px"><span class=pr-a>box</span></div></div>
+    <figcaption><code>text-align: center</code> on the stage: the dashed child block is at the left, as blocks
+    are, and the box in it is centered in its 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: center"><div class="pr-a pr-fit" style="float: left; width: 60px; height: 40px">float</div><span class=pr-b>box</span><br><br><span class=pr-b>box</span></div>
+    <figcaption>Centered in the 140px line box beside the 60px float, then in the full 200px below
+    it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

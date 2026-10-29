@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Properties table parts ignore</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; background: #e0e3e8; outline: 1px dashed #2c5a8f; }
+  td { padding: 0; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.6.1 Overrides applying in all modes, table-internal boxes</div>
+  <h1>Properties table parts ignore</h1>
+  <p class=pr-lede>Some properties do nothing on the boxes inside a table. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#global-style-overrides">CSS Table 3 §3.6.1</a></span>
+  Each table is outlined; two cells, blue and orange, of <code>.pr-measure</code> text.</p>
+</header>
+
+<section>
+  <h2>Columns</h2>
+  <p><q>All css properties of table-column and table-column-group boxes are ignored, except when explicitly specified by
+  this specification.</q> 'width', 'visibility', borders in collapsed-borders mode and backgrounds are such
+  exceptions; 'color' is not.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><col style="color: #c0392b; font-size: 30px"><tr><td>aa</td><td>bb</td></tr></table></div>
+    <figcaption>A <code>col</code> with red text and <code>font-size: 30px</code>: "aa" stays black and
+    small.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows, groups and cells</h2>
+  <p><q>The 'margin', 'padding', 'overflow' and 'z-index' of table-track and table-track-group boxes are ignored.</q>
+  <q>The 'margin' of table-cell boxes is ignored (as if it was set to 0px).</q> Each table would be 40 by 20 without
+  them.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr style="padding: 10px"><td>aa</td><td>bb</td></tr></table></div>
+    <figcaption>A row with <code>padding: 10px</code>: 40 by 20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tbody style="margin: 10px"><tr><td>aa</td><td>bb</td></tr></tbody></table></div>
+    <figcaption>A row group with <code>margin: 10px</code>: 40 by 20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr><td style="margin: 10px">aa</td><td>bb</td></tr></table></div>
+    <figcaption>A cell with <code>margin: 10px</code>: 40 by 20.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><table><tr style="height: 20px; overflow: hidden"><td><div style="height: 40px">aa</div></td><td>bb</td></tr></table></div>
+    <figcaption>A row with <code>overflow: hidden</code> and a 40px block: the row grows to 40px, and nothing is
+    clipped.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

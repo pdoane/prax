@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Track sizes: minmax() and fr</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g { display: grid; }
+  .t1 { background: #b9cde6; }
+  .t2 { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.1 Track Sizes, minmax() and fr</div>
+  <h1>Track sizes: minmax() and fr</h1>
+  <p class=pr-lede><code>minmax(min, max)</code> <q>Defines a size range greater than or equal to min and less than
+  or equal to max. If the max is less than the min, then the max will be floored by the min</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#track-sizes">CSS Grid Layout 2 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A range</h2>
+  <p>Each grid's second column is <code>1fr</code>, which takes what is left.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(20px, 80px) 1fr"><div class=t1>a</div><div class=t2>b</div></div></div>
+    <figcaption><code>minmax(20px, 80px)</code>: grows to its maximum, 80px; "b" from 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(80px, 20px) 1fr"><div class=t1>a</div><div class=t2>b</div></div></div>
+    <figcaption><code>minmax(80px, 20px)</code>: the max floored by the min, so 80px again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>fr alone has an automatic minimum</h2>
+  <p>A &lt;flex&gt; <q>When appearing outside a minmax() notation, implies an automatic minimum (i.e. minmax(auto,
+  &lt;flex&gt;)).</q> The first column holds "abcdefghijklmn", 140px that cannot wrap.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: 1fr 1fr"><div class=t1>abcdefghijklmn</div><div class=t2>b</div></div></div>
+    <figcaption><code>1fr 1fr</code>: the first column is at least 140px, its content; the second has the other
+    60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: minmax(0, 1fr) 1fr"><div class=t1 style="overflow: hidden">abcdefghijklmn</div><div class=t2>b</div></div></div>
+    <figcaption><code>minmax(0, 1fr) 1fr</code>: 100px each; the text, clipped, ends at "j".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

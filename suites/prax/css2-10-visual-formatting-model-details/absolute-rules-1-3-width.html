@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: rules 1 to 3</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.7 Absolutely positioned, non-replaced elements</div>
+  <h1>Absolute widths: rules 1 to 3</h1>
+  <p class=pr-lede>When one or two of 'left', 'width' and 'right' are 'auto', one of six rules applies. Each stage is the
+  200px containing block of the absolutely positioned box in it, and is <code>ltr</code>.</p>
+</header>
+
+<section>
+  <h2>Auto margins are 0, then the rules</h2>
+  <p><q>Otherwise, set 'auto' values for 'margin-left' and 'margin-right' to 0, and pick the one of the following six
+  rules that applies.</q> <q>1. 'left' and 'width' are 'auto' and 'right' is not 'auto', then the width is
+  shrink-to-fit. Then solve for 'left'</q> <q>2. 'left' and 'right' are 'auto' and 'width' is not 'auto', then if the
+  'direction' property of the element establishing the static-position containing block is 'ltr' set 'left' to the
+  static position</q> <q>3. 'width' and 'right' are 'auto' and 'left' is not 'auto', then the width is shrink-to-fit .
+  Then solve for 'right'</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-non-replaced-width">CSS 2 §10.3.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs" style="right: 20px; margin: 0 auto">rule 1</div></div>
+    <figcaption>1. <code>right: 20px; margin: 0 auto</code>: the margins are 0, the box shrinks to its text, and ends
+    20px from the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class=pr-parent style="margin: 10px 0 0 40px; height: 20px"><div class="pr-a abs pr-fit" style="width: 100px; top: auto">rule 2</div></div></div>
+    <figcaption>2. <code>width: 100px</code>, in a dashed block 40px from the left: <code>left</code> is the static
+    position, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 40px"><div class="pr-a abs" style="left: 30px">rule 3</div></div>
+    <figcaption>3. <code>left: 30px</code>: the box shrinks to its text, from 30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

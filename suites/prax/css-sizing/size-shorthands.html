@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>size, min-size and max-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { width: 150px; height: 70px; }
+  figure.f figcaption { max-width: 152px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 4 · 3.1 Sizing Properties</div>
+  <h1>size, min-size and max-size</h1>
+  <p class=pr-lede><q>The size property is a shorthand that sets width and height in a single declaration. If the
+  second value is omitted, it is copied from the first.</q> min-size and max-size do the same for the minimums and
+  maximums. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-4/#sizing-properties">CSS Box Sizing 4 §3.1</a></span>
+  Each stage is 150 by 70.</p>
+</header>
+
+<section>
+  <h2>size</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=s1 class="pr-a pr-fit" style="size: 120px 40px">size</div></div>
+    <figcaption><code>size: 120px 40px</code>: 120 by 40.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> drop it:
+    the stage's width, one line tall.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="size: 50px">50</div></div>
+    <figcaption><code>size: 50px</code>: the value copied, 50 by 50. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> drop it.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="size: 50%">50%</div></div>
+    <figcaption><code>size: 50%</code>: 75 by 35. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> drop it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>min-size and max-size</h2>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="width: 40px; min-size: 90px 50px">min</div></div>
+    <figcaption><code>width: 40px; min-size: 90px 50px</code>: 90 by 50. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 40 by 20.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div class="pr-a pr-fit" style="height: 60px; max-size: 60px">max</div></div>
+    <figcaption><code>height: 60px; max-size: 60px</code>: 60 by 60, held from the stage's width. <span
+    class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 150 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

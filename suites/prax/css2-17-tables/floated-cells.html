@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Visual layout: floated and positioned cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .t { border-spacing: 10px; }
+  .blue { width: 40px; background: #4f81bd; color: white; font-weight: 600; }
+  .o { background: #d68a3c; border-color: #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5 Visual layout of table contents</div>
+  <h1>Visual layout: floated and positioned cells</h1>
+  <p class=pr-lede>Each dashed table has <code>border-spacing: 10px</code> and a row of three <code>table-cell</code>
+  <code>div</code>s, 40 by 20. The orange one is floated or positioned.</p>
+</header>
+
+<section>
+  <h2>No longer a cell</h2>
+  <p><q>Positioning and floating of table cells can cause them not to be table cells anymore, according to the rules in
+  section 9.7. When floating is used, the rules on anonymous table objects may cause an anonymous cell object to be
+  created as well.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#table-layout">CSS 2 §17.5</a></span></p>
+  <figure>
+    <div class=pr-stage><div class="pr-table pr-parent t"><div class=pr-table-row><div class="pr-table-cell blue">1</div><div class="pr-table-cell blue o" style="float: left">2</div><div class="pr-table-cell blue">3</div></div></div></div>
+    <figcaption><code>float: left</code>: 2 is a block, a float in an anonymous cell of its own, still between 1
+    and 3, 10px from each.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class="pr-table pr-parent t"><div class=pr-table-row><div class="pr-table-cell blue">1</div><div class="pr-table-cell blue o" style="position: absolute; left: 120px; top: 30px">2</div><div class="pr-table-cell blue">3</div></div></div></div>
+    <figcaption><code>position: absolute</code>: 2 is a block at 120, 30 in the stage. An empty anonymous cell stands in its place: 1 and 3 are
+    20px apart.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

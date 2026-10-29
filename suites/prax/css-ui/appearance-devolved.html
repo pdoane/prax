@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Devolved widgets</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 8px 10px 2px; }
+  .stage > * { display: block; margin: 0 0 6px; }
+  .layered { background-color: revert-layer; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 7.2.1 Properties Disabling Native Appearance</div>
+  <h1>Devolved widgets</h1>
+  <p class=pr-lede><q>Certain properties, when declared in the Author Origin, will disable the native appearance of
+  certain widgets.</q> <q>The rendering of a devolved widget is identical to that of the widget in its primitive
+  appearance, except when specified otherwise by the host language.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#appearance-disabling-properties">CSS Basic User Interface 4 §7.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>A background or a border devolves a widget</h2>
+  <p>The properties are the backgrounds', borders' and border radii's. Each stage holds a button, a text field and
+  a <code>select</code>.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><button>Button</button><input value=Text size=10><select><option>Select</select></div>
+    <figcaption>No author style: native.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium"><button style="background-color: #f9cc9d">Button</button><input value=Text size=10 style="border-color: #c0392b"><select style="border-radius: 0"><option>Select</select></div>
+    <figcaption>An orange <code>background-color</code>, a red <code>border-color</code>, <code>border-radius:
+    0</code>: each a plain box with that style; the <code>select</code> keeps an arrow, as HTML's devolved
+    <code>select</code> does.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only properties that cascade to a value</h2>
+  <p>A widget devolves <q>after having rolled back any number revert or revert-layer values</q>, if a value is left.
+  Properties not in the list, as <code>color</code> and <code>padding</code>, do not devolve it.</p>
+  <figure>
+    <div class="pr-stage stage pr-medium"><button class=layered>Button</button><button style="background-color: revert">Button</button></div>
+    <figcaption><code>background-color: revert-layer</code> and <code>revert</code>, which roll back to no author
+    value: both native.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-medium"><button style="color: #c0392b; padding: 4px 20px">Button</button></div>
+    <figcaption>A red <code>color</code> and <code>padding: 4px 20px</code>: native.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width: auto: capped by the specified size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; }
+  .x { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 4.5 Automatic Minimum Size of Flex Items, specified size suggestion</div>
+  <h1>min-width: auto: capped by the specified size</h1>
+  <p class=pr-lede>For non-replaced elements, the content-based minimum size is <q>the larger of the content size
+  suggestion and the transferred size suggestion (if one exists), capped by the specified size suggestion (if one
+  exists).</q> <q>In either case, the size is clamped by the maximum main size if it's definite.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#min-size-auto">CSS Flexible Box Layout 2 §4.5</a></span></p>
+</header>
+
+<section>
+  <h2>The specified size suggestion, and a definite maximum</h2>
+  <p><q>If the item's preferred main size is definite and not automatic, then the specified size suggestion is that
+  size. It is otherwise undefined.</q> Each item holds "flexbox", 70px, alone in a dashed container 20px wide unless
+  given.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="width: 30px">flexbox</div></div></div>
+    <figcaption><code>width: 30px</code>: the smaller of 70px and 30px; the item is 30px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 50px"><div class=x style="width: 100px">flexbox</div></div></div>
+    <figcaption><code>width: 100px</code> in 50px: the smaller, 70px; the item shrinks to 70px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="flex-basis: 30px">flexbox</div></div></div>
+    <figcaption><code>flex-basis: 30px</code> is not the preferred size: 70px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="max-width: 40px">flexbox</div></div></div>
+    <figcaption><code>max-width: 40px</code>: 70px clamped; the item is 40px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="f pr-parent pr-measure" style="width: 20px"><div class=x style="width: 60px; max-width: 40px">flexbox</div></div></div>
+    <figcaption><code>width: 60px; max-width: 40px</code>: 60px, clamped to 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>In a column</h2>
+  <p>Each dashed column container is 40px wide and 20px tall; its item holds "ab cd ef", three lines, 60px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 60px"><div class="f pr-parent pr-measure" style="flex-direction: column; width: 40px; height: 20px"><div class=x style="height: 40px">ab cd ef</div></div></div>
+    <figcaption><code>height: 40px</code>: the minimum is 40px; the third line spills.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 60px"><div class="f pr-parent pr-measure" style="flex-direction: column; width: 40px; height: 20px"><div class=x>ab cd ef</div></div></div>
+    <figcaption><code>height: auto</code>: no specified size suggestion: 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

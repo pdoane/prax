@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-border-slice: the middle shines through</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; mask-border-source: url(support/frame-alpha.svg); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 8.3 Mask Border Image Slicing: the mask-border-slice property</div>
+  <h1>mask-border-slice: the middle shines through</h1>
+  <p class=pr-lede><q>The middle image part is discarded and treated as fully opaque white (the content covered by the
+  middle part is not masked and shines through) unless the fill keyword is present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-border-slice">CSS Masking 1 §8.3</a></span>
+  Each box is 140 by 60 and blue, masked by the frame of discs, bars and a middle square.</p>
+</header>
+
+<section>
+  <h2>Without fill, and with it</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-slice: 10"></div></div>
+    <figcaption><code>10</code>: discs and bars around the edge, and the whole middle, 120 by 40, blue.
+    <span class=pr-flag>Safari</span> The middle hidden, only the frame. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-slice: 10 fill"></div></div>
+    <figcaption><code>10 fill</code>: the middle masked by the image's, a square 48 by 16. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The initial value, 0</h2>
+  <p>At <code>0</code>, the whole image is the middle.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption>Only <code>mask-border-source</code> set: the whole box, 140 by 60, as if unmasked.
+    <span class=pr-flag>Safari</span> Nothing drawn: the middle hidden.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-border-slice: 0 fill"></div></div>
+    <figcaption><code>0 fill</code>: the whole image is the middle, stretched over the box: discs 47 by 20 at the
+    corners, bars between them, and a square 19 by 8 at the center. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Firefox</span> The box unmasked.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

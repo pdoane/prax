@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table height algorithms: baselines</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; font-size: 13px; line-height: 20px; }
+  td { padding: 0 4px; border: 1px solid #b5bcc7; vertical-align: baseline; }
+  .blk { width: 30px; height: 30px; background: #4f81bd; }
+  .blk.o { background: #d68a3c; }
+  .l { font-size: 26px; line-height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.3 Table height algorithms</div>
+  <h1>Table height algorithms: baselines</h1>
+  <p class=pr-lede>Every cell has <code>vertical-align: baseline</code> unless the caption says otherwise; text is 13px
+  unless it is "Big".</p>
+</header>
+
+<section>
+  <h2>The baseline of a cell</h2>
+  <p><q>The baseline of a cell is the baseline of the first in-flow line box in the cell, or the first in-flow
+  table-row in the cell, whichever comes first. If there is no such line box or table-row, the baseline is the bottom
+  of content edge of the cell box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2 §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td><div class=blk></div><td>text</table></div>
+    <figcaption>The first cell holds only a 30px block, no line box: its baseline is the block's bottom, and "text"
+    stands on it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table><tr><td><div class=blk></div>line<td>text</table></div>
+    <figcaption>A line box after the block: the cell's baseline is that line's, so "line" and "text" stand on one
+    baseline, below the block.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The baseline of a row</h2>
+  <p><q>The maximum distance between the top of the cell box and the baseline over all cells that have 'vertical-align:
+  baseline' is used to set the baseline of the row.</q> <q>If a row has no cell box aligned to its baseline, the
+  baseline of that row is the bottom content edge of the lowest cell in the row.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#height-layout">CSS 2
+  §17.5.3</a></span></p>
+  <figure>
+    <div class=pr-stage><table><tr><td>small<td class=l>Big<td style="vertical-align: top"><div class="blk o" style="height: 60px"></div></table></div>
+    <figcaption>"Big" has the most room above its baseline, which sets the row's; "small" moves down to it. The
+    orange cell is <code>top</code> and does not take part.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>text <table style="display: inline-table"><tr><td style="vertical-align: top"><div class=blk></div><td style="vertical-align: top"><div class="blk o" style="height: 50px"></div></table> text</div>
+    <figcaption>An inline table whose row has only <code>top</code> cells: its baseline is the bottom of the orange
+    50px block, the lowest content edge, and the "text" beside it stands there.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

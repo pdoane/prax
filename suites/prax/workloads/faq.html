@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A help center of exclusive accordions, nested answers and restyled disclosure markers. Leans on: details groups that close each other by name, summaries with styled and replaced markers, the details content part, nested details, a grid with a side navigation, and a native button. -->
+<title>FAQ</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.faq { display:grid; grid-template-columns:150px 1fr; gap:12px; color:#22282f; font-size:12px }
+.nav { background:#fff; border:1px solid #d3d8de; border-radius:10px; padding:10px 12px; font-size:11px }
+.nav h3 { font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:#8a93a0; margin-bottom:6px }
+.nav a { display:block; color:#1c5b96; text-decoration:none; padding:2px 0 }
+.nav a.on { font-weight:bold }
+.main h2 { font-size:15px; margin-bottom:6px }
+.main h2:not(:first-child) { margin-top:12px }
+details { background:#fff; border:1px solid #d3d8de; border-radius:8px; margin-bottom:6px }
+summary { padding:7px 10px; font-weight:bold; cursor:pointer }
+summary::marker { color:#3d82c4 }
+details[open] > summary { border-bottom:1px solid #eef1f4 }
+details p { padding:6px 10px 8px; color:#3f4954; line-height:1.45 }
+details details { margin:0 10px 8px; border-color:#e6e9ed }
+.plain summary { list-style:none; display:flex; justify-content:space-between }
+.plain summary::after { content:"+"; color:#8a93a0; font-weight:normal }
+.plain[open] summary::after { content:"\2212" }
+.plain::details-content { background:#f8fafb; border-radius:0 0 8px 8px }
+.ask { margin-top:10px; font-size:11px; color:#6d7783 }
+.ask button { margin-inline-start:6px }
+</style>
+</head>
+<body>
+<div class="faq">
+  <div class="nav">
+    <h3>Topics</h3>
+    <a class="on" href="#orders">Orders</a>
+    <a href="#returns">Returns</a>
+    <a href="#account">Your account</a>
+  </div>
+  <div class="main">
+    <h2 id="orders">Orders</h2>
+    <details name="orders" open="open">
+      <summary>When will my order ship?</summary>
+      <p>Orders placed before 14:00 on a working day leave the warehouse the same day. Larger items, such as shelving
+      units, are sent by freight and leave within two working days.</p>
+    </details>
+    <details name="orders">
+      <summary>Can I change the delivery address?</summary>
+      <p>Until the order is packed, yes: open the order and choose a new address. After that, contact the carrier with
+      the tracking number from your confirmation email.</p>
+    </details>
+    <details name="orders">
+      <summary>Do you ship outside the EU?</summary>
+      <p>We ship to Switzerland, Norway and the United Kingdom. Duties are charged on delivery.</p>
+      <details>
+        <summary>What are the duties for the United Kingdom?</summary>
+        <p>Orders under 135&#160;GBP are charged VAT at checkout and nothing on delivery.</p>
+      </details>
+    </details>
+
+    <h2 id="returns">Returns</h2>
+    <details class="plain" name="returns">
+      <summary>How long do I have to return an item?</summary>
+      <p>Thirty days from delivery, unused and in its original packaging.</p>
+    </details>
+    <details class="plain" name="returns" open="open">
+      <summary>Who pays for the return shipping?</summary>
+      <p>We do, for anything that arrived damaged or was not what you ordered. Otherwise the return label costs 6.90
+      EUR, which we take from your refund.</p>
+    </details>
+
+    <h2 id="account">Your account</h2>
+    <details dir="rtl" lang="ar">
+      <summary>كيف أغير كلمة المرور؟</summary>
+      <p>افتح الإعدادات واختر الأمان، ثم اتبع التعليمات.</p>
+    </details>
+
+    <div class="ask">Still stuck?<button type="button">Contact support</button></div>
+  </div>
+</div>
+</body>
+</html>

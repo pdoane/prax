@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Padding percentages: the inline size, in every writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .s { height: 100px; }
+  .vrl { writing-mode: vertical-rl; }
+  .vlr { writing-mode: vertical-lr; }
+  .htb { writing-mode: horizontal-tb; }
+  .p { background: #c3d08b; }
+  .p > div { background: #8cb6c0; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Model 4 · 4.1 Page-relative (Physical) Padding Properties, percentages</div>
+  <h1>Padding percentages: the inline size, in every writing mode</h1>
+  <p class=pr-lede><q>Percentages: refer to logical width of containing block</q>: its inline size, its width in
+  horizontal writing and its height in vertical writing, on every side. <span class=pr-cite><a href="https://drafts.csswg.org/css-box-4/#padding-physical">CSS Box Model 4 §4.1</a></span> Each stage is 200px
+  wide and 100px tall. Each green box has a blue 20px content box and <code>padding-top: 10%; padding-left:
+  10%</code>.</p>
+</header>
+
+<section>
+  <h2>Horizontal: of the width</h2>
+  <figure>
+    <div class="pr-stage s"><div class=p style="padding-top: 10%; padding-left: 10%"><div></div></div></div>
+    <figcaption><code>horizontal-tb</code>: 20px of padding above and at the left of the blue square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s"><div class="p vrl" style="padding-top: 10%; padding-left: 10%"><div></div></div></div>
+    <figcaption>A <code>vertical-rl</code> box in the same stage: still 20px each, of its containing block's inline
+    size.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vertical: of the height</h2>
+  <figure>
+    <div class="pr-stage s vrl"><div class=p style="padding-top: 10%; padding-left: 10%"><div></div></div></div>
+    <figcaption><code>vertical-rl</code>: 10px each, a tenth of the 100px height; the box down the stage's right
+    side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage s vlr"><div class=p style="padding-top: 10%; padding-left: 10%"><div></div></div></div>
+    <figcaption><code>vertical-lr</code>: 10px each; the box down the stage's left side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

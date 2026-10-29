@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Filter, then clip, mask, blend and composite</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage.pr-cb { height: 60px; }
+  .bd { position: absolute; left: 10px; top: 10px; width: 80px; height: 40px; background: #00ff00; }
+  .el { position: absolute; left: 30px; top: 10px; width: 40px; height: 40px; background: #ff0000; }
+  .sw { position: absolute; left: 110px; top: 10px; width: 40px; height: 40px; }
+  .shadow { filter: drop-shadow(20px 10px 0 #8e44ad); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Compositing and Blending 2 · 3.1 Order of graphical operations</div>
+  <h1>Filter, then clip, mask, blend and composite</h1>
+  <p class=pr-lede><q>The compositing model must follow the SVG compositing model: first any filter effect is applied,
+  then any clipping, masking, blending and compositing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/compositing-2/#compositingandblendingorder">Compositing and Blending 2 §3.1</a></span>
+  In each stage a red 40px square sits over a lime band 80 by 40; the square at the right is the color expected.</p>
+</header>
+
+<section>
+  <h2>The filter comes before the clip</h2>
+  <p>The square has <code>filter: drop-shadow(20px 10px 0 purple)</code>. The shadow is part of what the filter draws,
+  and the clip that follows cuts it away.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class="el shadow"></div></div>
+    <figcaption>The filter alone: a purple shadow 20px right of the square and 10px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class="el shadow" style="clip-path: inset(0)"></div></div>
+    <figcaption>With <code>clip-path: inset(0)</code>: the square alone; the shadow, outside its border box, is
+    clipped.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The filter comes before the blend</h2>
+  <p>The square has <code>filter: grayscale(1)</code> and <code>mix-blend-mode: multiply</code>. Filtered first, red
+  becomes the grey <code>rgb(21% 21% 21%)</code> (0.2126 of red); multiplied by lime, that is
+  <code>rgb(0% 21% 0%)</code>. Blended first, red times lime would be black, and grey still black.</p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=el style="filter: grayscale(1); mix-blend-mode: multiply"></div><div class=sw style="background: rgb(0% 21.26% 0%)"></div></div>
+    <figcaption>A dark green square on the lime, matching the swatch at the right, <code>rgb(0% 21% 0%)</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=bd></div><div class=el style="mix-blend-mode: multiply"></div><div class=sw style="background: black"></div></div>
+    <figcaption>For comparison, the blend without the filter: red times lime, black.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

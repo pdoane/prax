@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-attachment: local</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .sc { width: 140px; height: 60px; margin: 10px; overflow: hidden; background-repeat: no-repeat; }
+  .sc div { padding: 0 6px; font-size: 13px; line-height: 20px; }
+  .sq { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>"); background-position: right 0 top 40px; }
+  .grad { background-image: linear-gradient(#b9cde6, #d68a3c); }
+  .local { background-attachment: local; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.5 Affixing Images: the background-attachment property</div>
+  <h1>background-attachment: local</h1>
+  <p class=pr-lede><q>local: The background is fixed with regard to the box's contents: if the box is a scroll
+  container, the background scrolls with the box's contents, and the background painting area and background
+  positioning area are relative to the scrollable overflow area of the box rather than to the border framing
+  them.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-attachment">CSS Backgrounds 4 §2.5</a></span></p>
+</header>
+
+<section>
+  <h2>scroll stays with the box, local moves with the contents</h2>
+  <p>Each box, 140 by 60 with <code>overflow: hidden</code>, holds eight lines, "line 1" to "line 8", 20px apart. An
+  orange square is placed at <code>right 0 top 40px</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc sq"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption><code>scroll</code>, not scrolled: the square beside line 3.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc sq scrolled"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption><code>scroll</code>, scrolled 40px: still 40px down the box, now beside line 5.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc sq local scrolled"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption><code>local</code>, scrolled 40px: the square moved up with line 3, to the top of the box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The areas are the scrollable overflow area</h2>
+  <p>Each box holds the same eight lines, 160px tall, with a gradient from blue to orange; neither is scrolled.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc grad"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption><code>scroll</code>: the whole gradient in the box's 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc grad local"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption><code>local</code>: the gradient spans the 160px of contents; the box shows its blue top.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="sc grad local" style="width: 120px; height: 40px; border: 10px dashed rgba(44, 90, 143, 0.6)"><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div><div>line 5</div><div>line 6</div><div>line 7</div><div>line 8</div></div></div>
+    <figcaption>With a dashed border, <code>border-box</code> <q>may be treated the same as padding-box</q>: the
+    gradient may or may not show between the dashes. Chrome, Safari and Firefox keep it inside them.</figcaption>
+  </figure>
+</section>
+
+<script>
+const scroll = () => { for (const s of document.querySelectorAll(".scrolled")) s.scrollTop = 40; };
+scroll();
+addEventListener("load", scroll);
+</script>
+</body>
+</html>

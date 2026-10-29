@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>@font-feature-values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  /* One name, a different index in each family. */
+  @font-feature-values "PR Bungee Spice" { @styleset { fancy: 2; } }
+  @font-feature-values "PR Literata" { @styleset { fancy: 2; } }
+  .pr-sample { font-size: 26px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 6.9 Defining font specific alternates: the @font-feature-values rule</div>
+  <h1>@font-feature-values</h1>
+  <p class=pr-lede><q>the @font-feature-values rule lets an author assign, for each font face, a human-friendly name to
+  specific feature indexes.</q> Fonts without the name <q>simply won't do anything</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-feature-values">CSS Fonts 4
+  §6.9</a></span></p>
+</header>
+
+<section>
+  <h2>One name, each family's index</h2>
+  <p>Both families define <code>styleset(fancy)</code> as their <code>ss02</code>, which changes different letters in
+  each.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Bungee Spice'">Many abc</div>
+    <figcaption>PR Bungee Spice, <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Bungee Spice'; font-variant-alternates: styleset(fancy)">Many abc</div>
+    <figcaption><code>styleset(fancy)</code>: Bungee Spice's <code>ss02</code>: alternate M, a, n and y.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'">abcdefg</div>
+    <figcaption>PR Literata, <code>normal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Literata'; font-variant-alternates: styleset(fancy)">abcdefg</div>
+    <figcaption><code>styleset(fancy)</code>: Literata's <code>ss02</code>, arrows and symbols in place of a to
+    g.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

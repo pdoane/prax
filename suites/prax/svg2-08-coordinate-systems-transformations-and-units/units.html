@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Units, and percentages of the viewport</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.9 Units</div>
+  <h1>Units, and percentages of the viewport</h1>
+  <p class=pr-lede><q>SVG follows the description and definition of common values and units from the CSS Values and
+  Units Module [css-values] for attributes, presentation attributes and CSS properties.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#Units">SVG 2 §8.9</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Units, in user space</h2>
+  <p>A unit's length is in the user coordinate system, so a scale applies to it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="1in" height="0.25in" fill="#4f81bd" /></svg></div>
+    <figcaption><code>width="1in" height="0.25in"</code>: 96 by 24.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" font-size="20"><rect x="20" y="10" width="6em" height="2em" fill="#4f81bd" /></svg></div>
+    <figcaption><code>font-size="20"</code>, <code>width="6em" height="2em"</code>: 120 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 80 30"><rect x="10" y="5" width="0.5in" height="0.125in" fill="#4f81bd" /></svg></div>
+    <figcaption>With <code>viewBox="0 0 80 30"</code>, user units of 2px: <code>0.5in</code> is 48 units, 96 px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages of the viewBox</h2>
+  <p><q>For any x-coordinate value or width value expressed as a percentage of the SVG viewport, the value to use must
+  be the percentage, in user units, of the width parameter of the ‘viewBox’ applied to that viewport.</q> Other
+  lengths take <q>the normalized diagonal of the ‘viewBox’</q>. Each has <code>viewBox="0 0 320 120"</code>,
+  units of half a pixel.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 320 120"><rect x="25%" y="25%" width="50%" height="50%" fill="#4f81bd" /></svg></div>
+    <figcaption><code>x="25%" y="25%" width="50%" height="50%"</code>: 160 by 60 units at 80, 30, so 80 by 30 px
+    from 40, 15.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" viewBox="0 0 320 120"><line x1="40" y1="60" x2="280" y2="60" stroke="#4f81bd" stroke-width="10%" /><rect class=pr-ghost x="40" y="47.92" width="240" height="24.17" /></svg></div>
+    <figcaption><code>stroke-width="10%"</code> of the diagonal, 241.7 units: 24.2 units, a band 12.1 px tall, filling
+    the dashed outline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

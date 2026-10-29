@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>order</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .flex { display: flex; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 3 Display Order: the order property</div>
+  <h1>order</h1>
+  <p class=pr-lede><q>the 'order' property controls the order in which flex items or grid items appear within their
+  container, by assigning them to ordinal groups.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#order-property">CSS Display 4 §3</a></span></p>
+</header>
+
+<section>
+  <h2>Ordinal groups, lowest first</h2>
+  <p><q>Flex and grid containers lay out their contents in order-modified document order, starting from the lowest
+  numbered ordinal group and going up. Items with the same ordinal group are laid out in the order they appear in the
+  source document.</q> Each stage holds A, B, C and D in that source order.</p>
+  <figure>
+    <div class=pr-stage><div class=flex><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="order: -1">C −1</div><div class=pr-d>D</div></div></div>
+    <figcaption>A flex row, C with <code>order: -1</code>: C, A, B, D.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=flex><div class=pr-a style="order: 2">A 2</div><div class=pr-b style="order: 1">B 1</div><div class=pr-c style="order: 2">C 2</div><div class=pr-d style="order: 1">D 1</div></div></div>
+    <figcaption>Two groups: B and D (1), then A and C (2), each in source order: B, D, A, C.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=grid><div class=pr-a style="order: 1">A 1</div><div class=pr-b>B</div><div class=pr-c>C</div><div class=pr-d>D</div></div></div>
+    <figcaption>A grid of three columns, A with <code>order: 1</code>: B, C, D in the first row, A in the
+    second.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only flex and grid items</h2>
+  <p><q>Unless otherwise specified by a future specification, this property has no effect on boxes that are not flex
+  items or grid items.</q></p>
+  <figure>
+    <div class=pr-stage><div class=pr-a>A</div><div class=pr-b>B</div><div class=pr-c style="order: -1">C −1</div></div>
+    <figcaption>Blocks, C with <code>order: -1</code>: A, B, C, one under another.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=pr-table><div class=pr-table-cell>A</div><div class=pr-table-cell>B</div><div class=pr-table-cell style="order: -1">C −1</div></div></div>
+    <figcaption>Table cells, C with <code>order: -1</code>: A, B, C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

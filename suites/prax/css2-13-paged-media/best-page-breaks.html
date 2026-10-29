@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>"Best" page breaks</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13.3.5 "Best" page breaks</div>
+  <h1>"Best" page breaks</h1>
+  <p class=pr-lede><q>CSS 2 does not define which of a set of allowed page breaks must be used</q> <q>But CSS 2 does recommend that user agents observe the following heuristics</q>: <q>Break as few times as possible.</q> <q>Avoid breaking inside a replaced element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#best-page-breaks">CSS 2 §13.3.5</a></span> The stills print each figure's document on pages of 240 by 160, set by a CSS 3 <code>size</code>; the root's blue background marks each page area; Safari paints it on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>The specification's example, scaled</h2>
+  <p><q>Suppose, for example, that the style sheet contains 'orphans: 4', 'widows: 2'</q> <q>If the paragraph contains 21 or 22 lines, the second part of the paragraph must not violate the 'widows' constraint, and so the second part must contain exactly two lines</q>. Here five lines are available and the paragraph has six.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } p { orphans: 4; widows: 2; background: #f9cc9d }</style><div style='height: 40px; background: #c3d08b'></div><p>line 1<br>line 2<br>line 3<br>line 4<br>line 5<br>line 6</p>"></iframe>
+    <figcaption>Five lines would fit, but one left for page 2 is too few: four on page 1, two on page 2. <span class=pr-flag>Firefox</span> Five and one.</figcaption>
+  </figure>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 10px } html { background: #8cb6c0 } img { display: block }</style><div style='height: 100px; background: #c3d08b'></div><img src=&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='80'><rect width='120' height='80' fill='%234f81bd'/></svg>&quot;>"></iframe>
+    <figcaption>A recommendation: the 80px image does not fit below the 100px block. Chrome and Safari move it whole to page 2; Firefox breaks inside it, its top half on page 1.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

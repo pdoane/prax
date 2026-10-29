@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The size of a select</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.7 The select element</div>
+  <h1>The size of a select</h1>
+  <p class=pr-lede><q>The select element is an element with default preferred size, and user agents are expected to
+  apply the 'field-sizing' CSS property to select elements.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">HTML §15.5.16</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+</header>
+
+<section>
+  <h2>The width of its labels</h2>
+  <p><q>The inline size of its intrinsic size is the width of the select's labels.</q> <q>The width of the select's
+  labels is the wider of the width necessary to render the widest optgroup, and the width necessary to render the
+  widest option element</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span>
+  The engines' developers have agreed that a drop-down box leaves group labels out, as every browser does, and a
+  list box counts them (<a href="https://github.com/whatwg/html/issues/4502">html#4502</a>).</p>
+  <figure>
+    <div class="pr-stage pad">
+      <select><option>Fig<option>Watermelon</select><br>
+      <select><option>Fig<option>Kiwi</select><br>
+      <select><optgroup label="Watermelons"><option>Fig</optgroup></select>
+    </div>
+    <figcaption>Drop-down boxes as wide as "Watermelon", "Kiwi", and "Fig": the third leaves its group's label
+    out.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pad">
+      <select size=2><option>Fig<option>Watermelon</select>
+      <select size=2><option>Fig<option>Kiwi</select>
+      <select size=2><optgroup label="Watermelons"><option>Fig</optgroup></select>
+    </div>
+    <figcaption>List boxes: the first wider by the difference between "Watermelon" and "Kiwi", and the third as wide
+    as its group's label, "Watermelons".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>field-sizing: content</h2>
+  <p>For a list box, <q>If the 'field-sizing' property on the element has a computed value of 'content', return the
+  height necessary to contain all rows for items.</q> For a drop-down box, <q>the inline size of the intrinsic size
+  depends on the shown text.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure>
+    <div class="pr-stage pad"><select multiple style="field-sizing: content"><option>Apple<option>Pear<option>Plum<option>Fig<option>Kiwi<option>Lime</select></div>
+    <figcaption><code>multiple</code>, so a list box: all six rows, Apple to Lime, with nothing to scroll.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pad"><select style="field-sizing: content"><option>Fig<option>Watermelon</select></div>
+    <figcaption>A drop-down box showing "Fig", only as wide as "Fig" and its button.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

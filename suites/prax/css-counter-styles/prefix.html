@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The prefix descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style pilcrow { system: extends decimal; prefix: "¶"; suffix: " "; }
+  @counter-style pre-neg { system: extends decimal; prefix: "No. "; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 60px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+  .fn { counter-reset: n 4; }
+  .fn div::before { content: counter(n, pilcrow) "|"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.3 Symbols before the marker: the prefix descriptor</div>
+  <h1>The prefix descriptor</h1>
+  <p class=pr-lede><q>The 'prefix' descriptor specifies a &lt;symbol&gt; that is prepended to the marker representation.
+  Prefixes come before any negative sign.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#counter-style-prefix">CSS Counter Styles 3 §3.3</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Before the representation, and before the sign</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: pilcrow" start=4><li>four<li>five</ol></div>
+    <figcaption><code>prefix: "¶"</code>: "¶4", "¶5".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: pre-neg" start=-1><li>minus one<li>zero</ol></div>
+    <figcaption><code>prefix: "No. "</code>: "No. -1", "No. 0": the prefix before the minus.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not in counter()</h2>
+  <p>Prefixes <q>are only added by the algorithm for constructing the default contents of the ::marker pseudo-element;
+  the prefix is not added automatically when the 'counter()' or 'counters()' functions are used.</q></p>
+  <figure>
+    <div class="pr-stage pr-text fn"><div>text</div></div>
+    <figcaption><code>counter(n, pilcrow)</code> at 4: "4|text", with no "¶".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The family descriptor</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Any Name"; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: Courier; src: url(../../../third_party/fonts/Literata.ttf); }
+  @font-face { font-family: monospace; src: url(../../../third_party/fonts/Literata.ttf); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 4.2 Font family: the @font-face 'font-family' descriptor</div>
+  <h1>The family descriptor</h1>
+  <p class=pr-lede><q>This descriptor defines the font family name that will be used in all CSS font family name
+  matching. It overrides the font family names contained in the underlying font data.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-family-desc">CSS Fonts 4 §4.2</a></span></p>
+</header>
+
+<section>
+  <h2>The rule's name, not the font's</h2>
+  <p>Literata's own name table says "Literata"; each rule here gives it another name.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Any Name', monospace">Handgloves</div>
+    <figcaption><code>'Any Name'</code>: Literata.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Literata, monospace">Handgloves</div>
+    <figcaption><code>Literata</code>: no rule has that name; monospace, unless Literata is installed.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Hiding an installed family</h2>
+  <p><q>If the font family name is the same as a font family available in a given user's environment, it effectively
+  hides the underlying font for documents that use the stylesheet.</q></p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: Courier, sans-serif">Handgloves</div>
+    <figcaption><code>Courier</code>: the rule's Literata, a proportional serif, not the installed typewriter
+    face.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace">Handgloves</div>
+    <figcaption>A rule named <code>monospace</code> defines a family named "monospace"; the generic keyword is not
+    that name, so monospace.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

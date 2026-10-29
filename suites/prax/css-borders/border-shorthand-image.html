@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The border shorthand resets border-image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 60px; height: 20px; margin: 10px; background: #f9cc9d; border: 10px solid #2c5a8f;
+    border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%236aa36a'/></svg>") 10; }
+  .reset { border: 10px dashed #2c5a8f; }
+  .side { border-top: 10px dashed #2c5a8f; }
+  .after { border-width: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 2.4 Border Shorthand Properties</div>
+  <h1>The border shorthand resets border-image</h1>
+  <p class=pr-lede><q>The 'border' shorthand also resets 'border-image' to its initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-shorthands">CSS Borders and Box Decorations 4 §2.4</a></span>
+  Each box first has a 10px blue border and a green border image.</p>
+</header>
+
+<section>
+  <h2>border resets it, border-top does not</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box></div></div>
+    <figcaption>As first given: green all round.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box reset"></div></div>
+    <figcaption>Then <code>border: 10px dashed</code>: blue dashes, no green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box side"></div></div>
+    <figcaption>Then <code>border-top: 10px dashed</code>: still green all round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other border properties after it</h2>
+  <p>An example sets <q>'border' shorthand first, otherwise it erases 'border-image'</q>, and notes <q>but other
+  'border' properties can be set after</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box after"></div></div>
+    <figcaption>Then <code>border-width: 10px 20px</code>: green, 10px at the top and bottom, 20px at the
+    sides.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

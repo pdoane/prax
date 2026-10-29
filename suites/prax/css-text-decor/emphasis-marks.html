@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Emphasis marks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .j { padding: 0 6px; font: 24px/50px "PR Noto Sans JP"; }
+  .pr-stage.v { padding: 6px 6px; font: 24px/50px "PR Noto Sans JP"; height: 170px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 3 Additional Controls for Emphasis Marks</div>
+  <h1>Emphasis marks</h1>
+  <p class=pr-lede><q>East Asian documents traditionally use small symbols next to each glyph to emphasize a run of
+  text.</q> <q>The 'text-emphasis' shorthand, and its 'text-emphasis-style' and 'text-emphasis-color' longhands, can be
+  used to apply such marks to the text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#emphasis-marks">CSS Text Decoration 4 §3</a></span></p>
+</header>
+
+<section>
+  <h2>A mark beside each character</h2>
+  <p><code>text-emphasis: filled sesame</code>, in blue, on the run 特に重要.</p>
+  <figure>
+    <div class="pr-stage pr-wide j" lang=ja>これは<span style="text-emphasis: filled sesame #2c5a8f">特に重要</span>です。</div>
+    <figcaption>A blue sesame over each of 特, に, 重 and 要, and none over the text around them.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical v" lang=ja>これは<span style="text-emphasis: filled sesame #2c5a8f">特に重要</span>です。</div>
+    <figcaption>Vertical: the sesames on the right of 特に重要.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

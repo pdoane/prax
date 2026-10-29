@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clear: inline-start and inline-end</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure.w { margin-right: 10px; }
+  figure.w figcaption { max-width: 162px; }
+  .pr-stage.w { width: 160px; height: 60px; }
+  .pr-stage.w { height: 100px; }
+  .l { float: inline-start; inline-size: 30px; block-size: 60px; }
+  .r { float: inline-end; inline-size: 30px; block-size: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Logical Properties and Values 1 · 2.2 Flow-Relative Values for the float and clear Properties, clear</div>
+  <h1>clear: inline-start and inline-end</h1>
+  <p class=pr-lede><code>clear</code> takes the new values <code>inline-start | inline-end</code>. <q>The mapping on these properties uses the writing mode of the element’s containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#float-clear">CSS Logical Properties and Values 1 §2.2</a></span> In each stage, L floats to the line's start and is 60px long in the block direction; R floats to its end and is 30px long. Then comes the orange block.</p>
+</header>
+
+<section>
+  <h2>inline-start</h2>
+  <p>The orange block has <code>clear: inline-start</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-start">clear</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: it clears L, at the left: 60px down.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-start">clear</div></div>
+    <figcaption><code>rtl</code>: it clears L, now at the right: 60px down.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-start">clear</div></div>
+    <figcaption><code>vertical-rl</code>: L at the top right, R at the bottom right: the block clears L, 60px in from the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>inline-end</h2>
+  <p>The orange block has <code>clear: inline-end</code>.</p>
+  <figure class="w">
+    <div class="pr-stage w"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-end">clear</div></div>
+    <figcaption><code>horizontal-tb</code>, <code>ltr</code>: it clears R only: 30px down.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="direction: rtl"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-end">clear</div></div>
+    <figcaption><code>rtl</code>: the same, R at the left.</figcaption>
+  </figure>
+  <figure class="w">
+    <div class="pr-stage w" style="writing-mode: vertical-rl"><div class="pr-a pr-fit l">L</div><div class="pr-c pr-fit r">R</div><div class=pr-b style="clear: inline-end">clear</div></div>
+    <figcaption><code>vertical-rl</code>: it clears R: 30px in from the right.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

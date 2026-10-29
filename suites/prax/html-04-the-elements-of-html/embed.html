@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The embed element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; font-size: 0; line-height: 0; }
+  .pic embed:not([width]) { width: 140px; height: 40px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.6 The embed element</div>
+  <h1>The embed element</h1>
+  <p class=pr-lede><q>The embed element provides an integration point for an external application or interactive
+  content.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/iframe-embed-object.html#the-embed-element">HTML §4.8.6</a></span>
+  Each embed is 140 by 40 unless a figure says otherwise.</p>
+</header>
+
+<section>
+  <h2>A plugin's content, or an indication that there is none</h2>
+  <p>The fetched resource's type is the one a <q>plugin</q> supports, from the type attribute, the URL's path or
+  the Content-Type; for one, the embed <q>now represents its content navigable</q>. Otherwise the user agent must
+  <q>Display an indication that no plugin could be found for element, as the contents of element.</q> Which types
+  have a plugin is <q>implementation-defined</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/infrastructure.html#plugins">§2.1.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><embed src="support/doc.html"></div>
+    <figcaption><code>doc.html</code>: with a plugin for HTML, green doc.html; without one, an indication that
+    there is no plugin.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><embed src="../shared/resources/flag-40x20.svg"></div>
+    <figcaption>An SVG flag, 40 by 20: with a plugin for SVG, the flag at the top left; without one, the
+    indication.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><embed src="support/missing.png"></div>
+    <figcaption>A 404, whose body is HTML: as for <code>doc.html</code>, the server's page or the
+    indication.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Nothing without src or type; a size from the attributes</h2>
+  <p><q>While any of the following conditions are occurring, any plugin instantiated for the element must be removed,
+  and the embed element represents nothing: The element has neither a src attribute nor a type attribute.</q></p>
+  <p><q>The embed element supports dimension attributes.</q> They <q>map to the dimension properties 'width' and
+  'height'</q>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#attributes-for-embedded-content-and-images">§15.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pic"><embed></div>
+    <figcaption>No src or type: nothing drawn in the embed's 140 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pic"><embed src="support/doc.html" width="100" height="60"></div>
+    <figcaption><code>width=100 height=60</code>: whatever is drawn, in a box 100 by 60.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

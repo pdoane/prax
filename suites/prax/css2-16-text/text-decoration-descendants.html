@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-decoration property: descendants</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .u { text-decoration: underline; color: #c0392b; }
+  .blue { color: #2c5a8f; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.3.1 Underlining, overlining, striking, and blinking: the 'text-decoration' property</div>
+  <h1>The text-decoration property: descendants</h1>
+  <p class=pr-lede>In each figure, the underlined element has a red <code>color</code>, and the descendant in it a blue
+  one.</p>
+</header>
+
+<section>
+  <h2>The ancestor's color, and the ancestor's decoration</h2>
+  <p><q>The color(s) required for the text decoration must be derived from the 'color' property value of the element
+  on which 'text-decoration' is set. The color of decorations must remain the same even if descendant elements have
+  different 'color' values.</q> <q>The 'text-decoration' property on descendant elements cannot have any effect on the
+  decoration of the ancestor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2 §16.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text u">red, <span class=blue>blue</span>, red</div>
+    <figcaption>"blue" is blue text, and the underline under it stays red.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text u">red, <span class=blue style="text-decoration: none">none</span>, red</div>
+    <figcaption><code>text-decoration: none</code> on the blue span: the red underline still runs under it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text u">red, <span class=blue style="text-decoration: overline">over</span>, red</div>
+    <figcaption><code>overline</code> on the span adds a blue line above "over"; the red underline stays.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Relative positioning moves the decoration</h2>
+  <p><q>Relatively positioning a descendant moves all text decorations affecting it along with the descendant's text;
+  it does not affect calculation of the decoration's initial position on that line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#lining-striking-props">CSS 2
+  §16.3.1</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-text u" style="padding-top: 10px">red, <span class=blue style="position: relative; top: -10px">raised</span>, red</div>
+    <figcaption>"raised" has <code>top: -10px</code>: its stretch of the red underline is 10px higher, with the text,
+    and the rest of the underline stays on the line. <span class=pr-flag>Chrome</span> leaves that stretch on
+    the line, under the place "raised" left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

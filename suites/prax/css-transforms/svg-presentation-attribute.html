@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The transform attribute in the cascade</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .g { fill: none; stroke: #6b7381; stroke-dasharray: 2 2; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 6.1 SVG presentation attributes</div>
+  <h1>The transform attribute in the cascade</h1>
+  <p class=pr-lede><q>SVG 2 defines the transform, patternTransform, gradientTransform attributes as presentation
+  attributes, represented by the CSS transform property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-attribute-specificity">CSS Transforms 1 §6.1</a></span>
+  Each stage is an <code>svg</code>, 160 by 80; the dashed outline is where the shape would be untransformed.</p>
+</header>
+
+<section>
+  <h2>The property overrides the attribute</h2>
+  <p><q>Because of the participation to the CSS cascade, the transform style property overrides the transform
+  attribute.</q> A group holds a blue 40px square at (0, 0).</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=0.5 y=0.5 width=40 height=40 /><g transform="translate(80 30)"><rect width=40 height=40 fill="#4f81bd" /></g></svg></div>
+    <figcaption><code>transform="translate(80 30)"</code>: to 80 to 120 across, 30 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=0.5 y=0.5 width=40 height=40 /><g transform="translate(80 30)" style="transform: translate(20px, 20px)"><rect width=40 height=40 fill="#4f81bd" /></g></svg></div>
+    <figcaption>And the property, <code>translate(20px, 20px)</code>: to 20 to 60.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><defs><linearGradient id=h gradientTransform="rotate(90)" style="transform: none"><stop offset=0.5 stop-color="#4f81bd" /><stop offset=0.5 stop-color="#d68a3c" /></linearGradient></defs><rect x=20 y=10 width=120 height=60 fill="url(#h)" /></svg></div>
+    <figcaption>A gradient, blue then orange, with <code>gradientTransform</code> <code>="rotate(90)"</code> and the
+    property <code>none</code>: left to right. <span class=pr-flag>Safari</span> keeps the attribute's rotation: top to
+    bottom.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>transform-origin is a presentation attribute too</h2>
+  <p><q>The transform-origin CSS property is also a presentation attribute</q>. A blue 60 by 40 rect at (60, 20),
+  <code>transform="rotate(90)"</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=60.5 y=20.5 width=60 height=40 /><rect x=60 y=20 width=60 height=40 fill="#4f81bd" transform="rotate(90)" transform-origin="60px 20px" /></svg></div>
+    <figcaption><code>transform-origin</code> <code>="60px 20px"</code>: about its top left corner, to 20 to 60
+    across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width=160 height=80><rect class=g x=60.5 y=20.5 width=60 height=40 /><rect x=60 y=20 width=60 height=40 fill="#4f81bd" transform="rotate(90)" transform-origin="60px 20px" style="transform-origin: 90px 40px" /></svg></div>
+    <figcaption>And the property, <code>90px 40px</code>: about its center, to 70 to 110 across.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

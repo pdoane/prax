@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color(xyz …)</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 10.9 The Predefined CIE XYZ Color Spaces: the xyz-d50, xyz-d65, and xyz keywords</div>
+  <h1>color(xyz …)</h1>
+  <p class=pr-lede><q>It represents the CIE XYZ [COLORIMETRY] color space, scaled such that diffuse white has a luminance (Y) of
+  1.0. and, if necessary, chromatically adapted to the reference white. The reference white for xyz-d50 is D50, while
+  the reference white for xyz-d65 and xyz is D65.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#predefined-xyz">CSS Color 4
+  §10.9</a></span></p>
+</header>
+
+<section>
+  <h2>The same color in each</h2>
+  <p><q>These are exactly equivalent</q>: <code>#7654CD</code>, <code>lab(44.36% 36.05 -58.99)</code>, <code>color(xyz-d50 0.2005 0.14089 0.4472)</code>, <code>color(xyz-d65 0.21661 0.14602 0.59452)</code>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: #7654CD"></div><div class=sw style="background: color(xyz-d50 0.2005 0.14089 0.4472)"></div><div class=sw style="background: color(xyz-d65 0.21661 0.14602 0.59452)"></div><div class=sw style="background: color(xyz 0.21661 0.14602 0.59452)"></div></div>
+    <figcaption><code>#7654CD</code>, then the XYZ D50, D65 and <code>xyz</code> forms: one violet four times.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(xyz-d50 0.9643 1 0.8251)"></div><div class=sw style="background: color(xyz-d65 0.9505 1 1.089)"></div></div>
+    <figcaption><q>These colors are exactly equivalent, and represent white</q>: white twice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Different white points</h2>
+  <p>The same numbers in the two spaces are two colors, one adapted from D50.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: color(xyz-d65 0.3 0.25 0.1)"></div><div class=sw style="background: rgb(76% 46.4% 29.6%)"></div><div class=sw style="background: color(xyz-d50 0.3 0.25 0.1)"></div><div class=sw style="background: rgb(72.7% 47.2% 35.7%)"></div></div>
+    <figcaption><code>color(xyz-d65 0.3 0.25 0.1)</code>, as <code>rgb(76% 46.4% 29.6%)</code>: an orange tan. <code>xyz-d50</code>: a duller tan, as <code>rgb(72.7% 47.2% 35.7%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text on a path</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.8 Text on a path</div>
+  <h1>Text on a path</h1>
+  <p class=pr-lede><q>SVG can place text along a path defined either by a ‘path’ element or the path equivalent of a
+  basic shape.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextLayoutPath">SVG 2 §11.8</a></span>
+  Each stage is an SVG 160 by 80 holding "abcdefghij…" in PR Noto Sans Mono at <code>calc(50px / 3)</code>, each
+  letter 10 along the path, which is dashed in red.</p>
+</header>
+
+<section>
+  <h2>A path, and a path's data</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path id="arc" d="M 20 60 Q 80 0 140 60" class=pr-baseline /><text class=pr-measure><textPath href="#arc">abcdefghijk</textPath></text></svg></div>
+    <figcaption><code>href="#arc"</code>, a curve from 20, 60 up and down to 140, 60: the letters stand on it, a
+    from its start, each turned to follow it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M 20 60 Q 80 0 140 60" class=pr-baseline /><text class=pr-measure><textPath path="M 20 60 Q 80 0 140 60">abcdefghijk</textPath></text></svg></div>
+    <figcaption><code>path</code> with the same data, and no <code>href</code>: the same.
+    <span class=pr-flag>Safari</span> No text.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Basic shapes</h2>
+  <p><q>The ability to place text along a basic shape is new in SVG 2.</q> A shape's equivalent path starts at the
+  top of a <code>rect</code>, at x + rx, and at the right of a <code>circle</code>, going clockwise.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><rect id="box" x="30" y="25" width="100" height="40" fill="none" stroke="#c0392b" stroke-dasharray="3 2" /><text class=pr-measure><textPath href="#box">abcdefghijklmnopqrstu</textPath></text></svg></div>
+    <figcaption>A <code>rect</code> 100 by 40 at 30, 25: "abcdefghij" along its top from 30 to 130, then "klmn"
+    down its right side, turned 90°, and "opqrstu" leftward along its bottom, upside down. <span class=pr-flag>Chrome</span> No text.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><circle id="ring" cx="80" cy="40" r="25" class=pr-baseline /><text class=pr-measure><textPath href="#ring">abcdefghijklmn</textPath></text></svg></div>
+    <figcaption>A <code>circle</code> of radius 25 at 80, 40: a at its right, 105, 40, the letters going clockwise
+    round it, outside it, down and under. <span class=pr-flag>Chrome</span> No text.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

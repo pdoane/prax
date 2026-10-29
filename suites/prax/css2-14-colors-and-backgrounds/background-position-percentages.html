@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Background position: percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .area { height: 100px; background-repeat: no-repeat; background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='50' height='50'><rect width='50' height='50' fill='%234f81bd'/><circle cx='7' cy='42' r='3' fill='white'/></svg>"); }
+  .ring { position: absolute; left: 21px; top: 77px; width: 10px; height: 10px; border: 2px solid #c0392b; border-radius: 50%; }
+  .bordered { height: 40px; margin: 10px; padding: 10px; border: 10px solid rgba(214, 138, 60, 0.6); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 14.2.1 Background properties</div>
+  <h1>Background position: percentages</h1>
+  <p class=pr-lede><code>background-position</code> takes percentages, lengths and keywords. Initial <code>0% 0%</code>,
+  applies to all elements, not inherited. The image is a 50px blue square, drawn once, with a white dot 14% across and
+  84% down it.</p>
+</header>
+
+<section>
+  <h2>A point of the image on the same point of the box</h2>
+  <p><q>A percentage X aligns the point X% across (for horizontal) or down (for vertical) the image with the point X%
+  across (for horizontal) or down (for vertical) the element's padding box.</q> Percentages <q>refer to the size of the box itself</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#background-properties">CSS 2
+  §14.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage><div class=area></div></div>
+    <figcaption><code>0% 0%</code>, the initial value: the image's top left corner on the box's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=area style="background-position: 100% 100%"></div></div>
+    <figcaption><code>100% 100%</code>: its bottom right corner on the box's, at 150px across and 50px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=area style="background-position: 14% 84%"></div><div class=ring></div></div>
+    <figcaption><code>14% 84%</code>: the white dot is in the red ring, the point 14% across, 28px, and 84% down,
+    84px, the box. The image is at 21px and 42px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="area bordered" style="background-position: 100% 100%; background-color: #e7eaef"></div></div>
+    <figcaption>A box with a 10px orange border: <code>100% 100%</code> puts the image in the padding box's corner, the
+    border's inner edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cyclic percentages in non-replaced boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 15px/20px "PR Cousine"; }
+  .s { width: 150px; }
+  figure.f figcaption { max-width: 152px; }
+  .bar { display: inline-block; height: 20px; background: #d68a3c; vertical-align: top; }
+  .kid { background: rgba(79, 129, 189, 0.45); min-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 5.2.1 Intrinsic Contributions of Percentage-Sized Boxes, non-replaced</div>
+  <h1>Cyclic percentages in non-replaced boxes</h1>
+  <p class=pr-lede><q>If the box is non-replaced, then the entire value of any max size property or preferred size
+  property (width/max-width/height/max-height) specified as an expression containing a percentage (such as 10% or
+  calc(10px + 0%)) that is cyclic is treated for the purpose of calculating the box’s intrinsic size contributions only
+  as that property’s initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#cyclic-percentage-contribution">CSS Box Sizing 3 §5.2.1</a></span>
+  Each dashed parent sizes itself to a blue child, and its width reads back below.</p>
+</header>
+
+<section>
+  <h2>As auto for the contribution, then resolved</h2>
+  <p>The spec's example: <q>When calculating the width of the outer &lt;article&gt;, the inner &lt;aside&gt; behaves as
+  width: auto</q>; <q>it's treated as definite for resolving the &lt;aside&gt;, whose width resolves to half that of
+  the &lt;article&gt;.</q></p>
+  <figure class=f>
+    <div class="pr-stage s t"><div id=ex class=pr-parent style="width: min-content"><div class=kid style="width: 50%">LOOOOOONG</div></div></div>
+    <figcaption><code>width: min-content</code> around a <code>width: 50%</code> child of "LOOOOOONG": 81px, the
+    word; the child is half, its word
+    overflowing.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=f1 class=pr-parent style="width: max-content"><div class=kid style="width: 50%"><span class=bar style="width: 80px"></span></div></div></div>
+    <figcaption>A <code>width: 50%</code> child of an 80px bar, in a <code>max-content</code> parent: 80px, reads <code class=pr-computed data-of=f1 data-dom=offsetWidth></code>; the child 40px.</figcaption>
+  </figure>
+  <figure class=f>
+    <div class="pr-stage s"><div id=f3 class=pr-parent style="width: max-content"><div class=kid style="max-width: calc(10px + 1%)"><span class=bar style="width: 80px"></span></div></div></div>
+    <figcaption><code>max-width: calc(10px + 1%)</code>, the whole value as none: 80px, reads <code class=pr-computed data-of=f3 data-dom=offsetWidth></code>; the child about 11px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Minimums, margins and padding against zero</h2>
+  <p><q>For the min size properties, as well as for margins and paddings (and gutters), a cyclic percentage is resolved
+  against zero for determining intrinsic size contributions.</q></p>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=f4 class=pr-parent style="width: max-content"><div class=kid style="padding-left: 10%; margin-left: 20%"><span class=bar style="width: 80px"></span></div></div></div>
+    <figcaption><code>padding-left: 10%; margin-left: 20%</code>: they add nothing, so 80px, reads <code class=pr-computed data-of=f4 data-dom=offsetWidth></code>; then they resolve, pushing the bar 24px out. <span class=pr-flag>Safari</span> 88px: it counts the padding against the
+    80px.</figcaption>
+  </figure>
+  <figure class="f pr-erratum">
+    <div class="pr-stage s"><div id=f2 class=pr-parent style="width: min-content"><div class=kid style="min-width: calc(40px + 50%)"><span class=bar style="width: 10px"></span></div></div></div>
+    <figcaption><code>min-width: calc(40px + 50%)</code> around a 10px bar, in a <code>min-content</code> parent: the
+    percentage as zero, so 40px, reads <code class=pr-computed data-of=f2 data-dom=offsetWidth></code>. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 10px.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // Read back as computed.js would, and again once the fonts have loaded, since the widths read are of text.
+  const read = () => {
+    for (const out of document.querySelectorAll(".pr-computed"))
+      out.textContent = String(document.getElementById(out.dataset.of)[out.dataset.dom]);
+  };
+  read();
+  document.fonts.ready.then(read);
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>caret-color: the color of the text under a block caret</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .stage { padding: 20px; }
+  .edit { padding: 0 10px; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #2c5a8f; font-size: 30px; line-height: 40px; }
+  .mono { font-family: "PR Cousine"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 5.2.1 Coloring the Insertion Caret, the second value</div>
+  <h1>caret-color: the color of the text under a block caret</h1>
+  <p class=pr-lede><q>If caret-shape is block— or auto behaving as block— then it determines the color of the text overlapping the caret.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#caret-color">CSS Basic User Interface 4 §5.2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Two colors</h2>
+  <p><q>The color of text overlapping the caret is the specified color.</q> <q>Text considered to overlap the caret is the next visible character after the insertion point</q>. The box has <code>caret-shape: block; caret-color: #1f2430 #f1c40f</code> and <code>caret-animation: manual</code>, so the caret does not blink.</p>
+  <p class=pr-note>A script gives the focus to the editable box and puts the insertion point in it. Safari and Firefox draw no caret in these stills.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide stage"><div id=edit class="edit" contenteditable style="caret-shape: block; caret-color: #1f2430 #f1c40f; caret-animation: manual">Lorem ipsum</div></div>
+    <figcaption>The insertion point is between “u” and “m”: a near-black block over the “m”, and the “m” drawn on it in yellow. <span class=pr-flag>Chrome</span> has no second value: a grey block, the “m” dark on it. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> have no <code>caret-shape</code>.</figcaption>
+  </figure>
+</section>
+
+<script>
+  // The focus goes to the editable box, and the insertion point after its 10 character.
+  const box = document.getElementById("edit");
+  box.focus();
+  const range = document.createRange();
+  range.setStart(box.firstChild, 10);
+  range.collapse(true);
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+</script>
+</body>
+</html>

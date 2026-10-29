@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Autospace after bidi reordering</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 6px; font: 24px/40px "PR Noto Sans JP", "PR Noto Sans Hebrew"; white-space: nowrap; text-autospace: ideograph-alpha; }
+  .t { background: #f9cc9d; }
+  .pr-stage { width: 300px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.4.2 Interaction with Bidirectional Text</div>
+  <h1>Autospace after bidi reordering</h1>
+  <p class=pr-lede><q>Spacing introduced by 'text-autospace' is inserted after bidi reordering.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#autospace-bidi">CSS Text 4 §8.4.2</a></span>
+  The specification's example, with Hebrew for its right-to-left capitals. Han is 24px, the space 3px. Each stage is <code>ideograph-alpha</code>.</p>
+</header>
+
+<section>
+  <h2>Between what is drawn side by side</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=zh>中国字שלום עולם中国字</div>
+    <figcaption><q>一些中国字SOME RTL TEXT中国字</q>: the Hebrew reversed, its first letter ש now beside the second
+    中; 3px between each Han and the Hebrew beside it as drawn. <span class=pr-flag>Chrome</span> None.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Only beside the second 中.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=zh>中国字שלום♥中国字</div>
+    <figcaption><q>一些中国字SOME RTL♥中国字.</q>: the ♥, neutral, stays after the Hebrew, before the second 中: no
+    space there; 3px between the first 字 and the Hebrew. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> None.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage ja" lang=zh>中国字<bdi dir=rtl>שלום♥</bdi>中国字</div>
+    <figcaption><q>&lt;bdi dir=rtl&gt;SOME RTL♥&lt;/bdi&gt;</q>: the ♥ goes to the isolate's left, beside the first
+    字, so no space there; 3px between the Hebrew and the second 中. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> None.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

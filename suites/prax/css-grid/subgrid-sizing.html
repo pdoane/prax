@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: their items size the parent's tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .p { display: grid; grid-template-columns: auto auto; justify-content: start; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .tc { background: #6aa36a; color: white; }
+  .td { background: #8e44ad; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, sizing</div>
+  <h1>Subgrids: their items size the parent's tracks</h1>
+  <p class=pr-lede>A subgrid <q>acts as if it was completely empty for track sizing purposes in the subgridded
+  dimension.</q> <q>The subgrid's own grid items participate in the sizing of its parent grid in the subgridded
+  dimension(s) and are aligned to it in those dimensions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span></p>
+</header>
+
+<section>
+  <h2>Each item in its own track</h2>
+  <p>The parent has <code>auto auto</code> columns: the tinted, outlined item spans both, and "x" and "y", 10px
+  each, are under it.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class=pr-parent style="grid-column: span 2; display: grid; grid-template-columns: auto auto"><div class=ta>abcdef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption>A nested grid: the item spans both columns with its 60px, which goes to both; they are 30px each, and
+    "y" is at 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class=pr-parent style="grid-column: span 2; display: grid; grid-template-columns: subgrid"><div class=ta>abcdef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption>A subgrid: "abcdef" is in the first column only, which is 60px; the second is 10px, and "y" is at
+    60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=p><div class=pr-parent style="grid-column: span 2; display: grid; grid-template-columns: subgrid"><div class=ta>abcd</div><div class=tb>ef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption>"abcd" and "ef" in the subgrid's two columns: the parent's are 40 and 20px, and "y" lines up under
+    "ef" at 40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Rows the same way</h2>
+  <p>The parent has two 100px columns and <code>auto</code> rows. In the first column, an item of both rows holds
+  "aaaa bbbb cccc", two lines, and "dd"; in the second, B and C stretch to the rows.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class=pr-parent style="grid-row: span 2; display: grid; grid-template-rows: subgrid"><div class=ta>aaaa bbbb cccc</div><div class=tb>dd</div></div><div class=pr-b style="grid-column: 2">B</div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption>The first row is 40px, from the two lines, and the second 20px: B is 40px tall at the top, C 20px
+    tall from 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div style="display: grid; grid-template-columns: 100px 100px"><div class=pr-parent style="grid-row: span 2; display: grid; grid-template-rows: auto auto"><div class=ta>aaaa bbbb cccc</div><div class=tb>dd</div></div><div class=pr-b style="grid-column: 2">B</div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption>A nested grid instead: its 60px is shared by both rows, 30px each, so B and C are each 30px
+    tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-self in grid: baselines and their cycles</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-columns: 70px 70px; align-items: baseline; }
+  .t { padding: 0 4px; background: #b9cde6; font-size: 26px; line-height: 40px; }
+  .u { padding: 0 4px; background: #f6d7b4; font-size: 13px; line-height: 20px; }
+  figure { margin-right: 10px; }
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 11.4 Block-axis Alignment: the align-self and align-items properties</div>
+  <h1>align-self in grid: baselines and their cycles</h1>
+  <p class=pr-lede><q>Grid items can also be aligned in the block dimension</q> <q>by using the align-self
+  property on the grid item or align-items property on the grid container</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#column-align">CSS Grid Layout 2 §11.4</a></span>
+  The values: <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#align-grid">CSS Box Alignment 3 §6.2.5</a></span>.
+  Each grid here is <code>align-items: baseline</code>; blue has 26px text, orange 13px, and the red line is blue's
+  baseline.</p>
+</header>
+
+<section>
+  <h2>A row's items share a baseline</h2>
+  <p>Each row's items align by their own baselines <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-terms">CSS Box Alignment 3 §9.2</a></span>.</p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=t><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Ab</div><div class=u>Ab</div><div class=u>Ab</div><div class=t><span class=pr-baseline style="width: 150px; margin: 0 -80px 0 -70px"></span>Ab</div></div></div>
+    <figcaption>Each orange "Ab" on the red line of its row, about 29px and 69px down.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A size that depends on the track: fallback</h2>
+  <p><q>If baseline alignment is specified on a grid item whose size in that axis depends on the size of an
+  intrinsically-sized track</q>, <q>that item does not participate in baseline alignment, and instead uses its
+  fallback alignment</q>. <q>For this purpose, &lt;flex&gt; track sizes count as “intrinsically-sized” when the grid
+  container has an indefinite size in the relevant axis.</q> Orange has <code>height: 50%</code>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=g><div class=t><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Ab</div><div class=u style="height: 50%">Ab</div></div></div>
+    <figcaption>An <code>auto</code> row: orange, 20px tall, falling back to the top. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> put it on
+    the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: 60px"><div class=t><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Ab</div><div class=u style="height: 50%">Ab</div></div></div>
+    <figcaption>A 60px row: orange, 30px tall, its text on the red line.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-rows: 1fr"><div class=t><span class=pr-baseline style="width: 150px; margin-right: -150px"></span>Ab</div><div class=u style="height: 50%">Ab</div></div></div>
+    <figcaption>A <code>1fr</code> row, the grid's height <code>auto</code>: the same: browsers put orange on the red
+    line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

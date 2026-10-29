@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Box dimensions: edges</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.1 Box dimensions</div>
+  <h1>Box dimensions: edges</h1>
+  <p class=pr-lede>Each box has a content area and optional padding, border and margin areas around it, drawn here in the colors browsers' inspectors use.</p>
+</header>
+
+<p class=pr-legend><span class="pr-swatch pr-margin"></span>margin<span class="pr-swatch pr-border"></span>border<span
+class="pr-swatch pr-padding"></span>padding<span class="pr-swatch pr-content"></span>content</p>
+
+<section>
+  <h2>Edges</h2>
+  <p><q>If the padding has 0 width, the padding edge is the same as the content edge.</q> The same holds of a border
+  of 0 width and the padding edge, and of a margin of 0 width and the border edge. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#box-dimensions">CSS 2
+  §8.1</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-margin-area><div class=pr-box style="margin: 10px; border-width: 10px; padding: 0"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption>No padding: content meets the border.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-margin-area><div class=pr-box style="margin: 10px; border-width: 0; padding: 10px"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption>No border: padding meets the margin.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-margin-area><div class=pr-box style="margin: 0; border-width: 10px; padding: 10px"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption>No margin: the border meets the stage.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pr-margin-area><div class=pr-box style="margin: 0; border-width: 0; padding: 0"><div
+      class=pr-content-area></div></div></div>
+    </div>
+    <figcaption>None of the three: all four edges are the content edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

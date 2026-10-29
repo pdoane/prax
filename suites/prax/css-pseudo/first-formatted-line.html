@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Finding the first formatted line</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage p { margin: 0; }
+  .fl::first-line { color: #d68a3c; }
+  .ib { display: inline-block; }
+  .float { float: right; width: 60px; }
+  .cols { columns: 2; column-gap: 20px; }
+  table { border-spacing: 0; }
+  td { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Pseudo-Elements 4 · 2.1.1 Finding the First Formatted Line</div>
+  <h1>Finding the first formatted line</h1>
+  <p class=pr-lede><q>The first formatted line of a block container or multi-column container that contains
+  block-level content (and is not a table wrapper box) is the first formatted line of its first in-flow block-level
+  child. If no such line exists, it has no first formatted line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-pseudo-4/#first-text-line">CSS Pseudo-Elements 4 §2.1.1</a></span>
+  Each outer <code>div</code> has <code>div::first-line { color: orange }</code>; its text is 10px a character.</p>
+</header>
+
+<section>
+  <h2>Through block children</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><div class=fl><p>First paragraph</p><p>Second one</p></div></div>
+    <figcaption>Two <code>p</code>s: <q>First paragraph</q>, the first <code>p</code>'s line, is orange; <q>Second
+    one</q> black.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><div class=fl><div class=float>Float</div><p>In flow</p></div></div>
+    <figcaption>A float first, then a <code>p</code>: the float is not in flow, so the line is the <code>p</code>'s,
+    and <q>In flow</q> is orange.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-measure"><div class="fl cols"><p>Left column then right</p></div></div>
+    <figcaption>A multi-column container, 70px columns: <q>Left</q>, the first line of the first column, is orange. <span class=pr-flag>Firefox</span> All black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No first formatted line past these</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium pr-measure"><div class=fl><table><tr><td>Cell</td></tr></table><p>After the table</p></div></div>
+    <figcaption>A table first: a table wrapper box has no first formatted line, and its <code>div</code> none, so
+    both lines are black. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> <q>After the
+    table</q> orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><p class=fl><br>First word</p></div>
+    <figcaption><q>The first formatted line can be an empty line.</q> A <code>br</code> first: <q>First word</q> is
+    on the second line, and black. (A Note.)</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-measure"><div class=fl><p class=ib>Hello<br>Goodbye</p> etcetera</div></div>
+    <figcaption>An inline block on the line: <q>the first formatted line of the DIV is not the line “Hello”, but
+    rather the line that contains that entire inline block.</q> <q>etcetera</q>, on that line, is orange. (A Note.) Firefox colors the inline block's text too, as a
+    child on that line; Chrome and Safari do not.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

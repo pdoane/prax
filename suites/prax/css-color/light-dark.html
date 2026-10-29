@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>light-dark()</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .chip { font: 15px/40px "PR Arimo"; padding: 0 10px; color: light-dark(#2c5a8f, #f6d7b4); background: light-dark(#ffffff, #1f2430); }
+  .img { width: 100px; height: 40px; margin-left: 10px; background-image: light-dark(linear-gradient(to right, #4f81bd, #ffffff), linear-gradient(to right, #d68a3c, #1f2430)); }
+  .none { width: 100px; height: 40px; margin-left: 10px; background-image: light-dark(linear-gradient(to right, #4f81bd, #ffffff), none); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 7 Reacting to the used color-scheme: the light-dark() Function</div>
+  <h1>light-dark()</h1>
+  <p class=pr-lede><q>For the color form, this function computes to the computed value of the first color, if the element color
+  scheme is light, or to the computed value of the second color, if the element color scheme is dark.</q> The stages set
+  <code>color-scheme</code> (<a href="https://drafts.csswg.org/css-color-adjust-1/#color-scheme-prop">CSS Color
+  Adjustment 1 §2.2</a>). <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#light-dark">CSS Color 5
+  §7</a></span></p>
+</header>
+
+<section>
+  <h2>Colors</h2>
+  <p>Text in <code>light-dark(#2c5a8f, #f6d7b4)</code> on <code>light-dark(#ffffff,
+  #1f2430)</code>.</p>
+  <figure>
+    <div class=pr-stage style="color-scheme: light"><div class=chip>light scheme</div></div>
+    <figcaption><code>color-scheme: light</code>: dark blue text on white.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="color-scheme: dark"><div class=chip>dark scheme</div></div>
+    <figcaption><code>color-scheme: dark</code>: peach text on near-black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Images</h2>
+  <p><q>For the image form, this function returns the first image, if the element color scheme is
+  light, or the second image</q>; <q>The none keyword computes to image(transparent)</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="color-scheme: light"><div class=img></div></div><div class=pr-stage style="color-scheme: dark"><div class=img></div></div>
+    <figcaption>Two gradients: blue to white in the light stage, orange to dark in the dark one. <span class=pr-flag>Safari</span> Has no image form: no gradient in either stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="color-scheme: light"><div class=none></div></div><div class=pr-stage style="color-scheme: dark"><div class=none></div></div>
+    <figcaption>With <code>none</code> as the dark image: the light stage's gradient, and nothing in the dark one. <span class=pr-flag>Safari</span> Has no image form: no gradient in either stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

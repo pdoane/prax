@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Page contexts cascade</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 4.4 Cascading in the page context</div>
+  <h1>Page contexts cascade</h1>
+  <p class=pr-lede><q>Page contexts cascade, so the following stylesheet would style pages with 25 millimeter margins and 14 point type in the page-margin boxes</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#cascading-and-page-context">CSS Paged Media 3 §4.4</a></span> Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>Declarations from several rules</h2>
+  <p>Each declaration is cascaded on its own, so two rules that match a page both contribute to it.</p>
+  <figure>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 40px } @page { margin-left: 10px } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div><div>line 3</div><div>line 4</div>"></iframe>
+    <figcaption>The second rule overrides only the left margin: each page area is 10px from the left and 40px from the other edges.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 20px; @top-center { content: 'Page ' counter(page) } } @page { color: #c0392b } @page { font-size: 10px }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Both later rules reach the header: 'Page 1' and 'Page 2' are red and 10px. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Margin contexts cascade too</h2>
+  <p>The specification's example: <q>the first page will have blue text in the top-left page-margin box and green text in the top-right page-margin box, while subsequent pages will have red text in the page-margin boxes.</q></p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page :first { color: green; @top-left { content: 'foo'; color: blue } @top-right { content: 'bar' } } @page { size: 240px 160px; margin: 20px; color: red; @top-center { content: 'Page ' counter(page) } }</style><div><div>line 1</div><div>line 2</div></div><div class=pg><div>line 3</div><div>line 4</div></div>"></iframe>
+    <figcaption>Page 1: blue 'foo', green 'Page 1' and green 'bar'. Page 2: red 'Page 2' alone. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

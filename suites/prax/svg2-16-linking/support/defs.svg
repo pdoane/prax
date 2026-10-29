@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Definitions for other documents to reference: a green gradient, a blue square, and a square that an animation
+     would turn orange, if it played. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+  <linearGradient id="green"><stop stop-color="#6aa36a" /></linearGradient>
+  <rect id="square" width="40" height="40" fill="#4f81bd" />
+  <rect id="animated" width="40" height="40" fill="#4f81bd"><set attributeName="fill" to="#d68a3c" begin="0s" /></rect>
+</svg>

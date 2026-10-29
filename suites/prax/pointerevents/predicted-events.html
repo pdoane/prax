@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Predicted events</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .layers { position: relative; margin: 10px 20px; width: 260px; height: 182px; touch-action: none; }
+  .layers canvas { position: absolute; top: 0; left: 0; touch-action: none; }
+  #ink { background: var(--pr-plain); border: 1px solid var(--pr-accent); }
+  #ahead { pointer-events: none; margin: 1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 9.2 Predicted events</div>
+  <h1>Predicted events</h1>
+  <p class=pr-lede><q>Applications can use this information with the getPredictedEvents method to speculatively "draw
+  ahead" to a predicted position to reduce perceived latency, and then discarding these predicted points once the actual
+  points are received.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#predicted-events">Pointer Events §9.2</a></span></p>
+</header>
+<section>
+  <h2>Where the pointer is going</h2>
+  <p><q>For trusted pointermove events, it is a sequence of PointerEvents that the user agent predicts will follow the
+  event in the future.</q> <q>The number of events in the list and how far they are from the current timestamp are
+  determined by the user agent and the prediction algorithm it uses.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#predicted-events">§9.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=layers><canvas id=ink width=258 height=180></canvas><canvas id=ahead width=258 height=180></canvas></div>
+      <ol class=pr-log data-log="pointermove" data-fields="predicted" data-on="#ink" data-lines=2></ol>
+    </div>
+    <figcaption>Press and drag in a steady line. The line is drawn from the coalesced events; grey rings ahead of it
+    are the last <code>pointermove</code>'s predicted events, replaced at each one. The log gives how many there are:
+    a browser that predicts nothing gives 0, and draws no rings.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws the actual movement on one canvas, and the latest predicted points on another above it.
+  const ink = document.getElementById("ink").getContext("2d"), ahead = document.getElementById("ahead").getContext("2d");
+  const canvas = document.getElementById("ink");
+  let last = null;
+  const at = (event, box) => [event.clientX - box.left - 1, event.clientY - box.top - 1];
+  canvas.addEventListener("pointerdown", event => {
+    ink.clearRect(0, 0, 258, 180);
+    last = at(event, canvas.getBoundingClientRect());
+  });
+  // Runs before the log's listener, which listens on the canvas itself.
+  document.addEventListener("pointermove", event => {
+    if (event.target !== canvas)
+      return;
+    const predicted = event.getPredictedEvents ? event.getPredictedEvents() : [];
+    event.predicted = predicted.length;
+    ahead.clearRect(0, 0, 258, 180);
+    if (!event.buttons || !last)
+      return;
+    const box = canvas.getBoundingClientRect();
+    ink.strokeStyle = "#2c5a8f";
+    ink.lineWidth = 2;
+    for (const item of event.getCoalescedEvents ? event.getCoalescedEvents() : [event]) {
+      const point = at(item, box);
+      ink.beginPath();
+      ink.moveTo(...last);
+      ink.lineTo(...point);
+      ink.stroke();
+      last = point;
+    }
+    ahead.strokeStyle = "#8a93a1";
+    for (const item of predicted) {
+      ahead.beginPath();
+      ahead.arc(...at(item, box), 4, 0, 2 * Math.PI);
+      ahead.stroke();
+    }
+  }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

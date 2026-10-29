@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>beforeinput</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.4.3.1 beforeinput</div>
+  <h1>beforeinput</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when the DOM is about to be updated.</q> It is
+  cancelable, and its default action is to <q>Update the DOM element</q>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-beforeinput">UI Events §3.4.3.1</a></span></p>
+</header>
+<section>
+  <h2>Canceled, nothing changes</h2>
+  <p>The page's script cancels each beforeinput in the field whose data is a digit, so the field takes letters but no
+  digits. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-beforeinput">§3.4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="beforeinput input" data-fields="data" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field and type <code>a1b</code>: the field holds <code>ab</code>. The log has beforeinput
+    with <code>data="1"</code> and no input after it.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>In an editing host</h2>
+  <p>Its targets include <q>any Element with contenteditable attribute enabled</q>; the same script cancels digits
+  there. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-beforeinput">§3.4.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=host contenteditable></div></div>
+      <ol class=pr-log data-log="beforeinput input" data-fields="target data" data-on="#host" data-lines=3></ol>
+    </div>
+    <figcaption>Click the box and type <code>x2y</code>: it holds <code>xy</code>, and the log's events have
+    <code>target=host</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels the insertion of a digit in the field and the editing host.
+  for (const id of ["field", "host"]) {
+      document.getElementById(id).addEventListener("beforeinput", event => {
+          if (event.data !== null && /^[0-9]$/.test(event.data))
+              event.preventDefault();
+      });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

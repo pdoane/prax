@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>font-variant-emoji</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-family: 'PR Tinos'; font-size: 30px; line-height: 50px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.3 Selecting the text presentation style: the 'font-variant-emoji' property</div>
+  <h1>font-variant-emoji</h1>
+  <p class=pr-lede><code>text</code> renders <q>as if U+FE0E VARIATION SELECTOR-15 was appended</q> to each code point
+  that has both presentations, and <code>emoji</code> as if U+FE0F. <code>unicode</code> follows each one's default.
+  A variation selector in the text overrides the property. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-variant-emoji-prop">CSS Fonts 4 §9.3</a></span></p>
+</header>
+
+<section>
+  <h2>The same characters, four ways</h2>
+  <p>☺ (U+263A) and ✈ (U+2708) are text by default; 😀 (U+1F600) is emoji by default, and has no text form in most
+  fonts.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-emoji: normal">&#x263A; &#x2708; &#x1F600;</div>
+    <figcaption><code>normal</code>: the platform's convention.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-emoji: text">&#x263A; &#x2708; &#x1F600;</div>
+    <figcaption><code>text</code>: ☺ and ✈ monochrome, in the text's color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-emoji: emoji">&#x263A; &#x2708; &#x1F600;</div>
+    <figcaption><code>emoji</code>: all three in color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-emoji: unicode">&#x263A; &#x2708; &#x1F600;</div>
+    <figcaption><code>unicode</code>: ☺ and ✈ as text, 😀 in color.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Variation selectors win</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-variant-emoji: text">&#x263A;&#xFE0F; &#x2708;&#xFE0F;</div>
+    <figcaption><code>text</code>, with U+FE0F after each: both in color.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

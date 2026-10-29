@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Definite main sizes after flexing</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .flex { display: flex; flex-direction: column; }
+  .item { width: 60px; background: #b9cde6; }
+  .half { height: 50%; background: #8e44ad; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.9 Definite and Indefinite Sizes, cases 1 and 2</div>
+  <h1>Definite main sizes after flexing</h1>
+  <p class=pr-lede><q>Although CSS Sizing defines definite and indefinite lengths, Flexbox has several additional cases
+  where a length can be considered definite</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#definite-sizes">CSS Flexible Box Layout 2 §9.9</a></span>
+  Each stage is a column container; the blue item holds a purple child of <code>height: 50%</code>, which resolves
+  only against a definite height.</p>
+</header>
+
+<section>
+  <h2>1. The container's main size is definite</h2>
+  <p><q>If the flex container has a definite main size, then the post-flexing main sizes of its flex items are treated
+  as definite.</q></p>
+  <figure>
+    <div class="pr-stage flex" style="height: 100px"><div class=item style="flex: 1 1 auto"><div class=half></div></div><div class="pr-b pr-fit" style="width: 60px">B</div></div>
+    <figcaption><code>height: 100px</code>; the item, <code>flex: 1 1 auto</code>, grows from 0 to 80px, so its
+    child is 40px tall.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-vertical" style="height: 60px"><div class="flex" style="width: 100px"><div class=item style="flex: 1; width: auto; height: auto"><div class=half style="height: auto; width: 50%"></div></div></div></div>
+    <figcaption>A <code>vertical-rl</code> column container 100px wide: the item, <code>flex: 1</code>, is 100px wide, and its child of
+    <code>width: 50%</code> 50px, at the right.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>2. The flex basis is definite</h2>
+  <p><q>If a flex item’s flex basis is definite, then its post-flexing main size is also definite.</q> These
+  containers have no height.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage flex" style="min-height: 100px"><div class=item style="flex: 1 0 40px"><div class=half></div></div></div>
+    <figcaption><code>flex: 1 0 40px</code> in a container of <code>min-height: 100px</code>: it grows to 100px, its
+    child 50px. <span class=pr-flag>Safari</span> takes the child's 50% as auto: no purple.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage flex"><div class=item style="height: 20px; flex: 0 0 auto"><div class=half></div></div><div class=item style="flex: 0 0 auto"><div class=half style="height: 50%; min-height: 4px; background: #c0392b"></div></div></div>
+    <figcaption><code>flex: 0 0 auto</code> with <code>height: 20px</code>: definite, child 10px. Below,
+    <code>height: auto</code>, so <code>content</code>: the red child's 50% is auto, and its 4px
+    <code>min-height</code> shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

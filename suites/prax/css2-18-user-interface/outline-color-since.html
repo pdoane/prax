@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Outline color since CSS 2</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ol { outline: 10px solid; }
+  .halves { background: linear-gradient(to right, #1f2430 50%, #f4f5f7 50%); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 18.4 Dynamic outlines: the 'outline' property</div>
+  <h1>Outline color since CSS 2</h1>
+  <p class=pr-lede><code>outline-color</code> now takes <code>auto | &lt;'border-top-color'&gt;</code>. Initial
+  <code>auto</code>. Every figure's outline is solid and 10px wide.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-ui-4/#outline-color">CSS Basic User Interface 4 §3.4</a></div>
+  <h2>invert is gone, and the initial value is the text color</h2>
+  <p><q>Earlier versions of this specification had an additional invert value, performing a color inversion on the
+  pixels on the screen. This is no longer supported, and was removed for lack of implementations</q>. The initial
+  value is <code>auto</code>: when the style is not <code>auto</code>, <q>outline-color: auto computes to
+  currentColor.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#outline-color">CSS Basic User Interface 4 §3.4</a></span> CSS 2's initial value was <code>invert</code>, with
+  <code>color</code> only as a fallback.</p>
+  <figure>
+    <div class="pr-stage halves" style="padding: 20px"><div class="pr-plain ol" style="outline-color: #c0392b; outline-color: invert"></div></div>
+    <figcaption><code>outline-color: #c0392b; outline-color: invert</code>: nothing is inverted: the
+    outline is red on both halves.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage halves" style="padding: 20px"><div class="pr-plain ol" style="color: #27ae60"></div></div>
+    <figcaption>No <code>outline-color</code>, and <code>color: #27ae60</code>: <code>auto</code> computes to
+    <code>currentColor</code>, so the outline is green on both halves.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="padding: 20px"><div class="pr-plain ol" style="color: #27ae60; outline-color: #c0392b; outline-color: auto"></div></div>
+    <figcaption><code>color: #27ae60; outline-color: #c0392b; outline-color: auto</code>: the outline is green, the
+    text color. <span class=pr-flag>Chrome</span> draws it red.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

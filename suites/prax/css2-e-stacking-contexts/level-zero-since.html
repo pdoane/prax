@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: level 0 since CSS 2</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .blk { box-sizing: border-box; width: 150px; height: 40px; padding: 0 6px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: level 0 since CSS 2</h1>
+  <p class=pr-lede>Later specifications add stacking contexts to step 8, at level 0.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-position-3/#stacking">CSS Positioned Layout 3 §2.2</a></div>
+  <h2>A fixed box is a stacking context, whatever its z-index</h2>
+  <p><q>When z-index is auto: Fixed and sticky positioned boxes nonetheless form a stacking context.</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stacking">CSS Positioned Layout 3 §2.2</a></span> In CSS 2, a fixed box's positioned descendants joined its parent's
+  context; now they stay in its own.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; font: 600 12px/18px Arial, sans-serif; color: white } div { box-sizing: border-box; padding: 0 6px } .a { position: fixed; left: 20px; top: 10px; width: 110px; height: 60px; background: #4f81bd; border: 1px solid #2c5a8f } .d { position: absolute; z-index: 1; left: 30px; top: 25px; width: 80px; height: 30px; background: #8e44ad; border: 1px solid #5e2a75 } .b { position: absolute; left: 90px; top: 50px; width: 100px; height: 40px; background: #d68a3c; border: 1px solid #9c5f22; text-align: right }</style><div class=a>A: fixed<div class=d>child: 1</div></div><div class=b>B: auto</div>"></iframe></div>
+    <figcaption>A is fixed with <code>z-index: auto</code> and holds a purple child at level 1, inside A's context;
+    B, after A in the tree, covers both.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 0; font: 600 12px/18px Arial, sans-serif; color: white } div { box-sizing: border-box; padding: 0 6px } .a { position: absolute; left: 20px; top: 10px; width: 110px; height: 60px; background: #4f81bd; border: 1px solid #2c5a8f } .d { position: absolute; z-index: 1; left: 30px; top: 25px; width: 80px; height: 30px; background: #8e44ad; border: 1px solid #5e2a75 } .b { position: absolute; left: 90px; top: 50px; width: 100px; height: 40px; background: #d68a3c; border: 1px solid #9c5f22; text-align: right }</style><div class=a>A: absolute<div class=d>child: 1</div></div><div class=b>B: auto</div>"></iframe></div>
+    <figcaption>For comparison, A absolute: it forms no context, and its child, at level 1 in the
+    frame's root context, is over B.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a>, <a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></div>
+  <h2>Stacking contexts that are not positioned</h2>
+  <p>A box with <code>opacity</code> below 1 <q>is otherwise painted on the same layer within its parent stacking
+  context as positioned elements with stack level 0</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#transparency">CSS Color 4 §3.3</a></span>, and so is one
+  with a transform <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></span>: whole, in step 8, not split between steps 4 and
+  7.</p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light blk" style="opacity: 0.8">A: opacity 0.8</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>B is pulled up 20px over A, which has <code>opacity: 0.8</code>: A is painted in step 8, after B,
+    covering B's top half, which shows faintly.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class="pr-b pr-light blk" style="transform: translate(0)">A: transform</div><div class="pr-a pr-light blk" style="margin: -20px 0 0 30px; text-align: right">B</div></div>
+    <figcaption>A has <code>transform: translate(0)</code>, which does not move it: it too is painted in step 8, and
+    only B's bottom half shows.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

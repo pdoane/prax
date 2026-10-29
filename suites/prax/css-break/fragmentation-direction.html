@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The fragmentation direction</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage.vcols { columns: 2; column-gap: 10px; column-rule: 1px dashed #6b7381; width: 60px; column-fill: auto; orphans: 1; widows: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 2 Fragmentation Model and Terminology</div>
+  <h1>The fragmentation direction</h1>
+  <p class=pr-lede>The fragmentation direction is <q>The block flow direction of the fragmentation context, i.e. the
+  direction in which content is fragmented.</q> <q>A given fragmentation context can only have one block flow
+  direction across all its fragmentainers.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#fragmentation-model">CSS Fragmentation 4 §2</a></span></p>
+</header>
+
+<section>
+  <h2>Vertical columns</h2>
+  <p>A <code>vertical-rl</code> multi-column container 200px tall and 60px wide: two columns, one above the other,
+  each 95px long and 60px wide, so three lines across.</p>
+  <figure>
+    <div class="pr-stage pr-vertical pr-measure vcols">one two three four five six seven eight</div>
+    <figcaption>Lines run down, and the blocks flow right to left: "one two", "three" and "four five" fill the upper
+    column from its right; "six seven" and "eight" go on in the lower one. Safari breaks after two lines, as a UA may, and "eight" goes on in a third column, below.</figcaption>
+  </figure>
+</section>
+
+<p class=pr-note>A descendant whose block flow is perpendicular to the context's is fragmented in the context's
+direction, not its own: <a href="../css-writing-modes/orthogonal-fragmentation.html">orthogonal flows across
+columns</a>.</p>
+
+</body>
+</html>

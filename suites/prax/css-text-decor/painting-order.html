@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The painting order of decorations</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 6px; font: 40px/70px "PR Arimo"; }
+  .pr-stage.pr-measure { padding: 5px 0; }
+  .ib { display: inline-block; width: 40px; height: 20px; vertical-align: -10px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 5.1 Painting Order of Text Decorations</div>
+  <h1>The painting order of decorations</h1>
+  <p class=pr-lede><q>As in [CSS2], text decorations are drawn immediately over/under the text they decorate, in the
+  following order (bottommost first):</q> shadows, underlines, overlines, text, emphasis marks, line-through. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#painting-order">CSS Text Decoration 4 §5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Under the text, over the text</h2>
+  <figure>
+    <div class="pr-stage t"><span style="text-decoration: underline #d68a3c 8px; text-underline-offset: -14px; text-decoration-skip-ink: none"><span style="text-decoration: line-through #2c5a8f 4px">Hxg</span></span></div>
+    <figcaption>An 8px orange underline raised 14px into the letters, behind them: black over orange. A 4px blue
+    line-through over them.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage t"><span style="text-decoration: underline #2c5a8f 10px; text-underline-offset: 2px; text-decoration-skip-ink: none; text-shadow: 0 16px #d68a3c">Hxg</span></div>
+    <figcaption>A 10px blue underline and an orange shadow 16px down: the shadows of the letters and of the line lie
+    under the blue line, and show only below it. <span class=pr-flag>Safari</span> Paints the orange shadow over
+    the blue line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Across box decorations and atomic inlines</h2>
+  <p><q>Where line decorations are drawn across box decorations or atomic inlines, they are drawn over non-positioned
+  content and just below any positioned descendants</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span style="text-decoration: line-through #c0392b 4px">ab<span style="background: #b9cde6; padding: 0 10px">cd</span>ef</span></div>
+    <figcaption>A child's blue background: the red line-through runs over it, unbroken from x=0 to 80. <span class=pr-flag>Safari</span> Paints the
+    background over it: no line across "cd".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><span style="text-decoration: line-through #c0392b 4px">ab<span style="background: #b9cde6; padding: 0 10px; position: relative">cd</span>ef</span></div>
+    <figcaption>The child positioned: its background covers the line from x=20 to 60, as
+    in Safari. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> Draw the line over it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

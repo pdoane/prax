@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-width and max-width: replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.4 Minimum and maximum widths: 'min-width' and 'max-width'</div>
+  <h1>Min-width and max-width: replaced elements</h1>
+  <p class=pr-lede>Each purple box is an <code>img</code> of an SVG image 60 by 40, so <i>w</i> = 60, <i>h</i> = 40 and
+  the ratio is 3:2, with <code>width</code> and <code>height</code> <code>auto</code>.</p>
+</header>
+
+<section>
+  <h2>One constraint violated</h2>
+  <p><q>However, for replaced elements with an intrinsic ratio and both 'width' and 'height' specified as 'auto', the
+  algorithm is as follows:</q> <q>Select from the table the resolved height and width values for the appropriate
+  constraint violation.</q> Rows: <q>w &gt; max-width</q>: max-width, <q>max(max-width * h/w, min-height)</q>; <q>w &lt;
+  min-width</q>: min-width, <q>min(min-width * h/w, max-height)</q>; and the same for heights. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2
+  §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" style="max-width: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>max-width: 30px</code>: 30 by 30 × 40/60 = 20, the ratio kept.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="min-width: 90px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>min-width: 90px</code>: 90 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="max-height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>max-height: 20px</code>: 20 × 60/40 = 30 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><img alt="" style="min-height: 60px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>min-height: 60px</code>: 90 by 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The other limit still holds</h2>
+  <p>In <q>max(max-width * h/w, min-height)</q>, the scaled height may not go below 'min-height', even if the ratio is
+  lost. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-widths">CSS 2 §10.4</a></span></p>
+  <figure>
+    <div class=pr-stage><img alt="" style="max-width: 30px; min-height: 30px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>max-width: 30px; min-height: 30px</code>: max(20, 30), so 30 by 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

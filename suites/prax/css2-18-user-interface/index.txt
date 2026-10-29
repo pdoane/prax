@@ -1,0 +1,24 @@
+00-supports-1.html
+CSS2/#cursor-props 18.1 Cursors: the cursor property
+    cursor-keywords.html
+    cursor-resize-inherit.html
+    cursor-uri.html
+CSS2/#system-colors 18.2 System Colors
+    system-colors.html
+    system-colors-deprecated.html
+CSS2/#system-fonts① 18.3 User preferences for fonts
+    system-fonts.html
+CSS2/#dynamic-outlines 18.4 Dynamic outlines: the outline property
+    outline-style.html
+    outline-style-3d.html
+    outline-width.html
+    outline-width-since.html
+    outline-color.html
+    outline-color-since.html
+    outline-shorthand.html
+    outline-no-room.html
+    outline-inline.html
+    outline-overlap.html
+CSS2/#outline-focus 18.4.1 Outlines and the focus
+    focus.html
+    focus-visible.html

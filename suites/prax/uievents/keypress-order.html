@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>When keypress comes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.3.2 keypress event order</div>
+  <h1>When keypress comes</h1>
+  <p class=pr-lede><q>The keypress event type MUST be dispatched after the keydown event and before the keyup event
+  associated with the same key.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keypress-event-order">UI Events §8.3.2</a></span></p>
+</header>
+<section>
+  <h2>Before beforeinput</h2>
+  <p>The text says <q>The keypress event type MUST be dispatched after the beforeinput event and before the input
+  event associated with the same key.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#keypress-event-order">§8.3.2</a></span>
+  Since, the engines' developers have agreed to send keypress first, in the order that Chrome and Safari shipped and
+  that Firefox's editing rests on, and the specification's editor took it into his key event algorithm
+  (<a href="https://github.com/w3c/uievents/issues/220">uievents#220</a>).</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown beforeinput keypress input keyup" data-fields="key data" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>Click the field and type <code>a</code>: keydown, keypress, beforeinput with <code>data="a"</code>,
+    input, keyup.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

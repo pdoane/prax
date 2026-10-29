@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>dx and dy: relative shifts</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.2.1 Attributes</div>
+  <h1>dx and dy: relative shifts</h1>
+  <p class=pr-lede><q>The current text position is shifted along the x-axis (y-axis) of the current user coordinate
+  system by &lt;length&gt; before the first character's glyphs are rendered.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TSpanAttributes">SVG 2 §11.2.1</a></span>
+  Each stage is an SVG 160 by 60. The text is PR Noto Sans Mono at <code>calc(50px / 3)</code>, each letter 10
+  wide, at <code>x="20" y="35"</code>, the baseline dashed in red.</p>
+</header>
+
+<section>
+  <h2>One value, and a list</h2>
+  <p><q>If a comma- or space-separated list of n &lt;length&gt;s is provided, then the values represent incremental
+  shifts along the x-axis (y-axis) for the current text position before rendering the glyphs corresponding to the
+  first n addressable characters within this element or any of its descendants.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35">ab<tspan dx="30">cd</tspan>ef</text></svg></div>
+    <figcaption>"ab", a <code>tspan</code> of "cd" with <code>dx="30"</code>, then "ef": "ab" 20 to 40, "cdef"
+    shifted on from 70 to 110.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35" dx="0 10 20">abcd</text></svg></div>
+    <figcaption><code>dx="0 10 20"</code> on "abcd": a at 20, b 10 on at 40, c 20 on at 70, d after it at
+    80.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160 M0 25H160 M0 45H160" class=pr-baseline /><text class=pr-measure x="20" y="35" dy="0 -10 20">abcd</text></svg></div>
+    <figcaption><code>dy="0 -10 20"</code>: a on 35, b up 10 on 25, c down 20 on 45, and d on 45 too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>More characters than values</h2>
+  <p><q>if an ancestor ‘text’ or ‘tspan’ element specifies a relative X (Y) coordinate for the given character via a
+  ‘dx’ (‘dy’) attribute (nearest ancestor has precedence), then the current text position is shifted along the
+  x-axis (y-axis) of the current user coordinate system by that amount, else</q> <q>no extra shift along the x-axis
+  (y-axis) occurs.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35" dx="5 5 5 5 5 5">ab<tspan dx="20">cd</tspan>ef</text></svg></div>
+    <figcaption><code>dx="5 5 5 5 5 5"</code> on the <code>text</code>, <code>dx="20"</code> on a
+    <code>tspan</code> of "cd": a at 25, b 40, c 70, d takes the <code>text</code>'s 5 to 85, e 100,
+    f 115.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><path d="M0 35H160" class=pr-baseline /><text class=pr-measure x="20" y="35" dx="10 0 0 0 0 0 0 0 0 0 0 30">ab</text></svg></div>
+    <figcaption><code>dx</code> with twelve values on "ab": the extra ones do nothing; a at 30, b at 40.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

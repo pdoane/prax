@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>glyph-orientation-vertical</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .v { font: 20px "PR Noto Sans JP"; writing-mode: vertical-rl; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.10.1.3 The ‘glyph-orientation-vertical’ property</div>
+  <h1>glyph-orientation-vertical</h1>
+  <p class=pr-lede><q>The following SVG 1.1 values must still be supported by aliasing the property as a shorthand to
+  text-orientation as follows: 'auto' to 'mixed'; '0deg', and '0', to 'upright'; '90deg', and '90', to
+  'sideways'.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#GlyphOrientationVerticalProperty">SVG 2 §11.10.1.3</a></span>
+  Each stage is an SVG 160 by 100 holding "Ab縦" in 20px PR Noto Sans JP, <code>writing-mode: vertical-rl</code>, at
+  <code>x="80" y="10"</code>, down the dashed red line.</p>
+</header>
+
+<section>
+  <h2>The three values</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" class=pr-baseline /><text class=v x="80" y="10" style="glyph-orientation-vertical: auto">Ab縦</text></svg></div>
+    <figcaption><code>auto</code>, <code>mixed</code>: "Ab" turned on its side, clockwise, 縦 upright.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" class=pr-baseline /><text class=v x="80" y="10" style="glyph-orientation-vertical: 0deg">Ab縦</text></svg></div>
+    <figcaption><code>0deg</code>, <code>upright</code>: A, b and 縦 all upright, stacked. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> As <code>auto</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" class=pr-baseline /><text class=v x="80" y="10" style="glyph-orientation-vertical: 90deg">Ab縦</text></svg></div>
+    <figcaption><code>90deg</code>, <code>sideways</code>: all three turned clockwise, 縦 too. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> As <code>auto</code>, 縦 upright.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Unitless</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" class=pr-baseline /><text class=v x="80" y="10" glyph-orientation-vertical="0">Ab縦</text></svg></div>
+    <figcaption>The attribute <code>glyph-orientation-vertical="0"</code>: upright, as <code>0deg</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> As <code>auto</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="100" fill="#2c5a8f"><path d="M80 0V100" class=pr-baseline /><text class=v x="80" y="10" glyph-orientation-vertical="90">Ab縦</text></svg></div>
+    <figcaption>The attribute <code>glyph-orientation-vertical="90"</code>: sideways, as <code>90deg</code>. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> As <code>auto</code>, 縦 upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

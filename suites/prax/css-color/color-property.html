@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The color property</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .word { font: 24px/40px "PR Arimo"; padding: 0 6px; }
+  .box { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin: 10px 0 10px 10px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 3.2 Foreground Color: the color property</div>
+  <h1>The color property</h1>
+  <p class=pr-lede><q>This property specifies the primary foreground color of the element. This is used as the fill
+  color of its text content, and in addition specifies the used value that currentcolor resolves to</q> <span
+  class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#the-color-property">CSS Color 4 §3.2</a></span></p>
+</header>
+
+<section>
+  <h2>The fill of text</h2>
+  <p>Initial: <code>CanvasText</code>. The page's own style sheet makes its text a dark blue-gray; each word below
+  sets <code>color</code> itself.</p>
+  <figure>
+    <div class="pr-stage word"><span style="color: initial">initial</span> <span style="color: CanvasText">Canvas</span></div>
+    <figcaption><code>color: initial</code> beside <code>color: CanvasText</code>: both words the same color, black
+    in a light color scheme.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage word"><span style="color: #2c8a3c">green</span> <span style="color: rgb(0 0 255 / 50%)">blue</span></div>
+    <figcaption><code>#2c8a3c</code> fills "green"; <code>rgb(0 0 255 / 50%)</code> fills "blue" half
+    transparent, so the stage's guides show through the letters.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>What currentcolor resolves to</h2>
+  <p>It <q>affects the initial values of various other color properties such as 'border-color'</q>. Each box sets
+  <code>color: #d68a3c</code> (orange).</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="color: #d68a3c; border: 8px solid"></div><div class=box style="color: #d68a3c; border: 8px solid currentcolor"></div><div class=box style="color: #d68a3c; background: currentcolor"></div></div>
+    <figcaption><code>border: 8px solid</code>, with no border color, and <code>border: 8px solid
+    currentcolor</code>: two orange rings. <code>background: currentcolor</code>: an orange square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=box style="color: #d68a3c; border: 8px solid; color: #4f81bd"></div><div class=box style="color: #d68a3c; background: currentcolor; color: #4f81bd"></div></div>
+    <figcaption>The same two boxes with a later <code>color: #4f81bd</code>: both blue, since currentcolor is the
+    element's used color, whatever came before.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

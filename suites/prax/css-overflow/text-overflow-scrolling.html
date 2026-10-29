@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ellipsis in a scroll container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { width: 100px; height: 20px; margin: 10px 50px; overflow: scroll; white-space: nowrap; text-overflow: ellipsis; background: #f4f5f7; }
+  .stage { height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 6.1.5 ellipsis interaction with scrolling interfaces</div>
+  <h1>The ellipsis in a scroll container</h1>
+  <p class=pr-lede><q>If a non-clip text-overflow is set, then as more content is scrolled into view, implementations
+  should show whatever additional content fits, only truncating content which would otherwise be clipped (or is
+  necessary to make room for the ellipsis/string), until the element is scrolled far enough to display the edge of the
+  content at which point that content should be displayed rather than an ellipsis/string.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#ellipsis-scrolling">CSS Overflow 3 §6.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>Scrolled by script</h2>
+  <p>Each box is 100 by 20, <code>overflow: scroll; text-overflow: ellipsis</code>, and holds "abcdefghijklmnopqrst",
+  20 letters of <code>.pr-measure</code> text, 200px; its overlay scroll bars are not seen.</p>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame pr-measure t">abcdefghijklmnopqrst</div></div>
+    <figcaption>Unscrolled: "abcdefghi…".</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div id=s1 class="pr-frame pr-measure t">abcdefghijklmnopqrst</div></div>
+    <figcaption>Scrolled 50px: what fits now shows, less one letter for the ellipsis: "fghijklmn…". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> keep the unscrolled cut and move it: "fghi…", the rest blank.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div id=s2 class="pr-frame pr-measure t">abcdefghijklmnopqrst</div></div>
+    <figcaption>Scrolled to the end: the content's edge is in view, so no ellipsis: "klmnopqrst". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> show nothing. <span class=pr-flag>Firefox</span> stays ellipsed: "fghijklm…".</figcaption>
+  </figure>
+</section>
+
+<script>
+  const scroll = () => {
+    document.getElementById("s1").scrollLeft = 50;
+    document.getElementById("s2").scrollLeft = 10000;
+  };
+  scroll();
+  document.fonts.ready.then(scroll);
+</script>
+</body>
+</html>

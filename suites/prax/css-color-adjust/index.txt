@@ -1,0 +1,24 @@
+00-supports-1.html
+# css-color-adjust-1/#intro 1 Introduction: no page; it says what the module covers
+# css-color-adjust-1/#values 1.1 Value Definitions: no page; it defines terms
+# css-color-adjust-1/#preferred 2 Preferred Color Schemes: no page; it defines color schemes, which 2.1 to 2.4 show
+css-color-adjust-1/#color-scheme-page 2.1 Opting Into a Preferred Color Scheme
+    page-color-scheme.html
+css-color-adjust-1/#color-scheme-prop 2.2 Overriding the Page Color Scheme: the color-scheme property
+    color-scheme.html
+css-color-adjust-1/#color-scheme-resolution 2.3 Resolving Color Schemes
+    color-scheme-resolution.html
+css-color-adjust-1/#color-scheme-effect 2.4 Effects of the Used Color Scheme
+    color-scheme-effects.html
+# css-color-adjust-1/#color-scheme-override 2.5 Overriding the Color Scheme: no page; the user turns the override on, which no still does
+# css-color-adjust-1/#forced 3 Forced Color Palettes: no page; forced colors mode is the user's, which no still turns on
+# css-color-adjust-1/#forced-colors-properties 3.1 Properties Affected by Forced Colors Mode: no page; as 3
+# css-color-adjust-1/#forced-color-adjust-prop 3.2 Opting Out of a Forced Color Palette: the forced-color-adjust property: no page; as 3
+# css-color-adjust-1/#perf 4 Performance-based Color Adjustments: no page; it introduces the subsections
+# css-color-adjust-1/#print-color-adjust 4.1 Ink Economy: the print-color-adjust property: no page; economy permits adjustments that the stills' prints are asked not to make
+# css-color-adjust-1/#color-adjust 4.2 The color-adjust Shorthand: no page; it is a shorthand of 4.1
+# css-color-adjust-1/#color-adjust-emulation 5 Emulation: no page; it is for authoring tools
+# css-color-adjust-1/#emulate-forced-colors-mode 5.1 Emulate Forced Colors Mode: no page; as 5
+# css-color-adjust-1/#forced-color-palettes 5.2 Forced Colors Mode Color Palettes: no page; as 5
+# css-color-adjust-1/#privacy 6 Privacy Considerations: no page; it is not drawn
+# css-color-adjust-1/#security 7 Security Considerations: no page; it is not drawn

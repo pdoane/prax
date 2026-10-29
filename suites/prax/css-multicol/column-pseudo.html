@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The ::column pseudo-element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { orphans: 1; widows: 1; columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 40px; column-fill: auto; overflow: hidden; }
+  .markers { scroll-marker-group: after; }
+  .markers::scroll-marker-group { display: flex; gap: 6px; height: 16px; padding: 4px 0 0; }
+  .markers::column::scroll-marker { content: ""; width: 10px; height: 10px; border: 1px solid #2c5a8f; border-radius: 50%; }
+  .markers::column::scroll-marker:target-current { background: #2c5a8f; }
+  .snap { scroll-snap-type: x mandatory; }
+  .snap::column { scroll-snap-align: start; }
+  .tinted::column { background: #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Multi-column Layout 2 · 4.8 Styling Columns: the ::column pseudo-element</div>
+  <h1>The ::column pseudo-element</h1>
+  <p class=pr-lede><q>The ::column pseudo-element represents the individual columns in a multi-column container.</q>
+  <q>Each ::column has the same size and position as its corresponding column</q>. <q>The ::column pseudo-element
+  accepts only a very limited set of properties: scroll-margin, scroll-snap-align, and scroll-snap-stop</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-multicol-2/#column-pseudo">CSS Multi-column Layout 2 §4.8</a></span>
+  Each stage scrolls (<code>overflow: hidden</code>), 40px tall, with columns of 60px and twelve words: six
+  columns, three in view.</p>
+</header>
+
+<section>
+  <h2>A scroll marker for each column</h2>
+  <p><q>a ::column pseudo-element can have a ::scroll-marker pseudo-element of its own, as ::column::scroll-marker.</q>
+  The stage has <code>scroll-marker-group: after</code> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-5/#scroll-marker-group-property">CSS Overflow 5 §3.1.3</a></span>,
+  and each marker is a circle, filled when its column is the current one.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure markers">one two six ten red big fat sun cat dog cow pig</div>
+    <figcaption>Six circles in a row under the stage, one for each column, the first filled. <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No markers.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure tinted">one two six ten</div>
+    <figcaption><code>::column { background: #c0392b }</code>: no red, as <code>background</code> is not among the properties it accepts.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Snapping to columns</h2>
+  <p>The stage has <code>scroll-snap-type: x mandatory</code>, and its <code>::column</code>
+  <code>scroll-snap-align: start</code>; a script scrolls it 50px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure snap" id=snapped>one two six ten red big fat sun cat dog cow pig</div>
+    <figcaption>The scroll snaps to the second column's start, 70px: "six" and "ten" at the stage's left
+    edge. <span class=pr-flag>Safari</span> Scrolled 50px, the second column
+    cut.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" id=unsnapped>one two six ten red big fat sun cat dog cow pig</div>
+    <figcaption>With no snapping, the same script leaves it 50px along: the second column from 20px. <span class=pr-flag>Firefox</span>
+    Scrolled 70px, as if snapped: "six" and "ten" at the stage's left edge.</figcaption>
+  </figure>
+</section>
+
+<script>
+const scroll = () => {
+    for (const id of ["snapped", "unsnapped"])
+        document.getElementById(id).scrollTo({ left: 50, behavior: "instant" });
+};
+scroll();
+document.fonts.ready.then(scroll);
+addEventListener("load", scroll);
+</script>
+</body>
+</html>

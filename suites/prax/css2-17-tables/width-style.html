@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border conflicts: width, then style</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-collapse: collapse; background: #f4f5f7; }
+  td { width: 60px; height: 40px; padding: 0; border: 2px solid #b5bcc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.6.2.1 Border conflict resolution</div>
+  <h1>Border conflicts: width, then style</h1>
+  <p class=pr-lede>Two cells meet: the left one sets an orange right border, the right one a blue left border. The color between them is the border that wins.</p>
+</header>
+
+<section>
+  <h2>3. Wider wins</h2>
+  <p><q>If none of the styles are 'hidden' and at least one of them is not 'none', then narrow borders are discarded
+  in favor of wider ones. If several have the same 'border-width' then styles are preferred in this order: 'double',
+  'solid', 'dashed', 'dotted', 'ridge', 'outset', 'groove', and the lowest: 'inset'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#border-conflict-resolution">CSS 2
+  §17.6.2.1</a></span></p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 6px double #d68a3c"><td style="border-left: 12px dotted #4f81bd"></table></div>
+    <figcaption>A 12px blue <code>dotted</code> border beats a 6px orange <code>double</code>: width comes before style.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 4px solid #d68a3c"><td style="border-left: 10px solid #4f81bd"></table></div>
+    <figcaption>Orange 4px against blue 10px, both solid: the 10px blue border.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>3. Same width: double, solid, dashed, dotted</h2>
+  <p>All borders here are 10px; the blue one is the higher style in the order.</p>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px solid #d68a3c"><td style="border-left: 10px double #4f81bd"></table></div>
+    <figcaption><code>double</code> (blue) beats <code>solid</code> (orange).</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px dashed #d68a3c"><td style="border-left: 10px solid #4f81bd"></table></div>
+    <figcaption><code>solid</code> beats <code>dashed</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px; width: 180px"><table><tr><td style="border-right: 10px dotted #d68a3c"><td style="border-left: 10px dashed #4f81bd"></table></div>
+    <figcaption><code>dashed</code> beats <code>dotted</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

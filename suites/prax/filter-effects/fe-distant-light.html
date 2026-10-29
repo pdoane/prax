@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>feDistantLight: azimuth and elevation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <filter id="e90" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feDistantLight elevation="90"/></feDiffuseLighting></filter>
+  <filter id="e30" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feDistantLight elevation="30"/></feDiffuseLighting></filter>
+  <filter id="e0" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feDiffuseLighting><feDistantLight/></feDiffuseLighting></filter>
+  <filter id="a0" color-interpolation-filters="sRGB"><feDiffuseLighting surfaceScale="10"><feDistantLight azimuth="0" elevation="45"/></feDiffuseLighting></filter>
+  <filter id="a90" color-interpolation-filters="sRGB"><feDiffuseLighting surfaceScale="10"><feDistantLight azimuth="90" elevation="45"/></feDiffuseLighting></filter>
+  <filter id="a180" color-interpolation-filters="sRGB"><feDiffuseLighting surfaceScale="10"><feDistantLight azimuth="180" elevation="45"/></feDiffuseLighting></filter>
+</svg>
+<header>
+  <div class=pr-eyebrow>Filter Effects 1 · 11.2 Light source feDistantLight</div>
+  <h1>feDistantLight: azimuth and elevation</h1>
+  <p class=pr-lede><q>azimuth</q>: <q>Direction angle for the light source on the XY plane (clockwise), in degrees
+  from the x axis.</q> <q>elevation</q>: <q>Direction angle for the light source from the XY plane towards the
+  Z-axis, in degrees.</q> <span class=pr-cite><a href="https://drafts.csswg.org/filter-effects-1/#feDistantLightElement">Filter Effects 1 §11.2</a></span>
+  Each filter is an feDiffuseLighting of a white light, in sRGB, so a flat surface facing the viewer takes the light's
+  z component, <q>L<sub>z</sub> = sin(elevation)</q>, as its brightness.</p>
+</header>
+
+<section>
+  <h2>Elevation, on a flat surface</h2>
+  <p>Each stage is an SVG 160 by 60 filled by one opaque rectangle, the filter region its own.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#e90)"/></svg></div>
+    <figcaption><code>elevation="90"</code>: sin 90° is 1, white.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#e30)"/><rect x="70" y="42" width="20" height="14" fill="#808080" stroke="white"/></svg></div>
+    <figcaption><code>30</code>: sin 30° is 0.5, mid grey, <code>#808080</code>, as the swatch.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect width="160" height="60" filter="url(#e0)"/></svg></div>
+    <figcaption>None given: <q>The initial value for elevation is 0</q>, in the plane, so black.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Azimuth, on a raised disc</h2>
+  <p>Each stage holds a disc of radius 20 at (80, 30), its alpha raised 10 by <code>surfaceScale</code>, lit from 45°
+  up. A side facing the light is bright, the far side dark; the flat ground around the disc is grey. With no
+  kernelUnitLength, the slope is taken over a pixel or so of the browser's own, so the rims' widths and depth differ
+  between browsers; Safari's are fainter.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" filter="url(#a0)"/></svg></div>
+    <figcaption><code>azimuth="0"</code>, along the x axis: bright on the right rim, dark on the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" filter="url(#a90)"/></svg></div>
+    <figcaption><code>90</code>, clockwise from x, toward y, which points down: bright at the bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="80" cy="30" r="20" filter="url(#a180)"/></svg></div>
+    <figcaption><code>180</code>: bright on the left rim, dark on the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

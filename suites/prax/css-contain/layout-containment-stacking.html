@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout containment: a stacking context, and overflow as ink</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figure figcaption { max-width: 152px; }
+  .pr-baseline { width: 150px; margin-right: -150px; }
+  iframe.pr-view { width: 150px; }
+  .pr-stage { height: 70px; }
+  .k { contain: layout; }
+  .box { width: 100px; height: 40px; margin: 10px; background: #4f81bd; }
+  .neg { position: relative; z-index: -1; left: 30px; top: 20px; width: 40px; height: 40px; background: #d68a3c; }
+  .hi { position: relative; z-index: 2; left: 40px; width: 40px; height: 40px; background: #d68a3c; }
+  .sib { position: relative; z-index: 1; margin: -30px 0 0 70px; width: 60px; height: 40px; background: #6aa36a; }
+  .sc { overflow: auto; height: 60px; }
+  .tall { height: 40px; background: #b9cde6; }
+  .tall div { height: 160px; background: linear-gradient(#b9cde6, #2c5a8f); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.3 Layout Containment, stacking and overflow</div>
+  <h1>Layout containment: a stacking context, and overflow as ink</h1>
+  <p class=pr-lede><q>The layout containment box creates a stacking context.</q> <q>If the computed value of the
+  'overflow' property is either visible or clip or a combination thereof, any overflow must be treated as ink
+  overflow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-layout">CSS Containment 2 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>A stacking context</h2>
+  <p>Each stage is a stacking context. The blue box is not positioned.</p>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class=box><div class=neg></div></div></div>
+    <figcaption>No containment: the orange child, <code>z-index: -1</code>, paints behind the blue box, showing only
+    below it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="box k"><div class=neg></div></div></div>
+    <figcaption><code>contain: layout</code>: the box is its stacking context, so the orange child paints over its
+    background, whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking"><div class="box k"><div class=hi></div></div><div class=sib></div></div>
+    <figcaption>An orange child with <code>z-index: 2</code> in it and a green sibling with <code>z-index: 1</code>
+    after it: the child's 2 counts only inside the box, so green covers orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overflow is ink overflow</h2>
+  <p>Each stage scrolls, <code>overflow: auto</code>, 60px tall, and a script scrolls it 100px down. It holds a box
+  40px tall whose content, a gradient, is 160px tall.</p>
+  <figure>
+    <div class="pr-stage sc pr-scroll"><div class=tall><div></div></div></div>
+    <figcaption>No containment: the gradient is scrollable overflow, and the stage scrolls down to its dark
+    end.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc pr-scroll"><div class="tall k"><div></div></div></div>
+    <figcaption><code>contain: layout</code>: the gradient is ink overflow only, the stage has nothing to scroll, and
+    its top, light, stays in view.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc pr-scroll"><div class="tall k" style="overflow: auto"><div></div></div></div>
+    <figcaption>The contained box <code>overflow: auto</code>: it is a scroller of its own, 40px tall, and the stage
+    again has nothing to scroll.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll(".pr-scroll")) s.scrollTop = 100;</script>
+</body>
+</html>

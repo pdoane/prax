@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The transform property: a list of functions, and percentages</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .p, .g { position: absolute; left: 20px; top: 20px; width: 60px; height: 40px; }
+  .pad { width: 18px; height: 18px; padding: 10px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 1 · 3 The transform Property</div>
+  <h1>The transform property: a list of functions, and percentages</h1>
+  <p class=pr-lede><q>The final transformation value for a coordinate system is obtained by converting each function in
+  the list to its corresponding matrix like defined in Mathematical Description of Transform Functions, then multiplying
+  the matrices.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-1/#transform-property">CSS Transforms 1 §3</a></span>
+  Each blue box is 60 by 40 at (20, 20), where the dashed outline is.</p>
+</header>
+
+<section>
+  <h2>A list multiplies</h2>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateX(40px) translateY(30px)">A</div></div>
+    <figcaption><code>translateX(40px) translateY(30px)</code>: both, to 60 to 120 across, 50 to 90 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scaleX(2) translateX(20px)">A</div></div>
+    <figcaption><code>scaleX(2) translateX(20px)</code>: the 20px is scaled too, 40px; 120 wide, from 30 to
+    150.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: none">A</div></div>
+    <figcaption><code>none</code>: where it was laid out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Percentages of the reference box</h2>
+  <p><q>Percentages: refer to the size of reference box</q>, which for a CSS box is its border box unless
+  <a href="transform-box.html">transform-box</a> says otherwise.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translate(50%, 50%)">A</div></div>
+    <figcaption><code>translate(50%, 50%)</code>: half its width and height, 30px right and 20px down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb"><div class="pr-ghost g"></div><div class="pr-a p pad" style="transform: translateX(100%)"></div></div>
+    <figcaption>An 18px content box, 20px of padding either side and a 1px border: <code>translateX(100%)</code> is its border
+    box, 60px, to 80 to 140.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

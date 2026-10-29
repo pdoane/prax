@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-height and max-height: values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.7 Minimum and maximum heights: 'min-height' and 'max-height'</div>
+  <h1>Min-height and max-height: values</h1>
+  <p class=pr-lede><code>min-height</code> takes <code>&lt;length&gt; | &lt;percentage&gt;</code>, initial 0;
+  <code>max-height</code> takes <code>&lt;length&gt; | &lt;percentage&gt; | none</code>, initial <code>none</code>.
+  Neither is inherited.</p>
+</header>
+
+<section>
+  <h2>&lt;length&gt;, &lt;percentage&gt; and none</h2>
+  <p><q>Specifies a fixed minimum or maximum computed height.</q> <q>The percentage is calculated with respect to the
+  height of the generated box's containing block.</q> <q>(Only on 'max-height') No limit on the height of the box.</q>
+  Each stage is 80px tall. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-heights">CSS 2 §10.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit" style="min-height: 50px">min-height: 50px</div></div>
+    <figcaption>A 20px block grows to 50px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit" style="min-height: 75%">min-height: 75%</div></div>
+    <figcaption>75% of the stage's 80px: 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit" style="height: 70px; max-height: 25%">max-height: 25%</div></div>
+    <figcaption><code>height: 70px</code> held to 25%: 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 80px"><div class="pr-a pr-fit" style="height: 70px; max-height: none">max-height: none</div></div>
+    <figcaption><code>height: 70px</code> with no limit: 70px.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-sizing-3/#min-size-properties">CSS Box Sizing 3 §3.1.2</a>, <a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">§3.2</a></div>
+  <h2>The initial value of min-height is auto</h2>
+  <p><q>The initial value of auto is new; in [CSS2] the initial value was zero.</q> <q>For backwards-compatibility,
+  the resolved value of this keyword is zero for boxes of all [CSS2] display types</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#min-size-properties">CSS Box Sizing 3
+  §3.1.2</a>, <a href="https://drafts.csswg.org/css-sizing-3/#sizing-values">§3.2</a></span> As for <code>min-width</code>, a CSS 2 box behaves as with 0.</p>
+  <figure>
+    <div class=pr-stage style="height: 40px"><div class="pr-a pr-fit" style="min-height: auto">min-height: auto</div></div>
+    <figcaption>A block with <code>min-height: auto</code> is 20px, as with 0.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 40px; display: flex; flex-direction: column"><div class=pr-a style="flex: 0 1 4px">flex item</div></div>
+    <figcaption>A column's flex item with <code>flex-basis: 4px</code>: <code>auto</code> keeps it 20px,
+    its text's height.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

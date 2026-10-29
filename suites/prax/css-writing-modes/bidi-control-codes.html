@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS as bidi control codes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.4.2 CSS–Unicode Bidi Control Translation, Text Reordering</div>
+  <h1>CSS as bidi control codes</h1>
+  <p class=pr-lede><q>The final order of characters within each bidi paragraph is the same as if the bidi control
+  codes had been added as described for unicode-bidi (above), markup had been stripped, and the resulting character
+  sequence had been passed to an implementation of the Unicode bidirectional algorithm for plain text that produced
+  the same line-breaks as the styled text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#bidi-control-codes">CSS Writing Modes 4 §2.4.2</a></span></p>
+</header>
+
+<section>
+  <h2>A box and its control codes</h2>
+  <p>In each pair, the first stage uses a span with <code>direction: rtl</code>, the second the characters <a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">§2.2</a>'s table gives for it, in the text.</p>
+  <figure>
+    <div class=pr-stage>one <span style="direction: rtl; unicode-bidi: embed">two three!</span> four</div>
+    <figcaption><code>embed</code>: "one !two three four".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>one &#x202B;two three!&#x202C; four</div>
+    <figcaption>RLE (U+202B) and PDF (U+202C): the same, "one !two three four".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span style="direction: rtl; unicode-bidi: bidi-override">abc</span> 5</div>
+    <figcaption><code>bidi-override</code>: "x 5 cba".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x &#x202E;abc&#x202C; 5</div>
+    <figcaption>RLO (U+202E) and PDF: the same, "x 5 cba".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Control codes in the text are honored</h2>
+  <p><q>Note that bidi control codes in the source text are still honored, and might not correspond to the document
+  tree structure. This can split inlines</q>.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-chip>ab&#x202E;cd</span>ef</div>
+    <figcaption>An RLO inside the chip, with no PDF, overrides to the paragraph's end: "cdef" reads "fedc". The chip
+    is in two pieces, "ab" at the left and "dc" at the right, with "fe" between them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

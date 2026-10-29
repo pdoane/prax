@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Excess width: percentages, then any column</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; width: 200px; }
+  td { padding: 0; height: 20px; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.9.3.2 Distributing excess width to columns, rules 4 to 6</div>
+  <h1>Excess width: percentages, then any column</h1>
+  <p class=pr-lede>The last three rules, where no column without a percentage can take the excess. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#distributing-width-to-columns">CSS Table 3 §3.9.3.2</a></span>
+  Each table is 200px; text is <code>.pr-measure</code>, no spacing.</p>
+</header>
+
+<section>
+  <h2>4. By percentage</h2>
+  <p><q>Otherwise, if there are columns with intrinsic percentage width greater than 0%</q>, they <q>are increased in
+  proportion to intrinsic percentage width</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 20%">a</td><td style="width: 30%">b</td></tr></table></div>
+    <figcaption><code>20%</code> and <code>30%</code>, 40px and 60px: 100px more, 2:3, so 80px and 120px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>5. Every column with a cell, equally</h2>
+  <p><q>Otherwise, if there is any such column, the distributed widths of all columns that have originating cells are
+  increased by equal amounts</q>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td style="width: 0"></td><td style="width: 0"></td></tr></table></div>
+    <figcaption>Two empty cells of <code>width: 0</code>: constrained, with no max-content width, so rules 1 to 4
+    find none: 100px each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>6. Every column, equally</h2>
+  <p><q>Otherwise, the distributed widths of all columns are increased by equal amounts so the total increase adds to
+  the excess width.</q> A table with slots has a cell originating in its first column, so rule 5 always finds one;
+  this rule has nothing to show.</p>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Releasing pointer capture</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .row { margin: 10px 20px; touch-action: none; font-size: 0; }
+  .row .pr-target { display: inline-block; width: 76px; margin: 0 8px 0 0; }
+  .row .pr-target:hover { background: #f6d7b4; }
+  .row .pr-target.captured { outline: 3px solid #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 8.3 Releasing pointer capture</div>
+  <h1>Releasing pointer capture</h1>
+  <p class=pr-lede><q>Pointer capture is released on an element explicitly by calling the
+  element.releasePointerCapture(pointerId) method.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#releasing-pointer-capture">Pointer Events §8.3</a></span></p>
+</header>
+<section>
+  <h2>Back to hit testing</h2>
+  <p><q>Subsequent events for the pointer follow normal hit testing mechanisms (out of scope for this specification)
+  for determining the event target.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#extensions-to-the-element-interface">§4</a></span>
+  A <code>pointerdown</code> listener on A captures the pointer; A releases it once the pointer is past B. A captured
+  box is outlined green, a hovered one orange.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=a>A, press</div><div class=pr-target id=b>B</div><div class=pr-target id=c>C</div></div>
+      <ol class=pr-log data-log="lostpointercapture pointerover" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Press A and drag right, holding the button: A keeps the capture across B; once past B,
+    <code>lostpointercapture</code> at A, then <code>pointerover</code> at C, which turns orange.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Only the element that has it</h2>
+  <p><q>If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#releasing-pointer-capture">§8.3</a></span>
+  D captures the pointer when pressed; every <code>pointermove</code> then calls <code>releasePointerCapture</code>
+  on E.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row><div class=pr-target id=d>D, press</div><div class=pr-target id=e>E</div></div>
+      <ol class=pr-log data-log="lostpointercapture pointerup" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Press D, drag over E and release: D keeps the capture throughout; <code>pointerup</code> at D, then
+    <code>lostpointercapture</code> at D.</figcaption>
+  </figure>
+</section>
+<script>
+  // A captures when pressed and releases once the pointer passes B; D captures, and E's release does nothing.
+  const box = id => document.getElementById(id);
+  box("a").addEventListener("pointerdown", event => box("a").setPointerCapture(event.pointerId));
+  box("a").addEventListener("pointermove", event => {
+    if (box("a").hasPointerCapture(event.pointerId) && event.clientX > box("b").getBoundingClientRect().right)
+      box("a").releasePointerCapture(event.pointerId);
+  });
+  box("d").addEventListener("pointerdown", event => box("d").setPointerCapture(event.pointerId));
+  box("d").addEventListener("pointermove", event => box("e").releasePointerCapture(event.pointerId));
+  for (const element of document.querySelectorAll(".row .pr-target")) {
+    element.addEventListener("gotpointercapture", () => element.classList.add("captured"));
+    element.addEventListener("lostpointercapture", () => element.classList.remove("captured"));
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

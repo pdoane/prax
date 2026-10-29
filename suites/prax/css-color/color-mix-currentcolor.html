@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>color-mix() with currentcolor</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .word { font: bold 30px/56px "PR Arimo"; padding: 6px 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 10.1 Resolving color-mix() Values</div>
+  <h1>color-mix() with currentcolor</h1>
+  <p class=pr-lede><q>Otherwise (if currentColor was used in the function), the computed value is the color-mix() function with
+  each &lt;color&gt; parameter resolved [...], thus preserving inheritance into child elements.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#resolving-mix">CSS Color 5
+  §10.1</a></span></p>
+</header>
+
+<section>
+  <h2>Inherited as the function</h2>
+  <p>The stage sets <code>color: #2c5a8f</code> (blue) and <code>text-emphasis: dot
+  color-mix(in srgb, currentcolor 50%, white)</code>, which inherits; its span sets <code>color: #c0392b</code>
+  (red).</p>
+  <figure>
+    <div class="pr-stage word" style="color: #2c5a8f; text-emphasis: dot color-mix(in srgb, currentcolor 50%, white)">blue <span style="color: #c0392b">red</span></div>
+    <figcaption>Pale blue dots over "blue", pink dots over "red": the span mixes its own color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage word" style="color: #2c5a8f; text-emphasis: dot color-mix(in srgb, #2c5a8f 50%, white)">blue <span style="color: #c0392b">red</span></div>
+    <figcaption>With <code>#2c5a8f</code> in place of currentcolor: pale blue dots over both.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

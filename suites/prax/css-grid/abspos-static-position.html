@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute positioning: the static position in a grid container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .pr-stage.pr-cb { height: 50px; }
+  .g { display: grid; grid-template-columns: 40px 40px; height: 30px; padding: 10px; }
+  .s { position: absolute; width: 40px; height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 10.2 With a Grid Container as Parent</div>
+  <h1>Absolute positioning: the static position in a grid container</h1>
+  <p class=pr-lede><q>The static position of an absolutely-positioned child of a grid container is determined as if
+  it were the sole grid item in a grid area whose edges coincide with the content edges of the grid
+  container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#static-position">CSS Grid Layout 2 §10.2</a></span>
+  Each stage is a <code>position: relative</code> block holding a grid container with 10px of padding, the content box
+  from 10 to 190px across and 10 to 40px down. S, 40 by 20px, is absolutely positioned with no offsets.</p>
+</header>
+
+<section>
+  <h2>Not a grid item, and aligned in the content box</h2>
+  <p><q>An absolutely-positioned child of a grid container is out-of-flow and not a grid item, and so does not affect
+  the placement of other items or the sizing of the grid.</q> <q>Note that this position is affected by the values of
+  justify-self and align-self on the child</q>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class=g><div class="pr-d pr-fit s" style="justify-self: end; align-self: end">S</div><div class=pr-a>A</div><div class=pr-b>B</div></div></div>
+    <figcaption>S comes first, but A and B take the first two cells, from 10 and 50px. S, <code>end</code> in both
+    axes, is from 150 to 190px across and 20 to 40px down. <span class=pr-flag>Safari</span> ignores
+    <code>justify-self</code>: S at 10px across.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-cb"><div class=g><div class="pr-d pr-fit s" style="justify-self: center; align-self: center">S</div></div></div>
+    <figcaption><code>center</code> in both: 80 to 120px across, 15 to 35px down. <span class=pr-flag>Safari</span>
+    puts S at 10px across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class=g style="direction: rtl"><div class="pr-d pr-fit s">S</div></div></div>
+    <figcaption>No alignment, <code>direction: rtl</code>: at the start, the content box's top right, 150 to 190px
+    across, 10px down.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline-shift: top, center and bottom</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; white-space: nowrap; }
+  .tall { display: inline-block; width: 20px; height: 60px; background: #8a93a1; }
+  .sq { display: inline-block; width: 20px; height: 20px; background: #4f81bd; }
+  .ob { display: inline-block; width: 20px; height: 20px; background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.3 Post-Alignment Shift, line-relative values</div>
+  <h1>baseline-shift: top, center and bottom</h1>
+  <p class=pr-lede><q>the line-relative shift values top, center, and bottom shift the inline box and its contents
+  relative to the bounds of its line box.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-shift-property">CSS Inline Layout 3 §4.2.3</a></span>
+  Each stage is 13px text on 20px lines beside a grey box 60px tall, which makes the line 60px tall or more.</p>
+</header>
+
+<section>
+  <h2>Against the line box</h2>
+  <p><code>top</code>: <q>Align the line-over edge of the aligned subtree with the line-over edge of the line
+  box.</q> <code>center</code>: <q>Align the center of the aligned subtree with the center of the line box.</q>
+  <code>bottom</code> the same at the line-under edge.</p>
+  <figure>
+    <div class=pr-stage>X <span class=tall></span> <span class=sq style="vertical-align: top"></span> <span class=sq style="vertical-align: bottom"></span></div>
+    <figcaption><code>top</code>, the first square, at the line's top; <code>bottom</code>, the second, at its
+    bottom.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>X <span class=tall></span> <span class=sq style="vertical-align: center"></span> <span class=sq style="baseline-shift: center"></span></div>
+    <figcaption><code>vertical-align: center</code> and <code>baseline-shift: center</code>: both squares centered
+    on the line box. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> Both on the
+    baseline.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The aligned subtree</h2>
+  <p><q>The aligned subtree of an inline box contains the layout bounds of that box and the aligned subtrees of all
+  child inline boxes whose computed alignment-baseline value is not itself a line-relative shift value.</q> Each
+  orange span holds a square.</p>
+  <figure>
+    <div class=pr-stage>X <span class=tall></span> <span class=pr-chip style="vertical-align: top">a<span class=sq style="vertical-align: 15px"></span></span></div>
+    <figcaption>A span at <code>top</code> holding a square raised 15px: the subtree's top is the square's, so the
+    square is at the line's top, the span below it.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>X <span class=tall></span> <span class=pr-chip style="vertical-align: top">a<span class=ob style="vertical-align: bottom"></span></span></div>
+    <figcaption>A span at <code>top</code> holding an orange square at <code>bottom</code>: a subtree of its own, at
+    the bottom of the line box. <span class=pr-flag>Chrome</span> At the bottom of the span's subtree, near the
+    top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

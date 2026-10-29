@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generic families</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.1.5 Generic font families</div>
+  <h1>Generic families</h1>
+  <p class=pr-lede><q>A generic font family is a font family which has a standard name (as defined by CSS), but which
+  is an alias for an existing installed font family present on the system.</q> 'serif', 'sans-serif' and
+  'monospace' <q>must always map to at least one matched font face.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#generic-font-families">CSS Fonts 4
+  §2.1.5</a></span></p>
+</header>
+
+<section>
+  <h2>The generics that always match</h2>
+  <p>Each stage sets the same word in one generic family.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: serif">Handgloves</div>
+    <figcaption><code>serif</code>: finishing strokes, flared or tapering ends, thick and thin strokes.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: sans-serif">Handgloves</div>
+    <figcaption><code>sans-serif</code>: low contrast, plain stroke endings.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: monospace">Handgloves</div>
+    <figcaption><code>monospace</code>: every glyph the same width; the l as wide as the H.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: system-ui">Handgloves</div>
+    <figcaption><code>system-ui</code>: the platform's user interface font.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Generics whose look is a style</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: cursive">Handgloves</div>
+    <figcaption><code>cursive</code>: <q>looks more like handwritten pen or brush writing than printed
+    letterwork.</q></figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: fantasy">Handgloves</div>
+    <figcaption><code>fantasy</code>: <q>primarily decorative or expressive fonts</q>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: math">x² + ∑ ∫ ∂</div>
+    <figcaption><code>math</code>: a font for mathematical expressions, with the operators in one design.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

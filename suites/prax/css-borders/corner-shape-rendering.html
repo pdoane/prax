@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>corner-shape: contours of the border, outline and shadow</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 100px; height: 40px; margin: 10px; border: 10px solid #2c5a8f; background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.9.4 Rendering corner-shape</div>
+  <h1>corner-shape: contours of the border, outline and shadow</h1>
+  <p class=pr-lede><q>When rendering elements with shaped corners, the corner curves for 'border', 'outline', 'box-shadow', 'overflow-clip-margin', etc. are offset from the element's outer contour by their respective insets.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-shape-rendering">CSS Borders and Box Decorations 4 §3.9.4</a></span></p>
+</header>
+
+<section>
+  <h2>Between the outer and inner contours</h2>
+  <p><q>An element's border is rendered in the area between its outer contour and its inner contour.</q> <q>An element's overflow area is shaped by its inner contour.</q> Each box is 100 by 40 inside a 10px border, <code>border-radius: 30px</code>, <code>bevel</code>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 30px"></div></div>
+    <figcaption>The blue border between two diagonals; the orange background inside it too, as <code>border-box</code> clips to the outer contour. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 30px; overflow: hidden"><div style="height: 60px; margin: -10px; background: #6aa36a"></div></div></div>
+    <figcaption><code>overflow: hidden</code>: the green child cut at the inner contour, inside the border. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Outline, shadow, clip margin</h2>
+  <p><q>An element's outline follows the outer contour with the used value of 'outline-width' and 'outline-offset'. The precise way in which it is rendered is implementation-defined.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 30px; outline: 4px solid #8e44ad; outline-offset: 6px"></div></div>
+    <figcaption>A purple outline 6px out: bevelled corners, wider. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 30px; box-shadow: 0 0 0 10px #d68a3c"></div></div>
+    <figcaption>A shadow spread 10px: bevelled corners, wider. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class="box" style="corner-shape: bevel; border-radius: 30px; overflow: clip; overflow-clip-margin: 10px"><div style="height: 60px; margin: -20px; background: #6aa36a"></div></div></div>
+    <figcaption><code>overflow-clip-margin: 10px</code>: the green child cut 10px outside, along bevels. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Round.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Object bounding box units</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <clipPath id="disc" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5" /></clipPath>
+  <linearGradient id="wide" x1="-0.5" x2="1.5"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /><stop offset="0.625" stop-color="#d68a3c" /><stop offset="0.625" stop-color="#6aa36a" /></linearGradient>
+  <linearGradient id="across"><stop offset="0.5" stop-color="#4f81bd" /><stop offset="0.5" stop-color="#d68a3c" /></linearGradient>
+  <filter id="shadow"><feOffset dy="10" /></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.11 Object bounding box units</div>
+  <h1>Object bounding box units</h1>
+  <p class=pr-lede><q>coordinate (0,0) in the new user coordinate system is mapped to the (minx,miny) corner of the
+  tight bounding box</q> <q>and coordinate (1,1) […] to the (maxx,maxy) corner</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#ObjectBoundingBoxUnits">SVG 2 §8.11</a></span>
+  Each stage is an SVG 160 by 60.</p>
+</header>
+
+<section>
+  <h2>Fractions of the box, any number</h2>
+  <p><q>Any numeric value can be specified for values expressed as a fraction or percentage of object bounding box
+  units. In particular, fractions less than zero or greater than one and percentages less than 0% or greater than
+  100% can be specified.</q> Rects 120 by 40 at 20, 10.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#4f81bd" clip-path="url(#disc)" /></svg></div>
+    <figcaption><code>clipPathUnits="objectBoundingBox"</code>, a circle of radius 0.5 at 0.5, 0.5: an ellipse
+    filling the rect.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="url(#wide)" /></svg></div>
+    <figcaption>A gradient from −0.5 to 1.5, edges at 0.5 and 0.625 of it: blue to x 80, orange to 110, green
+    after.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No width or no height: ignored</h2>
+  <p><q>When the geometry of the applicable element has no width or height and objectBoundingBox is specified, then the
+  given effect (e.g., a gradient or a filter) will be ignored.</q> A line from 20, 20 to 140, 20, stroked 10
+  wide.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><line x1="20" y1="20" x2="140" y2="20" stroke="url(#across) #8e44ad" stroke-width="10" /></svg></div>
+    <figcaption>A gradient in box units, with a purple fallback: the gradient ignored. What is painted instead the
+    text does not say; Chrome, Safari and Firefox paint the fallback.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><line x1="20" y1="20" x2="140" y2="20" stroke="#2c5a8f" stroke-width="10" filter="url(#shadow)" /></svg></div>
+    <figcaption>A filter whose region is in box units, moving it down 10: ignored, the line at y 20 as it
+    is. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> No line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>align-items: baseline</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { display: flex; align-items: baseline; height: 60px; }
+  .pr-stage > div { width: 40px; background: #b9cde6; }
+  .pr-stage > div:nth-child(2) { background: #f6d7b4; }
+  .pr-stage > div:nth-child(3) { background: #c9e0c9; }
+  .e { height: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 8.3 Cross-axis Alignment: the align-items and align-self properties, baseline</div>
+  <h1>align-items: baseline</h1>
+  <p class=pr-lede><q>all participating flex items on the line are aligned such that their baselines align, and the
+  item with the largest distance between its baseline and its cross-start margin edge is placed flush against the
+  cross-start edge of the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#align-items-property">CSS Flexible Box Layout 2 §8.3</a></span>
+  Each item holds a word in text whose lines are 20px tall.</p>
+</header>
+
+<section>
+  <h2>The item furthest from its baseline sits at cross-start</h2>
+  <figure>
+    <div class="pr-stage pr-measure"><div>ab</div><div style="padding-top: 20px">cd</div></div>
+    <figcaption>"cd" has <code>padding-top: 20px</code>, so its baseline is 20px further down: it is flush at the top,
+    and "ab" is moved down 20px, from 20 to 40px, its text beside "cd".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div>ab</div><div style="margin-top: 30px">cd</div><div style="align-self: flex-start">ef</div></div>
+    <figcaption>The distance is to the margin edge: "cd" has <code>margin-top: 30px</code>, so it is at 30 to 50px and
+    "ab" at 30px beside it. "ef", <code>align-self: flex-start</code>, does not take part: at the top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A baseline synthesized from the border box</h2>
+  <p><q>If the item does not have a baseline in the necessary axis, then one is synthesized from the flex item's border
+  box.</q> An empty box has no baseline; its synthesized alphabetic baseline is its bottom edge <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#baseline-export">CSS Box Alignment 3 §9.1</a></span>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div>ab</div><div class=e></div></div>
+    <figcaption>The orange box is empty and 30px tall: its bottom is level with the baseline of "ab", so
+    the letters sit on the line of the box's bottom edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure" style="flex-wrap: wrap-reverse"><div>ab</div><div style="padding-bottom: 20px">cd</div></div>
+    <figcaption><code>wrap-reverse</code> puts cross-start at the bottom of the line, stretched to 60px: "cd", whose
+    baseline is 20px further from its bottom, is flush with it, 20 to 60px, and "ab" is 20 to 40px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

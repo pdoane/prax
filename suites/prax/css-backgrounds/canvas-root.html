@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The canvas background: sized and placed by the root</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 4.1 The Canvas Background and the Root Element</div>
+  <h1>The canvas background: sized and placed by the root</h1>
+  <p class=pr-lede><q>The background of the root element becomes the canvas background and its background painting area
+  extends to cover the entire canvas. However, any images are sized and positioned relative to the root element’s box
+  as if they were painted for that element alone.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#root-background">CSS Backgrounds 4 §4.1</a></span>
+  Each figure is a frame, 200 by 100, whose root element has <code>margin: 20px; height: 60px</code>, so its box is
+  160 by 60, and a dashed outline. Its body has no margin.</p>
+</header>
+
+<section>
+  <h2>Sized by the root's box</h2>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>&quot;) 0 0 / 50% 50% no-repeat } body { margin: 0 }</style>"></iframe></div>
+    <figcaption><code>0 0 / 50% 50%</code>: an ellipse 80 by 30, half the root's box, at its top left, not half the
+    frame. <span class=pr-flag>Safari</span> Places it at the frame's top left corner.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 20px; height: 60px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><circle cx='10' cy='10' r='10' fill='%234f81bd'/></svg>&quot;) 0 0 / 40px 30px } body { margin: 0 }</style>"></iframe></div>
+    <figcaption><code>0 0 / 40px 30px</code>, repeated: the tiles start at the root's corner, four across it, and go on
+    over the whole frame, cut at its edges. <span class=pr-flag>Safari</span> Starts the tiles at the frame's corner.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Placed by the root's boxes</h2>
+  <p>The root has <code>padding: 10px</code> as well, so its content box is 20px further in.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; padding: 10px; height: 40px; outline: 1px dashed #1f2430; background: url(&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>&quot;) 100% 100% no-repeat content-box } body { margin: 0 }</style>"></iframe></div>
+    <figcaption><code>content-box</code> at <code>100% 100%</code>: the orange square in the root's content box's
+    bottom right corner, 20px from the frame's right and bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { margin: 10px; padding: 10px; height: 40px; outline: 1px dashed #1f2430; background: #b9cde6 content-box } body { margin: 0 }</style>"></iframe></div>
+    <figcaption>A note: <q>the 'background-clip' property has no effect when specified on it.</q> <code>#b9cde6
+    content-box</code>: the color covers the whole frame.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

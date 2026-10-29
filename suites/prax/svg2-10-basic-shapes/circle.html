@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>circle: center, radius and path</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .styled { cx: 110px; cy: 40px; r: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 10.3 The ‘circle’ element</div>
+  <h1>circle: center, radius and path</h1>
+  <p class=pr-lede><q>The ‘circle’ element defines a circle based on a center point and a radius.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/shapes.html#CircleElement">SVG 2 §10.3</a></span>
+  Each stage is an SVG 160 by 80, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>cx and cy, and r</h2>
+  <p><q>The ‘cx’ and ‘cy’ attributes define the coordinates of the center of the circle.</q> <q>The ‘r’ attribute
+  defines the radius of the circle.</q> <q>A computed value of zero disables rendering of the element.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="50" cy="40" r="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>cx="50" cy="40" r="30"</code>: from x 20 to 80, y 10 to 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle class=styled cx="20" cy="20" r="10" fill="#4f81bd" /></svg></div>
+    <figcaption>A style sheet's <code>cx: 110px; cy: 40px; r: 30px</code> over the attributes: from x 80 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="80" cy="40" r="0" fill="#4f81bd" stroke="#d68a3c" stroke-width="10" /></svg></div>
+    <figcaption><code>r="0"</code>, stroked orange 10 wide: nothing, not even a dot of stroke.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Four arcs from 3 o'clock, clockwise</h2>
+  <p><q>The path begins at the "3 o'clock" point on the radius and proceeds in a clock-wise direction (before any
+  transformations).</q> A light blue circle of radius 30 about 80, 40 is stroked with one orange dash, 6 wide, of a
+  quarter of its outline, 47.12, followed by a gap longer than the outline.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="80" cy="40" r="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="47.12 1000" /></svg></div>
+    <figcaption>The first arc: from 3 o'clock, 110, 40, down round to 6 o'clock, 80, 70.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="80" cy="40" r="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="47.12 1000" stroke-dashoffset="-141.37" /></svg></div>
+    <figcaption>Offset by three quarters: the last arc, from 12 o'clock, 80, 10, round to 3 o'clock.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><circle cx="80" cy="40" r="30" fill="#b9cde6" stroke="#d68a3c" stroke-width="6" stroke-dasharray="47.12 1000" transform="rotate(90 80 40)" /></svg></div>
+    <figcaption>Rotated 90° about its center: the path turns with it, so the first arc runs from 6 o'clock round to
+    9 o'clock.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

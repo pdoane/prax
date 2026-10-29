@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Font technologies</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  @font-face { font-family: "Tech Color"; src: url(../../../third_party/fonts/Nabla.ttf) tech(color-COLRv1), url(../../../third_party/fonts/Tinos.ttf); }
+  @font-face { font-family: "Tech Graphite"; src: url(../../../third_party/fonts/Nabla.ttf) tech(features-graphite), url(../../../third_party/fonts/Tinos.ttf); }
+  .tech { display: inline-block; margin: 0 8px 8px 0; padding: 3px 8px; font: 13px/1.3 ui-monospace, Menlo, monospace;
+          background: #f4f5f7; border: 1px solid #cfd3da; color: #9aa1ad; }
+  @supports font-tech(color-COLRv0) { #colrv0 { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(color-COLRv1) { #colrv1 { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(color-SVG) { #svg { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(color-sbix) { #sbix { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(color-CBDT) { #cbdt { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(variations) { #variations { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(palettes) { #palettes { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(features-opentype) { #opentype { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(features-aat) { #aat { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(features-graphite) { #graphite { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+  @supports font-tech(incremental) { #incremental { background: #dcefd6; border-color: #8fc47f; color: #1f3d1a; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 11.1 Font tech</div>
+  <h1>Font technologies</h1>
+  <p class=pr-lede><q>Web authors can specify the tech() function inside an @font-face 'src' descriptor to indicate
+  that support is required for correct rendering of a font. This mechanism can be used for gracefully falling back to
+  an ancillary font when requested support is not present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-tech-definitions">CSS Fonts 4 §11.1</a></span></p>
+</header>
+
+<section>
+  <h2>What this user agent supports</h2>
+  <p>Each tech is green where <code>@supports font-tech(…)</code> holds.</p>
+  <span class=tech id=opentype>features-opentype</span><span class=tech id=aat>features-aat</span><span class=tech id=graphite>features-graphite</span>
+  <span class=tech id=variations>variations</span><span class=tech id=palettes>palettes</span><span class=tech id=incremental>incremental</span>
+  <span class=tech id=colrv0>color-COLRv0</span><span class=tech id=colrv1>color-COLRv1</span><span class=tech id=svg>color-SVG</span>
+  <span class=tech id=sbix>color-sbix</span><span class=tech id=cbdt>color-CBDT</span>
+</section>
+
+<section>
+  <h2>Falling back by tech</h2>
+  <p>Each rule lists Nabla, a COLRv1 color font, with a tech, then Tinos.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Tech Color'">Nabla</div>
+    <figcaption><code>tech(color-COLRv1)</code>, where supported: Nabla, in color.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'Tech Graphite'">Nabla</div>
+    <figcaption><code>tech(features-graphite)</code>, where unsupported: Tinos.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

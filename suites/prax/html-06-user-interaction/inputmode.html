@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The inputmode attribute</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px;
+        background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px }
+  .row { display: inline-block; width: 120px; margin-right: 10px; vertical-align: top }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.9 Input modalities: the inputmode attribute</div>
+  <h1>The inputmode attribute</h1>
+  <p class=pr-lede><q>The inputmode content attribute is an enumerated attribute that specifies what kind of input mechanism would
+  be most helpful for users entering content.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute">HTML §6.8.9</a></span></p>
+</header>
+<section>
+  <h2>The virtual keyboard for each keyword</h2>
+  <p><code>none</code>: <q>The user agent should not display a virtual keyboard.</q> <code>numeric</code>: <q>a virtual
+  keyboard capable of numeric input</q>; <code>decimal</code>: <q>Numeric keys and the format separator for the locale
+  should be shown.</q> <code>tel</code>: <q>keys for the digits 0 to 9, the "#" character, and the "*" character</q>.
+  <code>email</code>: keys <q>such as that for the "@" character and the "." character</q>. <code>url</code>: keys
+  <q>such as that for the "/" and "." characters</q>. <code>search</code>: <q>a virtual keyboard optimized for
+  search.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute">§6.8.9</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide" style="width: 300px; padding: 10px 20px 0; box-sizing: border-box">
+      <div class=row>
+        <input class=ed inputmode=none placeholder=none>
+        <input class=ed inputmode=text placeholder=text>
+        <input class=ed inputmode=numeric placeholder=numeric>
+        <input class=ed inputmode=decimal placeholder=decimal>
+      </div><div class=row>
+        <input class=ed inputmode=tel placeholder=tel>
+        <input class=ed inputmode=email placeholder=email>
+        <input class=ed inputmode=url placeholder=url>
+        <input class=ed inputmode=search placeholder=search>
+      </div>
+    </div>
+    <figcaption>On a phone or tablet, tap each field: no keyboard for <code>none</code>; a text keyboard; digits; digits
+    with a decimal separator; a phone pad with # and *; a keyboard with @ and .; one with / and .com; one whose
+    return key searches.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

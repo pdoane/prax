@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>unicode-bidi: embeddings and isolates</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/24px "PR Arimo"; padding: 0 4px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 2.2 Embeddings and Overrides: the unicode-bidi property</div>
+  <h1>unicode-bidi: embeddings and isolates</h1>
+  <p class=pr-lede><q>Normally (i.e. when unicode-bidi is normal) an inline box is transparent to the unicode bidi
+  algorithm; content is ordered as if the box's boundaries were not there. Other values of the unicode-bidi property
+  cause inline boxes to create scopes within the algorithm, and to override the intrinsic directionality of
+  text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#unicode-bidi">CSS Writing Modes 4 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>embed and isolate: strong or neutral outside</h2>
+  <p>Both scope their content in the box's direction. To the content around it, an <code>embed</code> box behaves as
+  if its boundary were <q>a strong character of the box's direction</q>, an <code>isolate</code> box as <q>a neutral
+  character</q>: <q>neither is the content inside the box bidi-affected by the content surrounding the box, nor is the
+  content surrounding the box bidi-affected by the content or specified directionality of the box.</q> Each
+  <code>rtl</code> span holds a Hebrew word and is followed by " 5 stars".</p>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl">אבג</span> 5 stars</div>
+    <figcaption><code>normal</code>: no box for the algorithm; the "5" follows the Hebrew letters into the
+    right-to-left run, left of the word.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl; unicode-bidi: embed">אבג</span> 5 stars</div>
+    <figcaption><code>embed</code>: the "5" is drawn into the right-to-left run and lands left of the Hebrew
+    word.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-hl style="direction: rtl; unicode-bidi: isolate">אבג</span> 5 stars</div>
+    <figcaption><code>isolate</code>: the "5" stays after the span, right of the Hebrew
+    word.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overrides</h2>
+  <p><q>bidi-override: ... reordering within it is strictly in sequence according to the direction property; the
+  implicit part of the bidirectional algorithm is ignored.</q> <q>isolate-override: ... to surrounding content, it is
+  equivalent to isolate, but within the box content is ordered as if bidi-override were specified.</q></p>
+  <figure>
+    <div class=pr-stage>x <span class=pr-hl style="direction: rtl; unicode-bidi: bidi-override">abc</span> 5</div>
+    <figcaption><code>bidi-override</code>: "abc" reversed to "cba", and strong outside, so the "5" goes left of
+    it: "x 5 cba".</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span class=pr-hl style="direction: rtl; unicode-bidi: isolate-override">abc</span> 5</div>
+    <figcaption><code>isolate-override</code>: "cba" too, but neutral outside: "x cba 5".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

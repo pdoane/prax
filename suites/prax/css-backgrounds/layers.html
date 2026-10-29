@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layers of background images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; }
+  .order {
+    background-color: #c3d08b;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%234f81bd'/></svg>"),
+                      url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60'><rect width='60' height='60' fill='%23d68a3c'/></svg>");
+    background-repeat: no-repeat;
+  }
+  .three {
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>"),
+                      url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%23d68a3c'/></svg>"),
+                      url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%236aa36a'/></svg>");
+  }
+  .excess { background-position: left, center, right, bottom; background-repeat: no-repeat; }
+  .cycle { background-position: bottom left, top left, bottom right; background-repeat: no-repeat, repeat-x; }
+  .over {
+    width: 120px; height: 40px;
+    background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20'><rect width='20' height='20' fill='%234f81bd'/></svg>");
+    border: 10px solid transparent;
+    border-image: linear-gradient(rgba(214, 138, 60, 0.75), rgba(214, 138, 60, 0.75)) 10 fill;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 3 Layering Multiple Background Images</div>
+  <h1>Layers of background images</h1>
+  <p class=pr-lede><q>The number of layers is determined by the number of comma-separated values in the
+  'background-image' property.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#layering">CSS Backgrounds 4 §3</a></span>
+  Each dashed box is 140 by 60.</p>
+</header>
+
+<section>
+  <h2>The first image is closest to the user</h2>
+  <p><q>The first image in the list is the layer closest to the user, the next one is painted behind the first, and so
+  on. The background color, if present, is painted below all of the other layers.</q> A note: a border image <q>is
+  painted on top of the background layers</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost order"></div></div>
+    <figcaption>A 40px blue square over a 60px orange one, over green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="over" style="margin: 10px"></div></div>
+    <figcaption>An orange border image, <code>fill</code>, over blue tiles.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The lists are matched up from the first value</h2>
+  <p><q>excess values at the end are not used. If a property doesn't have enough comma-separated values to match the
+  number of layers, the UA must calculate its used value by repeating the list of values until there are
+  enough.</q> Three images: a blue, an orange and a green 20px square.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost three excess"></div></div>
+    <figcaption><code>left, center, right, bottom</code>, <code>no-repeat</code>: blue, orange, green across the
+    middle. <code>bottom</code> is not used.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost three cycle"></div></div>
+    <figcaption><code>no-repeat, repeat-x</code>: blue and green once at the bottom, an orange band along the
+    top.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

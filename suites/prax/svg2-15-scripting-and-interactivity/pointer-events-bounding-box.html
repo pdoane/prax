@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>pointer-events: bounding-box, clips, masks and filters</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+  svg .hot:hover { fill: #2c5a8f; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <clipPath id="left-half" clipPathUnits="objectBoundingBox"><rect width="0.5" height="1" /></clipPath>
+  <mask id="clear-right" maskContentUnits="objectBoundingBox" x="0" y="0" width="1" height="1"><rect width="0.5" height="1" fill="white" /></mask>
+  <filter id="shifted" x="-1" y="-1" width="3" height="3"><feOffset dx="40" /></filter>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.6 The ‘pointer-events’ property</div>
+  <h1>pointer-events: bounding-box, clips, masks and filters</h1>
+  <p class=pr-lede><code>bounding-box</code>: <q>The given element can be a target element for pointer events when the
+  pointer is over the bounding box of the element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#PointerEventsProp">SVG 2 §15.6</a></span>
+  Each shape turns dark blue under the pointer; the log lists clicks with their target.</p>
+</header>
+
+<section>
+  <h2>bounding-box</h2>
+  <p>A ring, a circle of radius 20 with no fill and a stroke 6 wide, and its bounding box, the square outlined dashed.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><circle id=ring cx="150" cy="30" r="20" fill="none" stroke="#4f81bd" stroke-width="6" pointer-events="bounding-box" /><rect class=pr-ghost x="130" y="10" width="40" height="40" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click inside the ring, or in the square's corners: <code>target=ring</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Clipped, masked, filtered</h2>
+  <p><q>pointer events must be captured normally over the rendered areas of a clipped element, but must not be captured
+  over the clipped areas</q>; <q>for elements with a mask applied, pointer events must still be captured even in areas
+  where the mask goes to zero opacity.</q> <q>The filter property has no effect on pointer events processing</q>. Three
+  rects 60 by 40, each outlined dashed: <code>#clipped</code> to its left half, <code>#masked</code> to its left half,
+  and <code>#filtered</code>, drawn 40 to the right of where it is.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="60"><rect id=clipped class=hot x="10" y="10" width="60" height="40" fill="#4f81bd" clip-path="url(#left-half)" /><rect id=masked class=hot x="90" y="10" width="60" height="40" fill="#4f81bd" mask="url(#clear-right)" /><rect id=filtered class=hot x="170" y="10" width="60" height="40" fill="#4f81bd" filter="url(#shifted)" /><rect class=pr-ghost x="10" y="10" width="60" height="40" /><rect class=pr-ghost x="90" y="10" width="60" height="40" /><rect class=pr-ghost x="170" y="10" width="60" height="40" /></svg>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click the right half of each outline: the clipped one, nothing; the masked one,
+    <code>target=masked</code>. Click the left of the third outline, from x 170 to 210, where nothing is
+    drawn: <code>target=filtered</code>; click its drawing right of the outline: nothing.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

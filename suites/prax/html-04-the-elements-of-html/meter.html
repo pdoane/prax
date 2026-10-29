@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The meter element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 0; font-size: 16px; line-height: 20px; }
+  .pad meter { margin: 0 0 0 10px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.14 The meter element</div>
+  <h1>The meter element</h1>
+  <p class=pr-lede><q>The meter element represents a scalar measurement within a known range, or a fractional
+  value</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element">HTML §4.10.14</a></span></p>
+</header>
+
+<section>
+  <h2>The actual value within the range</h2>
+  <p>Without <code>min</code> and <code>max</code> the range is 0 to 1.0; <q>If the candidate actual value is less
+  than the minimum value, then the actual value is the minimum value.</q> <q>Otherwise, if the candidate actual value is
+  greater than the maximum value, then the actual value is the maximum value.</q> Each gauge is 80px, 5em, wide. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-meter-element">§4.10.14</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter value=0.5></meter></div>
+    <figcaption><code>value=0.5</code>: filled 40px from the left.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter min=20 max=60 value=30></meter></div>
+    <figcaption><code>min=20 max=60 value=30</code>: a quarter, 20px.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter value=3></meter></div>
+    <figcaption><code>value=3</code>, past the maximum: full.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter value=-1></meter></div>
+    <figcaption><code>value=-1</code>, below the minimum: empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Other directions</h2>
+  <p><q>Its minimum value is on the right if the 'direction' property has a computed value of 'rtl', and on the left
+  otherwise.</q> <q>When this element has a vertical writing mode, it is expected to depict a vertical gauge. Its minimum
+  value is on the bottom if the 'direction' property has a computed value of 'rtl', and on the top otherwise.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-meter-element-2">§15.5.14</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><meter value=0.25 dir=rtl></meter></div>
+    <figcaption><code>rtl</code>: a quarter filled from the right.</figcaption>
+  </figure><figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pad" style="height: 80px"><meter value=0.25 style="writing-mode: vertical-lr"></meter></div>
+    <figcaption><code>vertical-lr</code>: 16px by 80px, a quarter filled from the top. <span
+    class=pr-flag>Firefox</span> fills from the bottom.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad" style="height: 80px"><meter value=0.25 dir=rtl style="writing-mode: vertical-lr"></meter></div>
+    <figcaption>Also <code>rtl</code>: a quarter filled from the bottom.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

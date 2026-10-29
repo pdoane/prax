@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spelling and grammar checking</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .ed { display: block; box-sizing: border-box; width: 100%; height: 20px; margin: 0 0 10px; padding: 0 6px;
+        background: var(--pr-plain); border: 1px solid var(--pr-accent); font-size: 12px; line-height: 18px }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.8.5 Spelling and grammar checking</div>
+  <h1>Spelling and grammar checking</h1>
+  <p class=pr-lede><q>If the checking is enabled for a word/sentence/text, the user agent should indicate spelling and grammar
+  errors in that text.</q> <q>If checking is disabled, the user agent should not indicate spelling or grammar errors
+  for that text.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#spelling-and-grammar-checking">HTML §6.8.5</a></span></p>
+</header>
+<section>
+  <h2>The attribute, on the element or an ancestor</h2>
+  <p><q>if the element with which the text is associated has a spellcheck content attribute, then: if that attribute
+  is in the True state, then checking is enabled; otherwise, if that attribute is in the False state, then checking is
+  disabled.</q> <q>Otherwise, if there is an ancestor element with a spellcheck content attribute that is not in the
+  Default state</q>, the nearest one decides. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#spelling-and-grammar-checking">§6.8.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <input class=ed spellcheck=true value="spellcheck=true: teh qick fox">
+        <input class=ed spellcheck=false value="spellcheck=false: teh qick fox">
+        <div spellcheck=false><textarea class=ed>parent false: teh qick fox</textarea></div>
+        <div spellcheck=true><input class=ed spellcheck=" false" value='" false" is invalid: teh qick fox'></div>
+      </div>
+    </div>
+    <figcaption>Click each field in turn and type a space at its end, so that the browser checks it: <code>teh</code> and
+    <code>qick</code> are marked as misspelled, typically with a red wavy underline, in the first and last fields only. The
+    last one's attribute is invalid, so its parent's <code>true</code> applies.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Text in an editing host</h2>
+  <p>The element that decides <q>is the immediate parent of the first character of the word</q>.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#spelling-and-grammar-checking">§6.8.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=ed contenteditable spellcheck=true style="height: auto">teh <span spellcheck=false>qick</span> fox jumsp</div>
+      </div>
+    </div>
+    <figcaption>Click the line and type a space at its end: <code>teh</code> and <code>jumsp</code> are marked, <code>qick</code>, in a
+    span with <code>spellcheck=false</code>, is not.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

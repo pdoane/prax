@@ -1,0 +1,5 @@
+/* The look of a figure's document in a frame: 13px text on 20px lines, and a .styled box, 20px tall, plain until a
+   style sheet colors it. */
+body { margin: 10px; font: 13px/20px "PR Noto Sans", sans-serif; color: #1f2430; }
+div { height: 20px; padding: 0 6px; box-sizing: border-box; background: #f4f5f7; border: 1px solid #2c5a8f;
+      font-size: 12px; line-height: 18px; }

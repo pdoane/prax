@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The overflow property</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.11 The effect of the ‘overflow’ property</div>
+  <h1>The overflow property</h1>
+  <p class=pr-lede><q>If the overflow property has a value of ‘visible’, the property has no effect (i.e., a clipping
+  rectangle is not created).</q> <q>If the overflow property has the value hidden or scroll, a clip, the exact size of
+  the SVG viewport is applied.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#OverflowAndClipProperties">SVG 2 §3.11</a></span>
+  Each stage is an SVG 160 by 60 with a nested <code>svg</code> 60 by 40 at 50, 10, outlined, holding a circle of
+  radius 28 about its middle.</p>
+</header>
+
+<section>
+  <h2>The values on a nested svg</h2>
+  <p>The table gives, for <q>other svg</q>: <code>auto</code> <q>visible | scroll</q>, <code>visible</code>
+  <q>visible</q>, <code>hidden</code> <q>hidden</q>, <code>scroll</code> <q>scroll</q>. <q>If the user agent has no
+  scrolling mechanism, the content would not be clipped, or the value ‘scroll’ is treated as hidden, then the value
+  auto must be treated as visible</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="50" y="10" width="60" height="40" /><svg x="50" y="10" width="60" height="40"><circle cx="30" cy="20" r="28" fill="#4f81bd" /></svg></svg></div>
+    <figcaption>The user agent style sheet's <code>hidden</code>: cut to the outline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="50" y="10" width="60" height="40" /><svg x="50" y="10" width="60" height="40" overflow="visible"><circle cx="30" cy="20" r="28" fill="#4f81bd" /></svg></svg></div>
+    <figcaption><code>visible</code>: the whole circle.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="50" y="10" width="60" height="40" /><svg x="50" y="10" width="60" height="40" overflow="auto"><circle cx="30" cy="20" r="28" fill="#4f81bd" /></svg></svg></div>
+    <figcaption><code>auto</code>, with no scrolling mechanism in SVG: visible, the whole circle.
+    <span class=pr-flag>Firefox</span> Clipped.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="50" y="10" width="60" height="40" /><svg x="50" y="10" width="60" height="40" overflow="scroll"><circle cx="30" cy="20" r="28" fill="#4f81bd" /></svg></svg></div>
+    <figcaption><code>scroll</code>: clipped to the outline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

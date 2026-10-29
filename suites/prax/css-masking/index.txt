@@ -1,0 +1,79 @@
+00-supports-1.html
+00-supports-2.html
+# css-masking-1/#intro 1 Introduction: no page; it introduces clipping and masking, which 5 to 9 show
+# css-masking-1/#clipping 1.1 Clipping: no page; it is informative, and 5's pages show clipping
+# css-masking-1/#masking 1.2 Masking: no page; it is informative, and 7's pages show masking
+# css-masking-1/#placement 2 Module interactions: no page; it says which properties create stacking contexts, which 5.1's and 7's pages show
+# css-masking-1/#values 3 Values: no page; it defines the notation and the CSS-wide keywords
+# css-masking-1/#terminology 4 Terminology: no page; it defines terms
+css-masking-1/#clipping-paths 5 Clipping Paths
+    clipping-paths.html
+css-masking-1/#the-clip-path 5.1 Clipping Shape: the clip-path property
+    clip-path-shapes.html
+    clip-path-boxes.html
+    clip-path-url.html
+    clip-path-stacking.html
+# css-masking-1/#svg-clipping-paths 6 SVG Clipping Path Sources: no page; it introduces 6.1 and 6.2
+css-masking-1/#ClipPathElement 6.1 The clipPath element
+    clippath-element.html
+    clippath-units.html
+css-masking-1/#the-clip-rule 6.2 Winding Rules: the clip-rule property
+    clip-rule.html
+# css-masking-1/#positioned-masks 7 Positioned Masks: no page; it introduces the mask properties, which 7.1 to 7.10 show
+css-masking-1/#the-mask-image 7.1 Mask Image Source: the mask-image property
+    mask-image.html
+css-masking-1/#the-mask-mode 7.2 Mask Image Interpretation: the mask-mode property
+    mask-mode.html
+css-masking-1/#the-mask-repeat 7.3 Tiling Mask Images: the mask-repeat property
+    mask-repeat.html
+css-masking-1/#the-mask-position 7.4 Positioning Mask Images: the mask-position property
+    mask-position.html
+css-masking-1/#the-mask-clip 7.5 Masking Area: the mask-clip property
+    mask-clip.html
+css-masking-1/#the-mask-origin 7.6 Positioning Area: the mask-origin property
+    mask-origin.html
+css-masking-1/#the-mask-size 7.7 Sizing Mask Images: the mask-size property
+    mask-size.html
+css-masking-1/#the-mask-composite 7.8 Compositing mask layers: the mask-composite property
+    mask-composite.html
+css-masking-1/#the-mask 7.9 Mask Shorthand: the mask property
+    mask-shorthand.html
+css-masking-1/#the-mask-image-rendering-model 7.10 The Mask Image Rendering Model
+    mask-rendering.html
+css-masking-1/#MaskValues 7.10.1 Mask processing
+    mask-processing.html
+css-masking-1/#layering 7.10.2 Layering Multiple Mask Images
+    mask-layers.html
+css-masking-1/#mask-borders 8 Border-Box Mask
+    mask-border.html
+css-masking-1/#the-mask-border-source 8.1 Mask Border Image Source: the mask-border-source property
+    mask-border-source.html
+css-masking-1/#the-mask-border-mode 8.2 Mask Border Image Interpretation: the mask-border-mode property
+    mask-border-mode.html
+css-masking-1/#the-mask-border-slice 8.3 Mask Border Image Slicing: the mask-border-slice property
+    mask-border-slice.html
+css-masking-1/#the-mask-border-width 8.4 Masking Areas: the mask-border-width property
+    mask-border-width.html
+css-masking-1/#the-mask-border-outset 8.5 Edge Overhang: the mask-border-outset property
+    mask-border-outset.html
+css-masking-1/#the-mask-border-repeat 8.6 Mask Border Image Tiling: the mask-border-repeat property
+    mask-border-repeat.html
+css-masking-1/#the-mask-border 8.7 Mask Border Image Shorthand: the mask-border property
+    mask-border-shorthand.html
+css-masking-1/#masking-with-the-mask-border-image 8.8 Masking with the mask border image
+    mask-border-masking.html
+# css-masking-1/#svg-masks 9 SVG Mask Sources: no page; it introduces 9.1 and 9.2
+css-masking-1/#MaskElement 9.1 The mask element
+    mask-element.html
+    mask-units.html
+css-masking-1/#the-mask-type 9.2 Mask Source Interpretation: the mask-type property
+    mask-type.html
+# css-masking-1/#priv 10 Privacy Considerations: no page; nothing to see
+# css-masking-1/#sec 11 Security Considerations: no page; nothing to see
+css-masking-1/#clip-property A The deprecated clip property
+    clip-property.html
+css-masking-1/#compute-stroke-bounding-box B Compute stroke bounding box
+    stroke-bounding-box.html
+# css-masking-1/#DOMInterfaces C DOM interfaces: no page; it is object model
+# css-masking-1/#InterfaceSVGClipPathElement C.1 Interface SVGClipPathElement: no page; it is object model
+# css-masking-1/#InterfaceSVGMaskElement C.2 Interface SVGMaskElement: no page; it is object model

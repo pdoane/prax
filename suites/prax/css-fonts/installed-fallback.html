@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Installed font fallback</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-sample { font-size: 24px; line-height: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 5.2 Matching font styles, step 7</div>
+  <h1>Installed font fallback</h1>
+  <p class=pr-lede><q>If there are no more font families to be evaluated and no matching face has been found, then the
+  user agent performs an installed font fallback procedure to find the best match for the character to be
+  rendered. The result of this procedure can vary across user agents.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-style-matching">CSS Fonts 4
+  §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>By the content language</h2>
+  <p>Each stage names only PR Tinos, which has no Han or Arabic. The language chooses the installed font.</p>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ja style="font-family: 'PR Tinos'">骨 Aa</div>
+    <figcaption><code>ja</code>: a Japanese font for 骨.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=zh-Hans style="font-family: 'PR Tinos'">骨 Aa</div>
+    <figcaption><code>zh-Hans</code>: a Simplified Chinese font, the inner corner open to the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ur dir=rtl style="font-family: 'PR Tinos'">اردو زبان</div>
+    <figcaption><code>ur</code>: Urdu prefers a Nastaliq font, words sloping down to the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" lang=ar dir=rtl style="font-family: 'PR Tinos'">اردو زبان</div>
+    <figcaption><code>ar</code>: the same letters in a Naskh font, on a level baseline.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

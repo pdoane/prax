@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which option is selected</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 6px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.7 The select element</div>
+  <h1>Which option is selected</h1>
+  <p class=pr-lede>Without <code>multiple</code>, when an option's selectedness is set to true, <q>the user agent must set the selectedness of all the other option
+  elements in its list of options to false.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">HTML §4.10.7</a></span></p>
+</header>
+
+<section>
+  <h2>None selected</h2>
+  <p>For a display size of 1: <q>Set firstEnabledOption's selectedness to true.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select><option>Apple<option>Pear</select></div>
+    <figcaption>No <code>selected</code>: Apple, the first option.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select><option disabled>Apple<option>Pear</select></div>
+    <figcaption>Apple <code>disabled</code>: Pear, the first enabled option.</figcaption>
+  </figure><figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow pad"><select><option disabled>Apple<option disabled>Pear</select></div>
+    <figcaption>All disabled: none, so the box is blank. <span class=pr-flag>Safari</span> shows Apple.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select size=2><option>Apple<option>Pear</select></div>
+    <figcaption><code>size=2</code>: a list box with no row highlighted.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Two selected</h2>
+  <p>The parser adds Apple, then Pear, each selected <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select><option selected>Apple<option selected>Pear<option>Plum</select></div>
+    <figcaption>Apple and Pear both <code>selected</code>: Pear, the last.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select size=3><option selected>Apple<option selected>Pear<option>Plum</select></div>
+    <figcaption>As a list box: only Pear is highlighted.</figcaption>
+  </figure><figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pad"><select multiple size=3><option selected>Apple<option selected>Pear<option>Plum</select></div>
+    <figcaption>With <code>multiple</code>: Apple and Pear both.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>When the attributes change</h2>
+  <p>The buttons toggle the attributes; each change resets the selectedness. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pad">
+      <select id=changing><option id=first>Apple<option id=second>Pear<option id=third>Plum</select>
+      <button onclick="first.toggleAttribute('disabled')">Apple disabled</button>
+      <button onclick="third.toggleAttribute('selected')">Plum selected</button>
+    </div>
+    <figcaption>Click "Apple disabled": Apple, still selected, still shows. Click "Plum selected": Plum; again:
+    none is selected, so Pear, the first enabled option.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup, stage 3: rows, and table or inline-table</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2.1 Fixup Algorithm, stage 3</div>
+  <h1>Fixup, stage 3: rows, and table or inline-table</h1>
+  <p class=pr-lede><q>Generate missing parents</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup-algorithm">CSS Table 3 §2.2.1</a></span>
+  Blue boxes are cell elements; stages have <code>border-spacing: 10px</code>, which anonymous tables inherit.</p>
+</header>
+
+<section>
+  <h2>A row around cells</h2>
+  <p><q>An anonymous table-row box must be generated around each sequence of consecutive table-cell boxes whose
+  parent is not a table-row.</q></p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class="pr-table-cell blue">A</div>
+      <div class="pr-table-cell blue">B</div><div class=pr-table-row><div class="pr-table-cell blue">C</div></div></div></div>
+    <figcaption>A and B, white space between, in a table: one row; C's row below.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row-group><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></div></div></div>
+    <figcaption>A and B in a row group: one row in the group.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A table, or an inline-table</h2>
+  <p><q>An anonymous table or inline-table box must be generated around each sequence of consecutive proper table child
+  boxes which are misparented. If the box's parent is an inline, run-in, or ruby box (or any box that would perform
+  inlinification of its children), then an inline-table box must be generated; otherwise it must be a table box.</q>
+  Each stage holds "x", cells A and B, and "y".</p>
+  <figure>
+    <div class="pr-stage spaced">x<div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div>y</div>
+    <figcaption>In a block: a block-level table, between "x" and "y".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced">x<span><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></span>y</div>
+    <figcaption>In a <code>span</code>: an inline-table, on the line between "x" and "y".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced">x<span style="display: ruby"><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></span>y</div>
+    <figcaption>In a <code>display: ruby</code> box: an inline-table, on the line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

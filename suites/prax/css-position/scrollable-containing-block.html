@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Containing blocks in a scroll container</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { position: relative; height: 100px; overflow: hidden; }
+  .content { display: flow-root; height: 300px; background: linear-gradient(to bottom, #b9cde6 0 20px, transparent 20px 280px, #b9cde6 280px); }
+  .ab { position: absolute; background: rgba(214, 138, 60, 0.6); outline: 1px solid #9c5f22; outline-offset: -1px; }
+  .anchor { anchor-name: --a; width: 40px; height: 20px; margin: 30px 0 0 80px; background: #6aa36a; }
+  .area { position-anchor: --a; position-area: bottom; place-self: stretch; }
+  .pr-stage { width: 160px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 4 · 2 Scrollable Containing Block</div>
+  <h1>Containing blocks in a scroll container</h1>
+  <p class=pr-lede><q>Unless otherwise specified, absolutely
+  positioned boxes use the local containing block.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-4/#scrollable-cb">CSS Positioned Layout 4 §2</a></span>
+  Each stage is a relative scroll container 100px tall, holding content 300px tall whose first and last 20px are light
+  blue.</p>
+</header>
+
+<section>
+  <h2>The local containing block</h2>
+  <p>It is the padding box, <q>affixed to the scrollable overflow area</q>. The orange box has <code>bottom:
+  0</code>.</p>
+  <figure>
+    <div class="pr-stage sc" data-scroll=0><div class=content></div><div class=ab style="bottom: 0; left: 20px; width: 80px; height: 20px"></div></div>
+    <figcaption>Not scrolled: from 80 to 100.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage sc" data-scroll=40><div class=content></div><div class=ab style="bottom: 0; left: 20px; width: 80px; height: 20px"></div></div>
+    <figcaption>Scrolled 40px: with the content, from 40 to 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The scrollable containing block</h2>
+  <p>It <q>corresponds to the padding edge of the scroll container’s scrollable overflow area</q>;
+  <q>position-area values other than none can opt absolutely positioned boxes into</q> it, as <a href="https://github.com/w3c/csswg-drafts/issues/12552">csswg-drafts#12552</a>
+  resolved. The orange box has <code>position-area: bottom; place-self: stretch</code>: it fills the area below the
+  green anchor.</p>
+  <figure>
+    <div class="pr-stage sc" data-scroll=0><div class=content><div class=anchor></div></div><div class="ab area"></div></div>
+    <figcaption>Not scrolled: the box from the anchor's bottom, 50, down past the stage.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" data-scroll=200><div class=content><div class=anchor></div></div><div class="ab area"></div></div>
+    <figcaption>Scrolled to the end: the box reaches the content's end, over the last light blue band.
+    <span class=pr-flag>Firefox</span> Ends it at the scrollport's bottom, scrolled out of view.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>key and code</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 4.2.2 The Relationship Between key and code</div>
+  <h1>key and code</h1>
+  <p class=pr-lede><q>The code attribute is intended for users who are interested in the key that was pressed by the user, without
+  any layout modifications applied.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#relationship-between-key-code">UI Events §4.2.2</a></span></p>
+</header>
+<section>
+  <h2>The meaning and the position</h2>
+  <p><q>The key attribute is intended for users who are interested in the meaning of the key being pressed, taking
+  into account the current keyboard layout</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#relationship-between-key-code">§4.2.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown" data-fields="key code" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>Click the box and press the key to the right of Tab. With a US layout: <code>key="q"</code>,
+    <code>code="KeyQ"</code>. Switch to a French layout and press it again: <code>key="a"</code>, still
+    <code>code="KeyQ"</code>. The left and right Alt give <code>code="AltLeft"</code> and
+    <code>code="AltRight"</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

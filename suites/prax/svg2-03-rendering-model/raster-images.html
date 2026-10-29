@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting raster images</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 3.7.2 Painting raster images</div>
+  <h1>Painting raster images</h1>
+  <p class=pr-lede><q>As in HTML, all animated images with the same absolute URL and the same image data are expected to
+  be rendered synchronised to the same timeline as a group, with the timeline starting at the time of the least recent
+  addition to the group.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/render.html#PaintingRasterImages">SVG 2 §3.7.2</a></span>
+  The image is a GIF 40 by 20 that turns blue, orange, green and purple, half a second each.</p>
+</header>
+
+<section>
+  <h2>Resampled, and in step</h2>
+  <p><q>When a raster image is rendered, the original samples are "resampled" using standard algorithms to produce
+  samples at the positions required on the output device.</q> The stage is an SVG 160 by 60.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="support/cycle.gif" x="10" y="20" width="40" height="20" /><image href="support/cycle.gif" x="60" y="10" width="80" height="40" /></svg></div>
+    <figcaption>Two images of the GIF, 40 by 20 and 80 by 40: always the same color, changing together.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

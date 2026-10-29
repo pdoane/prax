@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: negative levels out of their boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .p { position: absolute; box-sizing: border-box; z-index: -1; }
+  .ib { display: inline-block; vertical-align: top; width: 60px; height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: negative levels out of their boxes</h1>
+  <p class=pr-lede>Each stage forms the stacking context. The blue box in each has <code>z-index: -1</code>, and the
+  stage is its containing block.</p>
+</header>
+
+<section>
+  <h2>Into the stacking context's step 3</h2>
+  <p>An inline block is painted <q>as if it created a new stacking context, but any positioned descendants and
+  descendants which actually create a new stacking context should be considered part of the parent stacking context,
+  not this new one.</q> Step 3 paints the parent's negative levels before all its blocks, however deep they
+  are. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 60px"><div class="pr-parent ib"><i class="pr-a p" style="top: 0; left: 0; width: 120px; height: 40px"></i></div><div class=pr-b style="height: 40px; margin: -30px 0 0 40px; box-sizing: border-box"></div></div>
+    <figcaption>The blue box is in the dashed inline block and reaches past it; the orange block after it, pulled up
+    over it, covers it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb pr-stacking" style="height: 60px"><div class=pr-b style="height: 40px; box-sizing: border-box"></div><div><div><i class="pr-a p" style="top: 10px; left: 30px; width: 60px; height: 50px"></i></div></div></div>
+    <figcaption>The blue box is two static blocks deep, after the orange block, and reaches up under it: it is still
+    painted before it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

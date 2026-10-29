@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color interpolation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px; }
+  .pr-stage.bars { width: 240px; padding: 15px 0; }
+  .half { animation: 10s linear -5s paused both; }
+  @keyframes red-blue { from { background-color: red; } to { background-color: blue; } }
+  @keyframes current-blue { from { background-color: currentcolor; } to { background-color: blue; } }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13 Color Interpolation</div>
+  <h1>Color interpolation</h1>
+  <p class=pr-lede><q>Color interpolation happens with gradients, compositing, filters, transitions, animations, and
+  color mixing and color modification functions.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation">CSS Color 4 §13</a></span></p>
+</header>
+
+<section>
+  <h2>The same steps in a gradient and an animation</h2>
+  <p>Red to blue, both legacy sRGB colors, so interpolated in sRGB (<a href="https://drafts.csswg.org/css-color-4/#interpolation-space">§13.2</a>). A gradient (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS Images 4 §3.1</a>), its middle, and an animation
+  of <code>background-color</code> paused halfway.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(to right, red, blue)"></div></div>
+    <figcaption><code>linear-gradient(to right, red, blue)</code>: red, purple, blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(to right, red, blue)"></div><div class="sw half" style="animation-name: red-blue"></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>The gradient's middle, the animation at 50%, and <code>rgb(50% 0% 50%)</code>: one purple.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>To and from currentcolor</h2>
+  <p><q>Interpolating to or from currentcolor is possible. The numerical value used for this purpose is the used
+  value.</q> The box has <code>color: red</code>, and its <code>background-color</code> is animated from
+  <code>currentcolor</code> to <code>blue</code>, paused halfway.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw half" style="color: red; animation-name: current-blue"></div><div class=sw style="background: rgb(50% 0% 50%)"></div></div>
+    <figcaption>Halfway from red to blue: the same purple as <code>rgb(50% 0% 50%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

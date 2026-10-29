@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Positional alignment: start, end, center, left, right</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font-family: "PR Arimo"; }
+  .g { display: grid; grid-template-rows: 20px 20px 20px; height: 60px; }
+  .v { writing-mode: vertical-rl; display: grid; grid-template-columns: 100px; grid-template-rows: 20px 20px; width: 40px; height: 100px; }
+  .v > div { padding: 6px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Alignment 3 · 4.1 Positional Alignment</div>
+  <h1>Positional alignment: start, end, center, left, right</h1>
+  <p class=pr-lede><q>The positional alignment keywords specify a position for an alignment subject with respect to
+  its alignment container.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-align-3/#positional-values">CSS Box Alignment 3 §4.1</a></span>
+  Grids of three 20px rows; A <code>justify-self: start</code>, B <code>center</code>, C <code>end</code>.</p>
+</header>
+
+<section>
+  <h2>start, center, end: by the writing mode</h2>
+  <p><q>start</q> <q>Aligns the alignment subject to be flush with the alignment container’s start edge in the
+  appropriate axis.</q> <q>center</q> <q>Centers the alignment subject within its alignment container.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g><div class=pr-a style="justify-self: start">A</div><div class=pr-b style="justify-self: center">B</div><div class=pr-c style="justify-self: end">C</div></div></div>
+    <figcaption><code>ltr</code>: A at the left, B centered, C at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="justify-self: start">A</div><div class=pr-b style="justify-self: center">B</div><div class=pr-c style="justify-self: end">C</div></div></div>
+    <figcaption><code>rtl</code>: A at the right, B centered, C at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>left and right: physical, for justify-* only</h2>
+  <p><q>left</q> aligns <q>flush with the alignment container’s line-left or physical left edge, whichever is in the
+  appropriate axis.</q> It is not a value of <code>align-*</code>.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="direction: rtl"><div class=pr-a style="justify-self: left">A</div><div class=pr-b style="justify-self: right">B</div></div></div>
+    <figcaption><code>rtl</code>: A, <code>left</code>, at the left; B, <code>right</code>, at the right.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="width: auto; display: inline-block"><div class=v style="direction: rtl"><div class=pr-a style="justify-self: left">A</div><div class=pr-b style="justify-self: start">B</div></div></div>
+    <figcaption><code>vertical-rl</code>, <code>rtl</code>: A, <code>left</code>, at the top, the line-left side;
+    B, <code>start</code>, at the bottom.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

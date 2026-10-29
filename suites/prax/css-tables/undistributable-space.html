@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Undistributable space</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { width: 10px; background: #e0e3e8; }
+  td { padding: 0; vertical-align: top; background: #b9cde6; }
+  td + td { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.8.1 Computing Undistributable Space</div>
+  <h1>Undistributable space</h1>
+  <p class=pr-lede><q>The undistributable space of the table is the sum of the distances between the borders of
+  consecutive table-cells (and between the border of the table-root and the table-cells).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#computing-undistributable-space">CSS Table 3 §3.8.1</a></span>
+  Each grey table is <code>width: 10px</code>, so it is as narrow as it can be: its columns' min-content widths and
+  this space. Cells hold <code>.pr-measure</code> text: "aaa bbb", 30px at its narrowest, and "cc dd", 20px.</p>
+</header>
+
+<section>
+  <h2>Spacing between the cells, and padding at the edges</h2>
+  <p><q>The distance between the borders of two consecutive table-cells is the 'border-spacing', if any.</q> <q>The
+  distance between the table border and the borders of the cells on the edge of the table is the table's padding for
+  that side, plus the relevant border spacing distance (if any).</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="border-spacing: 10px"><tr><td>aaa bbb</td><td>cc dd</td></tr></table></div>
+    <figcaption><code>border-spacing: 10px</code>: three spacings, 30px, and the columns' 50px: 80px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="border-spacing: 5px; padding: 10px"><tr><td>aaa bbb</td><td>cc dd</td></tr></table></div>
+    <figcaption><code>5px</code> and <code>padding: 10px</code>: 15px of spacing, 20px of padding and the columns'
+    50px: 85px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table style="border-spacing: 10px; border-collapse: collapse; padding: 10px"><tr><td>aaa bbb</td><td>cc dd</td></tr></table></div>
+    <figcaption>The same, collapsed: no spacing and no padding count; 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

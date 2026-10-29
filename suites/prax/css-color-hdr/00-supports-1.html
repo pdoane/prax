@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Color HDR 1 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color HDR 1 · Support</div>
+  <h1>CSS Color HDR 1 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>dynamic-range-limit: standard</code>
+  <code class=pr-decl>dynamic-range-limit: constrained</code>
+  <code class=pr-decl>dynamic-range-limit: no-limit</code>
+  <code class=pr-decl>dynamic-range-limit:dynamic-range-limit-mix(standard 5%, no-limit 5%)</code>
+  <code class=pr-decl>color: color-hdr(white 0, color(rec2100-linear 4 4 4) 2)</code>
+  <code class=pr-decl>color: ictcp(0.58069 0 0)</code>
+  <code class=pr-decl>color: jzazbz(0.22207 -0.00016 -0.00012)</code>
+  <code class=pr-decl>color: jzczhz(0.17542 0.1614 132.5)</code>
+  <code class=pr-decl>color: color(rec2100-pq 0.58 0.58 0.58)</code>
+  <code class=pr-decl>color: color(rec2100-hlg 0.75 0.75 0.75)</code>
+  <code class=pr-decl>color: color(rec2100-linear 1 1 1)</code>
+  <code class=pr-decl>animation: sweep 4s linear infinite</code>
+  <code class=pr-decl>image-rendering: pixelated</code>
+  <code class=pr-decl>object-fit: cover</code>
+  <code class=pr-decl>object-position: 100% 0</code>
+  <code class=pr-decl>opacity: 0.5</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

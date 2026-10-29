@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Forming a table</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .t { outline: 1px dashed var(--pr-line); }
+  .t td { border: 1px solid #2c5a8f; background: var(--pr-plain); font-size: 12px; line-height: 18px; min-width: 14px; text-align: center; }
+  .t td.span { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.9.12.1 Forming a table</div>
+  <h1>Forming a table</h1>
+  <p class=pr-lede><q>To determine which elements correspond to which slots in a table associated with a table element,
+  to determine the dimensions of the table (xwidth and yheight), and to determine if there are any table model errors,
+  user agents must use the following algorithm</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/tables.html#forming-a-table">HTML §4.9.12.1</a></span>
+  Cells that span are orange.</p>
+</header>
+<section>
+  <h2>Each cell takes the next free slot</h2>
+  <p><q>Cells: While xcurrent is less than xwidth and the slot with coordinate (xcurrent, ycurrent) already has a cell
+  assigned to it, increase xcurrent by 1.</q></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td>A<td class=span rowspan=2>B<td>C<tr><td>D<td>E</table>
+    </div>
+    <figcaption>B spans two rows in the middle column. Row 2's D takes the first slot; E skips B's slot and takes the
+    third: D under A, E under C.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td class=span rowspan=3>A<td class=span colspan=2>B<tr><td>C<td class=span rowspan=2>D<tr><td>E</table>
+    </div>
+    <figcaption>A down the first column, B across the top of the other two. Row 2: C in the second column, D down the
+    third. Row 3: E skips the slots of A and fills the second column under C.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The grid grows to the widest row</h2>
+  <p><q>If xwidth &lt; xcurrent+colspan, then let xwidth be xcurrent+colspan.</q></p>
+  <figure>
+    <div class="pr-stage stage">
+      <table class=t><tr><td>A<td>B<tr><td>C<td>D<td>E<td>F<tr><td class=span colspan=3>G</table>
+    </div>
+    <figcaption>Rows of two cells, four, and one spanning three: four columns. The first row's last two slots and the
+    third row's last slot are empty, with nothing drawn in them.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

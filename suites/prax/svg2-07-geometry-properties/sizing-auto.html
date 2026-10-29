@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>width and height: auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .auto { width: auto; height: auto; }
+  .wide { width: auto; height: 40px; }
+  foreignObject div { width: 60px; height: 20px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.8 Sizing properties: the effect of the ‘width’ and ‘height’ properties</div>
+  <h1>width and height: auto</h1>
+  <p class=pr-lede>For <code>auto</code>, the outermost <code>svg</code> is <q>100%</q>; an <code>image</code> is
+  <q>Calculated from the referenced image's intrinsic dimensions and aspect ratio, according to the CSS Default Sizing
+  Algorithm</q>; <q>All other elements</q> are <q>0</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#Sizing">SVG 2 §7.8</a></span>
+  Each figure's style sheet sets <code>auto</code> over attributes of 120 by 40.</p>
+</header>
+
+<section>
+  <h2>The outermost svg: 100%</h2>
+  <p>Each stage is 160 wide; the <code>svg</code> holds a purple rect as large as it. The style sheet's
+  <code>auto</code> wins over the attribute, and <q>‘auto’ and percentage lengths must not be used to determine an
+  intrinsic width</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#SizingSVGInCSS">§8.12</a></span>.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg class=wide width="120" height="40"><rect width="100%" height="100%" fill="#8e44ad" /></svg></div>
+    <figcaption><code>width: auto; height: 40px</code>: 100% of the stage, 160 by 40.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 120 by
+    40, the <code>width</code> attribute's.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>image: its own size; the others: 0</h2>
+  <p>Each stage is an SVG 160 by 60, each element at 20, 10, and a dashed outline marks the attributes' 120 by 40.
+  The flag is 40 by 20.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image class=auto href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>An <code>image</code>: the flag's own 40 by 20, in the outline's corner.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=auto x="20" y="10" width="120" height="40" fill="#4f81bd" stroke="#d68a3c" stroke-width="4" /><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>rect</code>, stroked orange 4 wide: 0 by 0, so nothing, not even the stroke.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><foreignObject class=auto x="20" y="10" width="120" height="40"><div></div></foreignObject><rect class=pr-ghost x="20" y="10" width="120" height="40" /></svg></div>
+    <figcaption>A <code>foreignObject</code> holding a green <code>div</code> 60 by 20: 0 by 0, so nothing.
+    <q>a ‘foreignObject’ object element will not shrink-wrap to its contents</q>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

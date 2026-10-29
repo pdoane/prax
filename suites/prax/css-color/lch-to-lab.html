@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>LCH as Lab</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 9.6 Converting LCH or OkLCh colors to Lab or Oklab colors</div>
+  <h1>LCH as Lab</h1>
+  <p class=pr-lede><q>Conversion to the rectangular form is trivial</q>: <q>a = C cos(H)</q>, <q>b = C sin(H)</q>,
+  <q>L is the same</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#lch-to-lab">CSS Color 4
+  §9.6</a></span> Each pair is the polar color, then the rectangular one it converts to.</p>
+</header>
+
+<section>
+  <h2>The same color, polar and rectangular</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(52.2345% 72.2 56.2)"></div><div class=sw style="background: lab(52.2345% 40.1645 59.9971)"></div></div>
+    <figcaption><code>lch(52.2345% 72.2 56.2)</code> beside <code>lab(52.2345% 40.1645 59.9971)</code>: one
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0.59686 0.15619 49.7694)"></div><div class=sw style="background: oklab(0.59686 0.1009 0.1192)"></div></div>
+    <figcaption><code>oklch(0.59686 0.15619 49.7694)</code> beside <code>oklab(0.59686 0.1009 0.1192)</code>: one
+    orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(60% 40 180)"></div><div class=sw style="background: lab(60% -40 0)"></div><div class=sw style="background: lch(60% 40 270)"></div><div class=sw style="background: lab(60% 0 -40)"></div></div>
+    <figcaption>Hue 180 along −a, as <code>lab(60% -40 0)</code>: teal green. Hue 270 along −b, as <code>lab(60% 0
+    -40)</code>: blue.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A missing hue is 0</h2>
+  <p><q>If H is missing, H = 0</q>.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: lch(60% 40 none)"></div><div class=sw style="background: lab(60% 40 0)"></div></div>
+    <figcaption><code>lch(60% 40 none)</code> beside <code>lab(60% 40 0)</code>: one pink.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: oklch(0.6 0.1 none)"></div><div class=sw style="background: oklab(0.6 0.1 0)"></div></div>
+    <figcaption><code>oklch(0.6 0.1 none)</code> beside <code>oklab(0.6 0.1 0)</code>: one dusty pink.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

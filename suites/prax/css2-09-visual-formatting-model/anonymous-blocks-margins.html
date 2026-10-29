@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Anonymous block boxes: margins around a block in an inline</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.2.1.1 Anonymous block boxes</div>
+  <h1>Anonymous block boxes: margins around a block in an inline</h1>
+  <p class=pr-lede>In each figure the orange block B is inside a span, which is broken around it. Every named box is
+  20px tall; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>A sibling of the anonymous boxes</h2>
+  <p><q>The line boxes before the break and after the break are enclosed in anonymous block boxes, and the
+  block-level box becomes a sibling of those anonymous boxes.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#anonymous-block-level">CSS 2 §9.2.1.1</a></span> Its margins
+  collapse as any block's do, and the parts of the span with nothing on a line make no line. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#collapsing-margins">CSS 2 §8.3.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a style="margin-bottom: 20px">A: mb 20</div><span><div class=pr-b style="margin-top: 30px">B: mt 30</div></span></div>
+    <figcaption>A with a 20px bottom margin, then the span: the empty part of the span before B makes no line, and
+    the margins collapse to 30px. B is at 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><div class=pr-parent><span><div class=pr-b style="margin-top: 20px">B: mt 20</div></span></div></div>
+    <figcaption>In a dashed parent: B's 20px margin collapses through the parent's top, and the parent starts at 40
+    with B.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><span><div style="margin-bottom: 20px"></div> <div class=pr-b style="margin-top: 30px">B: mt 30</div></span></div>
+    <figcaption>An empty block with a 20px bottom margin, a space, then B: the space collapses away, makes no line,
+    and the margins collapse past it to 30px. B is at 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><div class=pr-a>A</div><span class=pr-hl style="margin: 30px 0; padding: 20px 0"><div class=pr-b>B</div></span><div class=pr-a>C</div></div>
+    <figcaption>The span has 30px vertical margins and 20px vertical padding: none of them move B, which touches A
+    and C.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

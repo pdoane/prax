@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>overflow: visible, hidden, clip, scroll, auto</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 70px; height: 40px; margin: 10px 9px 20px; }
+  .pr-stage.pr-narrow { width: 90px; }
+  figure.pr-narrow { margin-right: 6px; }
+  figure.pr-narrow figcaption { max-width: 92px; }
+  .w { width: 100px; }
+  .h { width: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1 Managing Overflow, the values</div>
+  <h1>overflow: visible, hidden, clip, scroll, auto</h1>
+  <p class=pr-lede><code>overflow-x, overflow-y, overflow-block, overflow-inline: visible | hidden | clip | scroll |
+  auto</code>, initial <code>visible</code>, not inherited, for block, flex and grid containers and table grid boxes.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Clipped or not</h2>
+  <p>Each dashed box is 70 by 40 and holds a 100px wide A, then B and C, 60px of content. <code>visible</code>: <q>the
+  box's content is rendered outside the box if positioned there.</q> The others clip to the <q>overflow clip
+  edge</q>, here the padding edge. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>visible</code>: A runs out to the right and C below.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: hidden"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>hidden</code>: cut at the edges.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: clip"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>clip</code>: cut, the same.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: scroll"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>scroll</code>: cut, with a means to scroll.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div class="pr-frame sc" style="overflow: auto"><div class="pr-a pr-fit w">A</div><div class="pr-b pr-fit h">B</div><div class="pr-c pr-fit h">C</div></div></div>
+    <figcaption><code>auto</code>: cut, and scrolls, since it overflows.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Who may scroll</h2>
+  <p><code>hidden</code>: no scrolling interface, <q>However, the content must still be scrollable programmatically</q>.
+  <code>clip</code> <q>forbids scrolling entirely, through any mechanism.</q> <code>scroll</code> and <code>auto</code>
+  scroll by any means. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-control">CSS Overflow 3 §3.1</a></span> A script sets
+  <code>scrollLeft = 30</code> on each. A is labelled "end" at its right end.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div id=s1 class="pr-frame sc" style="overflow: hidden"><div class="pr-a pr-fit w" style="text-align: right">end</div><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>hidden</code>: scrolled 30px: "end" shows.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div id=s2 class="pr-frame sc" style="overflow: clip"><div class="pr-a pr-fit w" style="text-align: right">end</div><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>clip</code>: it does not move; "end" stays cut off.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div id=s3 class="pr-frame sc" style="overflow: scroll"><div class="pr-a pr-fit w" style="text-align: right">end</div><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>scroll</code>: scrolled 30px.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><div id=s4 class="pr-frame sc" style="overflow: auto"><div class="pr-a pr-fit w" style="text-align: right">end</div><div class="pr-b pr-fit h">B</div></div></div>
+    <figcaption><code>auto</code>: scrolled 30px.</figcaption>
+  </figure>
+</section>
+
+<script>
+  for (const id of ["s1", "s2", "s3", "s4"]) document.getElementById(id).scrollLeft = 30;
+</script>
+</body>
+</html>

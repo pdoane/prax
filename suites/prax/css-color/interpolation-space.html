@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The color space for interpolation</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+  .mid { background-position: 50% 0; background-size: 4000px 100%; }
+  .bar { height: 30px; margin: 0 10px 6px; }
+  .pr-stage.bars { width: 200px; }
+  .pr-stage.pr-wide { width: 282px; }
+  .pr-wide .sw { margin-left: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 4 · 13.2 Color Space for Interpolation</div>
+  <h1>The color space for interpolation</h1>
+  <p class=pr-lede><q>Mixing or otherwise combining colors has different results depending on the interpolation color
+  space used.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-4/#interpolation-space">CSS Color 4
+  §13.2</a></span> The space is given by <code>&lt;color-interpolation-method&gt;</code>, as in
+  <code>linear-gradient(in oklab, …)</code> (<a href="https://drafts.csswg.org/css-images-4/#linear-gradients">CSS
+  Images 4 §3.1</a>).</p>
+</header>
+
+<section>
+  <h2>Black to white</h2>
+  <p>Each bar is <code>linear-gradient(in S to right, black, white)</code>; below, each bar's middle, then the gray it
+  should be.</p>
+  <figure>
+    <div class="pr-stage bars"><div class=bar style="background: linear-gradient(in srgb to right, black, white)"></div><div class=bar style="background: linear-gradient(in srgb-linear to right, black, white)"></div><div class=bar style="background: linear-gradient(in oklab to right, black, white)"></div></div>
+    <figcaption>S is <code>srgb</code>, <code>srgb-linear</code> and <code>oklab</code>: the second lightens soonest.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row pr-wide"><div class="sw mid" style="background-image: linear-gradient(in srgb to right, black, white)"></div><div class=sw style="background: rgb(50% 50% 50%)"></div><div class="sw mid" style="background-image: linear-gradient(in srgb-linear to right, black, white)"></div><div class=sw style="background: rgb(73.5% 73.5% 73.5%)"></div><div class="sw mid" style="background-image: linear-gradient(in oklab to right, black, white)"></div><div class=sw style="background: rgb(38.9% 38.9% 38.9%)"></div></div>
+    <figcaption>Each middle, then its gray: <code>srgb</code>, as <code>rgb(50% …)</code>; <code>srgb-linear</code>,
+    as <code>rgb(73.5% …)</code>; <code>oklab</code>, as <code>rgb(38.9% …)</code>.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Oklab by default</h2>
+  <p><q>If the host syntax does not define what color space interpolation should take place in, it defaults to
+  Oklab.</q> Gradients default to Oklab, except between legacy colors (<a href="interpolation-legacy.html">the next
+  page</a>).</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class="sw mid" style="background-image: linear-gradient(to right, color(srgb 1 0 0), color(srgb 0 0 1))"></div><div class="sw mid" style="background-image: linear-gradient(in oklab to right, red, blue)"></div><div class=sw style="background: rgb(55% 32.6% 63.7%)"></div></div>
+    <figcaption>The middle of <code>color(srgb 1 0 0)</code> to <code>color(srgb 0 0 1)</code>, with no space
+    given, and of <code>in oklab</code> red to blue: one lavender, <code>rgb(55% 32.6% 63.7%)</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

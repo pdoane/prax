@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inter-script spacing</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { padding: 0 6px; font: 40px/60px "PR Noto Sans JP"; white-space: nowrap; text-autospace: ideograph-alpha; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+  .pr-stage { width: 124px; }
+  .v { writing-mode: vertical-rl; width: auto; height: 130px; padding: 6px 0; }
+  figure { margin-right: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 8.4.1 Inter-script Spacing</div>
+  <h1>Inter-script spacing</h1>
+  <p class=pr-lede><q>The 'ideograph-alpha' and 'ideograph-numeric' values introduce spacing at the boundary between
+  particular classes of characters when they are directly adjoining on a line, i.e. without any intervening non-zero
+  margin, border, or padding or intervening characters (such as a quotation mark or a space).</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#inter-script-spacing">CSS Text 4 §8.4.1</a></span>
+  <q>The amount of space introduced by these keywords is 1/8 of the CJK advance measure</q>: 5px at 40px. Each stage is <code>text-autospace: ideograph-alpha</code>.</p>
+</header>
+
+<section>
+  <h2>Directly adjoining only</h2>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja>漢A字</div>
+    <figcaption>"漢A字": 5px each side of "A". <span class=pr-flag>Chrome</span> None.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage ja" lang=ja>漢"A"字</div>
+    <figcaption>"A" in quotation marks: none.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja>漢<span style="padding-left: 1px">A</span>字</div>
+    <figcaption>1px of padding left of "A": 5px on its right only. <span class=pr-flag>Chrome</span> None. <span class=pr-flag>Safari</span> On its left.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage ja" lang=ja>漢<span class=u>A</span>字</div>
+    <figcaption>"A" in a blue span, no padding: 5px each side, outside the blue. <span class=pr-flag>Chrome</span> None. <span class=pr-flag>Safari</span> On the left only.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

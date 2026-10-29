@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Control characters by name</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 2.1.1 Control Characters</div>
+  <h1>Control characters by name</h1>
+  <p class=pr-lede><q>A small number of characters in the Unicode "Cc" General Category are supported as named key attribute values.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#control">UI Events KeyboardEvent key Values §2.1.1</a></span></p>
+</header>
+<section>
+  <h2>Named, not characters</h2>
+  <p>U+0008 is <code>"Backspace"</code>, U+0009 <code>"Tab"</code>, U+000D <code>"Enter"</code>, U+001B <code>"Escape"</code>, U+007F <code>"Delete"</code>. The page's script cancels each keydown in the box, so Tab and Backspace stay in it. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#control">§2.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>Click the box and press Backspace, Tab, Enter, Escape and Delete (Fn+delete on a Mac laptop): <code>key</code> is each one's name, never a control character.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

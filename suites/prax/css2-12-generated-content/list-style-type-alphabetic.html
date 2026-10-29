@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The list-style-type property: alphabetic systems</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  ol.roman { list-style-type: lower-roman }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 12.5.1 Lists: the 'list-style-type', 'list-style-image', 'list-style-position', and 'list-style' properties</div>
+  <h1>The list-style-type property: alphabetic systems</h1>
+  <p class=pr-lede><q>Alphabetic systems are specified with:</q> five keywords, two of them pairs of synonyms. Each list
+  has three items. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>Latin and Greek letters</h2>
+  <p><q>lower-latin or lower-alpha: Lowercase ascii letters (a, b, c, ... z).</q> <q>upper-latin or upper-alpha:
+  Uppercase ascii letters (A, B, C, ... Z).</q> <q>lower-greek: Lowercase classical Greek alpha, beta, gamma, ... (α, β,
+  γ, ...)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2 §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: lower-latin"><li>lower-latin<li>b<li>c</ol><ol style="list-style-type: lower-alpha"><li>lower-alpha<li>b<li>c</ol></div>
+    <figcaption>Both lists: a., b., c.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: upper-latin"><li>upper-latin<li>B<li>C</ol><ol style="list-style-type: upper-alpha"><li>upper-alpha<li>B<li>C</ol></div>
+    <figcaption>Both lists: A., B., C.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: lower-greek"><li>lower-greek<li>beta<li>gamma</ol></div>
+    <figcaption><code>lower-greek</code>: α., β., γ.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The specification's example</h2>
+  <p>With <code>ol { list-style-type: lower-roman }</code> the document <q>might produce something like this</q>: i, ii,
+  iii. <q>The list marker alignment (here, right justified) depends on the user agent.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#list-style">CSS 2
+  §12.5.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide pr-text"><ol class=roman><li> This is the first item.<li> This is the second item.<li> This is the third item.</ol></div>
+    <figcaption>i., ii., iii. before the three items, outside the principal boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>user-select: none</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 6.1 Controlling content selection</div>
+  <h1>user-select: none</h1>
+  <p class=pr-lede><q>The user-select property enables authors to specify which elements in the document can be selected by the user and how.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#content-selection">CSS Basic User Interface 4 §6.1</a></span></p>
+  <p class=pr-note>A script in each frame makes the selection, highlighted orange. Safari draws no selection in these stills.</p>
+</header>
+
+<section>
+  <h2>Excluded from a selection across it</h2>
+  <p>For <code>none</code>, <q>The UA must allow selections to extend across this element, and must exclude this element from such a selection.</q> HTML's style sheet adds <q>button, meter, progress, select { user-select: none; }</q>.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;Some &lt;span style=&#x27;user-select: none&#x27;&gt;none&lt;/span&gt; text&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption>Everything selected: “Some” and “text” highlighted, “none” not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;Some &lt;button&gt;button&lt;/button&gt; text&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption>Everything selected, across a <code>button</code>: its label is not highlighted.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Generated content, and ::first-line</h2>
+  <p>On <code>::before</code> and <code>::after</code>, <q>the used value is none</q> for <code>auto</code>, and <q>User agents must not apply the user-select property to the ::first-line and ::first-letter pseudo-elements.</q></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } .n::before { content: &#x27;Before: &#x27; }&lt;/style&gt;&lt;body&gt;&lt;p style=&#x27;margin: 0&#x27; class=n&gt;text&lt;/p&gt;&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption>Everything selected: “text” highlighted, the generated “Before:” not.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } .f::first-line { user-select: none }&lt;/style&gt;&lt;body&gt;&lt;p style=&#x27;margin: 0&#x27; class=f&gt;The first line, and then the second&lt;/p&gt;&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption><code>::first-line { user-select: none }</code>, everything selected: both lines highlighted.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

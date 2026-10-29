@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sections</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { font: 13px/20px "PR Noto Sans"; }
+  .t > :not(span) { background: rgba(79, 129, 189, 0.16); outline: 1px dashed var(--pr-line); }
+  iframe.pr-view { height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.3 Sections</div>
+  <h1>Sections</h1>
+  <p class=pr-lede>The body and the sectioning elements are blocks, from the user agent's style sheet: <q>article,
+  aside, :heading, hgroup, nav, section { display: block; }</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/sections.html#sections">HTML §4.3</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#sections-and-headings">§15.3.6</a></span></p>
+</header>
+<section>
+  <h2>Blocks</h2>
+  <p>Header and footer are blocks too: <q>address, blockquote, center, dialog, div, figure, figcaption, footer, form,
+  header, hr, legend, listing, main, p, plaintext, pre, search, xmp { display: block; }</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#flow-content-3">§15.3.3</a></span>
+  Each element holds its name, between the words "text" in the same parent.</p>
+  <figure>
+    <div class="pr-stage t"><span>text</span><article>article</article><aside>aside</aside><nav>nav</nav><section>section</section><span>text</span></div>
+    <figcaption>Six lines: "text", four tinted blocks the stage's width, each outlined, and "text".</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t"><span>text</span><header>header</header><footer>footer</footer><hgroup>hgroup</hgroup><span>text</span></div>
+    <figcaption>Five lines: "text", three tinted blocks, and "text".</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>The body's margins</h2>
+  <p>For the body's margins, <q>If none of the attributes for a property are found, or if the value of the attribute
+  that was found cannot be parsed successfully, then a default value of 8px is expected to be used for that property
+  instead.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-page">§15.3.2</a></span>
+  <q>The body element represents the contents of the document.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/sections.html#the-body-element">§4.3.1</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { background: #e7eaef; font: 13px/20px 'PR Noto Sans' } body { background: #b9cde6 }</style>The body"></iframe></div>
+    <figcaption>The frame's document: the body, blue, one line tall, 8px in from the top, left and right edges of the
+    gray root.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

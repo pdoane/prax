@@ -1,0 +1,31 @@
+00-supports-1.html
+SVG2/shapes.html#Introduction 10.1 Introduction and definitions
+    basic-shapes.html
+    basic-shapes-painting.html
+SVG2/shapes.html#RectElement 10.2 The ‘rect’ element
+    rect-position-size.html
+    rect-rounded.html
+    rect-auto-radii.html
+    rect-radii-clamp.html
+    rect-path.html
+SVG2/shapes.html#CircleElement 10.3 The ‘circle’ element
+    circle.html
+SVG2/shapes.html#EllipseElement 10.4 The ‘ellipse’ element
+    ellipse.html
+    ellipse-auto.html
+    ellipse-path.html
+SVG2/shapes.html#LineElement 10.5 The ‘line’ element
+    line.html
+SVG2/shapes.html#PolylineElement 10.6 The ‘polyline’ element
+    polyline.html
+SVG2/shapes.html#PolygonElement 10.7 The ‘polygon’ element
+    polygon.html
+# SVG2/shapes.html#DOMInterfaces 10.8 DOM interfaces: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGRectElement 10.8.1 Interface SVGRectElement: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGCircleElement 10.8.2 Interface SVGCircleElement: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGEllipseElement 10.8.3 Interface SVGEllipseElement: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGLineElement 10.8.4 Interface SVGLineElement: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGAnimatedPoints 10.8.5 Mixin SVGAnimatedPoints: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGPointList 10.8.6 Interface SVGPointList: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGPolylineElement 10.8.7 Interface SVGPolylineElement: no page; it is object model
+# SVG2/shapes.html#InterfaceSVGPolygonElement 10.8.8 Interface SVGPolygonElement: no page; it is object model

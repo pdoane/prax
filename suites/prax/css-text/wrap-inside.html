@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>wrap-inside</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 220px; }
+  .t { background: #f9cc9d; }
+  .u { background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 5.2 Controlling Breaks Within Boxes: the wrap-inside property</div>
+  <h1>wrap-inside</h1>
+  <p class=pr-lede><code>avoid</code>: <q>Line breaking is suppressed within the box: the UA may only break within the
+  box if there are no other valid break points in the line.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#wrap-inside">CSS Text 4 §5.2</a></span>
+  No browser has the property. Each stage is 220px wide, of 10px letters, and holds a footer as in the
+  specification's example: <a href="https://drafts.csswg.org/css-text-4/#example-avoid">§5.2.1</a>.</p>
+</header>
+
+<section>
+  <h2>The footer</h2>
+  <p>"Conference • April 7, 2005 • Berlin", the date in orange and the place in blue.</p>
+  <figure>
+    <div class="pr-stage pr-measure">Conference • <span class=t>April 7, 2005</span> • <span class=u>Berlin</span></div>
+    <figcaption><code>auto</code>: the first line takes all it can, "Conference • April 7,", breaking the
+    date.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure">Conference • <span class=t style="wrap-inside: avoid">April 7, 2005</span> • <span class=u style="wrap-inside: avoid">Berlin</span></div>
+    <figcaption>The date and place <code>avoid</code>: the line breaks before the date, "Conference •", then "April
+    7, 2005 • Berlin". <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> Break the date, as at the left.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Broken anyway when nothing else will do</h2>
+  <p><q>If the text breaks, line-breaking restrictions are honored as for 'auto'.</q> The stage is 100px wide.</p>
+  <figure>
+    <div class="pr-stage pr-measure" style="width: 100px"><span class=t style="wrap-inside: avoid">April 7, 2005</span></div>
+    <figcaption>The date alone, 130px, with <code>avoid</code>: there is no break outside it, so it breaks inside, at
+    a space: "April 7,", "2005".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

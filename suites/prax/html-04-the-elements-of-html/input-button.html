@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Plain buttons</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { margin: 0 0 10px; white-space: nowrap; }
+  .pad input { font-size: 12px; }
+  iframe.pr-result { height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.21 Button state (type=button)</div>
+  <h1>Plain buttons</h1>
+  <p class=pr-lede><q>The input element represents a button with no default behavior.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#button-state-(type=button)">HTML §4.10.5.1.21</a></span></p>
+</header>
+
+<section>
+  <h2>Its label is its value, even an empty one</h2>
+  <p><q>If the element has a value attribute, the button's label must be the value of that attribute; otherwise, it
+  must be the empty string.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#button-state-(type=button)">§4.10.5.1.21</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=button value="Go"> <input type=button> <input type=button value=""></div>
+      </div>
+    </div>
+    <figcaption>"Go", then two buttons with no label at all, not "Submit" or any word of the browser's: narrow and
+    empty.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A click does nothing</h2>
+  <p><q>The element has no input activation behavior.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#button-state-(type=button)">§4.10.5.1.21</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <form class=pad action=support/form-echo.html target=button-result>
+        <div><input name=q value=hello size=8> <input type=button name=b value="Click me"></div>
+      </form>
+      <ol class=pr-log data-log="click submit reset" data-fields="target" data-lines=2></ol>
+      <iframe class=pr-result name=button-result src=support/form-echo.html></iframe>
+    </div>
+    <figcaption>Inside a form. Click the button: <code>click</code>, and nothing else; the frame stays grey.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

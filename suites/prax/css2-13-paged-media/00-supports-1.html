@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Paged media declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 13 Paged media · Support</div>
+  <h1>Paged media declaration support</h1>
+  <p class=pr-lede>One declaration for each feature the chapter's pages use, in a style rule or a page context. This
+  checks that the declarations parse, not what they do; the chapter's other pages show that. <code>size</code> is a
+  descriptor of <code>@page</code> from CSS Paged Media 3, which the pages use to print small pages, and shows grey
+  where an engine's <code>CSS.supports</code> knows only properties.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>page-break-before: always</code>
+  <code class=pr-decl>page-break-before: right</code>
+  <code class=pr-decl>page-break-after: always</code>
+  <code class=pr-decl>page-break-after: avoid</code>
+  <code class=pr-decl>page-break-inside: avoid</code>
+  <code class=pr-decl>break-before: page</code>
+  <code class=pr-decl>orphans: 3</code>
+  <code class=pr-decl>widows: 3</code>
+  <code class=pr-decl>margin: 10% 25%</code>
+  <code class=pr-decl>margin: 1em</code>
+  <code class=pr-decl>margin-left: -40px</code>
+  <code class=pr-decl>direction: rtl</code>
+  <code class=pr-decl>position: absolute</code>
+  <code class=pr-decl>right: 0</code>
+  <code class=pr-decl>bottom: 0</code>
+  <code class=pr-decl>size: 240px 160px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

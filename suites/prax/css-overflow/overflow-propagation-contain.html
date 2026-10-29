@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Which element gives the viewport its overflow</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.1.4 Overflow Viewport Propagation, which element</div>
+  <h1>Which element gives the viewport its overflow</h1>
+  <p class=pr-lede>The body's values go to the viewport where the root's are <code>visible</code>, from <q>a body
+  element whose display value is also not display/none</q>, <q>the first such child element</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#overflow-propagation">CSS Overflow 3 §3.1.4</a></span></p>
+</header>
+
+<section>
+  <h2>The first body that is displayed</h2>
+  <p>The frame's document has two body elements, made by script; the first is <code>display: none</code>, the
+  second, dashed, is <code>overflow: hidden</code>, 30px tall at 10, 10, and holds a box 60px tall and one 200px tall.
+  A script calls <code>scrollTo(0, 40)</code>. Read as the first body that is displayed, <q>the first such child</q>
+  is the second, whose value would go to the viewport. The sentence can also be read as the first body child, which
+  is displayed or not.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { background: #e7eaef } body { display: none } body + body { display: block; overflow: hidden; margin: 10px; height: 30px; outline: 1px dashed #6b7381 } div { width: 100px; height: 60px; background: #4f81bd } div + div { height: 200px; background: #d68a3c }</style><body><script>var b = document.createElement('body'); b.innerHTML = '&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;'; document.documentElement.appendChild(b); scrollTo(0, 40)</script>"></iframe></div>
+    <figcaption>The boxes run past the second body's bottom, the viewport scrolled 40px. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    take the first body, which gives nothing, so the second keeps <code>hidden</code> and cuts the blue box at
+    30px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

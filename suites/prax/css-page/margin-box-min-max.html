@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>min-width and max-width of page-margin boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-paged + figcaption { max-width: 240px; }
+  section > p { max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Paged Media 3 · 5.3.2.3 Handling min-width and max-width</div>
+  <h1>min-width and max-width of page-margin boxes</h1>
+  <p class=pr-lede><q>The 'min-width' and 'max-width' properties apply to page-margin boxes in the variable dimension like on normal elements, except that the three boxes on the same side are considered together.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-page-3/#variable-minmax">CSS Paged Media 3 §5.3.2.3</a></span> The pages have no margin at the sides: 240px across. Safari paints the root's background on the last page only as far down as the content.</p>
+</header>
+
+<section>
+  <h2>The rules applied again</h2>
+  <p><q>If the tentative used width of any of the three boxes is greater than 'max-width', the rules above are applied again, but this time using the computed value of 'max-width' as the computed value for 'width'.</q> Likewise for 'min-width'.</p>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 0; @top-left { content: 'a'; background: #4f81bd } @top-center { content: 'bbbb'; max-width: 60px; background: #6aa36a } @top-right { content: 'cc'; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>B would be 120 wide; held to 60 and laid out again, it is 60, centered, and A and C 90 each. <span class=pr-flag>Chrome</span> B is 120 wide: its <code>max-width</code> is ignored. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <iframe class="pr-paged pr-short" srcdoc="<link rel=stylesheet href=../shared/fonts.css><style>html { font: calc(50px / 3)/20px 'PR Noto Sans Mono' } body { margin: 0 } p { margin: 0 } .pg { break-before: page } @page { size: 240px 160px; margin: 30px 0; @top-left { content: 'a'; background: #4f81bd } @top-right { content: 'cc'; min-width: 200px; background: #d68a3c } } html { background: #8cb6c0 }</style><div>line 1</div><div>line 2</div>"></iframe>
+    <figcaption>C would be 160 wide (max-content 10 and 20 share 210px); at its <code>min-width</code> of 200 and laid out again, A takes the other 40. <span class=pr-flag>Chrome</span> C is 229 wide and A 11. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No page-margin boxes.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

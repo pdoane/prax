@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sizing the grid</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .g { display: grid; grid: auto-flow auto / repeat(auto-fill, 60px); justify-content: space-between; align-content: safe center; }
+  .g > .pr-a, .g > .pr-b { padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 2.3 Sizing the Grid</div>
+  <h1>Sizing the grid</h1>
+  <p class=pr-lede><q>Once the grid items have been placed, the sizes of the grid tracks (rows and columns) are
+  calculated, accounting for the sizes of their contents and/or available space as specified in the grid
+  definition.</q> <q>The resulting sized grid is aligned within the grid container according to the grid
+  container’s align-content and justify-content properties.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#overview-sizing">CSS Grid Layout 2 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>The specification's example</h2>
+  <p><code>grid: auto-flow auto / repeat(auto-fill, 60px)</code>, <code>justify-content: space-between</code> and
+  <code>align-content: safe center</code>: the example <q>justifies all columns by distributing any extra space
+  between them, and centers the grid in the grid container when it is smaller than</q> the container. Each stage
+  holds five items.</p>
+  <figure>
+    <div class="pr-stage g" style="min-height: 100px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-a>3</div><div class=pr-b>4</div><div class=pr-a>5</div></div>
+    <figcaption><code>min-height: 100px</code>: three 60px columns fit in 200px, 10px more between each two, so
+    columns at 0, 70 and 140px; the two 20px rows centered, from 30 to 70px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage g" style="height: 30px; margin-bottom: 16px"><div class=pr-a>1</div><div class=pr-b>2</div><div class=pr-a>3</div><div class=pr-b>4</div><div class=pr-a>5</div></div>
+    <figcaption><code>height: 30px</code>: the rows, 40px together, are taller than the container, and
+    <code>safe</code> aligns them to the start: from 0 to 40px, overflowing at the bottom only.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then each item in its area</h2>
+  <p><q>Finally each grid item is sized and aligned within its assigned grid area, as specified by its own sizing and
+  alignment properties.</q></p>
+  <figure>
+    <div class=pr-stage style="display: grid; grid-template: 60px / 100px 100px"><div class="pr-a pr-fit" style="align-self: end; width: 40px">A</div><div class=pr-b style="justify-self: center">B</div></div>
+    <figcaption>Two 100 by 60px areas: A, 40px wide, at the bottom of the first; B as wide as its letter, centered
+    in the second and as tall as the row.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

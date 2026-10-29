@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Border width: no style, as a used value</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 8.5.1 Border width</div>
+  <h1>Border width: no style, as a used value</h1>
+  <p class=pr-lede>CSS 2 makes a border's computed width 0 when its style is <code>none</code> or
+  <code>hidden</code>. The border still takes no room, but the width it computes to, which a child can inherit, is
+  now the one given.</p>
+</header>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a> (Editor's Draft)</div>
+  <h2>The used width is 0, the computed width is kept</h2>
+  <p><q>If the border-style corresponding to a given border-width is none or hidden, then the used width is 0.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-width">CSS Borders and Box Decorations 4 §2.3</a></span> The published draft of March 2024 still zeroes the computed value; the editor's draft moved it to the
+  used value. In each figure the dashed parent has <code>border-width: 20px; border-style: none</code>.</p>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-parent style="border-width: 20px; border-style: none"><div class=pr-plain style="border-style: solid; border-width: inherit"></div></div></div>
+    <figcaption>A child with <code>border-style: solid; border-width: inherit</code> inherits the computed 20px: a 20px
+    border on every side. CSS 2 gave it 0.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="padding: 10px"><div class=pr-parent style="border-width: 20px; border-style: none"><div class=pr-plain></div></div></div>
+    <figcaption>The parent itself takes no room for its border: the child is at the stage's padding edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

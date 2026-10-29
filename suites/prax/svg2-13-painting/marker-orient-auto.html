@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rendering markers: orient="auto"</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d68a3c" /></marker>
+  <marker id="arrow-start" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6aa36a" /></marker>
+</defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.7.4 Rendering markers</div>
+  <h1>Rendering markers: orient="auto"</h1>
+  <p class=pr-lede><q>When orienting a marker automatically, due to specifying ‘orient’ as 'auto', the following rules
+  are used</q>. <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#RenderingMarkers">SVG 2 §13.7.4</a></span>
+  Each stage is an SVG 160 by 60. The markers are arrows 16 across. The ends of open paths, which point in the path's
+  direction, are on <a href="../svg2-09-paths/path-direction.html">9.4's page</a>.</p>
+</header>
+
+<section>
+  <h2>Half way between, at other vertices</h2>
+  <p><q>Otherwise, the marker is oriented in a direction half way between the direction at the end of the preceding
+  segment and the direction at the start of the following segment.</q> The arrows are <code>marker-mid</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 H 80 V 10 H 140" fill="none" stroke="#2c5a8f" stroke-width="2" marker-mid="url(#arrow)" /></svg></div>
+    <figcaption>Right, up, right: at 80, 50, between right and up, and at 80, 10, between up and right, both
+    point up and to the right at 45°.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 L 80 50 L 140 10" fill="none" stroke="#2c5a8f" stroke-width="2" marker-mid="url(#arrow)" /></svg></div>
+    <figcaption>Down to 80, 50 and up again, at equal slopes: the arrow there points straight right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 Q 50 0 80 30 Q 110 60 140 30" fill="none" stroke="#2c5a8f" stroke-width="2" marker-mid="url(#arrow)" /></svg></div>
+    <figcaption>Two curves that meet smoothly at 80, 30, both heading down and right at 45° there: the arrow
+    along them.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The start and end of a closed subpath</h2>
+  <p><q>If the vertex is the start or end of an open subpath, then the marker is oriented in the path direction.</q>
+  The start and end of a closed subpath are not, so they take the half-way direction too, between the closing line
+  and the first, as <a href="https://github.com/w3c/svgwg/issues/300">svgwg#300</a> confirmed. The start arrow is green, the end orange.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 V 10 H 120 V 50 Z" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#arrow-start)" /></svg></div>
+    <figcaption><code>M 40 50 V 10 H 120 V 50 Z</code>, <code>marker-start</code>: closing leftwards, then up, so
+    up and to the left at 45°. <span class=pr-flag>Safari</span> Straight up, as if open.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 V 10 H 120 V 50 Z" fill="none" stroke="#2c5a8f" stroke-width="2" marker-end="url(#arrow)" /></svg></div>
+    <figcaption>The same, <code>marker-end</code>: also up and to the left at 45°. <span class=pr-flag>Safari</span> Straight down, along the
+    last side, as if open.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 40 50 V 10 H 120 V 50 H 40" fill="none" stroke="#2c5a8f" stroke-width="2" marker-start="url(#arrow-start)" marker-end="url(#arrow)" /></svg></div>
+    <figcaption>Open, back to 40, 50 by <code>H 40</code>: the start straight up, the end straight left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

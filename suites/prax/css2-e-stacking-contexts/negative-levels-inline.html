@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: an inline at a negative level</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .r { position: relative; }
+  .over { height: 40px; width: 120px; margin: -30px 0 0 30px; }
+  .big { font-size: 20px; line-height: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: an inline at a negative level</h1>
+  <p class=pr-lede>Each stage forms the stacking context. Its first block holds a relative orange span, and a blue block
+  after it is pulled up 30px over the span's line.</p>
+</header>
+
+<section>
+  <h2>Before every block</h2>
+  <p>Step 3, <q>Stacking contexts formed by positioned descendants with negative z-indices</q>, comes before step 4,
+  <q>For all its in-flow, non-positioned, block-level descendants in tree order</q>, whatever the boxes' kinds or
+  their order in the tree. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking big"><div><span class="pr-hl r" style="z-index: -1">abcdef</span></div><div class="pr-a over"></div></div>
+    <figcaption>The span has <code>z-index: -1</code>: it is painted first, and the later blue block covers its
+    background and text.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking big"><div><span class="pr-hl r">abcdef</span></div><div class="pr-a over"></div></div>
+    <figcaption>For comparison, at <code>auto</code>: the span is painted in step 8, over the block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

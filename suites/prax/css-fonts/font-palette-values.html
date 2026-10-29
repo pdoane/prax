@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>@font-palette-values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  /* One palette name, matching colors in two fonts. */
+  @font-palette-values --green { font-family: "PR Nabla"; base-palette: 5; }
+  @font-palette-values --green { font-family: "PR Bungee Spice"; base-palette: 2; }
+  @font-palette-values --twice { font-family: "PR Nabla"; base-palette: 1; }
+  @font-palette-values --twice { font-family: "PR Nabla"; base-palette: 2; }
+  .pr-sample { font-size: 32px; line-height: 56px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 9.2 User-defined font color palettes: the @font-palette-values rule</div>
+  <h1>@font-palette-values</h1>
+  <p class=pr-lede><q>The @font-palette-values rule defines a color palette and associates that color palette with a
+  specific font.</q> <q>If multiple @font-palette-values rules are defined with the same name, the last one in
+  document order wins</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#font-palette-values">CSS Fonts 4 §9.2</a></span></p>
+</header>
+
+<section>
+  <h2>One name, several fonts</h2>
+  <p><code>--green</code> is defined for PR Nabla as its palette 5 and for PR Bungee Spice as its palette 2.</p>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Nabla'; font-palette: --green">Nabla</div>
+    <figcaption>PR Nabla: yellow and green.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Bungee Spice'; font-palette: --green">Spice</div>
+    <figcaption>PR Bungee Spice: green and lime.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Last wins</h2>
+  <figure>
+    <div class="pr-stage pr-sample" style="font-family: 'PR Nabla'; font-palette: --twice">Nabla</div>
+    <figcaption><code>--twice</code>, palette 1 then 2: blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

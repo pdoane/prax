@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>What contain applies to</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .g::before { content: "before"; display: inline-block; width: 30px; margin-right: 40px; vertical-align: top; background: #b9cde6; contain: paint; }
+  .h::before { content: "before"; display: inline-block; width: 30px; margin-right: 40px; vertical-align: top; background: #b9cde6; }
+  svg { display: block; overflow: visible; outline: 1px dashed #c0392b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 2 Strong Containment, what it applies to</div>
+  <h1>What contain applies to</h1>
+  <p class=pr-lede><q>This property generally applies to all elements (including generated content), although some
+  types of containment have no effect on some elements</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#contain-property">CSS Containment 2 §2</a></span>
+  Where each type has no effect is on its own section's pages. Text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Generated content</h2>
+  <p>A <code>::before</code> of "before", an inline-block 30px wide, with a blue background.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=h>after</div></div>
+    <figcaption>No containment: "before" runs out of its 30px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g>after</div></div>
+    <figcaption><code>contain: paint</code> on the <code>::before</code>: "before" is cut to "bef".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>SVG</h2>
+  <p><q>In addition, in the case of SVG2, the 'contain' property only applies to svg elements that have an associated
+  CSS layout box.</q> Each <code>svg</code>, outlined in red, is 60 by 40 with <code>overflow: visible</code>, and
+  holds a blue rect 100 by 60.</p>
+  <figure>
+    <div class=pr-stage style="height: 70px"><svg width=60 height=40 style="contain: paint"><rect width=100 height=60 fill="#4f81bd"/></svg></div>
+    <figcaption>An outer <code>svg</code>, which has a CSS box, with <code>contain: paint</code>: the rect is cut to
+    60 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 70px"><svg width=60 height=40><svg width=60 height=40 style="contain: paint"><rect width=100 height=60 fill="#4f81bd"/></svg></svg></div>
+    <figcaption>The same <code>svg</code> nested in another, where it has no CSS box: <code>contain</code> does not
+    apply, and the rect is drawn whole, 100 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

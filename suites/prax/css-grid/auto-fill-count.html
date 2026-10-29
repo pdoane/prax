@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>auto-fill: counting the repetitions</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.3.2 Repeat-to-fill, counting the repetitions</div>
+  <h1>auto-fill: counting the repetitions</h1>
+  <p class=pr-lede><q>Otherwise, if the grid container has a definite minimum size in the relevant axis, the number
+  of repetitions is the smallest possible positive integer that fulfills that minimum requirement. Otherwise, the
+  specified track list repeats only once.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#auto-repeat">CSS Grid Layout 2 §7.2.3.2</a></span></p>
+</header>
+
+<section>
+  <h2>A minimum, or no size at all</h2>
+  <p>Each dashed grid is a float, sized by its content, and holds five items; its columns are
+  <code>repeat(auto-fill, 40px)</code>.</p>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="float: left; grid-template-columns: repeat(auto-fill, 40px); min-width: 130px"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption><code>min-width: 130px</code>: four columns, 160px, the fewest that reach it; 5 on the second
+    row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class="g pr-frame" style="float: left; grid-template-columns: repeat(auto-fill, 40px)"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption>No size: one repetition, one 40px column, the items stacked.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Which size a track counts as</h2>
+  <p><q>each track is treated as its max track sizing function if that is definite or else its min track sizing
+  function if that is definite. If both are definite, floor the max track sizing function by the min track sizing
+  function.</q></p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fill, minmax(min-content, 50px))"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption><code>minmax(min-content, 50px)</code>: counted as 50px, four columns; 5 on the second row.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fill, minmax(50px, 1fr))"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption><code>minmax(50px, 1fr)</code>: counted as 50px, four columns of 1fr, 50px each.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: repeat(auto-fill, minmax(70px, 30px))"><div class="pr-a pr-fit">1</div><div class="pr-b pr-fit">2</div><div class="pr-c pr-fit">3</div><div class="pr-d pr-fit">4</div><div class="pr-a pr-fit">5</div></div></div>
+    <figcaption><code>minmax(70px, 30px)</code>: floored to 70px, two columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

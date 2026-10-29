@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Generating the absolute URL</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  iframe { display: block; width: 160px; height: 60px; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.1.7.1 Generating the absolute URL</div>
+  <h1>Generating the absolute URL</h1>
+  <p class=pr-lede><q>The ‘xml:base’ attribute will only have an effect in XML documents; this includes SVG documents and
+  XHTML documents but not HTML documents that are not XML.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#processingURL-absolute">SVG 2 §16.1.7.1</a></span>
+  Each stage is 160 by 60 with an <code>image</code> 40 by 40 at 60, 10, outlined, whose <code>href</code> is
+  <code>flag-40x20.png</code>, in a <code>g</code> whose <code>xml:base</code> is the suite's shared resources, where the
+  flag is.</p>
+</header>
+
+<section>
+  <h2>xml:base: in XML, not in HTML</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><iframe src="support/xml-base.svg"></iframe></div>
+    <figcaption>An SVG document: the flag, stretched to 40 by 40. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> No flag: the attribute ignored.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g xml:base="../shared/resources/"><image href="flag-40x20.png" x="60" y="10" width="40" height="40" preserveAspectRatio="none" /></g><rect class=pr-ghost x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>This HTML document: the attribute has no effect; the URL resolves next to this page, where there
+    is no flag, so nothing in the outline; Safari
+    draws a broken-image icon there.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

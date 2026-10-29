@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>tab-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { white-space: pre; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 4.4 Tab Character Size: the tab-size property</div>
+  <h1>tab-size</h1>
+  <p class=pr-lede><q>A &lt;number&gt; represents the measure as a multiple of the advance width of the space
+  character (U+0020) of the nearest block container ancestor of the preserved tab, including its associated
+  'letter-spacing' and 'word-spacing'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#tab-size-property">CSS Text 4 §4.4</a></span>
+  Each stage is <code>pre</code>, of 10px letters, and holds "a", a tab, "b".</p>
+</header>
+
+<section>
+  <h2>A number and a length</h2>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure"><span class=t>a	b</span></div>
+    <figcaption>The initial 8: stops every 80px, "b" at 80.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="tab-size: 3"><span class=t>a	b</span></div>
+    <figcaption><code>3</code>: "b" at 30.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-measure" style="tab-size: 55px"><span class=t>a	b</span></div>
+    <figcaption><code>55px</code>: "b" at 55.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The block container's space</h2>
+  <p>In each stage the tab is in a span of its own.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="tab-size: 3">a<span class=t style="font-size: calc(100px / 3)">	</span>b</div>
+    <figcaption>The span's font is twice the size, its space 20px. <code>3</code> spaces of the stage, the block container: 30px, so "b" is at 30, not 60. <span class=pr-flag>Safari</span> takes the span's
+    space: 60.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure" style="tab-size: 3; word-spacing: 10px">a<span class=t>	</span>b</div>
+    <figcaption>The stage's <code>word-spacing: 10px</code> widens its space to 20px: stops every 60px, "b" at
+    60. <span class=pr-flag>Safari</span> leaves the spacing out: 30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>srcset: pixel density</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.4.2.1 Srcset attributes</div>
+  <h1>srcset: pixel density</h1>
+  <p class=pr-lede>An image candidate string may have <q>A pixel density descriptor, consisting of: ASCII
+  whitespace, a valid floating-point number giving a number greater than zero representing the pixel density
+  descriptor value, and a U+0078 LATIN SMALL LETTER X character.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#srcset-attributes">HTML §4.8.4.2.1</a></span>
+  Each img has one candidate, an orange image 160 by 80, so the user agent has no choice to make.</p>
+</header>
+
+<section>
+  <h2>The natural size, divided by the density</h2>
+  <p>The density-corrected natural width is the image's <q>intrinsicWidth divided by density</q>, and its height
+  likewise. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#images-processing-model">§4.8.4.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 2x" alt=""></div>
+    <figcaption><code>2x</code>: 80 by 40.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 4x" alt=""></div>
+    <figcaption><code>4x</code>: 40 by 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-row pic"><img srcset="support/orange-160x80.png 1.6x" alt=""></div>
+    <figcaption><code>1.6x</code>: 100 by 50.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No descriptor is 1x</h2>
+  <p><q>Otherwise, give the image source a pixel density descriptor of 1x.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/images.html#normalizing-the-source-densities">§4.8.4.3.12</a></span></p>
+  <figure>
+    <div class="pr-stage pr-row pic"><img srcset="support/orange-160x80.png" alt=""></div>
+    <figcaption>No descriptor: the image's own 160 by 80.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

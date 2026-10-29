@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>compositionend</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.7.3 compositionend</div>
+  <h1>compositionend</h1>
+  <p class=pr-lede><q>A user agent MUST dispatch this event when a text composition system completes or cancels the
+  current composition session, and the compositionend event MUST be dispatched after the control is updated.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionend">UI Events §3.6.7.3</a></span></p>
+</header>
+<section>
+  <h2>After the control holds the result</h2>
+  <p>Its data is <q>the string comprising the final result of the composition session</q>. The page's script records
+  the field's value as each event reaches it, as <code>value</code>. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionend">§3.6.7.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="compositionstart compositionend" data-fields="data value" data-on="#field" data-lines=2></ol>
+    </div>
+    <figcaption>Turn on an input method, such as Japanese Romaji, click the field, type <code>ka</code> and press
+    Enter to commit it: compositionend with <code>data="か"</code> and <code>value="か"</code>, the field already
+    updated.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>When the input method closes</h2>
+  <p><q>This event is dispatched immediately after the text composition system completes the composition session
+  (e.g., the IME is closed, minimized, switched out of focus, or otherwise dismissed, and the focus switched back to
+  the user agent).</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-compositionend">§3.6.7.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=switched><div class=pr-target id=elsewhere tabindex=0>elsewhere</div></div>
+      <ol class=pr-log data-log="compositionend blur" data-fields="target data" data-lines=2></ol>
+    </div>
+    <figcaption>With the input method on, type <code>ka</code> in the field, leave it uncommitted, and click
+    <code>elsewhere</code>: compositionend at <code>switched</code>, as the session ends with the focus leaving the
+    field.</figcaption>
+  </figure>
+</section>
+<script>
+  // Records the field's value as each event reaches it, before the log reads it.
+  const field = document.getElementById("field");
+  for (const type of ["compositionstart", "compositionend"])
+      field.addEventListener(type, event => { event.value = field.value; }, {capture: true});
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

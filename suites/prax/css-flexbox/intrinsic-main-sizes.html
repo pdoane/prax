@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Intrinsic main sizes of a flex container</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .f { display: flex; }
+  .i1 { background: #b9cde6; }
+  .i2 { background: #f6d7b4; }
+  .i3 { background: #c7dfc7; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 9.10.1 Flex Container Intrinsic Main Sizes</div>
+  <h1>Intrinsic main sizes of a flex container</h1>
+  <p class=pr-lede>For max-content sizes and for single-line min-content sizes, <q>an implementation is conformant to
+  CSS Flexible Box Layout if it conforms to either the Ideal Algorithm or the Web-compatible Algorithm</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#intrinsic-main-sizes">CSS Flexible Box Layout 2 §9.10.1</a></span></p>
+</header>
+
+<section>
+  <h2>The max-content main size</h2>
+  <p><q>the smallest size the flex container can take such that when flex layout is run with that container size,
+  each flex item ends up at least as large as its max-content contribution, to the extent allowed by the items’
+  flexibility.</q> Each dashed container is a row with <code>width: max-content</code>, of "aaa bbb" (70px) and "cc"
+  (20px).</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: max-content"><div class=i1>aaa bbb</div><div class=i2>cc</div></div></div>
+    <figcaption>90px: each item at its max-content width, "aaa bbb" on one line.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="writing-mode: vertical-rl; height: max-content"><div class=i1>aaa bbb</div><div class=i2>cc</div></div></div>
+    <figcaption>The same in <code>vertical-rl</code>, with <code>height: max-content</code>: the main axis runs down, and the container is 90px tall,
+    20px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The min-content main size</h2>
+  <p><q>the smallest size the flex container can take such that no items overflow it, and no item's contents overflow
+  the item</q>. Each container is a single-line row with <code>width: min-content</code>.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bbb</div><div class=i2>cc</div></div></div>
+    <figcaption>50px: "aaa" over "bbb", 30px wide, and "cc" beside them, 20px; nothing overflows.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="f pr-parent" style="width: min-content"><div class=i1>aaa bbb</div><div class=i2 style="margin-left: -10px">cc</div></div></div>
+    <figcaption>With <code>margin-left: -10px</code> on "cc", which is <em>defined</em> to overflow: 40px, "cc"
+    over the last 10px of "aaa".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

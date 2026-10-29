@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scrollable overflow area: a descendant's, clipped</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 60px; height: 40px; margin: 10px 70px; overflow: auto; }
+  .stage { height: 60px; }
+  .kid { width: 80px; height: 20px; }
+  .w { width: 200px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.3 Calculating the Scrollable Overflow Area, clipped descendants</div>
+  <h1>The scrollable overflow area: a descendant's, clipped</h1>
+  <p class=pr-lede>The area unites <q>The scrollable overflow rectangles of all of the above boxes (including
+  zero-area boxes), clipped to their overflow clip edge if overflow is not overflow/visible or contain applies
+  contain/paint</q>. <q>Note: The clip, clip-path, and mask-* properties do not affect the scrollable overflow area.
+  Only effects that clip to the overflow clip edge are taken into account.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>A child whose content is 200px wide</h2>
+  <p>Each dashed box is 60 by 40, <code>overflow: auto</code>, and holds a dashed child 80 by 20, 82 with its border, whose own content,
+  A, is 200px wide. Captions read the box's <code>scrollWidth</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=c1 class="pr-frame sc"><div class="pr-frame kid"><div class="pr-a pr-fit w">A</div></div></div></div>
+    <figcaption>The child <code>visible</code>: A's 200px count, <code class=pr-computed data-of=c1
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=c2 class="pr-frame sc"><div class="pr-frame kid" style="overflow: clip"><div class="pr-a pr-fit w">A</div></div></div></div>
+    <figcaption>The child <code>overflow: clip</code>: cut to its 82px, <code class=pr-computed data-of=c2
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div id=c3 class="pr-frame sc"><div class="pr-frame kid" style="overflow: clip; overflow-clip-margin: 20px"><div class="pr-a pr-fit w">A</div></div></div></div>
+    <figcaption>And <code>overflow-clip-margin: 20px</code>: 20px past its padding edge, 101: <code class=pr-computed data-of=c3 data-dom=scrollWidth></code>. <span class=pr-flag>Safari</span> ignores the margin: 82.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=c4 class="pr-frame sc"><div class="pr-frame kid" style="contain: paint"><div class="pr-a pr-fit w">A</div></div></div></div>
+    <figcaption>The child <code>contain: paint</code>: cut, <code class=pr-computed data-of=c4
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=c5 class="pr-frame sc"><div class="pr-frame kid" style="clip-path: inset(0)"><div class="pr-a pr-fit w">A</div></div></div></div>
+    <figcaption>The child <code>clip-path: inset(0)</code>: A is cut where it paints, but its 200px still count:
+    <code class=pr-computed data-of=c5 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

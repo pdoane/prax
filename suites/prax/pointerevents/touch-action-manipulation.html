@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>manipulation, and what touch-action leaves alone</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 40px; margin: 10px 20px; }
+  #manipulation { touch-action: manipulation; }
+  .none { touch-action: none; margin: 10px 20px; font-size: 13px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 7.3 Details of touch-action values</div>
+  <h1>manipulation, and what touch-action leaves alone</h1>
+  <p class=pr-lede><q>The touch-action property covers direct manipulation behaviors related to viewport panning and
+  zooming.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">Pointer Events §7.3</a></span></p>
+</header>
+<section>
+  <h2>No double-tap zoom</h2>
+  <p><q>The user agent MAY consider direct manipulation interactions that begin on the element only for the purposes of
+  panning and continuous zooming (such as pinch-zoom), but MUST NOT trigger other related behaviors that rely on multiple
+  activations that must happen within a set period of time (such as double-tap to zoom, or double-tap and hold for
+  single-finger zoom).</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=manipulation>touch-action: manipulation</div>
+      <div class="pr-target pad" id=auto>touch-action: auto</div>
+      <ol class=pr-log data-log="click dblclick" data-fields="target detail" data-lines=3></ol>
+    </div>
+    <figcaption>Needs a touch screen on a page that can zoom. Double-tap the upper box: two <code>click</code>s, and
+    the page does not zoom. Pinch on it: the page zooms. Double-tap the lower box: the browser may zoom
+    instead.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Selection and activation are not its business</h2>
+  <p><q>Any additional user agent behaviors, such as text selection/highlighting, or activating links and form controls,
+  MUST NOT be affected by this CSS property.</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#details-of-touch-action-values">§7.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <p class=none>This paragraph has touch-action: none. Long-press a word to select it, or tap
+      <a href="#details" id=link>this link</a>, or this box: <input type=checkbox id=box>.</p>
+    </div>
+    <figcaption>Needs a touch screen. In the paragraph, which cannot pan: a long press still selects a word, the
+    link still follows (to this page), and the checkbox still toggles.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

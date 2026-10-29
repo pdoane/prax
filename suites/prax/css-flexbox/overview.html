@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Overview: a catalog of items</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .deals { display: flex; flex-flow: row wrap; padding: 4px 0 0 4px; }
+  .sale-item { display: flex; flex-flow: column; width: 138px; margin: 0 4px 4px 0; padding: 4px; color-scheme: light; color: var(--pr-ink); background: white; border: 1px solid #b5bcc7; box-sizing: border-box; }
+  .sale-item h3 { margin: 0; font: 600 12px/20px "PR Arimo"; }
+  .sale-item p { margin: 0; font: 12px/20px "PR Arimo"; }
+  .sale-item > .photo { order: -1; align-self: center; width: 60px; height: 30px; background: #8e44ad; }
+  .sale-item > .buy { margin-top: auto; height: 20px; background: #6aa36a; color: white; font: 600 11px/20px "PR Arimo"; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Flexible Box Layout 2 · 1.1 Overview</div>
+  <h1>Overview: a catalog of items</h1>
+  <p class=pr-lede><q>Flex layout is superficially similar to block layout. It lacks many of the more complex text- or
+  document-centric properties that can be used in block layout, such as floats and columns. In return it gains simple
+  and powerful tools for distributing space and aligning content</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-flexbox-2/#overview">CSS Flexible Box Layout 2 §1.1</a></span></p>
+</header>
+
+<section>
+  <h2>The spec's catalog, built</h2>
+  <p>A catalog <code>flex-flow: row wrap</code> of entries <code>flex-flow: column</code>, each a title, a
+  description and a purple photo that comes last in the source, then a green button. The photo has <code>order:
+  -1</code> and <code>align-self: center</code>; the button <code>margin-top: auto</code>.</p>
+  <figure>
+    <div class="pr-stage pr-wide deals">
+      <div class=sale-item><h3>Starter kit</h3><p>The best computer money can buy.</p><div class=photo></div><div class=buy>BUY NOW</div></div>
+      <div class=sale-item><h3>Printer</h3><p>ASCII art only.</p><div class=photo></div><div class=buy>BUY NOW</div></div>
+      <div class=sale-item><h3>Mouse</h3><p>One button.</p><div class=photo></div><div class=buy>BUY NOW</div></div>
+    </div>
+    <figcaption>Two entries a row, the third wrapped to a row of its own. In each, the photo is on top, centered
+    across the entry. The two entries of the first row are equally tall, and both buttons sit at their
+    bottoms, level, though the printer's description is a line shorter.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>mask-type: luminance or alpha</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <mask id="black" maskContentUnits="objectBoundingBox"><rect width="0.5" height="1" fill="black" /></mask>
+  <mask id="black-alpha" maskContentUnits="objectBoundingBox" style="mask-type: alpha"><rect width="0.5" height="1" fill="black" /></mask>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 9.2 Mask Source Interpretation: the mask-type property</div>
+  <h1>mask-type: luminance or alpha</h1>
+  <p class=pr-lede><q>The mask-type property defines whether the content of the mask element is treated as as luminance
+  mask or alpha mask</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-mask-type">CSS Masking 1 §9.2</a></span>
+  Each box is 140 by 60 and blue; each mask holds an opaque black rectangle over the box's left half: luminance 0,
+  alpha 1.</p>
+</header>
+
+<section>
+  <h2>The mask's own preference</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#black)"></div></div>
+    <figcaption><code>luminance</code>, the initial value: black is 0, so nothing. <span class=pr-flag>Safari</span>
+    The left half, as for <code>alpha</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#black-alpha)"></div></div>
+    <figcaption><code>mask-type: alpha</code>: opaque is 1, so the left half, 70 by 60.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Overridden by mask-mode</h2>
+  <p><q>the author can override this preference by setting the mask-mode value to something different than
+  match-source on the masked content.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#black); mask-mode: alpha"></div></div>
+    <figcaption>A <code>luminance</code> mask, <code>mask-mode: alpha</code> on the box: the left half.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="mask-image: url(#black-alpha); mask-mode: luminance"></div></div>
+    <figcaption>An <code>alpha</code> mask, <code>mask-mode: luminance</code> on the box: nothing.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

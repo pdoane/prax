@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>page-break-before, page-break-after and page-break-inside</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .cols { columns: 3; column-gap: 10px; column-rule: 1px dashed #6b7381; height: 60px; column-fill: auto; orphans: 1; widows: 1; }
+  .k { background: #b9cde6 }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fragmentation 4 · 3.4 Page Break Aliases: the page-break-before, page-break-after, and page-break-inside properties</div>
+  <h1>page-break-before, page-break-after and page-break-inside</h1>
+  <p class=pr-lede>UAs <q>must alias the page-break-before, page-break-after, and page-break-inside properties to break-before, break-after, and break-inside by treating the page-break-* properties as legacy shorthands for the break-* properties</q>: <code>auto</code>, <code>left</code>, <code>right</code> and <code>avoid</code> as themselves, and <code>always</code> as <code>page</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-break-4/#page-break-properties">CSS Fragmentation 4 §3.4</a></span></p>
+</header>
+
+<section>
+  <h2>In columns</h2>
+  <p>Three columns 60px tall.</p>
+  <figure>
+    <div class="pr-stage pr-measure cols"><div class=pr-a>A</div><div class=pr-b style="page-break-before: always">B</div><div class=pr-c>C</div></div>
+    <figcaption>B, <code>page-break-before: always</code>, is <code>break-before: page</code>: no column break. A, B and C in the first column.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure cols"><div class=pr-b>B</div><div class=pr-b>B</div><div class=pr-a>A</div><div class=pr-c style="page-break-before: avoid">C</div><div class=pr-c>C</div></div>
+    <figcaption>The first C, <code>page-break-before: avoid</code>, is <code>break-before: avoid</code>, which avoids column breaks too: A moves to the second column with the Cs. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> A stays under the Bs.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>On pages</h2>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 }</style><body class=pr-measure><div class=pr-a>A</div><div class=pr-b style='page-break-before: always'>B</div><div class=pr-c>C</div>"></iframe>
+    <figcaption>B, <code>page-break-before: always</code>: A on the first page, B and C on the second.</figcaption>
+  </figure>
+  <figure>
+    <iframe class=pr-paged srcdoc="<!doctype html><link rel=stylesheet href=../shared/page.css><link rel=stylesheet href=../shared/fonts.css><style>@page { size: 240px 160px; margin: 10px } body { margin: 0; padding: 0; background: white; color-scheme: light; orphans: 1; widows: 1 } .k { background: #b9cde6 }</style><body class=pr-measure>one<br>two<br>three<br>four<br>five<div class=k style='page-break-inside: avoid'>six<br>seven<br>eight</div>"></iframe>
+    <figcaption>Five lines, then the tinted box of three, <code>page-break-inside: avoid</code>: the box whole on the second page.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

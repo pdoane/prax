@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>scrollbar-gutter on the root</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 5.2 Reserving space for the scrollbar, the viewport</div>
+  <h1>scrollbar-gutter on the root</h1>
+  <p class=pr-lede><q>As for the overflow property, when scrollbar-gutter is set on the root element, the user agent
+  must apply it to the viewport instead, and the used value on the root element itself is scrollbar-gutter: auto.
+  However, unlike the overflow property, the user agent must not propagate scrollbar-gutter from the HTML body
+  element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>The viewport's gutter</h2>
+  <p>Each frame is a document whose canvas is grey and whose body, blue, fills its width and is 40px tall, so nothing
+  overflows. Its scroll bars are styled with <code>::-webkit-scrollbar</code>: Safari draws classic ones 12px wide, as
+  the last frame shows; Chrome and Firefox draw overlay ones here, which make no gutter, so each of their bodies fills
+  the frame's width, as it should with overlay bars.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>::-webkit-scrollbar { width: 12px; background: #cfd3da } html { background: #e7eaef } body { margin: 0; height: 40px; background: #4f81bd }</style>"></iframe></div>
+    <figcaption>No <code>scrollbar-gutter</code>: the body is the frame's full 200px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>::-webkit-scrollbar { width: 12px; background: #cfd3da } html { scrollbar-gutter: stable; background: #e7eaef } body { margin: 0; height: 40px; background: #4f81bd }</style>"></iframe></div>
+    <figcaption><code>html { scrollbar-gutter: stable }</code>: with classic bars, a 12px gutter at the right of the viewport, the body stopping short of it, 188px. <span class=pr-flag>Safari</span> leaves no gutter.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>::-webkit-scrollbar { width: 12px; background: #cfd3da } html { background: #e7eaef } body { scrollbar-gutter: stable; margin: 0; height: 40px; background: #4f81bd }</style>"></iframe></div>
+    <figcaption><code>body { scrollbar-gutter: stable }</code>: not propagated, and the body is no scroll container:
+    no gutter, 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>::-webkit-scrollbar { width: 12px; background: #cfd3da } ::-webkit-scrollbar-thumb { background: #8a93a1 } html { background: #e7eaef } body { margin: 0; height: 300px; background: #4f81bd }</style>"></iframe></div>
+    <figcaption>For comparison, a body 300px tall, which overflows: where the viewport's bars are classic, a bar
+    at the right.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

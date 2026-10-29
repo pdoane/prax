@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Elliptical arcs: radii, rotation and end point</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.8 The elliptical arc curve commands</div>
+  <h1>Elliptical arcs: radii, rotation and end point</h1>
+  <p class=pr-lede><q>Draws an elliptical arc from the current point to (<b>x</b>, <b>y</b>). The size and
+  orientation of the ellipse are defined by two radii (<b>rx</b>, <b>ry</b>) and an <b>x-axis-rotation</b>, which
+  indicates how the ellipse as a whole is rotated, in degrees, relative to the current coordinate system.</q>
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataEllipticalArcCommands">SVG 2 §9.3.8</a></span>
+  Each stage is an SVG 160 by 60, in user units of 1px; the arcs are stroked dark blue, 4 wide.</p>
+</header>
+
+<section>
+  <h2>A: an arc of an ellipse</h2>
+  <p><q>The center (<b>cx</b>, <b>cy</b>) of the ellipse is calculated automatically to satisfy the constraints
+  imposed by the other parameters.</q> <b>A</b> takes <code>rx ry x-axis-rotation large-arc-flag sweep-flag x
+  y</code>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 30 40 A 50 30 0 0 1 130 40" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 30 40 A 50 30 0 0 1 130 40</code>: the top half of an ellipse 50 by 30 about 80, 40,
+    up to 80, 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 A 40 40 0 0 1 60 10" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 50 A 40 40 0 0 1 60 10</code>: a quarter circle of radius 40 about 60, 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 55 5 A 35.355 12 45 0 1 105 55 A 35.355 12 45 0 1 55 5 Z" fill="#4f81bd" /></svg></div>
+    <figcaption><code>A 35.355 12 45 …</code> from 55, 5 to 105, 55 and back, filled blue: an ellipse tilted 45°
+    down to the right, its long axis that diagonal.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>a: the end point relative</h2>
+  <p><q>When a relative <b>a</b> command is used, the end point of the arc is (cpx + x, cpy + y).</q> The radii
+  are lengths, the same either way.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 40 a 20 20 0 0 1 40 0 a 20 20 0 0 1 40 0 a 20 20 0 0 1 40 0" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption><code>M 20 40 a 20 20 0 0 1 40 0</code> three times: three half circles, their tops on y 20, from
+    20 to 140.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 a 20 20 0 0 1 40 0 20 20 0 0 0 40 0 20 20 0 0 1 40 0" fill="none" stroke="#2c5a8f" stroke-width="4" /></svg></div>
+    <figcaption>One <b>a</b>, three sets, the sweep flag 1, 0, 1: half circles over, under and over, between y 10
+    and 50.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 80 10 a 20 20 0 0 1 0 40 z" fill="#4f81bd" /></svg></div>
+    <figcaption><code>M 80 10 a 20 20 0 0 1 0 40 z</code>, filled: a half disc right of x 80, out to x
+    100.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

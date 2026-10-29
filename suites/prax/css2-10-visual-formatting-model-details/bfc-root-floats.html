@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Auto heights of formatting context roots: floats</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .root { display: flow-root; }
+  .fl { float: right; width: 40px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.6.7 'Auto' heights for block formatting context roots</div>
+  <h1>Auto heights of formatting context roots: floats</h1>
+  <p class=pr-lede>A block formatting context root grows to hold its floats. The tinted, outlined box in each stage is
+  such a root, <code>display: flow-root</code>, holding a 20px block A.</p>
+</header>
+
+<section>
+  <h2>Floats below the content</h2>
+  <p><q>In addition, if the element has any floating descendants whose bottom margin edge is below the element's
+  bottom content edge, then the height is increased to include those edges.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#root-height">CSS 2
+  §10.6.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div class="pr-parent root"><div class="pr-c pr-fit fl">float</div><div class=pr-a>A</div></div></div>
+    <figcaption>A 60px float after A: the root is 60px, not 20.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div class="pr-parent root"><div class="pr-c pr-fit fl" style="margin-bottom: 20px">float</div><div class=pr-a>A</div></div></div>
+    <figcaption>With the float's <code>margin-bottom: 20px</code>, its bottom margin edge is at 80: the root is
+    80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only this context's floats</h2>
+  <p><q>Only floats that participate in this block formatting context are taken into account, e.g., floats inside
+  absolutely positioned descendants or other floats are not.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#root-height">CSS 2 §10.6.7</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 90px"><div class="pr-parent root"><div class=pr-a>A</div><div style="position: absolute; top: 0; right: 0"><div class="pr-c pr-fit fl">float</div></div></div></div>
+    <figcaption>A 60px float inside an absolutely positioned box: the root stays 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 90px"><div class="pr-parent root"><div class="pr-b pr-fit" style="float: right; width: 60px; height: 20px"><div class="pr-c pr-fit fl">in</div></div><div class=pr-a style="margin-right: 60px">A</div></div></div>
+    <figcaption>A 60px float inside an orange 20px float: only the orange one counts, and the root is 20px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

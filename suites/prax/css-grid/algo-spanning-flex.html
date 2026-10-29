@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Spanning items crossing flexible tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; justify-content: start; width: 10px; }
+  .s { grid-column: span 2; background: #b9cde6; }
+  .c { background: #f6d7b4; }
+  .m1 { height: 10px; background: #d68a3c; }
+  .m2 { height: 10px; background: #6aa36a; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.5 Resolve Intrinsic Track Sizes, steps 4 and 5</div>
+  <h1>Spanning items crossing flexible tracks</h1>
+  <p class=pr-lede><q>Increase sizes to accommodate spanning items crossing flexible tracks: Next, repeat the previous
+  step instead considering (together, rather than grouped by span size) all items that do span a track with a flexible
+  sizing function while distributing space only to flexible tracks</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-content">CSS Grid Layout 2 §12.5</a></span>
+  Each grid is 10px wide (dashed): no free space, so <q>The used flex fraction is zero</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-flex-tracks">§12.7</a></span>
+  and the columns, shown by bars, keep these base sizes. Blue spans both, its <code>min-width</code> as wide as its
+  text.</p>
+</header>
+
+<section>
+  <h2>By the ratio of the flex factors</h2>
+  <p>Where the flex factors sum to one or more, <q>according to the ratios of their flexible sizing functions rather
+  than distributing space equally; and if the sum is less than one, distributing that proportion of space according to
+  the ratios of their flexible sizing functions and the rest equally</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 2fr"><div class=s style="min-width: 90px">abcdefghi</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>1fr 2fr</code>, blue "abcdefghi", 90px: shared 1:2, 30 and 60px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 0.6fr 0.2fr"><div class=s style="min-width: 100px">abcdefghij</div><div class=m1></div><div class=m2></div></div></div>
+    <figcaption><code>0.6fr 0.2fr</code>, blue 100px: 80px shared 3:1, the other 20px equally: 70 and 30px.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> 75 and 25px. <span
+    class=pr-flag>Firefox</span> 60 and 20px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: auto 1fr"><div class=s style="min-width: 90px">abcdefghi</div><div class=c>ab</div><div class=m2></div></div></div>
+    <figcaption><code>auto 1fr</code>, "ab" alone in the first: blue's other 70px go only to the flexible column, 20
+    and 70px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Infinite growth limits become the base size</h2>
+  <p><q>If any track still has an infinite growth limit</q>, as an empty one has, <q>set its growth limit to its base size.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=g style="grid-template-columns: auto 40px; width: auto"><div class=c style="grid-column: 2">ab</div></div></div>
+    <figcaption><code>auto 40px</code>, <code>justify-content: start</code>, the first empty: its growth limit is
+    0, so it does not grow into the free space, and orange is at 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

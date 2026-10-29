@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Aligning on a character</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-table-cell { height: auto; padding: 0 4px; font: calc(50px / 3)/20px "PR Noto Sans Mono"; }
+  .col { width: 120px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 7.2 Character-based Alignment in a Table Column</div>
+  <h1>Aligning on a character</h1>
+  <p class=pr-lede><q>When multiple cells in a column have an alignment character specified, the alignment character
+  of each such cell in the column is centered along a single column-parallel axis and the rest of the text in the
+  column shifted accordingly.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#character-alignment">CSS Text 4 §7.2</a></span>
+  No browser has it. Letters are 10px wide.</p>
+</header>
+
+<section>
+  <h2>The specification's column of figures</h2>
+  <p>Each cell is <code>text-align: "." center</code>. <q>If the alignment character appears more than once in the
+  text, the first instance is used for alignment. If the alignment character does not appear in a cell at all, the
+  string is aligned as if the alignment character had been inserted at the end of its contents.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class=pr-table>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">$1.30</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">$10.80</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">$111.01</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">$85.</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">N/A</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: '.' center">$.05</div></div>
+      </div>
+    </div>
+    <figcaption>The points one above another, the column centered on them: "N/A" ends where the points are.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each cell
+    aligned on its own, as <code>start</code>.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage>
+      <div class=pr-table>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: ','">1,5</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: ','">12,25</div></div>
+        <div class=pr-table-row><div class="pr-table-cell col" style="text-align: ','">3,1,4</div></div>
+      </div>
+    </div>
+    <figcaption><code>","</code> alone, the keyword <q>defaults to 'right'</q>: the commas aligned, the first in
+    "3,1,4" used, and the figures as far right as the column allows. <span class=pr-flag>Chrome</span> <span
+    class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Each cell as <code>start</code>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

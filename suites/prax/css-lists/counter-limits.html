@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Counters: values held to the user agent's range</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .over { counter-reset: n 2000000000; }
+  .over div::before { counter-increment: n 50000000; content: counter(n); }
+  .under { counter-reset: n -2000000000; }
+  .under div::before { counter-increment: n -50000000; content: counter(n); }
+  .order div { counter-increment: n 5; counter-set: n 1; }
+  .order div::before { content: counter(n) " "; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Lists and Counters 3 · 4 Automatic Numbering With Counters</div>
+  <h1>Counters: values held to the user agent's range</h1>
+  <p class=pr-lede><q>A counter is a special numeric tracker used, among other things, to automatically number list
+  items in CSS.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-lists-3/#auto-numbering">CSS Lists and Counters 3 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Clamped, never wrapped</h2>
+  <p><q>UAs may have implementation-specific limits on the maximum or minimum value of a counter. If a counter reset,
+  set, or increment would push the value outside of that range, the value must be clamped to that range.</q> Each
+  stage starts at ±2,000,000,000 and steps by 50,000,000; a signed 32-bit limit is 2,147,483,647.</p>
+  <figure>
+    <div class="pr-stage pr-text over"><div></div><div></div><div></div></div>
+    <figcaption>2050000000, 2100000000; the third step would pass the limit, so it is held at or below it, never
+    wrapped to a negative number. Chrome, Safari and Firefox draw 2100000000 again.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text under"><div></div><div></div><div></div></div>
+    <figcaption>-2050000000, -2100000000, then held at or above the lower limit, never wrapped to a positive
+    number. The three browsers draw -2100000000 again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Reset, increment, set, use</h2>
+  <p><q>Resolving counter values on a given element is a multi-step process:</q> <q>Existing counters are inherited from
+  previous elements.</q> <q>New counters are instantiated ('counter-reset').</q> <q>Counter values are incremented
+  ('counter-increment').</q> <q>Counter values are explicitly set ('counter-set').</q> <q>Counter values are used
+  ('counter()'/'counters()').</q></p>
+  <figure>
+    <div class="pr-stage pr-text order"><div>a</div><div>b</div></div>
+    <figcaption><code>counter-increment: n 5; counter-set: n 1</code> on each: the set comes after the increment, so
+    "1 a", "1 b".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

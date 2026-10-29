@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>background-size: contain and cover</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background-repeat: no-repeat; }
+  .wide { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'><rect x='1' y='1' width='38' height='18' fill='%234f81bd' stroke='%23d68a3c' stroke-width='2'/></svg>"); }
+  .bare { background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' fill='%234f81bd' stroke='%23d68a3c' stroke-width='4'/></svg>"); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Backgrounds 4 · 2.10 Sizing Images: the background-size property, contain and cover</div>
+  <h1>background-size: contain and cover</h1>
+  <p class=pr-lede><q>contain: Scale the image, while preserving its natural aspect ratio (if any), to the largest size
+  such that both its width and its height can fit inside the background positioning area.</q> <q>cover: Scale the
+  image, while preserving its natural aspect ratio (if any), to the smallest size such that both its width and its
+  height can completely cover the background positioning area.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-backgrounds-4/#background-size">CSS Backgrounds 4 §2.10</a></span>
+  Each dashed box is a positioning area 140 by 60. The images are blue with an orange edge.</p>
+</header>
+
+<section>
+  <h2>A wide image, 40 by 20</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost wide" style="background-size: contain"></div></div>
+    <figcaption><code>contain</code>: 120 by 60, its orange edge whole, 20px of the box left at the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost wide" style="background-size: cover"></div></div>
+    <figcaption><code>cover</code>: 140 by 70, its bottom 10px, and the orange edge there, cut off.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost wide" style="background-size: contain; background-repeat: repeat-x"></div></div>
+    <figcaption><code>contain</code>, <code>repeat-x</code>: a second tile, cut off after 20px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No ratio</h2>
+  <p>An image with no natural size and no ratio, with a 2px orange edge.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost bare" style="background-size: contain"></div></div>
+    <figcaption><code>contain</code>: 140 by 60, the whole area, its edge on all four sides.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class="box pr-ghost bare" style="background-size: cover"></div></div>
+    <figcaption><code>cover</code>: the same, 140 by 60.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

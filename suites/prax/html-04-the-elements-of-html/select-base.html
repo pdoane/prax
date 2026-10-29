@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The customizable select</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px; font-size: 13px; line-height: 20px; }
+  .pad select { margin: 0; font-size: 13px; vertical-align: top; }
+  .base, .base::picker(select) { appearance: base-select; }
+  .swatch { display: inline-block; width: 10px; height: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.7 The select element</div>
+  <h1>The customizable select</h1>
+  <p class=pr-lede><q>select elements which render as a drop-down box support a base appearance</q>, which each stage
+  opts into with <code>appearance: base-select</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">HTML §15.5.16</a></span>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+</header>
+
+<section>
+  <h2>The drop-down box, closed</h2>
+  <p>A <code>currentColor</code> border, rounded by 0.5em, and a <code>disclosure-open</code>
+  <code>::picker-icon</code> at the end. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-select-element-2">§15.5.16</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad"><select class=base style="width: 120px"><option>Apple<option>Pear</select></div>
+    <figcaption>A box 120px wide with rounded corners and a thin dark border, "Apple", and a down-pointing triangle at
+    its right end. <span class=pr-flag>Safari</span> draws a grey border and a chevron. <span
+    class=pr-flag>Firefox</span> draws its native box.</figcaption>
+  </figure><figure class=pr-erratum>
+    <div class="pr-stage pad"><select class=base><button><span class="swatch" style="background: #d68a3c"></span> Pick</button><option>Apple<option>Pear</select></div>
+    <figcaption>A first child <code>button</code> <q>is used to replace the in-page rendering of the select
+    element</q>: an orange square and "Pick", then the triangle. <span class=pr-flag>Safari</span> draws a chevron. <span
+    class=pr-flag>Firefox</span> shows "Apple".</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The picker, and the list box</h2>
+  <p>A click opens <code>::picker(select)</code> below the box; picking an option hides it. An option's
+  <code>::checkmark</code>, <code>'\2713'</code>, shows when it is checked. A list box's rows are
+  <code>max(24px, 1lh)</code> tall. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/form-elements.html#the-select-element">§4.10.7</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pad">
+      <select class=base id=picked><option>Apple<option selected>Pear<option disabled>Plum<option>Fig</select>
+      <ol class=pr-log data-log="input change" data-fields="target" data-lines=2 data-on="#picked" style="margin: 10px -10px -10px"></ol>
+    </div>
+    <figcaption>Click the box: a white list opens below it, a check mark beside Pear, Plum greyed. Click Fig: the
+    list closes, the box shows Fig, and <code>input</code> and <code>change</code> are logged. <span class=pr-flag>Firefox</span> opens its native menu.</figcaption>
+  </figure><figure class=pr-erratum>
+    <div class="pr-stage pad"><select class=base size=3 style="width: 120px"><option>Apple<option selected>Pear<option>Plum<option>Fig</select></div>
+    <figcaption><code>size=3</code>: a box 72px tall, three rows of 24px, Apple to Plum, a check mark beside Pear.
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> draw a native list box.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

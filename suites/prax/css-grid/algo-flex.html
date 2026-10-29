@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Expanding flexible tracks</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; }
+  figcaption { max-width: 150px; }
+  .g { display: grid; }
+  .a { background: #b9cde6; }
+  .b { background: #f6d7b4; }
+  .c { background: #cfe6c4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 12.7 Expand Flexible Tracks</div>
+  <h1>Expanding flexible tracks</h1>
+  <p class=pr-lede><q>This step sizes flexible tracks using the largest value it can assign to an fr without exceeding
+  the available space.</q> <q>For each flexible track, if the product of the used flex fraction and the track's flex
+  factor is greater than the track's base size, set its base size to that product.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-flex-tracks">CSS Grid Layout 2 §12.7</a></span></p>
+</header>
+
+<section>
+  <h2>Definite free space</h2>
+  <p><q>Otherwise, if the free space is a definite length: The used flex fraction is the result of finding the size of
+  an fr using all of the grid tracks and a space to fill of the available grid space.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#algo-find-fr-size">§12.7.1</a></span>
+  Each grid is as wide as its 150px stage, its edges dashed.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 2fr"><div class=a>a</div><div class=b>b</div></div></div>
+    <figcaption><code>1fr 2fr</code>: an fr of 50px; 50 and 100px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 30px 1fr 1fr"><div class=a>a</div><div class=b>b</div><div class=c>c</div></div></div>
+    <figcaption><code>30px 1fr 1fr</code>: 120px left over, an fr of 60px; orange from 30 to 90px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 30px 1fr 1fr; column-gap: 20px"><div class=a>a</div><div class=b>b</div><div class=c>c</div></div></div>
+    <figcaption>With <code>column-gap: 20px</code>: 80px left, an fr of 40px; orange from 50 to 90px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>No free space, or a min-content constraint: zero</h2>
+  <p><q>If the free space is zero or if sizing the grid container under a min-content constraint: The used flex
+  fraction is zero.</q> Then each flexible track keeps its base size.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 100px 1fr; width: 80px"><div class=a>a</div><div class=b>ab</div></div></div>
+    <figcaption>A 80px grid of <code>100px 1fr</code>: no free space; the <code>1fr</code> is its base size, its
+    item's 20px, from 100 to 120px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="g pr-ghost" style="grid-template-columns: 1fr 1fr; width: min-content"><div class=a>ab</div><div class=b>abcd</div></div></div>
+    <figcaption><code>width: min-content</code>, <code>1fr 1fr</code> holding "ab" and "abcd": 20 and 40px, not
+    equal.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

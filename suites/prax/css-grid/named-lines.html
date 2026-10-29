@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Naming grid lines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .g { display: grid; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 7.2.2 Naming Grid Lines: the [&lt;custom-ident&gt;*] syntax</div>
+  <h1>Naming grid lines</h1>
+  <p class=pr-lede><q>While grid lines can always be referred to by their numerical index, line names can make the
+  grid-placement properties easier to understand and maintain. Line names can be explicitly assigned with the
+  grid-template-rows and grid-template-columns properties</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#named-lines">CSS Grid Layout 2 §7.2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Names in brackets, several to a line</h2>
+  <p>The grid is <code>[first nav-start] 50px [main-start] 1fr [last]</code>, the spec's example made narrow.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: [first nav-start] 50px [main-start] 1fr [last]"><div class="pr-a pr-fit" style="grid-column: nav-start / main-start">nav</div><div class="pr-b pr-fit" style="grid-column: main-start / last">main</div><div class="pr-c pr-fit" style="grid-column: first / last">all</div></div></div>
+    <figcaption>"nav" from <code>nav-start</code> to <code>main-start</code>, 50px; "main" from 50px to the end;
+    "all" from <code>first</code> to <code>last</code>, the whole 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: [a] 40px [a] 40px [a] 40px [a]"><div class="pr-a pr-fit" style="grid-column: a 2 / a 3">a 2</div><div class="pr-b pr-fit" style="grid-column: a 3 / a -1">a 3</div></div></div>
+    <figcaption>The name <code>a</code> on four lines: <code>a 2 / a 3</code> is the second column, from 40px;
+    <code>a 3 / a -1</code> the third, from 80px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Not span, not auto</h2>
+  <p><q>A line name cannot be span or auto, i.e. the &lt;custom-ident&gt; in the &lt;line-names&gt; production
+  excludes the keywords span and auto.</q> Each declaration below uses one, and is dropped: the grid has no explicit
+  columns, and its items stack.</p>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: [span] 40px 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>[span] 40px 40px</code>: dropped; A over B, each the stage's width.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px [auto] 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>40px [auto] 40px</code>: dropped too; A over B.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><div class=g style="grid-template-columns: 40px [spans] 40px"><div class="pr-a pr-fit">A</div><div class="pr-b pr-fit">B</div></div></div>
+    <figcaption><code>[spans]</code> is a name: two 40px columns, A then B.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

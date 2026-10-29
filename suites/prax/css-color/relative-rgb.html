@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Relative rgb()</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pr-stage { padding: 10px 0; }
+  .chk { background: repeating-conic-gradient(#ffffff 0 25%, #b5bcc7 0 50%) 0 0 / 20px 20px; }
+  .sw { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Color 5 · 4.3 Relative sRGB Colors</div>
+  <h1>Relative rgb()</h1>
+  <p class=pr-lede><q>r, g, and b are all &lt;number&gt;s that correspond to the origin color's red, green, and blue components
+  after conversion, if required to sRGB. 255.0 is equivalent to 100%.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-color-5/#relative-RGB">CSS Color 5
+  §4.3</a></span> Each pair is the relative color, then the color it should be, written out.</p>
+</header>
+
+<section>
+  <h2>Replacing components</h2>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(from indianred 255 g b)"></div><div class=sw style="background: rgb(255 92 92)"></div></div>
+    <figcaption><q>This takes the sRGB value of indianred (205 92 92) and replaces the red component with 255 to give rgb(255 92 92)</q>: one salmon.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-row chk"><div class=sw style="background: rgb(from darkblue 16 32 b / 0.5)"></div><div class=sw style="background: rgb(16 32 139 / 0.5)"></div></div>
+    <figcaption><code>rgb(from darkblue 16 32 b / 0.5)</code>: <q>rgb(16 32 139 / 0.5)</q>, a half-transparent navy.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>An origin in another space</h2>
+  <p>The origin is converted to sRGB first.</p>
+  <figure>
+    <div class="pr-stage pr-row"><div class=sw style="background: rgb(from oklch(0.6 0.1 30) r g b)"></div><div class=sw style="background: oklch(0.6 0.1 30)"></div><div class=sw style="background: rgb(from oklch(0.6 0.1 30) b g r)"></div></div>
+    <figcaption><code>rgb(from oklch(0.6 0.1 30) r g b)</code> beside its origin: one dusty red. <code>b g r</code>, swapped: a dusty blue.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The clear property: when there is clearance</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .f { float: left; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 9.5.2 Controlling flow next to floats: the 'clear' property</div>
+  <h1>The clear property: when there is clearance</h1>
+  <p class=pr-lede>Clearance is computed from the hypothetical position of the box's top border edge, <q>where the
+  actual top border edge would have been if the element's 'clear' property had been 'none'.</q> Every named box is
+  20px tall unless it says otherwise; the guides are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Level with the float's bottom</h2>
+  <p><q>If this hypothetical position of the element's top border edge is not past the relevant floats, then clearance
+  is introduced, and margins collapse according to the rules in 8.3.1.</q> In each figure the dashed parent holds A
+  with <code>margin-bottom: 30px</code>, a green float, and an empty box with <code>clear: both; margin-top:
+  40px</code>; N follows the parent. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#flow-control">CSS 2
+  §9.5.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-parent><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class="pr-c pr-fit f" style="height: 10px"></div><div style="clear: both; margin-top: 40px"></div></div><div class=pr-b>N</div></div>
+    <figcaption>A 10px float, from 50 to 60: the empty box would be at 60, level with its bottom, which is not past
+    it. So it has clearance, the margins stop at it, and the parent ends there: 60px tall, N at 60. <span
+    class=pr-flag>Firefox</span> gives it none: the parent is 20px tall. <span class=pr-flag>Safari</span> puts N at 40, over the float.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><div class=pr-parent><div class=pr-a style="margin-bottom: 30px">A: mb 30</div><div class="pr-c pr-fit f" style="height: 9px"></div><div style="clear: both; margin-top: 40px"></div></div><div class=pr-b>N</div></div>
+    <figcaption>A 9px float: the box would be 1px past its bottom, so it has no clearance. The margins collapse
+    through it and the parent's end: the parent is 20px tall, and N at 60. <span class=pr-flag>Chrome</span> gives it
+    clearance: the parent is 60px tall.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

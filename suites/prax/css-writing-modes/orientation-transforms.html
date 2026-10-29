@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Rotate or translate: scripts in vertical text</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 18px/30px "PR Noto Sans JP"; writing-mode: vertical-rl; width: auto; height: 110px; padding: 0 6px; }
+  .lat { font-family: "PR Arimo"; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 5 Introduction to Vertical Text Layout</div>
+  <h1>Rotate or translate: scripts in vertical text</h1>
+  <p class=pr-lede><q>To lay out vertical text, the UA needs to transform the text from its horizontal orientation.
+  This transformation is the bi-orientational transform, and there are two types</q>: <q>Rotate the glyph from
+  horizontal to vertical</q> and <q>Translate the glyph from horizontal to vertical</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#intro-text-layout">CSS Writing Modes 4 §5</a></span></p>
+</header>
+
+<section>
+  <h2>Vertical scripts carry their own transform</h2>
+  <p><q>most CJK (Chinese/Japanese/Korean) characters translate, that is, they are always upright. Characters from
+  other scripts, such as Mongolian, rotate.</q></p>
+  <figure class=s>
+    <div class=pr-stage>漢字ひらがなカタカナ</div>
+    <figcaption>Han, Hiragana, Katakana: translated, upright.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class=pr-stage style="writing-mode: vertical-lr; font-family: 'PR Noto Sans Mongolian'">ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ</div>
+    <figcaption>Mongolian, <code>vertical-lr</code>: rotated.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Horizontal-only scripts: a choice</h2>
+  <p><q>Scripts without a native vertical orientation can be either rotated (set sideways) or translated (set
+  upright): the transform used is a stylistic preference</q>; <q>The text-orientation property's mixed and upright
+  values are provided to specify rotation vs. translation of horizontal-only text.</q></p>
+  <figure class=s>
+    <div class="pr-stage lat">Latin<br>Ωμέγα</div>
+    <figcaption><code>mixed</code>: rotated a quarter clockwise.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage lat" style="text-orientation: upright">Latin<br>Ωμέγα</div>
+    <figcaption><code>upright</code>: translated, each letter upright.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

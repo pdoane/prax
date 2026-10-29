@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Size containment: measured empty, laid out in place</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 70px; }
+  figure figcaption { max-width: 152px; }
+  .k { contain: size; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .par { float: left; background: #f6d7b4; outline: 1px dashed #9c5f22; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.1 Size Containment, the two phases</div>
+  <h1>Size containment: measured empty, laid out in place</h1>
+  <p class=pr-lede><q>Laying out a size containment box and its content is conceptually done in two phases</q>:
+  sizing as if empty, then laying out in place. <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-size">CSS Containment 2 §3.1</a></span>
+  Each blue box has <code>contain: size</code>; text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>What sizing from content finds</h2>
+  <p><q>This affects explicit invocations of the min-content or max-content keywords, as well as any calculation that
+  depends on these measurement, such as</q> <q>fit-content sizing the containment box's parent.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=k style="width: max-content; height: 20px">blue</div></div>
+    <figcaption><code>width: max-content</code>, 20px tall: 0 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=k style="width: min-content; height: 20px; padding-left: 30px">blue</div></div>
+    <figcaption><code>width: min-content</code> with 30px left padding: 30 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=par><div class=k>some text</div></div></div>
+    <figcaption>An orange float holding the blue block: it finds no content, so both are 0 wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Then laid out in place</h2>
+  <p><q>The containment box's content (including any pseudo-elements) must then be laid out into the now fixed-size
+  containment box normally.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=k style="width: 100px; height: 40px">laid out in place</div></div>
+    <figcaption>A box 100 by 40: its text wraps at 100, "laid out" over "in place", filling it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class="k fl" style="min-width: 60px">laid out in place</div></div>
+    <figcaption>A float with <code>min-width: 60px</code>: 60 by 0, and the text wraps at 60, on three
+    lines.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

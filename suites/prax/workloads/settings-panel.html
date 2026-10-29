@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<!-- A settings panel of grouped fields, toggles built from checkboxes, and descriptions. Leans on: flex rows with a fixed control column, author-styled form controls, checked-state sibling selectors driving the toggle knobs, radio groups, and a footer action bar. -->
+<title>Settings panel</title>
+<link rel="stylesheet" href="support/workloads.css" />
+<style>
+.app { background:#fff; border:1px solid #d3d8de; border-radius:10px; color:#22282f; font-size:12px }
+.hdr { padding:12px 16px; border-bottom:1px solid #e6e9ed }
+.hdr h2 { font-size:16px; margin:0 }
+.hdr p { color:#6d7783; font-size:11px; margin-top:2px }
+.tabs { display:flex; gap:14px; padding:0 16px; border-bottom:1px solid #e6e9ed; font-size:11px }
+.tabs span { padding:7px 0; color:#6d7783; border-bottom:2px solid transparent }
+.tabs span.on { color:#1c5b96; border-bottom-color:#3d82c4; font-weight:bold }
+.grp { padding:12px 16px; border-bottom:1px solid #eef1f4 }
+.grp > h3 { font-size:9px; text-transform:uppercase; letter-spacing:.09em; color:#8a93a0; margin-bottom:8px }
+.field { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px }
+.field:last-child { margin-bottom:0 }
+.field .txt { flex:1 }
+.field label { display:block; font-weight:bold; font-size:12px }
+.field .hint { color:#6d7783; font-size:11px; margin-top:1px }
+.ctl { flex:none; width:190px }
+input[type=text], input[type=email], select { width:100%; font:inherit; font-size:11px; color:#22282f; border:1px solid #ccd3da; border-radius:6px; padding:4px 7px; background:#fff }
+.tog { position:relative; display:inline-block; width:34px; height:19px; margin-top:2px }
+.tog input { position:absolute; opacity:0; width:0; height:0 }
+.tog .tr { position:absolute; top:0; left:0; right:0; bottom:0; background:#ccd3da; border-radius:99px }
+.tog .kn { position:absolute; top:2px; left:2px; width:15px; height:15px; background:#fff; border-radius:50%; border:1px solid #b9c0ca }
+.tog input:checked ~ .tr { background:#3d82c4 }
+.tog input:checked ~ .kn { left:17px }
+.radios { display:flex; gap:14px; font-size:11px }
+.radios label { font-weight:normal; display:flex; align-items:center; gap:5px }
+.foot { display:flex; justify-content:flex-end; gap:8px; padding:10px 16px; background:#f8fafb; border-top:1px solid #e6e9ed; border-radius:0 0 10px 10px }
+.btn { font-size:11px; border:1px solid #ccd3da; border-radius:6px; padding:5px 12px; background:#fff; color:#3f4954 }
+.btn.pri { background:#3d82c4; border-color:#2f6ba6; color:#fff; font-weight:bold }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hdr">
+    <h2>Workspace settings</h2>
+    <p>Changes apply to everyone in the Northwind workspace.</p>
+  </div>
+
+  <div class="tabs"><span class="on">General</span><span>Members</span><span>Notifications</span><span>Billing</span></div>
+
+  <div class="grp">
+    <h3>Identity</h3>
+    <div class="field">
+      <div class="txt"><label for="wn">Workspace name</label>
+        <div class="hint">Shown in the sidebar and on every shared link.</div></div>
+      <div class="ctl"><input type="text" id="wn" value="Northwind Supply" /></div>
+    </div>
+    <div class="field">
+      <div class="txt"><label for="tz">Time zone</label>
+        <div class="hint">Reports and exports are written in this zone.</div></div>
+      <div class="ctl"><select id="tz">
+        <option>Europe/Berlin (UTC+1)</option>
+        <option>America/New_York</option>
+      </select></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h3>Notifications</h3>
+    <div class="field">
+      <div class="txt"><label>Daily digest</label>
+        <div class="hint">One email at 08:00 with the previous day's orders.</div></div>
+      <div class="ctl"><span class="tog"><input type="checkbox" checked="checked" /><span class="tr"></span><span class="kn"></span></span></div>
+    </div>
+    <div class="field">
+      <div class="txt"><label>Failed payment alerts</label>
+        <div class="hint">Sent to the billing contact within a minute.</div></div>
+      <div class="ctl"><span class="tog"><input type="checkbox" checked="checked" /><span class="tr"></span><span class="kn"></span></span></div>
+    </div>
+    <div class="field">
+      <div class="txt"><label>Weekly product tips</label>
+        <div class="hint">Occasional notes about the features we ship.</div></div>
+      <div class="ctl"><span class="tog"><input type="checkbox" /><span class="tr"></span><span class="kn"></span></span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h3>Access</h3>
+    <div class="field">
+      <div class="txt"><label>Who can invite members</label>
+        <div class="hint">Guests can never invite, whichever option is set.</div></div>
+      <div class="ctl"><div class="radios">
+        <label><input type="radio" name="inv" checked="checked" /> Admins</label>
+        <label><input type="radio" name="inv" /> Everyone</label>
+      </div></div>
+    </div>
+    <div class="field">
+      <div class="txt"><label for="dom">Allowed email domain</label>
+        <div class="hint">Leave this empty to accept any address.</div></div>
+      <div class="ctl"><input type="email" id="dom" value="northwind.example" /></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="btn">Cancel</span>
+    <span class="btn pri">Save changes</span>
+  </div>
+</div>
+</body>
+</html>

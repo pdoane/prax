@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Flow-relative insets: the box's own writing mode</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .abs { position: absolute; width: 40px; height: 20px; }
+  .pr-stage.pr-cb { width: 116px; height: 60px; }
+  figure { margin-right: 12px; }
+  figcaption { max-width: 116px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.1 Box Insets: the top, right, bottom, left, inset-block-start, inset-inline-start, inset-block-end, and inset-inline-end properties</div>
+  <h1>Flow-relative insets: the box's own writing mode</h1>
+  <p class=pr-lede>The inset properties apply <q>on the corresponding side of the box (with respect to the box’s own
+  writing mode</q>. <q>The physical and flow-relative properties interact as defined in CSS-LOGICAL-1.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#insets">CSS Positioned Layout 3 §3.1</a></span>
+  Each stage is relative, and the containing block of the orange box, 40 by 20, which has <code>inset-block-start:
+  10px; inset-inline-start: 20px</code>.</p>
+</header>
+
+<section>
+  <h2>Mapped by the box, not by its containing block</h2>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b pr-fit abs" style="inset-block-start: 10px; inset-inline-start: 20px"></div></div>
+    <figcaption>Left to right, top to bottom: <code>top: 10px; left: 20px</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b pr-fit abs" style="direction: rtl; inset-block-start: 10px; inset-inline-start: 20px"></div></div>
+    <figcaption>The box <code>rtl</code>, in an <code>ltr</code> stage: its inline start is its right, so 20px from
+    the stage's right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="direction: rtl"><div class="pr-b pr-fit abs" style="direction: ltr; inset-block-start: 10px; inset-inline-start: 20px"></div></div>
+    <figcaption>The box <code>ltr</code>, in an <code>rtl</code> stage: 20px from the stage's left edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b pr-fit abs" style="writing-mode: vertical-rl; inset-block-start: 10px; inset-inline-start: 20px"></div></div>
+    <figcaption>The box <code>vertical-rl</code>: its block start is its right, its inline start its top, so 10px
+    from the stage's right and 20px from its top.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>With physical insets, the later declaration wins</h2>
+  <p>Both set the same side, and <q>the computed value of both properties in the pair is derived from the specified
+  value of the property declared with higher priority in the CSS cascade.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-logical-1/#box">CSS Logical Properties and Values 1 §4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b pr-fit abs" style="top: 10px; left: 100px; inset-inline-start: 20px"></div></div>
+    <figcaption><code>left: 100px; inset-inline-start: 20px</code>: 20px from the left.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb"><div class="pr-b pr-fit abs" style="top: 10px; inset-inline-start: 20px; left: 100px"></div></div>
+    <figcaption><code>inset-inline-start: 20px; left: 100px</code>: 100px from the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>baseline-shift: lengths, sub and super</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 30px/60px "PR Arimo"; white-space: nowrap; padding: 0 6px; box-sizing: border-box; }
+  .pr-stage .pr-baseline { margin-left: -6px; }
+  .sq { display: inline-block; width: 20px; height: 20px; background: #4f81bd; }
+  .s { font-size: 15px; }
+  .pr-stage { width: 160px; }
+  figcaption { max-width: 160px; }
+  .pr-baseline { width: 160px; margin-right: -160px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 4.2.3 Post-Alignment Shift: the baseline-shift longhand</div>
+  <h1>baseline-shift: lengths, sub and super</h1>
+  <p class=pr-lede><q>The baseline-relative shift values &lt;length-percentage&gt;, sub, super shift the box relative to
+  its baseline-aligned position</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#baseline-shift-property">CSS Inline Layout 3 §4.2.3</a></span>
+  Each stage is 30px text on 60px lines; the red line is the line's baseline, and each blue square sits on it before
+  its shift.</p>
+</header>
+
+<section>
+  <h2>Lengths and percentages</h2>
+  <p><q>Raise (positive value) or lower (negative value) by the specified length.</q> A percentage is <q>the specified
+  percentage of the line-height</q>, the box's own.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: 20px"></span> <span class=sq style="vertical-align: -10px"></span></div>
+    <figcaption><code>vertical-align: 20px</code>: the left square 20px above the red line; <code>-10px</code>: the
+    right one 10px below it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class=pr-hl style="vertical-align: 50%; line-height: 40px">50%</span></div>
+    <figcaption>A span on 40px lines at <code>50%</code>: raised 20px, half its own line height, not the
+    block's 60px.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class=sq style="baseline-shift: 20px"></span></div>
+    <figcaption>The longhand, <code>baseline-shift: 20px</code>: raised 20px. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> Ignore it on a CSS box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>sub and super</h2>
+  <p><code>sub</code>: <q>Lower by the offset appropriate for subscripts of the parent’s box. The UA may use the
+  parent’s font metrics to find this offset; otherwise it defaults to dropping by one fifth of the parent’s used
+  font-size.</q> <code>super</code>: <q>otherwise it defaults to raising by one third of the parent’s used
+  font-size.</q> Here 6px and 10px, or the font's.</p>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class=sq style="vertical-align: sub"></span> <span class=sq style="vertical-align: super"></span></div>
+    <figcaption><code>sub</code>: the left square lowered about 6px; <code>super</code>: the right one raised about
+    10px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><span class=pr-baseline></span>Xx <span class=s>small <span class=sq style="vertical-align: super"></span></span></div>
+    <figcaption>In a 15px span: <code>super</code> of the span, its parent, so raised about 5px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

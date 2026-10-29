@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-break in Korean and Ethiopic</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ko { width: 160px; font: 20px/30px "PR Noto Sans KR"; }
+  .et { width: 160px; font: 20px/32px "PR Noto Sans Ethiopic"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1 Breaking Rules for Letters: the word-break property</div>
+  <h1>word-break in Korean and Ethiopic</h1>
+  <p class=pr-lede><code>normal</code>: <q>Korean, which commonly exhibits two different behaviors, allows breaks
+  between any two consecutive Hangul/Hanja. For Ethiopic, which also exhibits two different behaviors, such breaks
+  within words are not allowed.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-break-property">CSS Text 4 §6.1</a></span>
+  Each stage is 160px wide; one word in each is highlighted.</p>
+</header>
+
+<section>
+  <h2>Korean</h2>
+  <p>The specification's sentence, 각 줄의 마지막에 한글이 올 때 줄 나눔 <b>기준을</b>.</p>
+  <figure>
+    <div class="pr-stage ko" lang=ko>각 줄의 마지막에 한글이 올 때 줄 나눔 <span class=t>기준을</span></div>
+    <figcaption><code>normal</code>: lines break between any two syllables, and fill to the edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage ko" lang=ko style="word-break: keep-all">각 줄의 마지막에 한글이 올 때 줄 나눔 <span class=t>기준을</span></div>
+    <figcaption><code>keep-all</code>: only at spaces, as in English: each word whole, "기준을" with
+    it.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Ethiopic</h2>
+  <p>Ethiopic separates words with its wordspace "፡", U+1361. The specification's sentence.</p>
+  <figure>
+    <div class="pr-stage et" lang=gez>ተወልዱ፡ኵሉ፡ሰብእ፡ግዑዛን፡ወዕሩያን፡<span class=t>በማዕረግ</span>፡ወብሕግ።</div>
+    <figcaption><code>normal</code>: breaks only after a wordspace; "በማዕረግ" is whole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage et" lang=gez style="word-break: break-all">ተወልዱ፡ኵሉ፡ሰብእ፡ግዑዛን፡ወዕሩያን፡<span class=t>በማዕረግ</span>፡ወብሕግ።</div>
+    <figcaption><code>break-all</code>: <q>This option enables the other common behavior for Ethiopic</q>: lines
+    break between letters too, and fill to the edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

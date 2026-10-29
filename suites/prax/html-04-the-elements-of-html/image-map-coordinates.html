@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Image map coordinates</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 0 0; font-size: 0; line-height: 0; }
+  .act { padding: 10px 10px 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.14.2 Processing model</div>
+  <h1>Image map coordinates</h1>
+  <p class=pr-lede>Each area's coordinates are in CSS pixels from the top left of the image. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#image-map-processing-model">HTML §4.8.14.2</a></span> Each image is 200 by 100 unless a figure says otherwise: a blue rectangle from 10, 10 to 60, 90, an orange circle at 100, 50 of radius 30, and a green triangle from 150 to 190 across. Each log lists the target of the clicks in its stage.</p>
+</header>
+
+<section>
+  <h2>Coordinates on the image as drawn</h2>
+  <p><q>For historical reasons, the coordinates must be interpreted relative to the displayed image after any
+  stretching caused by the CSS 'width' and 'height' properties</q>. <q>Image maps are live; if the DOM is mutated, then
+  the user agent must act as if it had rerun the algorithms for image maps.</q></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=half src="support/map-shapes.svg" usemap="#half-map" width="100" height="50" alt="Shapes"><map name=half-map>
+        <area id=left-half shape=rect coords="0,0,50,50" href="#left-link" alt="Left half">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The image at 100 by 50, an area from 0, 0 to 50, 50: the left half of the drawn image,
+    <code>target=left-half</code>, the circle's left part included.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=moving src="support/map-shapes.svg" usemap="#moving-map" alt="Shapes"><map name=moving-map>
+        <area id=moved shape=rect coords="10,10,60,90" href="#moved-link" alt="Moving area">
+      </map></div>
+      <div class=act><button class=pr-target id=move>Move the area to the triangle</button></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>The area is on the blue rectangle. Press the button, which sets its coords to the triangle's
+    box: the triangle's box is <code>target=moved</code>, the rectangle <code>target=moving</code>.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("move").addEventListener("click", () => {
+      document.getElementById("moved").coords = "150,10,190,90";
+  });
+</script>
+</body>
+</html>

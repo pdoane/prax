@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The numeric system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style trinary { system: numeric; symbols: '0' '1' '2'; }
+  @counter-style hex { system: numeric; symbols: '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' 'A' 'B' 'C' 'D' 'E' 'F'; }
+  .pr-stage { font-family: "PR Noto Sans"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.5 Positional Numerals: the numeric system</div>
+  <h1>The numeric system</h1>
+  <p class=pr-lede><q>The numeric counter system interprets the list of counter symbols as digits to a "place-value"
+  numbering system, similar to the default 'decimal' counter style. The first counter symbol in the list is interpreted
+  as the digit 0, the second as the digit 1, and so on.</q> <q>This system is defined over all counter values.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#numeric-system">CSS Counter Styles 3 §3.1.5</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>Base N</h2>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: trinary"><li>One<li>Two<li>Three<li>Four<li>Five<li>Six</ol></div>
+    <figcaption>The example's <code>trinary</code>: 1., 2., 10., 11., 12., 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: hex"><li value=9>9<li>10<li value=255>255<li>256</ol></div>
+    <figcaption>Sixteen symbols: 9., A., FF., 100.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero, and negative values</h2>
+  <p><q>If value is 0, append symbol(0) to S and return S.</q> A numeric style uses a negative sign, the initial
+  "-".</p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: trinary" start=-4><li>-4<li>-3<li>-2<li>-1<li>0</ol></div>
+    <figcaption>-11., -10., -2., -1., 0.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,369 @@
+/* The fonts that pages show font features with, from the checkout's third_party/fonts (./dev.sh fonts). Each family is
+   named "PR ..." so that no installed font of the same name stands in for it, and a page that names one draws in the
+   same face in every browser. A face downloads only when text uses it, so a page pays only for the families it sets
+   text in. Each comment says what a page can show with the family. */
+
+/* A book serif: variable weight (200-900) and optical size (7-72), and small capitals, old-style and lining figures,
+   tabular and proportional figures, fractions, ordinals, superiors and inferiors, a slashed zero, ligatures and
+   discretionary ligatures, kerning, and two stylistic sets. */
+@font-face {
+    font-family: "PR Literata";
+    src: url(../../../third_party/fonts/Literata.ttf) format("truetype");
+    font-weight: 200 900;
+}
+
+/* A serif of three static faces: regular, bold and italic, and no bold italic. */
+@font-face {
+    font-family: "PR Tinos";
+    src: url(../../../third_party/fonts/Tinos.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Tinos";
+    src: url(../../../third_party/fonts/Tinos-Bold.ttf) format("truetype");
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: "PR Tinos";
+    src: url(../../../third_party/fonts/Tinos-Italic.ttf) format("truetype");
+    font-style: italic;
+}
+
+/* A sans-serif of variable weight (400-700), upright and italic. */
+@font-face {
+    font-family: "PR Arimo";
+    src: url(../../../third_party/fonts/Arimo.ttf) format("truetype");
+    font-weight: 400 700;
+}
+
+@font-face {
+    font-family: "PR Arimo";
+    src: url(../../../third_party/fonts/Arimo-Italic.ttf) format("truetype");
+    font-weight: 400 700;
+    font-style: italic;
+}
+
+/* A monospace of one regular face: every other weight and style is synthesized. */
+@font-face {
+    font-family: "PR Cousine";
+    src: url(../../../third_party/fonts/Cousine.ttf) format("truetype");
+}
+
+/* A sans-serif and a serif of variable weight (100-900) and width (62.5%-100%), with small capitals, figures and
+   fractions. The sans-serif has an italic. */
+@font-face {
+    font-family: "PR Noto Sans";
+    src: url(../../../third_party/fonts/NotoSans.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans";
+    src: url(../../../third_party/fonts/NotoSans-Italic.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "PR Noto Serif";
+    src: url(../../../third_party/fonts/NotoSerif.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+/* A sans-serif of many axes: weight 100-1000, width 25%-151%, slant to 10 degrees, optical size 8-144 and grade. */
+@font-face {
+    font-family: "PR Roboto Flex";
+    src: url(../../../third_party/fonts/RobotoFlex.ttf) format("truetype");
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+    font-style: oblique 0deg 10deg;
+}
+
+/* Japanese: variable weight (100-900), JIS78, JIS83 and JIS90 forms, full, half and proportional widths, ruby forms,
+   and vertical alternates. */
+@font-face {
+    font-family: "PR Noto Sans JP";
+    src: url(../../../third_party/fonts/NotoSansJP.ttf) format("truetype");
+    font-weight: 100 900;
+}
+
+/* Scripts, for writing modes and bidi. Arabic and Hebrew are right to left, Arabic cursive; Korean sets Hangul upright
+   in vertical text; Mongolian is written only vertically, its glyphs turned 90° clockwise; Ogham turns -90°. */
+@font-face {
+    font-family: "PR Noto Sans Arabic";
+    src: url(../../../third_party/fonts/NotoSansArabic.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+/* A monospace sans whose every advance is 0.6em, so at calc(50px / 3) each letter is 10px wide and a word lines up with
+   a stage's guides (`.pr-measure` in page.css): for figures whose sizes come from text. */
+@font-face {
+    font-family: "PR Noto Sans Mono";
+    src: url(../../../third_party/fonts/NotoSansMono.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+/* Scripts whose lines break and whose words are spaced otherwise than Latin's: Thai and Tai Tham, which have no
+   spaces between words (a dictionary finds Thai's breaks; Tai Tham has none in browsers); Balinese, broken by
+   orthographic syllable; Ethiopic and Phoenician, whose words are separated by their own marks. */
+@font-face {
+    font-family: "PR Noto Sans Thai";
+    src: url(../../../third_party/fonts/NotoSansThai.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Tai Tham";
+    src: url(../../../third_party/fonts/NotoSansTaiTham.ttf) format("truetype");
+    font-weight: 400 700;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Balinese";
+    src: url(../../../third_party/fonts/NotoSansBalinese.ttf) format("truetype");
+    font-weight: 400 700;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Ethiopic";
+    src: url(../../../third_party/fonts/NotoSansEthiopic.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Phoenician";
+    src: url(../../../third_party/fonts/NotoSansPhoenician.ttf) format("truetype");
+}
+
+/* Mathematical alphanumerics (U+1D400 to U+1D7FF), operators and arrows. */
+@font-face {
+    font-family: "PR Noto Sans Math";
+    src: url(../../../third_party/fonts/NotoSansMath.ttf) format("truetype");
+}
+
+/* The scripts of the predefined counter styles (Armenian, Georgian, the Indic scripts, Khmer, Lao, Myanmar,
+   Tibetan, simplified and traditional Chinese), and the symbols of disclosure and list markers. */
+@font-face {
+    font-family: "PR Noto Sans Armenian";
+    src: url(../../../third_party/fonts/NotoSansArmenian.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Georgian";
+    src: url(../../../third_party/fonts/NotoSansGeorgian.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Bengali";
+    src: url(../../../third_party/fonts/NotoSansBengali.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Khmer";
+    src: url(../../../third_party/fonts/NotoSansKhmer.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Gujarati";
+    src: url(../../../third_party/fonts/NotoSansGujarati.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Gurmukhi";
+    src: url(../../../third_party/fonts/NotoSansGurmukhi.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Kannada";
+    src: url(../../../third_party/fonts/NotoSansKannada.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Lao";
+    src: url(../../../third_party/fonts/NotoSansLao.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Malayalam";
+    src: url(../../../third_party/fonts/NotoSansMalayalam.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Myanmar";
+    src: url(../../../third_party/fonts/NotoSansMyanmar.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Oriya";
+    src: url(../../../third_party/fonts/NotoSansOriya.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Tamil";
+    src: url(../../../third_party/fonts/NotoSansTamil.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Telugu";
+    src: url(../../../third_party/fonts/NotoSansTelugu.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Serif Tibetan";
+    src: url(../../../third_party/fonts/NotoSerifTibetan.ttf) format("truetype");
+    font-weight: 100 900;
+}
+
+@font-face {
+    font-family: "PR Noto Sans SC";
+    src: url(../../../third_party/fonts/NotoSansSC.ttf) format("truetype");
+    font-weight: 100 900;
+}
+
+@font-face {
+    font-family: "PR Noto Sans TC";
+    src: url(../../../third_party/fonts/NotoSansTC.ttf) format("truetype");
+    font-weight: 100 900;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Symbols 2";
+    src: url(../../../third_party/fonts/NotoSansSymbols2.ttf) format("truetype");
+}
+
+/* The color-fonts project's COLRv1 test glyphs: U+F0B00 to U+F0B07 paint with the foreground color (palette index
+   0xFFFF), which is the color property's value. */
+@font-face {
+    font-family: "PR Colr Test Glyphs";
+    src: url(../../../third_party/fonts/ColrTestGlyphs.ttf) format("truetype");
+}
+
+/* WPT's underline test fonts, Chromium's, from Roboto (Apache 2): only "A", "G", "a" and "g", ascent 1900 and descent
+   500 of 2048. Far's underline is 300 below the baseline and 100 thick; Thick's is 150 below and 200 thick: for
+   text-decoration-thickness and text-underline-position from the font. */
+@font-face {
+    font-family: "PR Underline Test Far";
+    src: url(../../../third_party/fonts/UnderlineTest-Far.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Underline Test Thick";
+    src: url(../../../third_party/fonts/UnderlineTest-Thick.ttf) format("truetype");
+}
+
+/* WPT's baseline diagnostic font: a BASE table with every baseline, each at its own height in a 1000-unit em: ideographic
+   over 750, hanging 650, ideographic face over 650, math 450, alphabetic 50, ideographic face under 50, ideographic
+   under -50; and cap height 550, x-height 250, ascent 800 and descent -200. "X" draws every baseline with its label;
+   "x", "B", "I", "F", "H" and "+" fill the band between a pair (x-height and alphabetic, cap height and alphabetic,
+   ideographic over and under, ideographic face over and under, hanging and alphabetic, math and alphabetic), and "χ",
+   "β", "i", "f", "h" and "±" draw it labeled. Set it large. The second family is the same with alphabetic at 0. */
+@font-face {
+    font-family: "PR Baseline Diagnostic";
+    src: url(../../../third_party/fonts/BaselineDiagnostic.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Baseline Diagnostic Zero";
+    src: url(../../../third_party/fonts/BaselineDiagnosticAlphabeticZero.ttf) format("truetype");
+}
+
+/* Devanagari, whose letters hang from a headline: it has no BASE table, so a browser synthesizes its hanging baseline. */
+@font-face {
+    font-family: "PR Noto Sans Devanagari";
+    src: url(../../../third_party/fonts/NotoSansDevanagari.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Hebrew";
+    src: url(../../../third_party/fonts/NotoSansHebrew.ttf) format("truetype");
+    font-weight: 100 900;
+    font-stretch: 62.5% 100%;
+}
+
+@font-face {
+    font-family: "PR Noto Sans KR";
+    src: url(../../../third_party/fonts/NotoSansKR.ttf) format("truetype");
+    font-weight: 100 900;
+}
+
+@font-face {
+    font-family: "PR Noto Sans Mongolian";
+    src: url(../../../third_party/fonts/NotoSansMongolian.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Noto Sans Ogham";
+    src: url(../../../third_party/fonts/NotoSansOgham.ttf) format("truetype");
+}
+
+/* A handwriting face for Latin-1, as a WOFF file. */
+@font-face {
+    font-family: "PR Architects Daughter";
+    src: url(../../../third_party/fonts/AD.woff) format("woff");
+}
+
+/* Color fonts: COLRv1 layers with palettes (Nabla has seven, Bungee Spice three, Kalnia Glaze two), and emoji as
+   COLRv1 vectors and CBDT bitmaps. Nabla and Bungee Spice carry SVG glyphs too. No source names a tech, so a user agent
+   without a color technology still sets text in the font, in its outlines or its other color glyphs. */
+@font-face {
+    font-family: "PR Nabla";
+    src: url(../../../third_party/fonts/Nabla.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Bungee Spice";
+    src: url(../../../third_party/fonts/BungeeSpice.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Kalnia Glaze";
+    src: url(../../../third_party/fonts/KalniaGlaze.ttf) format("truetype");
+    font-weight: 100 700;
+    font-stretch: 100% 125%;
+}
+
+@font-face {
+    font-family: "PR Twemoji";
+    src: url(../../../third_party/fonts/Twemoji.ttf) format("truetype");
+}
+
+@font-face {
+    font-family: "PR Noto Color Emoji";
+    src: url(../../../third_party/fonts/NotoColorEmoji.ttf) format("truetype");
+}

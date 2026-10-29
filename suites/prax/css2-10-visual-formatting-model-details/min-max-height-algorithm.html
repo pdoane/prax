@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Min-height and max-height: the algorithm</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.7 Minimum and maximum heights: 'min-height' and 'max-height'</div>
+  <h1>Min-height and max-height: the algorithm</h1>
+  <p class=pr-lede>As for widths, the height rules run again with 'max-height', then 'min-height', standing in for
+  'height'.</p>
+</header>
+
+<section>
+  <h2>max-height, then min-height</h2>
+  <p><q>If this tentative height is greater than 'max-height', the rules above are applied again, but this time using
+  the value of 'max-height' as the computed value for 'height'.</q> <q>If the resulting height is smaller than
+  'min-height', the rules above are applied again, but this time using the value of 'min-height' as the computed value
+  for 'height'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-heights">CSS 2 §10.7</a></span></p>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit" style="height: 70px; max-height: 40px">box</div></div>
+    <figcaption><code>height: 70px; max-height: 40px</code>: 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 60px"><div class="pr-a pr-fit" style="max-height: 30px; min-height: 60px">box</div></div>
+    <figcaption><code>max-height: 30px; min-height: 60px</code>: min-height wins, 60px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The computed height is unchanged</h2>
+  <p><q>These steps do not affect the real computed value of 'height'. Consequently, for example, they do not affect
+  margin collapsing, which depends on the computed value.</q> <q>However, for replaced elements with both 'width' and
+  'height' computed as 'auto', use the algorithm under Minimum and maximum widths above</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#min-max-heights">CSS 2
+  §10.7</a></span> <a href="https://drafts.csswg.org/css2/#collapsing-margins">§8.3.1</a> collapses the <q>bottom margin of a last in-flow child and bottom margin of its parent if the
+  parent has 'auto' computed height</q>.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage style="height: 100px"><div class=pr-parent style="min-height: 60px"><div class=pr-a style="margin-bottom: 20px">A: mb 20</div></div><div class=pr-b>B</div></div>
+    <figcaption>The parent has <code>min-height: 60px</code>: A's margin collapses through it, and B
+    is at 80. <span class=pr-flag>Chrome</span> puts B at 60.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="height: 100px"><img alt="" style="max-height: 20px" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption>An image 60 by 40 with <code>max-height: 20px</code>: the width follows, 30 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Animation event attributes</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 15.8.1 Animation event attributes</div>
+  <h1>Animation event attributes</h1>
+  <p class=pr-lede>‘onbegin’, ‘onend’ and ‘onrepeat’ <q>Specifies some script to execute when "bubbling" or "at target"
+  phase listeners for the corresponding event are fired on the element the attribute is specified on.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/interact.html#AnimationEvents">SVG 2 §15.8.1</a></span></p>
+</header>
+
+<section>
+  <h2>begin, repeat, end</h2>
+  <p>A square slides right by an <code>animate</code> that begins on a click on it, repeats twice, a second each, and
+  ends. Its attributes write each event into the log: <code>onbegin</code>, <code>onrepeat</code>,
+  <code>onend</code>. The square is orange while it runs, by a <code>set</code> that begins and ends with it.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <svg width="300" height="50"><rect id=mover x="20" y="5" width="40" height="40" fill="#4f81bd"><animate id=slide attributeName="x" from="20" to="240" dur="1s" repeatCount="2" begin="click" onbegin="note('begin')" onrepeat="note('repeat')" onend="note('end')" /><set attributeName="fill" to="#d68a3c" begin="slide.begin" end="slide.end" /></rect></svg>
+      <ol class=pr-log id=log data-lines=4></ol>
+    </div>
+    <figcaption>Click the square: <code>begin</code>; it turns orange and slides right over a second;
+    <code>repeat</code>; again; <code>end</code>, and it is blue at x 20.</figcaption>
+  </figure>
+</section>
+
+<script>
+  function note(text) {
+    const log = document.getElementById("log");
+    const item = document.createElement("li");
+    item.textContent = text;
+    log.append(item);
+    while (log.children.length > 4)
+      log.firstElementChild.remove();
+  }
+</script>
+</body>
+</html>

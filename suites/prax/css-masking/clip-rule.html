@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>clip-rule: nonzero and evenodd</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg.art { display: block; }
+  .subj { width: 100px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<svg class=pr-defs aria-hidden="true">
+  <!-- Two squares in one path, both drawn clockwise: the outer 60 by 60 at 10, 10, the inner 20 by 20 at 30, 30. -->
+  <clipPath id="plain"><path d="M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z" /></clipPath>
+  <clipPath id="evenodd"><path clip-rule="evenodd" d="M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z" /></clipPath>
+  <g clip-rule="evenodd"><clipPath id="inherited"><path d="M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z" /></clipPath></g>
+</svg>
+<header>
+  <div class=pr-eyebrow>CSS Masking 1 · 6.2 Winding Rules: the clip-rule property</div>
+  <h1>clip-rule: nonzero and evenodd</h1>
+  <p class=pr-lede><q>The clip-rule property indicates the algorithm which is to be used to determine whether a given
+  point is inside a shape for a clipping region created with a graphics element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#the-clip-rule">CSS Masking 1 §6.2</a></span>
+  Each SVG is 160 by 80, filled blue and clipped by one path of two squares drawn the same way round: 60 by 60 at
+  10, 10, and 20 by 20 at 30, 30 inside it.</p>
+</header>
+
+<section>
+  <h2>On the path in the clipPath</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect width="160" height="80" fill="#4f81bd" clip-path="url(#plain)" /></svg></div>
+    <figcaption>The initial <code>nonzero</code>: both squares wind the same way, so the inner one is inside: a solid
+    square 60 by 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect width="160" height="80" fill="#4f81bd" clip-path="url(#evenodd)" /></svg></div>
+    <figcaption><code>clip-rule="evenodd"</code> on the path: the inner square, crossed twice, is outside: a hole 20
+    by 20 at 30, 30.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited from the clipPath's ancestors, not the element's</h2>
+  <p><q>CSS properties inherit into the clipPath element from its ancestors; properties do not inherit from the
+  element referencing the clipPath element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-masking-1/#ClipPathElement">§6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect width="160" height="80" fill="#4f81bd" clip-path="url(#inherited)" /></svg></div>
+    <figcaption><code>evenodd</code> on a <code>g</code> around the <code>clipPath</code>: the hole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg class="art" width="160" height="80"><rect width="160" height="80" fill="#4f81bd" clip-rule="evenodd" clip-path="url(#plain)" /></svg></div>
+    <figcaption><code>evenodd</code> on the clipped rectangle: not the path's, so no hole.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=subj style="clip-rule: evenodd; clip-path: path('M 10 10 h 60 v 60 h -60 Z M 30 30 h 20 v 20 h -20 Z')"></div></div>
+    <figcaption>On a CSS box with <code>clip-path: path(…)</code>: <q>The clip-rule property does not apply to
+    &lt;basic-shape&gt;s</q>, so no hole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-align property: what justification stretches</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .w { display: inline-block; width: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.2 Alignment: the 'text-align' property</div>
+  <h1>The text-align property: what justification stretches</h1>
+  <p class=pr-lede>Every stage here has <code>text-align: justify</code>. Each blue box is 30px wide, and the guides
+  are 10px apart.</p>
+</header>
+
+<section>
+  <h2>Expanding the inline boxes</h2>
+  <p><q>In the case of 'justify', this property specifies that the inline-level boxes are to be made flush with both
+  sides of the line box if possible, by expanding or contracting the contents of inline boxes, else aligned as for the
+  initial value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#alignment-prop">CSS 2 §16.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify"><span class="pr-a w">a</span><span class=pr-hl style="padding: 0 5px"> </span><span class="pr-a w">b</span> <span class="pr-a w" style="width: 150px">c</span></div>
+    <figcaption>The space between a and b is in an orange span with 5px of padding: the span widens with the space,
+    and b is at the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-align: justify">one&nbsp;two three <span class="pr-a w" style="width: 150px">wide</span></div>
+    <figcaption>"one" and "two" are joined by a no-break space, which stretches as the other space does: the gaps are
+    equal.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#justify-limits">CSS Text 3 §6.4.3</a></div>
+  <h2>A line that cannot be stretched</h2>
+  <p><q>If the inline contents of a line cannot be stretched to the full width of the line box, then they must be
+  aligned as specified by the 'text-align-last' property. (If 'text-align-last' is 'justify', then they must be
+  aligned as for 'center'.)</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#justify-limits">CSS Text 3 §6.4.3</a></span> Each stage is 100px wide.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: justify; text-align-last: center"><span class="pr-a w" style="width: 80px">80px</span> <span class="pr-a w">b</span></div>
+    <figcaption><code>text-align-last: center</code>: the first line holds one 80px box, nothing to stretch, so it
+    is centered. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    At the left.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: justify; text-align-last: justify"><span class="pr-a w">a</span></div>
+    <figcaption><code>text-align-last: justify</code>, a last line of one box: centered. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> At the left.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

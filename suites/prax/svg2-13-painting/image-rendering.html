@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>image-rendering</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.10.3 The ‘image-rendering’ property</div>
+  <h1>image-rendering</h1>
+  <p class=pr-lede><q>The 'image-rendering' property provides a hint to the implementation about how to make speed vs.
+  quality tradeoffs as it performs image processing.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#ImageRendering">SVG 2 §13.10.3</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> of 4 by 4 pixels, blue and orange in a checkerboard,
+  drawn 40 by 40 at 60, 10: each pixel covers 10 by 10.</p>
+</header>
+
+<section>
+  <h2>Resampling</h2>
+  <p><b>auto</b>: <q>The user agent shall employ a resampling algorithm at least as good as nearest neighbor
+  resampling, but bilinear resampling is strongly preferred.</q> <b>optimizeQuality</b>: <q>The user agent shall
+  employ a resampling algorithm at least as good as bilinear resampling.</q> <b>optimizeSpeed</b>: <q>The user agent
+  should use a resampling algorithm which achieves the goal of fast rendering</q>, <q>at least as good as nearest
+  neighbor</q>.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image x="60" y="10" width="40" height="40" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR4nGPwb9x7rcsGQjLAWUCSAacMAJMCGUkn4yTxAAAAAElFTkSuQmCC" /></svg></div>
+    <figcaption><code>auto</code>, the initial value: blended, the colors fading into each other across each
+    pixel.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image x="60" y="10" width="40" height="40" image-rendering="optimizeQuality" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR4nGPwb9x7rcsGQjLAWUCSAacMAJMCGUkn4yTxAAAAAElFTkSuQmCC" /></svg></div>
+    <figcaption><code>optimizeQuality</code>: blended, never in hard-edged squares.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image x="60" y="10" width="40" height="40" image-rendering="optimizeSpeed" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGElEQVR4nGPwb9x7rcsGQjLAWUCSAacMAJMCGUkn4yTxAAAAAElFTkSuQmCC" /></svg></div>
+    <figcaption><code>optimizeSpeed</code>: either. Firefox draws sixteen hard-edged squares 10 by 10, by
+    nearest neighbor; Chrome and Safari blend.
+    CSS Images 3 makes it <q>the same behavior as crisp-edges</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-images-3/#the-image-rendering">CSS Images 3 §5.2</a></span>.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The viewport's scroll origin</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 2.3 Scrolling Overflow, the viewport</div>
+  <h1>The viewport's scroll origin</h1>
+  <p class=pr-lede><q>The root viewport, which scrolls the page canvas, uses the principal writing mode for determining
+  its scroll origin and initial scroll position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrolling">CSS Overflow 3 §2.3</a></span></p>
+</header>
+
+<section>
+  <h2>From the root's writing mode</h2>
+  <p>Each frame is a document whose body holds a bar 400px wide, blue at its left end and orange at its right.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px } div { width: 400px; height: 30px; background: linear-gradient(to right, #4f81bd, #d68a3c); }</style><div></div>"></iframe></div>
+    <figcaption>Horizontal, left to right: the viewport shows the bar's blue left end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>html { writing-mode: vertical-rl } body { margin: 10px } div { writing-mode: horizontal-tb; width: 400px; height: 30px; background: linear-gradient(to right, #4f81bd, #d68a3c); }</style><div></div>"></iframe></div>
+    <figcaption><code>html { writing-mode: vertical-rl }</code>: the origin is the top right, and the viewport shows the
+    bar's orange right end.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>From the body, through the root</h2>
+  <p>The principal writing mode is the body's where the root's is not set otherwise. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#principal-flow">CSS Writing Modes 4 §8</a></span></p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; direction: rtl } div { width: 400px; height: 30px; background: linear-gradient(to right, #4f81bd, #d68a3c); }</style><div></div>"></iframe></div>
+    <figcaption><code>body { direction: rtl }</code>: the origin is the top right, and the viewport shows the bar's
+    orange right end.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<style>body { margin: 10px; writing-mode: vertical-lr } div { writing-mode: horizontal-tb; width: 400px; height: 30px; background: linear-gradient(to right, #4f81bd, #d68a3c); }</style><div></div>"></iframe></div>
+    <figcaption><code>body { writing-mode: vertical-lr }</code>: the origin is the top left, and the viewport shows
+    the blue left end.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

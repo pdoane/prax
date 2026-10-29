@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vector-effect: combined</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.13.1 Computing the vector effects</div>
+  <h1>vector-effect: combined</h1>
+  <p class=pr-lede><q>These values can be enumerated. Thereby, the effect which has these characteristics
+  simultaneously can be specified.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#VectorEffects">SVG 2 §8.13</a></span>
+  Each stage is an SVG 160 by 60, the host. The arrow is 40 by 20 about its origin, pointing right; dashed, without the
+  effect.</p>
+</header>
+
+<section>
+  <h2>Two at once</h2>
+  <p>By the formulas of <a href="https://svgwg.org/svg2-draft/coords.html#VectorEffectsCalculation">§8.13.1</a>, for <code>non-scaling-size non-rotation</code> the host point is <code>CTM · (0, 0)</code> plus the user point
+  unchanged; for <code>fixed-position non-scaling-size</code>, <code>(x<sub>o</sub>, y<sub>o</sub>)</code> plus
+  <code>CTM / sqrt(|det(CTM)|)</code> of it.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(80 30) rotate(90) scale(1.5)"><path class=pr-ghost d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /><path fill="#4f81bd" vector-effect="non-scaling-size non-rotation" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /></g></svg></div>
+    <figcaption><code>non-scaling-size non-rotation</code> in <code>rotate(90) scale(1.5)</code> about 80, 30: 40
+    by 20, pointing right, from 60 to 100. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> 30 by 60, pointing down.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(60 0) scale(1.5)"><path fill="#4f81bd" vector-effect="fixed-position non-scaling-size" transform="translate(40 30)" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /></g><path class=pr-ghost transform="translate(40 30)" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /></svg></div>
+    <figcaption><code>fixed-position non-scaling-size</code>, <code>translate(40 30)</code>, in a <code>g</code>
+    moved and scaled: 40 by 20 about 40, 30, on the dashed one. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 60 by 30 about 120, 45.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>All three</h2>
+  <p>For <code>fixed-position non-scaling-size non-rotation</code>, the host point is <code>(x<sub>o</sub>,
+  y<sub>o</sub>)</code> plus the user point unchanged.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="translate(140 60) rotate(45) scale(3)"><path fill="#4f81bd" vector-effect="fixed-position non-scaling-size non-rotation" transform="translate(40 30)" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /></g><path class=pr-ghost transform="translate(40 30)" d="M -20 -5 H 5 V -10 L 20 0 L 5 10 V 5 H -20 Z" /></svg></div>
+    <figcaption>In <code>rotate(45) scale(3)</code> and moved: 40 by 20 about 40, 30, pointing right, on the
+    dashed outline. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Off the stage.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

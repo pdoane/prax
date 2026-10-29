@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Linking into SVG: the initial view</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.3 Linking into SVG content: URL fragments and SVG views</div>
+  <h1>Linking into SVG: the initial view</h1>
+  <p class=pr-lede><q>Because SVG content often represents a picture or drawing of something, a common need is to link
+  into a particular view of the document, where a view indicates the initial transformations so as to present a closeup
+  of a particular section of the document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#LinksIntoSVG">SVG 2 §16.3</a></span>
+  Each stage is an <code>img</code> 160 by 60 of <code>support/quadrants.svg</code>: blue, orange, green and purple
+  quadrants from the top left, each with a white dot in its middle; its own <code>viewBox</code> is the whole.</p>
+</header>
+
+<section>
+  <h2>No fragment, or a view</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg" alt=""></div>
+    <figcaption>No fragment: the whole, the <code>svg</code>'s own <code>viewBox</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#svgView(viewBox(0,0,80,60))" alt=""></div>
+    <figcaption><code>#svgView(viewBox(0,0,80,60))</code>: the left half, scaled 1, centered: blue over green from
+    x 40 to 120, the rest of the drawing beyond it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#right" alt=""></div>
+    <figcaption><code>#right</code>, a <code>view</code> of the right half: orange over purple from x 40 to
+    120, the left half's edge before it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

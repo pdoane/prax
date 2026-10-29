@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Table width algorithms: table-layout</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 0; background: #f4f5f7; }
+  td { height: 20px; padding: 0; border: 1px solid #2c5a8f; }
+  .blk { height: 18px; background: #4f81bd; }
+  .blk.o { background: #d68a3c; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 17.5.2 Table width algorithms: the 'table-layout' property</div>
+  <h1>Table width algorithms: table-layout</h1>
+  <p class=pr-lede><code>table-layout</code> takes <code>auto | fixed</code>. Initial <code>auto</code>, not inherited,
+  and it applies to <code>table</code> and <code>inline-table</code> elements. Cells have a 1px border and no
+  padding.</p>
+</header>
+
+<section>
+  <h2>fixed and auto</h2>
+  <p><q>The 'table-layout' property controls the algorithm used to lay out the table cells, rows, and columns.</q>
+  <code>fixed</code>: <q>Use the fixed table layout algorithm</q>. <code>auto</code>: <q>Use any automatic table layout
+  algorithm</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#width-layout">CSS 2 §17.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="width: 200px"><tr><td><div class=blk style="width: 140px"></div><td><div class="blk o" style="width: 20px"></div></table></div>
+    <figcaption><code>auto</code>, <code>width: 200px</code>: the content sizes the columns, the blue 140px
+    block's column wider than the orange 20px one's.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px; table-layout: fixed"><tr><td><div class=blk style="width: 140px"></div><td><div class="blk o" style="width: 20px"></div></table></div>
+    <figcaption><code>fixed</code>: the content does not matter; the two columns are 100px each, and the blue
+    block overflows into the second.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="width: 200px; table-layout: fixed"><tr><td><table style="width: 90px"><tr><td><div class=blk style="width: 50px"></div><td><div class="blk o" style="width: 10px"></div></table><td></table></div>
+    <figcaption>A 90px table in a fixed table's cell, with no <code>table-layout</code> of its own: not inherited,
+    so <code>auto</code>, and the blue block's column is wider than the orange one's, not 45px each.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Section 10.3, overridden</h2>
+  <p><q>If the margins of a table are set to '0' and the width to 'auto', the table will not automatically size to fill
+  its containing block.</q> <q>Therefore a table can be centered using left and right 'auto' margins, for
+  instance.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#width-layout">CSS 2 §17.5.2</a></span></p>
+  <figure>
+    <div class=pr-stage><table style="margin: 0"><tr><td><div class=blk style="width: 60px"></div><td><div class="blk o" style="width: 20px"></div></table></div>
+    <figcaption><code>width: auto</code>, <code>margin: 0</code>: 84px wide, the width of its content, not the
+    stage's 200px.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><table style="margin: 0 auto"><tr><td><div class=blk style="width: 60px"></div><td><div class="blk o" style="width: 20px"></div></table></div>
+    <figcaption><code>margin: 0 auto</code>: the 84px table is centered, 58px from each side.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

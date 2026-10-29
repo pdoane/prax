@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Whitespace key values</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events KeyboardEvent key Values · 3.3 Whitespace Keys</div>
+  <h1>Whitespace key values</h1>
+  <p class=pr-lede><q>"Enter"</q>: <q>The Enter or ↵ key, to activate current selection or accept current input. This key value is also used for the Return (Macintosh numpad) key.</q> <q>The space or spacebar key is encoded as " ".</q> <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-whitespace">UI Events KeyboardEvent key Values §3.3</a></span></p>
+</header>
+<section>
+  <h2>Enter, Tab and Space</h2>
+  <p>Enter and Tab are named; Space is a key string. <span class=pr-cite><a href="https://w3c.github.io/uievents-key/#keys-whitespace">§3.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><div class=pr-target id=field tabindex=0>click here, then press keys</div></div>
+      <ol class=pr-log data-log="keydown keyup" data-fields="key code location" data-on="#field" data-lines=4></ol>
+    </div>
+    <figcaption>Click the box and press Enter, Tab and Space: <code>key="Enter"</code>, <code>"Tab"</code>, <code>" "</code>. The numpad's Enter is <code>"Enter"</code> too, with <code>location=3</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Keeps the keys pressed in the box from moving the focus, scrolling or typing.
+  document.getElementById("field").addEventListener("keydown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>border-radius: quarter ellipses</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .box { width: 140px; height: 60px; margin: 10px; background: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.5 Corner Sizing: the border-*-*-radius properties</div>
+  <h1>border-radius: quarter ellipses</h1>
+  <p class=pr-lede><q>The two &lt;length-percentage&gt; values of the 'border-*-radius' properties define the radii of a
+  quarter ellipse that defines the shape of the corner of the outer border edge</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#border-radius">CSS Borders and Box Decorations 4 §3.5</a></span>
+  Each blue box is 140 by 60.</p>
+</header>
+
+<section>
+  <h2>One corner</h2>
+  <p><q>If the second value is omitted it is copied from the first. If either length is zero, the corner is square, not
+  rounded. Percentages for the horizontal radius refer to the width of the border box, whereas percentages for the
+  vertical radius refer to the height of the border box.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-top-left-radius: 60px 30px"></div></div>
+    <figcaption><code>border-top-left-radius: 60px 30px</code>: the curve ends 60px along the top and 30px down
+    the side.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-top-left-radius: 30px; border-bottom-right-radius: 40px 0"></div></div>
+    <figcaption>Top left <code>30px</code>: a quarter circle. Bottom right <code>40px 0</code>: square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-top-left-radius: 50%; border-top-right-radius: 50%; border-bottom-right-radius: 50%; border-bottom-left-radius: 50%"></div></div>
+    <figcaption><code>50%</code> at each corner: 70 by 30, an ellipse filling the box.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The shorthand</h2>
+  <p><q>If values are given before and after the slash, then the values before the slash set the horizontal radii and
+  the values after the slash set the vertical radii.</q> <q>The four values for each radii are given in the order
+  top-left, top-right, bottom-right, bottom-left.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 0 10px 20px 30px"></div></div>
+    <figcaption><code>0 10px 20px 30px</code>: square at the top left, then larger round the box.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 40px / 20px"></div></div>
+    <figcaption><code>40px / 20px</code>: each corner 40 across and 20 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=box style="border-radius: 40px 20px 60px / 10px 30px"></div></div>
+    <figcaption><code>40px 20px 60px / 10px 30px</code>: top left 40/10, top right 20/30, bottom right 60/10, bottom
+    left 20/30.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>text-shadow: spread and inset</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: bold 40px/70px "PR Arimo"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text Decoration 4 · 4 Text Shadows: the text-shadow property, spread and inset</div>
+  <h1>text-shadow: spread and inset</h1>
+  <p class=pr-lede>Level 4 adds a spread distance and inner shadows to <code>text-shadow</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-text-decor-4/#text-shadow-property">CSS Text Decoration 4 §4</a></span></p>
+</header>
+
+<section>
+  <h2>Spread</h2>
+  <p><q>Unlike 'box-shadow', the spread distance is strictly interpreted as outset distance from any point of the glyph
+  outline, and therefore, similar to the blur radius, creates rounded, rather than sharp, corners.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage t" style="text-shadow: 0 0 0 4px #d68a3c">Spread</div>
+    <figcaption><code>0 0 0 4px</code>: each letter outlined 4px wide in solid orange, its corners rounded.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Draw no shadow.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inner shadows</h2>
+  <p><q>Inner text shadows (specified with the inset keyword) shadow the canvas-- and any text stroke [FILL-STROKE-3]--
+  as if the text were cut and dropped below the surrounding canvas. They are therefore only drawn within the inner
+  edge of the stroke.</q> <q>Inner text shadows must be painted over the text and its decorations.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage t" style="color: #f6d7b4; text-shadow: inset 3px 3px #2c5a8f">Inset</div>
+    <figcaption><code>inset 3px 3px</code> blue on pale orange letters: a blue band inside each letter along its top
+    and left edges. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Draw the pale letters with no band.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

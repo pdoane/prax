@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Arcs and ellipses</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.12.5.1.6 Building paths</div>
+  <h1>Arcs and ellipses</h1>
+  <p class=pr-lede><q>A path has a list of zero or more subpaths. Each subpath consists of a list of one or more points,
+  connected by straight or curved line segments, and a flag indicating whether the subpath is closed or not.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/canvas.html#building-paths">HTML §4.12.5.1.6</a></span>
+  Every path is stroked blue, 3 wide; red marks the points the methods were given.</p>
+</header>
+<section>
+  <h2>Arcs and ellipses</h2>
+  <p>arc and ellipse add their arc, <q>going counterclockwise if counterclockwise is true, and clockwise otherwise</q>,
+  after <q>a straight line from the last point in the subpath to the start point of the arc</q>.</p>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=arcs></canvas></div>
+    <figcaption>Radius 30, from angle 0 to π: clockwise round (50, 50), the lower half; counterclockwise round (150,
+    50), the upper half.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=arcto></canvas></div>
+    <figcaption><code>arcTo</code> from (20, 20) through the corner (180, 20) toward (180, 90), radius 40: a line to
+    (140, 20), then a quarter circle down to (180, 60).</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><canvas width=200 height=100 data-draw=ellipse></canvas></div>
+    <figcaption>From (10, 90), a whole ellipse round (110, 50), radii 70 and 30, turned π/12: a straight line joins
+    (10, 90) to its start, on its long axis at the right.</figcaption>
+  </figure>
+</section>
+<script>
+  function mark(context, points) {
+    context.save();
+    context.fillStyle = "#c0392b";
+    for (const [x, y] of points)
+      context.fillRect(x - 2, y - 2, 4, 4);
+    context.restore();
+  }
+  const draw = {
+    lines(context) {
+      context.beginPath();
+      context.moveTo(10, 80); context.lineTo(50, 20); context.lineTo(90, 80); context.closePath();
+      context.moveTo(110, 80); context.lineTo(150, 20); context.lineTo(190, 80);
+      context.stroke();
+      mark(context, [[10, 80], [50, 20], [90, 80], [110, 80], [150, 20], [190, 80]]);
+    },
+    curves(context) {
+      context.beginPath();
+      context.moveTo(10, 80); context.quadraticCurveTo(50, 0, 90, 80);
+      context.moveTo(110, 80); context.bezierCurveTo(110, 10, 190, 10, 190, 80);
+      context.stroke();
+      mark(context, [[10, 80], [50, 0], [90, 80], [110, 80], [110, 10], [190, 10], [190, 80]]);
+    },
+    arcs(context) {
+      context.beginPath();
+      context.arc(50, 50, 30, 0, Math.PI);
+      context.stroke();
+      context.beginPath();
+      context.arc(150, 50, 30, 0, Math.PI, true);
+      context.stroke();
+      mark(context, [[50, 50], [150, 50]]);
+    },
+    arcto(context) {
+      context.beginPath();
+      context.moveTo(20, 20);
+      context.arcTo(180, 20, 180, 90, 40);
+      context.stroke();
+      mark(context, [[20, 20], [180, 20], [180, 90]]);
+    },
+    ellipse(context) {
+      context.beginPath();
+      context.moveTo(10, 90);
+      context.ellipse(110, 50, 70, 30, Math.PI / 12, 0, 2 * Math.PI);
+      context.stroke();
+      mark(context, [[10, 90], [110, 50]]);
+    },
+    rect(context) {
+      context.beginPath();
+      context.rect(20, 20, 60, 60);
+      context.lineTo(180, 80);
+      context.stroke();
+      mark(context, [[20, 20], [180, 80]]);
+    },
+  };
+  for (const canvas of document.querySelectorAll("canvas[data-draw]")) {
+    const context = canvas.getContext("2d");
+    context.strokeStyle = "#4f81bd";
+    context.lineWidth = 3;
+    draw[canvas.dataset.draw](context, canvas);
+  }
+</script>
+</body>
+</html>

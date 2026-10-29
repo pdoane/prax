@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>word-break: normal, break-all, keep-all</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .ja { font: 20px/30px "PR Noto Sans JP"; }
+  .t { background: #f9cc9d; }
+  figure { margin-right: 8px; }
+  .pr-stage { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1 Breaking Rules for Letters: the word-break property</div>
+  <h1>word-break: normal, break-all, keep-all</h1>
+  <p class=pr-lede><q>This property specifies soft wrap opportunities between and within “words”, i.e. where it is
+  “normal” and permissible to break lines of text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#word-break-property">CSS Text 4 §6.1</a></span>
+  Latin is 10px a letter; Japanese, in PR Noto Sans JP, 20px a character. Each stage is 100px wide.</p>
+</header>
+
+<section>
+  <h2>break-all</h2>
+  <p><q>Breaking is allowed within “words”: specifically, in addition to soft wrap opportunities allowed for 'normal',
+  any typographic letter units (and any typographic character units resolving to the NU (“numeric”), AL
+  (“alphabetic”), or SA (“Southeast Asian”) line breaking classes [UAX14]) are instead treated as ID (“ideographic
+  characters”) for the purpose of line-breaking.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t>wordbreaking</span></div>
+    <figcaption><code>normal</code>: one word, 120px, clipped at the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="word-break: break-all"><span class=t>wordbreaking</span></div>
+    <figcaption><code>break-all</code>: "wordbreaki", then "ng".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure" style="word-break: break-all"><span class=t>123456789012</span></div>
+    <figcaption>Digits, class NU, break too: ten, then "12".</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow pr-measure"><span class=t style="display: inline-block; width: min-content; word-break: break-all">abcd</span></div>
+    <figcaption>Taken into intrinsic sizes: a <code>min-content</code> box of "abcd" is one letter wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>keep-all</h2>
+  <p><q>Breaking is forbidden within “words”</q>. <q>In this style, sequences of CJK characters do not break.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja"><span class=t>日本語の文章です</span></div>
+    <figcaption><code>normal</code>: five characters, then three.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja" style="word-break: keep-all"><span class=t>日本語の文章です</span></div>
+    <figcaption><code>keep-all</code>: no break, eight characters, clipped at the edge.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow ja" style="word-break: keep-all"><span class=t>日本語の 文章です</span></div>
+    <figcaption><code>keep-all</code> with a space: the line breaks there, "日本語の", then "文章です".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

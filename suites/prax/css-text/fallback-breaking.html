@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fallback breaking</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .lana { font: 20px/40px "PR Noto Sans Tai Tham"; }
+  .t { background: #f9cc9d; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Text 4 · 6.1.1.3 Fallback Breaking</div>
+  <h1>Fallback breaking</h1>
+  <p class=pr-lede><q>In order to avoid unexpected overflow, if the user agent is unable to perform the requisite
+  lexical or orthographic analysis for line breaking any content language that requires it—for example due to
+  lacking a dictionary for languages written in characters with class SA—it must assume a soft wrap opportunity
+  between pairs of typographic letter units in that writing system.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-4/#fallback-breaking">CSS Text 4 §6.1.1.3</a></span></p>
+</header>
+
+<section>
+  <h2>Tai Tham, with no dictionary</h2>
+  <p>Tai Tham, the script of Northern Thai, is of class SA, and written without spaces. No browser has a dictionary
+  of its words, so each must break between any two of its letters. The stages hold a run of Tai Tham letters with their
+  vowel signs, three times over, about 150px.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage lana" lang=nod style="width: 60px"><span class=t>ᨣᩤᩴᨾᩮᩬᩥᨦᨣᩤᩴᨾᩮᩬᩥᨦᨣᩤᩴᨾᩮᩬᩥᨦ</span></div>
+    <figcaption>60px wide: the run breaks between letters, as many to a line as fit, never splitting a letter from
+    its vowel signs. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span
+    class=pr-flag>Firefox</span> No break: one line past the edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage lana" lang=nod><span class=t>ᨣᩤᩴᨾᩮᩬᩥᨦᨣᩤᩴᨾᩮᩬᩥᨦᨣᩤᩴᨾᩮᩬᩥᨦ</span></div>
+    <figcaption>200px wide, on one line.</figcaption>
+  </figure>
+  <p class=pr-note>The provision is not for a run a dictionary knows: <q>This provision is not triggered merely when
+  the UA fails to find a word boundary in a particular text run; the text run may well be a single unbreakable
+  word.</q></p>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>CSS Gaps 1 declaration support</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Gaps 1 · Support</div>
+  <h1>CSS Gaps 1 declaration support</h1>
+  <p class=pr-lede>A declaration for each property's features; whether they parse, not what they do.</p>
+</header>
+
+<section>
+  <h2>Declaration support</h2>
+  <code class=pr-decl>row-gap: 10px</code>
+  <code class=pr-decl>row-gap: 20%</code>
+  <code class=pr-decl>column-gap: 10%</code>
+  <code class=pr-decl>column-gap: normal</code>
+  <code class=pr-decl>column-gap: thick</code>
+  <code class=pr-decl>gap: 10px 20px</code>
+  <code class=pr-decl>gap: 20%</code>
+  <code class=pr-decl>grid-row-gap: 20px</code>
+  <code class=pr-decl>grid-column-gap: 10px</code>
+  <code class=pr-decl>grid-gap: 4px 30px</code>
+  <code class=pr-decl>column-rule: 4px solid #c0392b</code>
+  <code class=pr-decl>column-rule: 2px solid #c0392b, 6px dashed #27ae60</code>
+  <code class=pr-decl>column-rule: repeat(2, 6px solid #27ae60), 2px solid #c0392b</code>
+  <code class=pr-decl>row-rule: 4px solid #1f2430</code>
+  <code class=pr-decl>rule: dotted</code>
+  <code class=pr-decl>column-rule-color: red, blue</code>
+  <code class=pr-decl>column-rule-color: gray, repeat(3, red, blue), gray</code>
+  <code class=pr-decl>column-rule-color: gray, repeat(auto, red, blue), gray</code>
+  <code class=pr-decl>row-rule-color: red, blue, green</code>
+  <code class=pr-decl>rule-color: #d68a3c</code>
+  <code class=pr-decl>column-rule-style: double</code>
+  <code class=pr-decl>row-rule-style: none</code>
+  <code class=pr-decl>rule-style: dashed</code>
+  <code class=pr-decl>column-rule-width: thin</code>
+  <code class=pr-decl>column-rule-width: 1px, repeat(2, 4px), 8px</code>
+  <code class=pr-decl>column-rule-width: 4px, repeat(auto, 10px), 30px</code>
+  <code class=pr-decl>row-rule-width: 8px</code>
+  <code class=pr-decl>rule-width: 6px</code>
+  <p class=pr-note>green is a declaration this engine parses, grey is one it does not</p>
+</section>
+
+<script src=../shared/supports.js></script>
+</body>
+</html>

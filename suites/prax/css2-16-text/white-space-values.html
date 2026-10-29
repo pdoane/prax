@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The white-space property: values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .clip { overflow: hidden; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6 White space: the 'white-space' property</div>
+  <h1>The white-space property: values</h1>
+  <p class=pr-lede><code>white-space</code> takes <code>normal | pre | nowrap | pre-wrap | pre-line</code>. Initial
+  <code>normal</code>, inherited, applies to all elements. Each stage holds the same source: "one", three spaces, "two",
+  a newline, then a sentence too long for one line. Stages clip what overflows.</p>
+</header>
+
+<section>
+  <h2>normal, pre and nowrap</h2>
+  <p><q>This value directs user agents to collapse sequences of white space, and break lines as necessary to fill line
+  boxes.</q> <q>This value prevents user agents from collapsing sequences of white space. Lines are only broken at
+  preserved newline characters.</q> <q>This value collapses white space as for 'normal', but suppresses line breaks
+  within text.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-prop">CSS 2 §16.6</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: normal">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>normal</code>: one space between "one" and "two", the newline is a space, and the text wraps
+    to fill the lines.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: pre">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>pre</code>: three spaces, a break at the newline, and the second line runs past the right edge,
+    unbroken.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text clip" style="white-space: nowrap">one   two
+three four five six seven eight nine ten</div>
+    <figcaption><code>nowrap</code>: collapsed as for <code>normal</code>, all on one line that runs past the
+    edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

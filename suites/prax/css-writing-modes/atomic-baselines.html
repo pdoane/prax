@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Baselines of atomic inlines</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 16px/50px "PR Arimo"; }
+  .v { writing-mode: vertical-rl; width: 60px; height: 100px; padding: 6px 0; }
+  .vguide { display: inline-block; width: 0; height: 88px; margin-bottom: -88px; border-left: 1px dashed #c0392b; }
+  .ib { display: inline-block; width: 10px; height: 30px; background: #8e44ad; }
+  .ibh { display: inline-block; width: 30px; height: 10px; background: #8e44ad; }
+  img { background: #8e44ad; }
+  figure.s figcaption { max-width: 116px; }
+  figure.s { margin-right: 10px; }
+  .h { width: 120px; padding: 0 6px; }
+  .h + figcaption { max-width: 132px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Writing Modes 4 · 4.3 Atomic Inline Baselines</div>
+  <h1>Baselines of atomic inlines</h1>
+  <p class=pr-lede><q>If an atomic inline (such as an inline-block, inline-table, or replaced inline element) does not
+  have a baseline, then the UA synthesizes a baseline table</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-writing-modes-4/#replaced-baselines">CSS Writing Modes 4 §4.3</a></span></p>
+</header>
+
+<section>
+  <h2>Central: the middle of the margin box</h2>
+  <p><q>The central baseline is assumed to be halfway between the under and over margin edges of the box.</q> Each <code>vertical-rl</code> line holds a purple
+  box 10 by 30; the dashed line is its central baseline.</p>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span>a<span class=ib></span>b</div>
+    <figcaption>An empty inline-block: centered on the dashed line.</figcaption>
+  </figure>
+  <figure class="s pr-erratum">
+    <div class="pr-stage v"><span class=vguide></span>a<img alt="" style="width: 10px; height: 30px" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">b</div>
+    <figcaption>An image: centered on the dashed line. <span class=pr-flag>Chrome</span> puts it 5px to the
+    right.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v"><span class=vguide></span>a<span class=ib style="margin-left: 10px"></span>b</div>
+    <figcaption>A 10px left margin: the 20px margin box centered, the box right of the line.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Alphabetic: the under margin edge</h2>
+  <p><q>The alphabetic baseline is assumed to be at the under margin edge.</q> Under is the bottom of a horizontal line and
+  the left of a <code>vertical-rl</code> one; the dashed line is the alphabetic baseline.</p>
+  <figure>
+    <div class="pr-stage h"><span class=pr-baseline></span>a<span class=ibh></span>b<span class=ibh style="margin-bottom: 10px"></span>c</div>
+    <figcaption>The first box on the baseline; the second, with a 10px bottom margin, above
+    it.</figcaption>
+  </figure>
+  <figure class=s>
+    <div class="pr-stage v" style="text-orientation: sideways"><span class=vguide></span>a<span class=ib></span>b</div>
+    <figcaption><code>sideways</code>: the box's left edge on the line.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

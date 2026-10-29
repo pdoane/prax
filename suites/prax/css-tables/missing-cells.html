@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Missing cells</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 4px; background: #e0e3e8; }
+  td { padding: 0; }
+  tr { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.4 Missing cells fixup</div>
+  <h1>Missing cells</h1>
+  <p class=pr-lede><q>Once the amount of columns in a table is known, any table-row box must be modified such that it
+  owns enough cells to fill all the columns of the table, when taking spans into account. New table-cell anonymous
+  boxes must be appended to its rows content until this condition is met.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#missing-cells-fixup">CSS Table 3 §3.4</a></span>
+  Tables are grey with 4px spacing; rows are orange, which their cells draw; text is <code>.pr-measure</code>.</p>
+</header>
+
+<section>
+  <h2>Anonymous cells fill the row</h2>
+  <p>The new cells are empty and, as <a href="https://drafts.csswg.org/css-tables-3/#drawing-cell-backgrounds">§5.3.2</a>
+  says, <q>do not render any of their backgrounds</q>, so their row's orange is not drawn there.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr><td>a</td></tr><tr><td>b</td><td>c</td><td>d</td></tr></table></div>
+    <figcaption>A row of one cell over a row of three: the first row is filled with two empty cells, and grey shows
+    where they are.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><col style="width: 40px"><col style="width: 40px"><col style="width: 40px"><tr><td>a</td></tr></table></div>
+    <figcaption>Three <code>col</code>s of 40px and one cell: three columns, so two anonymous cells; the table is
+    136px, three columns and four spacings.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

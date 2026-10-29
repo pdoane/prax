@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>perspective-origin: where the viewer looks from</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .s3 { perspective: 100px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .p, .g { position: absolute; left: 40px; top: 20px; width: 80px; height: 40px; transform: translateZ(-100px); }
+  .g { transform: none; }
+  .sweep { perspective-origin: 0% 50%; animation: sweep 4s ease-in-out infinite alternate; }
+  @keyframes sweep { from { perspective-origin: 0% 50%; } to { perspective-origin: 100% 50%; } }
+  .floor { position: absolute; left: 30px; top: 20px; width: 100px; height: 60px; transform-origin: bottom; transform: rotateX(60deg);
+           background: repeating-linear-gradient(to right, #4f81bd 0 10px, #b9cde6 10px 20px); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 9 The perspective-origin Property</div>
+  <h1>perspective-origin: where the viewer looks from</h1>
+  <p class=pr-lede><q>It effectively sets the X and Y position at which the viewer appears to be looking at the
+  children of the element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#perspective-origin-property">CSS Transforms 2 §9</a></span>
+  Each stage, 160 by 80, has <code>perspective: 100px</code>. Each blue box, 80 by 40 at (40, 20) on the dashed
+  outline, has <code>translateZ(-100px)</code>: half its size, toward the origin.</p>
+</header>
+
+<section>
+  <h2>Offsets from the top left corner, and moving</h2>
+  <p><q>an offset of the perspective origin from the top left corner of the reference box.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p"></div></div>
+    <figcaption>The initial <code>50% 50%</code>: toward (80, 40), 60 to 100 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3" style="perspective-origin: left top"><div class="pr-ghost g"></div><div class="pr-a pr-fit p"></div></div>
+    <figcaption><code>left top</code>: toward (0, 0), 20 to 60 across, 10 to 30 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3" style="perspective-origin: right bottom"><div class="pr-ghost g"></div><div class="pr-a pr-fit p"></div></div>
+    <figcaption><code>right bottom</code>: toward (160, 80), 100 to 140 across, 50 to 70 down.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3" style="perspective-origin: 40px 20px"><div class="pr-ghost g"></div><div class="pr-a pr-fit p"></div></div>
+    <figcaption><code>40px 20px</code>, the box's corner, which stays: 40 to 80 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3 sweep pr-motion"><div class="pr-ghost g"></div><div class="pr-a pr-fit p"></div></div>
+    <figcaption>Still: <code>0% 50%</code>, the box at 20 to 60 across. As the origin sweeps right and back, the box
+    slides, halfway between its place and the origin.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3 sweep pr-motion"><div class="pr-c pr-fit floor"></div></div>
+    <figcaption>A striped floor tilted back 60deg about its bottom edge. Still: seen from the left, its stripes lean
+    left. As the origin sweeps, they lean after it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

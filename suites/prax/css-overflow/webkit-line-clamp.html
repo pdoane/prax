@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>-webkit-line-clamp</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .c { width: 100px; margin: 10px 0; background: #f4f5f7; }
+  .stage { height: 110px; }
+  .pr-stage.pr-narrow { width: 104px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 4 · 5.1.1 Legacy compatibility</div>
+  <h1>-webkit-line-clamp</h1>
+  <p class=pr-lede><code>-webkit-line-clamp: none | &lt;integer [1,∞]&gt;</code> is a shorthand of
+  <code>max-lines</code>, <code>block-ellipsis</code> and <code>continue</code>: <q>it unconditionally sets
+  block-ellipsis to block-ellipsis/ellipsis</q> and sets <code>continue</code> to <code>-webkit-legacy</code>, which
+  <q>behaves identically to collapse, except that it only takes effect if the specified value of the display property
+  is -webkit-box or -webkit-inline-box and the value of the -webkit-box-orient property is
+  -webkit-box-orient/vertical.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#webkit-line-clamp">CSS Overflow 4 §5.1.1</a></span></p>
+</header>
+
+<section>
+  <h2>Only with the old flexbox's display and orientation</h2>
+  <p>Each dashed box is 100px wide with <code>-webkit-line-clamp: 2</code> and holds four lines of
+  <code>.pr-measure</code> text. With <code>continue</code> other than <code>normal</code> and a vertical
+  <code>-webkit-box-orient</code>, <code>display: -webkit-box</code> computes to <code>flow-root</code>. <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-4/#continue">CSS Overflow 4 §5.3</a></span></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>-webkit-box</code>, <code>vertical</code>: "line one", "line two…", 40px
+    tall.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="-webkit-line-clamp: 2">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption>A plain block: <code>-webkit-legacy</code> does not take effect: four lines.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="display: -webkit-box; -webkit-line-clamp: 2">line one<br>line two<br>line three<br>line four</div></div>
+    <figcaption><code>-webkit-box</code>, no orientation: a flex container, so no clamp: its one anonymous item
+    holds four lines.</figcaption>
+  </figure>
+  <figure class="pr-narrow pr-erratum">
+    <div class="pr-stage pr-narrow stage"><div class="pr-frame pr-measure c" style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2"><div>line one</div><div style="display: flow-root">line two</div><div>line three</div></div></div>
+    <figcaption>Lines in block children: "line one" counts, the <code>flow-root</code>'s line does not, so the clamp
+    follows "line three", the last: nothing is cut and there is no ellipsis. <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> count the <code>flow-root</code>'s line: "line two…".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

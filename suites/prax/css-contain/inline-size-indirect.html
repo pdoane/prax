@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Inline-size containment, depending on content indirectly</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { width: 150px; height: 60px; }
+  figure figcaption { max-width: 152px; }
+  .k { contain: inline-size; background: #b9cde6; outline: 1px dashed #2c5a8f; }
+  .fl { float: left; }
+  .sec { display: flow-root; width: 120px; height: auto; }
+  .f1 { float: left; width: 30px; height: 40px; background: #4f81bd; }
+  .f2 { float: right; width: 30px; height: 40px; background: #4f81bd; }
+  .f3 { float: left; width: 100px; height: 40px; background: #2c5a8f; }
+  article { display: flow-root; min-width: min-content; outline: 1px solid #c0392b; }
+  article div { background: #f6d7b4; aspect-ratio: 1/1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Containment 2 · 3.2 Inline-Size Containment, indirect dependencies</div>
+  <h1>Inline-size containment, depending on content indirectly</h1>
+  <p class=pr-lede><q>Infinite cycles are prevented by ensuring that layout does not revert to a previous
+  (known-problematic) state, even if a naive analysis of the constraints would allow for such; in other words, layout
+  always “moves forward”.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-contain-2/#containment-inline-size">CSS Containment 2 §3.2</a></span>
+  Text is 10px a letter.</p>
+</header>
+
+<section>
+  <h2>Still depending on content through the block size</h2>
+  <p><q>although inline-size containment prevents the box’s content from directly affecting its inline size through
+  its inline-axis intrinsic sizes, its inline size can still indirectly depend on its contents by their effect on its
+  block size.</q> The spec's example, smaller: three floats 40px tall, then a red-outlined <code>article</code>,
+  <code>display: flow-root; min-width: min-content</code>, holding "Art" in a square orange box.</p>
+  <figure>
+    <div class="pr-stage pr-measure sec"><div class=f1></div><div class=f2></div><div class=f3></div><article><div>Art</div></article></div>
+    <figcaption>At the top, 60 wide, the square would be 60 tall and hit the third float; beside that float only 20
+    is free, under the 30 of "Art". So it goes below them all, a square 120 by 120.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure sec"><div class=f1></div><div class=f2></div><div class=f3></div><article style="contain: inline-size"><div>Art</div></article></div>
+    <figcaption>With <code>contain: inline-size</code>, its min-content is 0: it fits beside the third float, 20 by
+    20 at 100, 40, its text spilling. It would fit at the top now, but <q>the box is not returned to the previous
+    position</q>. Safari puts it at the top, 0 wide; this is the spec's example, so no flag.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

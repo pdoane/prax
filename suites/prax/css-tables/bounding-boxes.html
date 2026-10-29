@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Where cells, rows and groups lie</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  table { border-spacing: 10px; background: #e0e3e8; }
+  td { padding: 0; width: 30px; height: 20px; }
+  td { background: #b9cde6; }
+  .o { outline: 2px solid #c0392b; outline-offset: -1px; }
+  .g { background: #f6d7b4; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.11 Positioning of cells, captions and other internal table boxes</div>
+  <h1>Where cells, rows and groups lie</h1>
+  <p class=pr-lede>A cell's, track's or track group's width and height are the sum of <q>the widths/heights of all
+  spanned visible columns/rows</q> and <q>the horizontal/vertical 'border-spacing' times the amount of spanned visible
+  columns/rows minus one</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#bounding-box-assignment">CSS Table 3 §3.11</a></span>
+  Grey tables have <code>border-spacing: 10px</code> and cells 30 by 20; a red outline marks the box of the row or
+  group named.</p>
+</header>
+
+<section>
+  <h2>Spacing between tracks is inside a group, not around it</h2>
+  <p>A note sums it up: <q>the border-spacing before the first track or after the last track in a direction is not
+  included in any track's or track-group's breadth.</q> <q>the border-spacing between tracks is not included in any
+  track's breadth, but is included in the breadth of track-groups spanning both tracks.</q></p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tr class=o><td></td><td></td></tr><tr><td></td><td></td></tr></table></div>
+    <figcaption>The first row: 70 by 20, from the first cell's left edge to the last one's right, the 10px between
+    them included, the spacing around not. <span class=pr-flag>Safari</span> starts the row at the table's
+    left edge, 90px wide.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class=pr-stage><table><tbody class=o><tr><td></td><td></td></tr><tr><td></td><td></td></tr></tbody></table></div>
+    <figcaption>A row group of two rows: 70 by 50, the 10px between its rows included. <span
+    class=pr-flag>Safari</span> makes it the table's inside, 90 by 70.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="width: 120px"><table><tr><td class=g colspan=2 rowspan=2></td><td></td></tr><tr><td></td></tr><tr><td></td><td></td><td></td></tr></table></div>
+    <figcaption>An orange cell spanning two columns and two rows: 70 by 50, the spacings between them in it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>object-fit and object-position on image</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 12.2 Placement of the embedded content</div>
+  <h1>object-fit and object-position on image</h1>
+  <p class=pr-lede><q>The object-fit and object-position affect the final position and size of the object, and may
+  cause it to be extend beyond the positioning rectangle.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/embedded.html#Placement">SVG 2 §12.2</a></span>
+  Each stage is an SVG 160 by 60 with an <code>image</code> of the PNG flag, 40 by 20 in quarters, at 20, 10, 120 by
+  40, outlined dashed grey, with <code>preserveAspectRatio="none"</code>.</p>
+</header>
+
+<section>
+  <h2>object-fit</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" style="object-fit: contain" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>contain</code>: 80 by 40, centered, from 40 to 120. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Stretched over 120 by 40.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" style="object-fit: cover; object-position: top" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>cover</code> at <code>top</code>: 120 by 60 from y 10, cut at 50, so the seam at 40.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Stretched, the seam at 30.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" style="object-fit: none" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>none</code>: its natural 40 by 20, centered, 60 to 100 across, 20 to 40 down.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Stretched.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>object-position, and beyond the rectangle</h2>
+  <p><q>In that case, the overflow property determines whether the rendered object should be clipped to its
+  positioning rectangle.</q></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" style="object-fit: contain; object-position: left top" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>contain</code> at <code>left top</code>: 80 by 40 from 20 to 100.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span>
+    Stretched.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><image href="../shared/resources/flag-40x20.png" x="20" y="10" width="120" height="40" preserveAspectRatio="none" style="object-fit: none; object-position: -20px 30px; overflow: visible" /><rect x="20.5" y="10.5" width="119" height="39" class=pr-ghost /></svg></div>
+    <figcaption><code>none</code> at <code>-20px 30px</code>, <code>overflow: visible</code>: 40 by 20, 0 to 40
+    across, 40 to 60 down. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> Stretched.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

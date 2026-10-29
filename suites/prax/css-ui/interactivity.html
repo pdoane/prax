@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>interactivity: inert</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  iframe.pr-view { height: 64px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Basic User Interface 4 · 6.3 Preventing All Interaction: the interactivity property</div>
+  <h1>interactivity: inert</h1>
+  <p class=pr-lede><q>The interactivity property specifies whether an element and its flat tree descendants (including text nodes) are inert or not.</q> When inert, <q>Text selection must act as if user-select was none, regardless of its actual value.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-ui-4/#inertness">CSS Basic User Interface 4 §6.3</a></span> Pointer events, focus and find-in-page are not drawn.</p>
+  <p class=pr-note>A script in each frame makes the selection, highlighted orange. Safari draws no selection in these stills.</p>
+</header>
+
+<section>
+  <h2>Left out of a selection</h2>
+  <p>Each frame's script selects everything.</p>
+  <figure class=pr-erratum>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;Some &lt;span style=&#x27;interactivity: inert&#x27;&gt;inert&lt;/span&gt; text&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption><code>interactivity: inert</code> on the middle word: “Some” and “text” highlighted, “inert” not. <span class=pr-flag>Firefox</span> highlights it. <span class=pr-flag>Safari</span> has no <code>interactivity</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="&lt;!doctype html&gt;&lt;style&gt;body { margin: 0; padding: 10px; background: #e7eaef; font: 16px/24px sans-serif; color: #1f2430 } ::selection { background: #f9cc9d } &lt;/style&gt;&lt;body&gt;Some &lt;span inert&gt;inert&lt;/span&gt; text&lt;script&gt;getSelection().selectAllChildren(document.body)&lt;/script&gt;"></iframe></div>
+    <figcaption>The same with HTML's <code>inert</code> attribute, which the host language makes inert: “inert” not highlighted.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>tabindex within scopes</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.3 The tabindex attribute</div>
+  <h1>tabindex within scopes</h1>
+  <p class=pr-lede>A positive value places the element <q>in the tabindex-ordered focus navigation scope where the element is a part
+  of so that, relative to other elements and focusable areas that belong to the same focus navigation scope</q>, it
+  comes in the order of its value. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-tabindex-attribute">HTML §6.6.3</a></span></p>
+</header>
+<section>
+  <h2>A value orders only its own scope</h2>
+  <p>The shadow tree's <code>s1</code> has <code>tabindex=1</code>; it is ordered within the host's scope, and the
+  host, without a tabindex, comes after the page's positive values. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#the-tabindex-attribute">§6.6.3</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <div class=pr-target id=start tabindex=1>start, tabindex=1</div>
+        <div id=host></div>
+        <div class=pr-target id=d2 tabindex=2>d2, tabindex=2</div>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click <code>start</code> and press Tab repeatedly: <code>d2</code>, then the shadow tree's
+    <code>s1</code> and <code>s0</code>, both logged as <code>host</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A negative value on a scope owner</h2>
+  <p>The tabindex-ordered scope <q>contains all elements in owner's focus navigation scope that are themselves focus
+  navigation scope owners, except the elements whose tabindex value is a negative integer.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=first>first</button>
+        <div id=skipped tabindex=-1></div>
+        <button class=pr-target id=last>last</button>
+      </div>
+      <ol class=pr-log data-log="focus" data-fields="target" data-lines=1></ol>
+    </div>
+    <figcaption>The host <code>skipped</code>, with <code>tabindex=-1</code>, holds two buttons in its shadow tree.
+    Click <code>first</code> and press Tab: <code>last</code>.</figcaption>
+  </figure>
+</section>
+<script>
+  // Two shadow trees: s0 and s1 (tabindex=1) in the first host, two buttons in the second.
+  document.getElementById("host").attachShadow({mode: "open"}).innerHTML = '<link rel=stylesheet href=../shared/page.css>'
+      + '<div class=pr-target id=s0 tabindex=0>s0, tabindex=0, in a shadow tree</div>'
+      + '<div class=pr-target id=s1 tabindex=1>s1, tabindex=1, in a shadow tree</div>';
+  document.getElementById("skipped").attachShadow({mode: "open"}).innerHTML = '<link rel=stylesheet href=../shared/page.css>'
+      + '<button class=pr-target>in the skipped host\'s shadow tree</button>';
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

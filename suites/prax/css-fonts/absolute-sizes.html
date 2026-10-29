@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The absolute size keywords</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .row { font-family: 'PR Arimo'; white-space: nowrap; padding: 0 6px; }
+  .row span { font: 12px/1 ui-monospace, Menlo, monospace; color: #6b7381; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Fonts 4 · 2.5.1 Absolute size keyword mapping table</div>
+  <h1>The absolute size keywords</h1>
+  <p class=pr-lede><q>The 'medium' value is used as the reference middle value.</q> The scaling factors are 3/5, 3/4,
+  8/9, 1, 6/5, 3/2, 2/1 and 3/1, from 'xx-small' to 'xxx-large'; <q>The user agent may fine-tune these values</q>.
+  <span class=pr-cite><a href="https://drafts.csswg.org/css-fonts-4/#absolute-size-mapping">CSS Fonts 4 §2.5.1</a></span></p>
+</header>
+
+<section>
+  <h2>From xx-small to xxx-large</h2>
+  <p>With 'medium' at 16px, the factors give about 9.6px, 12px, 14.2px, 16px, 19.2px, 24px, 32px and 48px. Each line
+  shows its keyword and, read back, the size its "Aa" is set at.</p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=row id=a1 style="font-size: xx-small">Aa <span>xx-small <b class=pr-computed data-of=a1 data-property=font-size></b></span></div>
+      <div class=row id=a2 style="font-size: x-small">Aa <span>x-small <b class=pr-computed data-of=a2 data-property=font-size></b></span></div>
+      <div class=row id=a3 style="font-size: small">Aa <span>small <b class=pr-computed data-of=a3 data-property=font-size></b></span></div>
+      <div class=row id=a4 style="font-size: medium">Aa <span>medium <b class=pr-computed data-of=a4 data-property=font-size></b></span></div>
+      <div class=row id=a5 style="font-size: large">Aa <span>large <b class=pr-computed data-of=a5 data-property=font-size></b></span></div>
+      <div class=row id=a6 style="font-size: x-large">Aa <span>x-large <b class=pr-computed data-of=a6 data-property=font-size></b></span></div>
+      <div class=row id=a7 style="font-size: xx-large">Aa <span>xx-large <b class=pr-computed data-of=a7 data-property=font-size></b></span></div>
+      <div class=row id=a8 style="font-size: xxx-large">Aa <span>xxx-large <b class=pr-computed data-of=a8 data-property=font-size></b></span></div>
+    </div>
+    <figcaption>Each line larger than the one above; 'medium' 16px, 'xx-large' 32px and 'xxx-large' 48px.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Presentation attributes in the cascade</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .universal * { fill: #4f81bd; }
+  .inheriting { fill: #4f81bd; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 6.6 Presentation attributes</div>
+  <h1>Presentation attributes in the cascade</h1>
+  <p class=pr-lede><q>These are attributes whose name matches (or is similar to) a given CSS property and whose value is
+  parsed as a value of that property. Presentation attributes contribute to the author level of the cascade, followed
+  by all other author-level style sheets, and have specificity 0.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/styling.html#PresentationAttributes">SVG 2 §6.6</a></span>
+  Each stage is an SVG 160 by 60 with a rect 120 by 40 at 20, 10.</p>
+</header>
+
+<section>
+  <h2>Before every author rule, and inherited</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>fill="#d68a3c"</code> alone: orange.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium universal"><svg width="160" height="60"><rect x="20" y="10" width="120" height="40" fill="#d68a3c" /></svg></div>
+    <figcaption><code>.universal *</code>, blue, of the least specificity: it wins over the attribute, blue.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" class=inheriting><g fill="#d68a3c"><rect x="20" y="10" width="120" height="40" /></g></svg></div>
+    <figcaption><code>fill</code> on the <code>g</code>, blue from CSS on the <code>svg</code>: the rect inherits the
+    <code>g</code>'s orange.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Only on designated elements</h2>
+  <p><q>However, the geometry properties only have equivalent presentation attributes on designated elements. Attributes
+  of the same name on other elements must not affect CSS cascading and inheritance.</q> The ‘r’ attribute is one only
+  on ‘circle’; ‘x’ and ‘width’ only on ‘svg’, ‘rect’, ‘image’, ‘foreignObject’, ‘symbol’ and ‘use’.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g r="20"><circle cx="80" cy="30" style="r: inherit" fill="#4f81bd" /></g><rect class=pr-ghost x="60" y="10" width="40" height="40" /></svg></div>
+    <figcaption>A <code>g</code> with <code>r="20"</code>, its circle <code>r: inherit</code>: the <code>g</code>'s
+    attribute sets nothing, so no circle in the dashed square.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><circle cx="20" cy="10" r="10" width="120" height="40" x="20" fill="#4f81bd" /></svg></div>
+    <figcaption>A circle with <code>x</code>, <code>width</code> and <code>height</code>: no effect, a circle of
+    radius 10 at 20, 10.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

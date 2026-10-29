@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Stretch-fit, min-content, max-content and fit-content</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure.n figcaption { max-width: 112px; }
+  .w { width: 150px; }
+  figure.n { margin-right: 10px; }
+  .t { font: 15px/20px "PR Cousine"; }
+  .box { background: #f6d7b4; outline: 1px solid #d68a3c; }
+  .cb { border-right: 1px dashed #c0392b; padding: 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Box Sizing 3 · 2.1 Auto Box Sizes</div>
+  <h1>Stretch-fit, min-content, max-content and fit-content</h1>
+  <p class=pr-lede>The fit-content size is, <q>If the available space in a given axis is definite, equal to
+  clamp(min-content size, stretch-fit size, max-content size)</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-sizing-3/#auto-box-sizes">CSS Box Sizing 3 §2.1</a></span>
+  Text here is PR Cousine at 15px, 9px a character: "abc def ehg" is 99px on one line, and its widest word 27px.</p>
+</header>
+
+<section>
+  <h2>The sizes</h2>
+  <p>Each orange box holds "abc def ehg", in a stage 110px wide.</p>
+  <figure class=n>
+    <div class="pr-stage t" style="width: 110px"><div class=box style="width: stretch">abc def ehg</div></div>
+    <figcaption><code>stretch</code>: the stage's 110px.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t" style="width: 110px"><div class=box style="width: min-content">abc def ehg</div></div>
+    <figcaption><code>min-content</code>: every wrap taken, 27px wide on three lines.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t" style="width: 110px"><div class=box style="width: max-content">abc def ehg</div></div>
+    <figcaption><code>max-content</code>: no wrap taken, 99px on one line.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t" style="width: 110px"><div class=cb style="width: min-content"><div class=box style="width: fit-content">abc def ehg</div></div></div>
+    <figcaption><code>fit-content</code> in a parent of <code>width: min-content</code>, so under a min-content constraint: 27px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>fit-content in three containing blocks</h2>
+  <p>The spec's example: <code>div &gt; div { width: fit-content; }</code> in containing blocks of 2ch, 9ch and 16ch,
+  each ending at the red dashed line. <q>In the narrowest containing block (2ch), the box takes its min-content
+  size</q>; <q>In the middle containing block (9ch), the box takes its stretch-fit size</q>; <q>In the widest
+  containing block (16ch), the box takes its max-content size</q>.</p>
+  <figure class=n>
+    <div class="pr-stage t w"><div class=cb style="width: 2ch"><div class=box style="width: fit-content">abc def ehg</div></div></div>
+    <figcaption>2ch: 27px, three lines, overflowing the 18px containing block.</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t w"><div class=cb style="width: 9ch"><div class=box style="width: fit-content">abc def ehg</div></div></div>
+    <figcaption>9ch: exactly 81px, to the line, "abc def" then "ehg".</figcaption>
+  </figure>
+  <figure class=n>
+    <div class="pr-stage t w"><div class=cb style="width: 16ch"><div class=box style="width: fit-content">abc def ehg</div></div></div>
+    <figcaption>16ch: 99px on one line, short of the 144px containing block.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

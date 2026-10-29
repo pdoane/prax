@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Color wells</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pad { padding: 10px 10px 0; font-size: 13px; line-height: 20px; }
+  .pad > div { height: 24px; margin: 0 0 2px; white-space: nowrap; }
+  .pad code { display: inline-block; width: 120px; font-size: 11px; vertical-align: middle; }
+  .pad input[type=color] { width: 50px; height: 22px; padding: 2px; margin: 0; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.10.5.1.14 Color state (type=color)</div>
+  <h1>Color wells</h1>
+  <p class=pr-lede><q>The input element represents a color well control, for setting the element's value to a string
+  representing the serialization of a CSS color.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#color-state-(type=color)">HTML §4.10.5.1.14</a></span></p>
+</header>
+
+<section>
+  <h2>The well shows the value's color</h2>
+  <p>The well's box has a child with <q>a presentational hint setting the 'background-color' property to the element's
+  value.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#the-input-element-as-a-colour-well">§15.5.9</a></span>
+  Any CSS color, made opaque without <code>alpha</code>; <q>If color is failure,
+  then set color to opaque black.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#color-state-(type=color)">§4.10.5.1.14</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-wide">
+      <div class=pad>
+        <div><code>#4f81bd</code><input type=color value="#4f81bd"></div>
+        <div><code>no value</code><input type=color></div>
+        <div><code>orange</code><input type=color value="orange"></div>
+        <div><code>rgb(0 128 0 / 0.3)</code><input type=color value="rgb(0 128 0 / 0.3)"></div>
+        <div><code>… alpha</code><input type=color value="rgb(0 128 0 / 0.3)" alpha></div>
+      </div>
+    </div>
+    <figcaption>Blue; black; orange; full green, its alpha dropped; and, with <code>alpha</code>, a pale green, 30%
+    over the well's background. <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> the last is full
+    green too: <code>alpha</code> is ignored.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Activating it shows the picker</h2>
+  <p><q>The input activation behavior for such an element element is to show the picker, if applicable, for
+  element.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/input.html#color-state-(type=color)">§4.10.5.1.14</a></span></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pad>
+        <div><input type=color value="#d68a3c"></div>
+      </div>
+      <ol class=pr-log data-log="click input change" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the well: <code>click</code>, and a color picker opens. Choose a color: the well takes it, with
+    <code>input</code>, and <code>change</code> once the choice is committed.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

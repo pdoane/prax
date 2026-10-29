@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Tilt and twist</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { display: block; margin: 10px 20px; touch-action: none; background: var(--pr-plain);
+         border: 1px solid var(--pr-accent); }
+  .axis { stroke: #4f81bd; stroke-width: 4px; stroke-linecap: round; }
+  .needle { stroke: #d68a3c; stroke-width: 3px; stroke-linecap: round; }
+  .ring { fill: none; stroke: var(--pr-line); stroke-dasharray: 3px 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 3.1 PointerEvent interface</div>
+  <h1>Tilt and twist</h1>
+  <p class=pr-lede><q>A positive tiltX is to the right, in the direction of increasing X values.</q> <q>A positive tiltY
+  is towards the user, in the direction of increasing Y values.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">Pointer Events §3.1</a></span></p>
+</header>
+<section>
+  <h2>Where the pen leans</h2>
+  <p><q>tiltX can be used along with tiltY to represent the tilt away from the normal of a transducer with the
+  digitizer. For hardware and platforms that do not report tilt or angle, the value MUST be 0.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <svg class=pad id=tilt width=258 height=120 viewBox="-129 -60 258 120">
+        <circle class=ring r=50 />
+        <line class=axis id=axis x1=0 y1=0 x2=0 y2=0 />
+      </svg>
+      <ol class=pr-log data-log="pointermove pointerdown" data-fields="pointerType tiltX tiltY" data-on="#tilt" data-lines=2></ol>
+    </div>
+    <figcaption>The blue line is the pen seen from above, from its tip at the centre to its top; the ring is a pen
+    lying flat. Hover or press with a pen and lean it right: the line points right, and <code>tiltX</code> is
+    positive. Lean it towards you: down, and <code>tiltY</code> positive. With a mouse: a dot, and no tilt.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>How the pen is turned</h2>
+  <p><q>The clockwise rotation (in degrees, in the range of [0,359]) of a transducer (e.g. pen/stylus) around its own
+  major axis. For hardware and platforms that do not report twist, the value MUST be 0.</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#pointerevent-interface">§3.1</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <svg class=pad id=twist width=258 height=80 viewBox="-129 -40 258 80">
+        <circle class=ring r=30 />
+        <line class=needle id=needle x1=0 y1=0 x2=0 y2=-30 />
+      </svg>
+      <ol class=pr-log data-log="pointermove pointerdown" data-fields="pointerType twist" data-on="#twist" data-lines=2></ol>
+    </div>
+    <figcaption>The needle stands at <code>twist</code> degrees clockwise from the top. Turn a pen that reports its
+    rotation between your fingers over the box: the needle turns with it. A mouse, or a pen that reports none: the
+    needle stays up.</figcaption>
+  </figure>
+</section>
+<script>
+  // Draws the pen's axis projected on the screen from tiltX and tiltY, and its twist as a needle.
+  const axis = document.getElementById("axis"), needle = document.getElementById("needle");
+  const tan = degrees => Math.tan(Math.max(-89.9, Math.min(89.9, degrees)) * Math.PI / 180);
+  for (const type of ["pointermove", "pointerdown"]) {
+    document.getElementById("tilt").addEventListener(type, event => {
+      const x = tan(event.tiltX), y = tan(event.tiltY), length = Math.hypot(1, x, y);
+      axis.setAttribute("x2", 50 * x / length);
+      axis.setAttribute("y2", 50 * y / length);
+    });
+    document.getElementById("twist").addEventListener(type, event => {
+      needle.setAttribute("transform", "rotate(" + event.twist + ")");
+    });
+  }
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

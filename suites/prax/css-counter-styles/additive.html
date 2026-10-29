@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The additive system</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  @counter-style dice { system: additive; additive-symbols: 6 ⚅, 5 ⚄, 4 ⚃, 3 ⚂, 2 ⚁, 1 ⚀; suffix: " "; }
+  @counter-style ab { system: additive; additive-symbols: 3 "a", 2 "b"; suffix: " "; }
+  @counter-style zero { system: additive; additive-symbols: 10 "X", 1 "I", 0 "nil"; suffix: " "; }
+  .pr-stage { font-family: "PR Noto Sans", "PR Noto Sans Symbols 2"; }
+  .pr-stage ol { padding-left: 50px; }
+  .pr-stage li { background: rgba(79, 129, 189, 0.16); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Counter Styles 3 · 3.1.6 Accumulating Numerals: the additive system</div>
+  <h1>The additive system</h1>
+  <p class=pr-lede><q>The additive counter system is used to represent "sign-value" numbering systems, which, rather
+  than reusing digits in different positions to change their value, define additional digits with much larger values,
+  so that the value of the number can be obtained by adding all the digits together.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-counter-styles-3/#additive-system">CSS Counter Styles 3 §3.1.6</a></span></p>
+  <p class=pr-note>Where an outside marker sits is not specified (<a href="https://drafts.csswg.org/css-lists-3/#list-style-position-property">CSS Lists and Counters 3 §3.5</a>): Safari sets the markers about 6px further from the text than Chrome and Firefox.</p>
+</header>
+
+<section>
+  <h2>The largest weights first</h2>
+  <p>For each tuple, largest first: <q>Let reps be floor( value / weight ).</q> <q>Append symbol to S reps times.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: dice"><li>One<li>Two<li>Three<li value=11>Eleven<li>Twelve<li>Thirteen</ol></div>
+    <figcaption>The example's <code>dice</code>: ⚀, ⚁, ⚂, then ⚅⚄, ⚅⚅, ⚅⚅⚀.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero, and values it cannot reach</h2>
+  <p><q>If symbol list contains a tuple with a weight of zero, append that tuple's counter symbol to S and return
+  S.</q> <q>Otherwise, the given counter value cannot be represented by this counter style, and must instead be
+  represented by the fallback counter style.</q></p>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: zero" start=0><li>0<li>1<li value=12>12</ol><ol style="list-style-type: dice" start=0><li>0</ol></div>
+    <figcaption>With <code>0 "nil"</code>: nil, I, XII. <code>dice</code> has no weight 0: "0" in
+    <code>decimal</code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text"><ol style="list-style-type: ab" start=2><li>2<li>3<li>4<li>5<li>6</ol></div>
+    <figcaption><code>3 "a", 2 "b"</code>: b, a, then 4 in <code>decimal</code>, though "bb" would make it; ab, aa.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

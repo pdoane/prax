@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Text decoration in SVG</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .big { font: 700 36px "PR Arimo"; }
+  .under { text-decoration: underline; }
+  .over { text-decoration: overline; }
+  .through { text-decoration: line-through; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.11 Text decoration</div>
+  <h1>Text decoration in SVG</h1>
+  <p class=pr-lede><q>Text in SVG can be decorated with an underline, overline, and/or strike-through.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#TextDecorationProperties">SVG 2 §11.11</a></span>
+  Each stage is an SVG 160 by 60 holding "Text" in 36px bold PR Arimo at <code>x="20" y="42"</code>, filled
+  blue.</p>
+</header>
+
+<section>
+  <h2>The three lines</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big under" x="20" y="42">Text</text></svg></div>
+    <figcaption><code>underline</code>: a blue line under the word, below the baseline.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big over" x="20" y="42">Text</text></svg></div>
+    <figcaption><code>overline</code>: a line over it, above the capitals.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60" fill="#2c5a8f"><text class="big through" x="20" y="42">Text</text></svg></div>
+    <figcaption><code>line-through</code>: a line through it, at about the middle of the x-height.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

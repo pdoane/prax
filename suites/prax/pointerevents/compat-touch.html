@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Mouse events from a touch</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  /* Each caption beside its stage, so that the page fits. */
+  .pad { height: 30px; margin: 10px 20px; }
+  .columns { font-size: 0; }
+  .columns .pr-log { display: inline-block; vertical-align: top; width: 150px; box-sizing: border-box; }
+  .columns .pr-log + .pr-log { border-left: 1px solid var(--pr-stage-border); }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>Pointer Events · 10.3 Mapping for devices that do not support hover</div>
+  <h1>Mouse events from a touch</h1>
+  <p class=pr-lede><q>Whenever the user agent is to dispatch a pointer event for a device that does not support hover,
+  it SHOULD run the following steps</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-do-not-support-hover">Pointer Events §10.3</a></span></p>
+</header>
+<section>
+  <h2>A tap</h2>
+  <p><q>The activation of an element (click) with a primary pointer that does not support hover (e.g. single finger on a
+  touchscreen) would typically produce the following event sequence</q>
+  <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-do-not-support-hover">§10.3</a></span></p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=tap>Tap here.</div>
+      <div class=columns>
+        <ol class=pr-log data-log="pointerover pointerenter pointerdown pointerup pointerout pointerleave click" data-on="#tap" data-lines=7></ol>
+        <ol class=pr-log data-log="mousemove mouseover mouseenter mousedown mouseup mouseout mouseleave" data-on="#tap" data-lines=7></ol>
+      </div>
+    </div>
+    <figcaption>Needs a touch screen. Tap the box: pointer events and <code>click</code> on the left, the mouse events
+    on the right: <code>mousemove</code>, <code>mouseover</code>, <code>mouseenter</code>, <code>mousedown</code>,
+    <code>mouseup</code>, <code>mouseout</code>, <code>mouseleave</code>.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>A tap whose pointerdown is canceled</h2>
+  <p><q>If, however, the pointerdown event canceled flag is set during this interaction then the sequence of events
+  would be</q> <span class=pr-cite><a href="https://w3c.github.io/pointerevents/#mapping-for-devices-that-do-not-support-hover">§10.3</a></span>
+  A listener cancels <code>pointerdown</code> on the box.</p>
+  <figure class=pr-beside>
+    <div class="pr-stage pr-wide">
+      <div class="pr-target pad" id=canceled>Tap here.</div>
+      <div class=columns>
+        <ol class=pr-log data-log="pointerover pointerenter pointerdown pointerup pointerout pointerleave click" data-on="#canceled" data-lines=7></ol>
+        <ol class=pr-log data-log="mousemove mouseover mouseenter mousedown mouseup mouseout mouseleave" data-on="#canceled" data-lines=7></ol>
+      </div>
+    </div>
+    <figcaption>Needs a touch screen. Tap the box: the same pointer events and <code>click</code>; on the right,
+    <code>mousemove</code>, <code>mouseover</code>, <code>mouseenter</code>, <code>mouseout</code> and
+    <code>mouseleave</code> only.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels pointerdown on the second box.
+  document.getElementById("canceled").addEventListener("pointerdown", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

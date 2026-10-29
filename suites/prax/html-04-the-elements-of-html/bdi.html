@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The bdi element</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .t { padding: 0 10px; font: 13px/20px "PR Noto Sans", "PR Noto Sans Arabic", "PR Noto Sans Hebrew"; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.5.24 The bdi element</div>
+  <h1>The bdi element</h1>
+  <p class=pr-lede><q>The bdi element represents a span of text that is to be isolated from its surroundings for the purposes of bidirectional text formatting.</q> <q>The dir global attribute defaults to auto on this element (it never inherits from the parent element like with other elements).</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/text-level-semantics.html#the-bdi-element">HTML §4.5.24</a></span></p>
+</header>
+<section>
+  <h2>Isolated, its direction its own</h2>
+  <p><q>[dir]:dir(ltr), bdi:dir(ltr), input[type=tel i]:dir(ltr) { direction: ltr; }</q> <q>[dir]:dir(rtl),
+  bdi:dir(rtl) { direction: rtl; }</q> and bdi is among the elements with <code>unicode-bidi: isolate</code>. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#bidi-rendering">§15.3.5</a></span> Each
+  stage lists a user whose name is Arabic, then the user's count.</p>
+  <figure>
+    <div class="pr-stage t">User <bdi>إيان</bdi>: 3 posts.</div>
+    <figcaption>bdi: "User", the name, then ": 3 posts." in that order, left to right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage t">User <span>إيان</span>: 3 posts.</div>
+    <figcaption>A span, for comparison: the "3" moves to the name's left, as the number joins the right-to-left
+    run.</figcaption>
+  </figure>
+</section>
+</body>
+</html>

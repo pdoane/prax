@@ -1,0 +1,56 @@
+<!doctype html>
+<script>
+"use strict";
+const calls = [];
+let loaded = false;
+function check(value, message) {
+    if (!value) throw new Error(message);
+}
+window.addEventListener("load", function(event) {
+    check(event.type === "load" && event.currentTarget === window, "load event target");
+    check(!loaded && calls.join() === "sync", "load follows scripts and fires once");
+    loaded = true;
+});
+
+const cancelled = setTimeout(() => calls.push("cancelled"), 0);
+clearTimeout(cancelled);
+clearTimeout(cancelled);
+clearTimeout(123456);
+
+// A handler that is not a function is a string of script, which runs in the global scope.
+setTimeout("calls.push('string')", 0);
+// The arguments after the delay are the handler's, and the global is its receiver.
+setTimeout(function(first, second) {
+    check(this === window && arguments.length === 2 && first === 1 && second === "two", "timer arguments");
+    calls.push("arguments");
+}, 0, 1, "two");
+let conversionFailed = false;
+try {
+    setTimeout(() => {}, {valueOf() { throw new Error("delay conversion"); }});
+} catch (error) { conversionFailed = error.message === "delay conversion"; }
+check(conversionFailed, "delay conversion failure");
+
+setTimeout(function() {
+    check(loaded, "load dispatched after parsing");
+    check(this === window && arguments.length === 0, "timer receiver and arguments");
+    calls.push("first");
+    Promise.resolve().then(() => {
+        calls.push("microtask");
+        clearTimeout(removedByMicrotask);
+    });
+    setTimeout(() => calls.push("nested"), -1);
+});
+const removedByMicrotask = setTimeout(() => calls.push("removed"), 0);
+setTimeout(() => {
+    calls.push("exception");
+    throw new Error("expected timer exception");
+}, 0);
+const start = performance.now();
+setTimeout(() => {
+    check(performance.now() - start >= 10, "positive delay must elapse");
+    check(calls.join() === "sync,string,arguments,first,microtask,exception,nested",
+          "timer and microtask ordering");
+    print("timer host tests passed");
+}, 10);
+calls.push("sync");
+</script>

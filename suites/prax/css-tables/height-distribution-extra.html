@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Height distribution: room to spare</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  table { border-spacing: 0; outline: 1px dashed #2c5a8f; height: 100px; }
+  td { padding: 0; width: 40px; vertical-align: top; background: #b9cde6; }
+  tr + tr td { background: #f6d7b4; }
+  tr + tr + tr td { background: #c3d08b; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 3.10.5 Distribution algorithm, room to spare</div>
+  <h1>Height distribution: room to spare</h1>
+  <p class=pr-lede>When the table is taller than its rows need at their reference sizes, the extra height goes to the rows by the rules below. <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#height-distribution-algorithm">CSS Table 3 §3.10.5</a></span> Each table is <code>height: 100px</code>, outlined; each row's cell is a line of <code>.pr-measure</code> text, 20px.</p>
+</header>
+
+<section>
+  <h2>Room to spare</h2>
+  <p><q>Else, if the table owns any “auto-height” row</q>, <q>each non-auto-height row receives its reference height
+  and auto-height rows receive their reference size plus some increment which is equal to the height missing to amount
+  to the specified table height divided by the amount of such rows.</q> <q>Else, all rows receive their reference size
+  plus some increment which is equal to the height missing to amount to the specified table height divided by the
+  amount of rows.</q></p>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr style="height: 30px"><td>a</td></tr><tr><td>b</td></tr><tr><td>c</td></tr></table></div>
+    <figcaption>A 30px row and two auto rows: 30px, then 35px and 35px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><table><tr style="height: 20px"><td>a</td></tr><tr style="height: 40px"><td>b</td></tr></table></div>
+    <figcaption>Rows of <code>20px</code> and <code>40px</code>, no auto row: 20px more each, 40px and 60px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

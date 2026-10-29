@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>keypress</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 8.3.1.1 keypress</div>
+  <h1>keypress</h1>
+  <p class=pr-lede><q>If supported by a user agent, this event MUST be dispatched when a key is pressed down, if and
+  only if that key normally produces a character value.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keypress">UI Events §8.3.1.1</a></span></p>
+</header>
+<section>
+  <h2>Only for a key that types a character</h2>
+  <p><q>This event type MUST be generated after the key mapping. It MUST NOT be fired when using an input method
+  editor.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keypress">§8.3.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown keypress keyup" data-fields="key charCode" data-on="#field" data-lines=5></ol>
+    </div>
+    <figcaption>Click the field and press A: keydown, keypress with <code>key="a"</code> and <code>charCode=97</code>,
+    keyup. Press Shift alone or an arrow key: keydown and keyup with no keypress. Turn on an input method, such as
+    Japanese Romaji, and type: no key fires keypress.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Canceled</h2>
+  <p><q>If this event is canceled, it should prevent the input event from firing, in addition to canceling the default
+  action.</q> The page's script cancels each keypress in the field. <span class=pr-cite><a href="https://w3c.github.io/uievents/#event-type-keypress">§8.3.1.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=canceled></div>
+      <ol class=pr-log data-log="keydown keypress input keyup" data-fields="key" data-on="#canceled" data-lines=4></ol>
+    </div>
+    <figcaption>Click the field and type <code>a</code>: keydown, keypress, keyup, no input, and nothing in the
+    field.</figcaption>
+  </figure>
+</section>
+<script>
+  // Cancels every keypress in the second field.
+  document.getElementById("canceled").addEventListener("keypress", event => event.preventDefault());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

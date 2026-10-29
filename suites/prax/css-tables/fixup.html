@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Fixup: a table, a row and a cell</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .spaced { border-spacing: 10px; font-size: 12px; line-height: 20px; }
+  .blue { background: #4f81bd; color: white; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Table 3 · 2.2 Fixup</div>
+  <h1>Fixup: a table, a row and a cell</h1>
+  <p class=pr-lede><q>Any table-internal element will automatically generate necessary anonymous table objects around
+  itself, if necessary. Any descendant of a table-root that is not table-internal must have a set of ancestors in the
+  table consisting of at least three nested objects corresponding to a table/inline-table, a table-row, and a
+  table-cell.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-tables-3/#fixup">CSS Table 3 §2.2</a></span></p>
+</header>
+
+<section>
+  <h2>Text gets a cell</h2>
+  <p>Each tinted, dashed box is a table element with <code>border-spacing: 10px</code>. The spacing lies between
+  the table's edge and a cell, so text 10px in from the edge sits in a cell.</p>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent">text</div></div>
+    <figcaption>Text right in the table: an anonymous row and cell, so the text is 10px in from each edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row-group>text</div></div></div>
+    <figcaption>Text in a row group: the same, a row and a cell inside the group.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class="pr-table pr-parent"><div class=pr-table-row>one</div><div class=pr-table-row>two</div></div></div>
+    <figcaption>Text in two rows: a cell in each, "one" and "two" 10px apart.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A cell gets a row and a table</h2>
+  <p>The blue boxes are elements with <code>display: table-cell</code> in a plain block, outlined.</p>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-ghost><div class="pr-table-cell blue">A</div><div class="pr-table-cell blue">B</div></div></div>
+    <figcaption>Two cells: one anonymous row and table around them, so they sit side by side, as narrow as their
+    text, not as wide as the block.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage spaced"><div class=pr-ghost><div class=pr-table-row style="background: #f6d7b4">row text</div></div></div>
+    <figcaption>An orange row element with text: a cell inside it and a table around it, as narrow as "row
+    text".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Sticky positioning: the sticky view rectangle</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { height: 100px; overflow: hidden; }
+  .rest { height: 200px; }
+  .st { position: sticky; width: 80px; }
+  .tall { height: 60px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Positioned Layout 3 · 3.4 Sticky positioning</div>
+  <h1>Sticky positioning: the sticky view rectangle</h1>
+  <p class=pr-lede><q>For a sticky positioned box, the inset properties represent insets from the respective edges of
+  the scrollport of the nearest scroll container with a matching scrollable axis, defining the sticky view rectangle
+  used to constrain the box’s position.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-position-3/#stickypos-insets">CSS Positioned Layout 3 §3.4</a></span>
+  Each stage scrolls.</p>
+</header>
+
+<section>
+  <h2>From the scrollport's edges, or the padding's?</h2>
+  <p>The scrollport is the padding box, so a box with <code>top: 0</code> is held at its top, over the padding. The
+  box is in a block 300px tall, its containing block, so that <q>its position box remains contained within its
+  containing block</q> does not stop it first.</p>
+  <figure class=pr-erratum>
+    <div class="pr-stage sc" style="padding: 20px; box-sizing: border-box" data-scroll=80><div style="height: 300px"><div style="height: 40px"></div><div class="pr-b st" style="top: 0">top: 0</div></div></div>
+    <figcaption>20px of padding, scrolled 80px: at 0. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> hold it below
+    the padding, at 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A rectangle smaller than the box</h2>
+  <p>Where the rectangle is smaller than the box's border box, <q>the effective end-edge inset in the affected axis is
+  reduced (possibly becoming negative) to bring the sticky view rectangle’s size up to the size of the border box in
+  that axis</q>. The orange box, 60px tall, follows a block 50px tall in a stage 100px tall.</p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc"><div style="height: 50px"></div><div class="pr-b st tall" style="top: 20px">top</div><div class=rest></div></div>
+    <figcaption><code>top: 20px</code>: not moved, from 50.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc"><div style="height: 50px"></div><div class="pr-b st tall" style="bottom: 30px">bottom</div><div class=rest></div></div>
+    <figcaption><code>bottom: 30px</code>: shifted up, from 10 to 70.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow sc"><div style="height: 50px"></div><div class="pr-b st tall" style="top: 20px; bottom: 30px">both</div><div class=rest></div></div>
+    <figcaption>Both: the 50px rectangle grows to 60, and the box fills it, from 20 to 80.</figcaption>
+  </figure>
+</section>
+
+<script>for (const s of document.querySelectorAll("[data-scroll]")) s.scrollTop = s.dataset.scroll;</script>
+</body>
+</html>

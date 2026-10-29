@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>vector-effect: the host, across nested viewports</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 8.13.2 Computing the vector effects for nested viewport coordinate systems</div>
+  <h1>vector-effect: the host, across nested viewports</h1>
+  <p class=pr-lede><q>The host coordinate space for ‘vector-effect’ is the viewport coordinate system of the furthest
+  ancestral SVG viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#VectorEffects">SVG 2 §8.13</a></span>
+  For nested viewports, the transform from user space to the host is <q>CTM<sub>root</sub> … CTM<sub>parent</sub>
+  CTM<sub>this</sub></q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/coords.html#NestedVectorEffectsCalculation">§8.13.2</a></span>.
+  Each stage is an SVG 160 by 60, the host, holding a nested <code>svg</code> outlined dashed whose
+  <code>viewBox</code> scales by 4.</p>
+</header>
+
+<section>
+  <h2>Every viewport's transform, to the outermost</h2>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><svg x="20" y="10" width="120" height="40" viewBox="0 0 30 10"><rect x="5" y="2.5" width="20" height="5" fill="none" stroke="#2c5a8f" stroke-width="1" /></svg></svg></div>
+    <figcaption>A rect stroked 1 wide in it: scaled 4, a frame 80 by 20 from 40, 20, 4 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><svg x="20" y="10" width="120" height="40" viewBox="0 0 30 10"><rect x="5" y="2.5" width="20" height="5" fill="none" stroke="#2c5a8f" stroke-width="1" vector-effect="non-scaling-stroke" /></svg></svg></div>
+    <figcaption>The same with <code>non-scaling-stroke</code>: 1 wide in the host, a hairline.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><rect class=pr-ghost x="20" y="10" width="120" height="40" /><svg x="20" y="10" width="120" height="40" viewBox="0 0 30 10"><rect x="10" y="2.5" width="10" height="5" fill="#4f81bd" vector-effect="non-scaling-size" transform="translate(5 2.5)" /><rect class=pr-ghost x="15" y="5" width="10" height="5" /></svg></svg></div>
+    <figcaption><code>non-scaling-size</code>, its origin at 5, 2.5 in the nested <code>svg</code>, 40, 20 in the
+    host: 10 by 5 from 50, 22.5, the dashed one 40 by 20. <span class=pr-flag>Chrome</span>
+    <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> 40 by 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

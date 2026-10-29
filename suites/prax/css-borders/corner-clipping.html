@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Corner clipping</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .clip { width: 100px; height: 40px; margin: 10px; border: 10px solid rgba(44, 90, 143, 0.4); border-radius: 30px; }
+  .clip div { height: 60px; background: #d68a3c; }
+  .img { display: block; width: 120px; height: 40px; margin: 10px; padding: 10px; border-radius: 30px; background: #b9cde6; }
+  .bi { width: 100px; height: 40px; margin: 10px; border: 10px solid; border-radius: 30px;
+    border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='30' height='30'><rect width='30' height='30' fill='%236aa36a'/></svg>") 10; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Borders and Box Decorations 4 · 3.1 Corner Clipping</div>
+  <h1>Corner clipping</h1>
+  <p class=pr-lede><q>other effects that clip painting or event handling to the border, padding, or content edge must
+  clip to their respective curves. For example, backgrounds clip to the curve specified by 'background-clip', 'overflow'
+  values other than visible to the curved padding edge (when 'overflow' on both axes is not visible), replaced element
+  content to the curved content edge</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-borders-4/#corner-clipping">CSS Borders and Box Decorations 4 §3.1</a></span></p>
+</header>
+
+<section>
+  <h2>Overflow, clipped to the curved padding edge</h2>
+  <p>Each box has a faint 10px border with a 30px radius, so its padding edge has a 20px radius, and an orange child
+  taller than it.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=clip style="overflow: hidden"><div></div></div></div>
+    <figcaption><code>overflow: hidden</code>: the orange is cut along the inner curves.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=clip style="overflow: clip"><div></div></div></div>
+    <figcaption><code>overflow: clip</code> on both axes: the same.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><div class=clip style="overflow-y: clip"><div></div></div></div>
+    <figcaption>Only <code>overflow-y: clip</code>: cut at the bottom padding edge, straight; the top corners are not
+    clipped. <span class=pr-flag>Safari</span> <span class=pr-flag>Firefox</span> Cut along the curves.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Replaced content and border images</h2>
+  <p><q>Although border images are not affected by 'border-radius', other effects</q> are.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><img class=img alt="" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='40'><rect width='120' height='40' fill='%234f81bd'/></svg>"></div>
+    <figcaption>An image with 10px of padding and a 30px radius: the blue image's corners have a 20px radius.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><div class=bi></div></div>
+    <figcaption>A green border image and a 30px radius: square corners.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

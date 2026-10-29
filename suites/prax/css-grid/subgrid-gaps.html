@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Subgrids: gaps of their own</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage:not(.pr-measure) { font: 13px/20px "PR Arimo"; }
+  .p { display: grid; grid-template-columns: 60px 1fr; column-gap: 40px; }
+  .s { grid-column: span 2; display: grid; grid-template-columns: subgrid; }
+  .m { display: grid; grid-template-columns: auto auto; column-gap: 20px; justify-content: start; }
+  .ta { background: #b9cde6; }
+  .tb { background: #f6d7b4; }
+  .tc { background: #6aa36a; color: white; }
+  .td { background: #8e44ad; color: white; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Grid Layout 2 · 9 Subgrids, gaps</div>
+  <h1>Subgrids: gaps of their own</h1>
+  <p class=pr-lede><q>half the size of the difference between the subgrid’s gutters (row-gap/column-gap) and its
+  parent grid’s gutters is applied as an extra layer of (potentially negative) margin to the items not at those
+  edges.</q> <q>A value of normal indicates that the subgrid has the same size gutters as its parent grid</q>. <span class=pr-cite><a href="https://drafts.csswg.org/css-grid-2/#subgrids">CSS Grid Layout 2 §9</a></span></p>
+</header>
+
+<section>
+  <h2>The parent's tracks stay as they are</h2>
+  <p>The parent has columns <code>60px 1fr</code> and a 40px gap: the second column is 100px, from 100px, where C
+  is. The subgrid spans both, and holds A and B.</p>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=p><div class="s pr-parent"><div class=pr-a>A</div><div class=pr-b>B</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>normal</code>: A 60px wide, B from 100px, 100px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="column-gap: 0"><div class=pr-a>A</div><div class=pr-b>B</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>0</code>: −20px of margin on each inner side; A is 80px wide, B from 80px, 120px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="column-gap: 20px"><div class=pr-a>A</div><div class=pr-b>B</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>20px</code>: −10px each; A is 70px wide, B from 90px, 110px wide.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class=pr-stage><div class=p><div class="s pr-parent" style="column-gap: 80px"><div class=pr-a>A</div><div class=pr-b>B</div></div><div class=pr-c style="grid-column: 2">C</div></div></div>
+    <figcaption><code>80px</code>: 20px each; A is 40px wide, B from 120px, 80px wide.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The difference counts in sizing</h2>
+  <p>The parent has <code>auto auto</code> columns and a 20px gap. The subgrid spans both and holds "abcd" and "ef",
+  40 and 20px; under it, "x" and "y" mark the columns.</p>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=m><div class="s pr-parent"><div class=ta>abcd</div><div class=tb>ef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption><code>normal</code>: columns of 40 and 20px, "ef" and "y" at 60px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-measure"><div class=m><div class="s pr-parent" style="column-gap: 0"><div class=ta>abcd</div><div class=tb>ef</div></div><div class=tc>x</div><div class=td>y</div></div></div>
+    <figcaption><code>column-gap: 0</code>: each item counts 10px less, so the columns are 30 and 10px. "abcd" and
+    "ef" touch at 40px; "y" is at 50px.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

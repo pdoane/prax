@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>3D transform functions: translate and scale</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  .pr-stage, .pr-stage.pr-cb { height: 80px; }
+  .s3 { perspective: 100px; }
+  .p, .g { position: absolute; left: 60px; top: 30px; width: 40px; height: 20px; }
+  .q, .h { position: absolute; left: 40px; top: 10px; width: 80px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Transforms 2 · 12.2 3D Transform Functions</div>
+  <h1>3D transform functions: translate and scale</h1>
+  <p class=pr-lede><q>In the following 3d transform functions, a &lt;zero&gt; behaves the same as 0deg.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-transforms-2/#three-d-transform-functions">CSS Transforms 2 §12.2</a></span>
+  Each blue box is 40 by 20 at the stage's center, on the dashed outline. <a href="functions-3d-matrix.html">matrix3d() and
+  perspective()</a> and <a href="functions-3d-rotate.html">the rotations</a> follow.</p>
+</header>
+
+<section>
+  <h2>translate3d(), translateZ(), scale3d(), scaleZ()</h2>
+  <p>Each stage has <code>perspective: 100px</code>, centered.</p>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translate3d(10px, 10px, 50px)">A</div></div>
+    <figcaption><code>translate3d(10px, 10px, 50px)</code>: twice the size, its 10px too; 60 to 140 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scale3d(1, 1, 2) translateZ(25px)">A</div></div>
+    <figcaption><code>scale3d(1, 1, 2) translateZ(25px)</code>: Z doubled to 50px; twice the size.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: translateZ(25px) scale3d(1, 1, 2)">A</div></div>
+    <figcaption><code>translateZ(25px) scale3d(1, 1, 2)</code>: a flat box has no depth to scale; 4/3, 53 by 27.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium pr-cb s3"><div class="pr-ghost g"></div><div class="pr-a pr-fit p" style="transform: scaleZ(0)">A</div></div>
+    <figcaption><code>scaleZ(0)</code>: cannot be undone, <a href="function-lists.html">not displayed</a>;
+    <a href="https://github.com/w3c/csswg-drafts/issues/11046">csswg-drafts#11046</a> asks the module to say so.</figcaption>
+  </figure>
+</section>
+
+
+</body>
+</html>

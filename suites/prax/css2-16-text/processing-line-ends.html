@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>White space processing: line ends</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.6.1 The 'white-space' processing model</div>
+  <h1>White space processing: line ends</h1>
+  <p class=pr-lede><q>Then, the block container's inlines are laid out.</q> <q>As each line is laid out,</q> four more
+  steps apply; these are the last two. Orange spans show the white space they hold. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+</header>
+
+<section>
+  <h2>Steps 3 and 4: the end of a line</h2>
+  <p>3. <q>If a space (U+0020) at the end of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line', it is
+  also removed.</q> 4. <q>If spaces (U+0020) or tabs (U+0009) at the end of a line have 'white-space' set to
+  'pre-wrap', UAs may visually collapse them.</q> For <code>pre-wrap</code>, <q>a line breaking opportunity exists at
+  the end of the sequence</q> of spaces. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#white-space-model">CSS 2 §16.6.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: right"><span class=pr-hl>aaaaaaaa&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;bbbbbbbb</span></div>
+    <figcaption><code>normal</code>, <code>text-align: right</code>, in 100px: the space at the end of the first line
+    is removed, so "aaaaaaaa" ends at the right edge.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: right; white-space: pre-wrap"><span class=pr-hl>aaaaaaaa&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;bbbbbbbb</span></div>
+    <figcaption><code>pre-wrap</code>: the line breaks after the ten spaces, so "bbbbbbbb" starts the second line. The
+    spaces end the first line and may be collapsed. <span class="pr-flag pr-since">Since CSS 2</span> they must hang
+    past the edge.</figcaption>
+  </figure>
+</section>
+
+<section class=pr-later>
+  <div class=pr-tag>Since CSS 2 · <a href="https://drafts.csswg.org/css-text-3/#white-space-phase-2">CSS Text 3 §4.1.2</a></div>
+  <h2>Preserved spaces at a line's end hang</h2>
+  <p><q>If white-space is set to pre-wrap, the UA must (unconditionally) hang this sequence, unless the sequence is
+  followed by a forced line break, in which case it must conditionally hang the sequence instead. It may also visually
+  collapse the character advance widths of any that would otherwise overflow.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-text-3/#white-space-phase-2">CSS Text 3
+  §4.1.2</a></span> Hanging spaces are not counted when the line is aligned.</p>
+  <figure>
+    <div class="pr-stage pr-narrow pr-text" style="text-align: right; white-space: pre-wrap"><span class=pr-hl>aaaaaaaa&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;&#32;bbbbbbbb</span></div>
+    <figcaption><code>pre-wrap</code>, right-aligned in 100px: "aaaaaaaa" ends at the right edge, and its ten spaces
+    hang past it (or are collapsed).</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="white-space: pre-wrap; text-align: center"><span class=pr-hl>&#32;0&#32;</span></div>
+    <figcaption>The specification's example: " 0 " centered, the last space before the end of the block. It fits, so
+    it does not hang, and both spaces are centered with the "0".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

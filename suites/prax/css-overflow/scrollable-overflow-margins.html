@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The scrollable overflow area: margins</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; }
+  .stage { height: 60px; }
+  .k { width: 160px; height: 20px; margin-right: 40px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 3.3 Calculating the Scrollable Overflow Area, margins</div>
+  <h1>The scrollable overflow area: margins</h1>
+  <p class=pr-lede>The area unites <q>The margin areas of grid item and flex item boxes for which the box establishes a
+  containing block.</q> <q>The UA may additionally include the margin areas of other boxes for which the box
+  establishes a containing block; however, the conditions under which such margin areas are included is undefined in
+  this level.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollable-overflow-calculation">CSS Overflow 3 §3.3</a></span></p>
+</header>
+
+<section>
+  <h2>Flex and grid items: margins included</h2>
+  <p>Each dashed box is 120 by 40, <code>overflow: auto</code>, with no padding, and holds A 160px wide with a 40px
+  right margin, and a 20px bottom margin in the second row. Captions read <code>scrollWidth</code> and
+  <code>scrollHeight</code>.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=f1 class="pr-frame sc" style="display: flex"><div class="pr-a pr-fit k">A, a flex item</div></div></div>
+    <figcaption>In a flex container: to the end of A's margin, <code class=pr-computed data-of=f1
+    data-dom=scrollWidth></code> wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=f2 class="pr-frame sc" style="display: grid; grid-template-columns: auto"><div class="pr-a pr-fit k">A, a grid item</div></div></div>
+    <figcaption>In a grid container: <code class=pr-computed data-of=f2 data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=f3 class="pr-frame sc" style="display: flex; flex-direction: column"><div class="pr-a pr-fit k" style="height: 40px; margin: 0 0 20px">A, 40px tall</div></div></div>
+    <figcaption>A 40px tall with a 20px bottom margin, a flex item: <code class=pr-computed data-of=f3
+    data-dom=scrollHeight></code> tall.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Block boxes: undefined</h2>
+  <p>The same A in a block container: the user agent may count its margin or not, and either is right.</p>
+  <figure>
+    <div class="pr-stage stage"><div id=b1 class="pr-frame sc"><div class="pr-a pr-fit k">A, a block</div></div></div>
+    <figcaption>A block: at least 160, its border box; 200 with the margin. Here: <code class=pr-computed data-of=b1
+    data-dom=scrollWidth></code>.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div id=b2 class="pr-frame sc"><div class="pr-a pr-fit k" style="height: 40px; margin: 0 0 20px">A, 40px tall</div></div></div>
+    <figcaption>A block 40px tall with a 20px bottom margin: 40 or 60. Here: <code class=pr-computed data-of=b2
+    data-dom=scrollHeight></code>.</figcaption>
+  </figure>
+</section>
+
+<script src=../shared/computed.js></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The word-spacing property</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.4 Letter and word spacing: the 'letter-spacing' and 'word-spacing' properties</div>
+  <h1>The word-spacing property</h1>
+  <p class=pr-lede><code>word-spacing</code> takes <code>normal | &lt;length&gt;</code>. Initial <code>normal</code>,
+  inherited, applies to all elements. Computed value: <q>for 'normal' the value '0'; otherwise the absolute
+  length</q>. Each word is on orange, so the gaps between them are the spaces.</p>
+</header>
+
+<section>
+  <h2>normal and &lt;length&gt;</h2>
+  <p><q>The normal inter-word space, as defined by the current font and/or the UA.</q> <q>This value indicates
+  inter-word space in addition to the default space between words. Values may be negative, but there may be
+  implementation-specific limits.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#spacing-props">CSS 2 §16.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl>one</span> <span class=pr-hl>two</span> <span class=pr-hl>three</span><br><span style="word-spacing: 20px"><span class=pr-hl>one</span> <span class=pr-hl>two</span> <span class=pr-hl>three</span></span><br><span style="word-spacing: -3px"><span class=pr-hl>one</span> <span class=pr-hl>two</span> <span class=pr-hl>three</span></span></div>
+    <figcaption><code>normal</code>; then <code>20px</code>, each gap 20px wider; then <code>-3px</code>, each gap
+    3px narrower.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Which characters</h2>
+  <p><q>Word spacing affects each space (U+0020) and non-breaking space (U+00A0), left in the text after the white
+  space processing rules have been applied.</q> <q>Fixed-width spaces (such as U+3000 and U+2000 through U+200A) are
+  not affected.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#spacing-props">CSS 2 §16.4</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text"><span class=pr-hl>a</span> <span class=pr-hl>b</span>&nbsp;<span class=pr-hl>c</span>&#x2003;<span class=pr-hl>d</span><br><span style="word-spacing: 20px"><span class=pr-hl>a</span> <span class=pr-hl>b</span>&nbsp;<span class=pr-hl>c</span>&#x2003;<span class=pr-hl>d</span></span></div>
+    <figcaption>a, space, b, no-break space, c, em space (U+2003), d. With <code>20px</code> below, the first two gaps
+    are 20px wider; the em space is not.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="white-space: pre"><span class=pr-hl>a</span>   <span class=pr-hl>b</span><br><span style="word-spacing: 10px"><span class=pr-hl>a</span>   <span class=pr-hl>b</span></span></div>
+    <figcaption>Three spaces, kept by <code>white-space: pre</code>. With <code>10px</code> below, each of the three
+    is 10px wider: 30px in all.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>inline-size</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .jp { font: 20px/30px "PR Noto Sans JP"; writing-mode: vertical-rl; inline-size: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 11.4.1 The ‘inline-size’ property</div>
+  <h1>inline-size</h1>
+  <p class=pr-lede><q>The inline-size property allows one to set the wrapping area to a rectangular shape. The
+  computed value of the property sets the width of the rectangle for horizontal text and the height of the rectangle
+  for vertical text.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/text.html#InlineSize">SVG 2 §11.4.1</a></span>
+  The rectangle's edges are dashed in red; horizontal text is PR Noto Sans Mono, 10 a letter on 20px lines, at
+  <code>x="20" y="30"</code>.</p>
+</header>
+
+<section>
+  <h2>Width, and height</h2>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M20 0V80 M100 0V80 M0 30H160 M0 50H160" class=pr-baseline /><text class=pr-measure x="20" y="30" style="inline-size: 50%">wraps at eighty</text></svg></div>
+    <figcaption><code>inline-size: 50%</code>, of the SVG's width of 160: "wraps at" on y 30, "eighty" on 50,
+    within 20 to 100. <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span>
+    <span class=pr-flag>Firefox</span> One line.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 10H160 M0 70H160 M120 0V80 M90 0V80" class=pr-baseline /><text class=jp x="120" y="10">縦書きの文章</text></svg></div>
+    <figcaption>Vertical, 20px PR Noto Sans JP on 30px lines, <code>inline-size: 60px</code>, at
+    <code>x="120" y="10"</code>: three characters down x 120, from 10 to 70, then three down x 90.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Firefox</span> One column of six.
+    <span class=pr-flag>Safari</span> One column of six, 30 apart, running off the stage.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Zero and auto</h2>
+  <p><q>A value of zero disables the creation of a wrapping area.</q> <code>auto</code> is the initial value.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M20 0V80" class=pr-baseline /><text class=pr-measure x="20" y="30" style="inline-size: 0">no wrapping area</text></svg></div>
+    <figcaption><code>inline-size: 0</code>: no wrapping area, one line from 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80" fill="#2c5a8f"><path d="M0 30H160 M20 0V80" class=pr-baseline /><text class=pr-measure x="20" y="30" style="inline-size: auto">no wrapping area</text></svg></div>
+    <figcaption><code>inline-size: auto</code>: one line from 20.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

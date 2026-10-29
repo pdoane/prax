@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Painting order: a positioned inline at level 0</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .big { font-size: 20px; line-height: 40px; }
+  .ib { display: inline-block; vertical-align: top; width: 40px; height: 40px; margin-left: -30px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · E.2 Painting order</div>
+  <h1>Painting order: a positioned inline at level 0</h1>
+  <p class=pr-lede>Each stage forms the stacking context. On its line, an orange span of "abc" is followed by a blue
+  inline block pulled 30px back over it.</p>
+</header>
+
+<section>
+  <h2>Step 8, after the line</h2>
+  <p><q>All positioned descendants with 'z-index: auto' or 'z-index: 0', in tree order. For those with 'z-index: auto',
+  treat the element as if it created a new stacking context</q>: a relatively positioned inline is painted whole,
+  after the lines of step 7 and the inline blocks on them. <span class=pr-cite><a href="https://drafts.csswg.org/css2/#painting-order">CSS 2 §E.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-stacking big"><span class=pr-hl style="position: relative">abc</span><span class="pr-a ib"></span></div>
+    <figcaption>The span is <code>position: relative</code>: its background and text cover the inline block.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-stacking big"><span class=pr-hl>abc</span><span class="pr-a ib"></span></div>
+    <figcaption>For comparison, a static span is painted with its line, before the inline block after it, which
+    covers most of "abc".</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Absolute widths: replaced elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  img { position: absolute; top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 10.3.8 Absolutely positioned, replaced elements</div>
+  <h1>Absolute widths: replaced elements</h1>
+  <p class=pr-lede>Each purple box is an absolutely positioned <code>img</code> of an SVG image 60 by 40, and each stage,
+  200 by 60, is its containing block. The constraint equation of 10.3.7 holds.</p>
+</header>
+
+<section>
+  <h2>The width, then the static position</h2>
+  <p><q>The used value of 'width' is determined as for inline replaced elements.</q> <q>If both 'left' and 'right' have
+  the value 'auto', then if the 'direction' property of the element establishing the static-position containing block
+  is 'ltr', set 'left' to the static position; else if 'direction' is 'rtl', set 'right' to the static position.</q>
+  <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-replaced-width">CSS 2 §10.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class=pr-parent style="margin: 10px 0 0 40px; height: 40px"><img alt="" style="top: auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In an <code>ltr</code> dashed block 40px from the left: 60px wide, with <code>left</code> at the static
+    position, 40px.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><div class=pr-parent style="margin: 10px 40px 0 0; height: 40px; direction: rtl"><img alt="" style="top: auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div></div>
+    <figcaption>In an <code>rtl</code> dashed block 40px from the right: <code>right</code> is the static position,
+    40px.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Auto margins</h2>
+  <p><q>If 'left' or 'right' are 'auto', replace any 'auto' on 'margin-left' or 'margin-right' with '0'.</q> <q>If at
+  this point both 'margin-left' and 'margin-right' are still 'auto', solve the equation under the extra constraint that
+  the two margins must get equal values</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#abs-replaced-width">CSS 2 §10.3.8</a></span></p>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><img alt="" style="right: 20px; margin: 0 auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>right: 20px; margin: 0 auto</code>: <code>left</code> is auto, so the margins are 0. The image
+    ends 20px from the right.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-cb" style="height: 60px"><img alt="" style="left: 0; right: 0; margin: 0 auto" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='40'><rect width='100%' height='100%' fill='%238e44ad'/></svg>"></div>
+    <figcaption><code>left: 0; right: 0; margin: 0 auto</code>: margins of 70px each center it.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

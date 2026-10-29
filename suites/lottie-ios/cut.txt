@@ -1,0 +1,37 @@
+# Cases that a plain run leaves out because they test what the engine has decided not to build. An entry lists its
+# cases, one per line, as <path>:<index> within the samples, or a path for every snapshot of the animation, followed by
+# the indented reason, which starts with what is cut. An entry that names no case fails the run. --match runs these
+# cases like any other.
+
+Issues/issue_1664.json
+Issues/issue_1837_opacity.json
+Issues/issue_1837_scale_rotation.json
+Issues/issue_1847.json
+Issues/issue_1854.json
+Issues/issue_2042.json
+Issues/issue_2094.json
+Issues/issue_2150.json
+Issues/issue_2262.json
+Issues/issue_2677.json
+Nonanimating/Text_Color.json
+Nonanimating/keypathTest.json
+Switch.json
+TypeFace/G.json
+    lottie-ios's value providers: its snapshot tests replace properties of the animation through lottie-ios's API
+    (SnapshotConfiguration.customMapping), so the snapshots do not show what the file holds.
+
+Issues/issue_1722.json
+Issues/issue_1949_full_paths.json
+Issues/issue_1949_short_paths.json
+    lottie-ios's text providers: the snapshots replace the animation's text through lottie-ios's API.
+
+Issues/issue_2310.json
+    lottie-ios's viewport frame: the snapshot crops the animation through lottie-ios's API.
+
+Nonanimating/Text_Glyph.json
+    lottie-ios's font providers: the snapshot sets the text in a font that lottie-ios's API names in place of the
+    animation's.
+
+Nonanimating/dog.json
+Nonanimating/dog_landscape.json
+    lottie-ios's image providers: the snapshots draw an image that lottie-ios's API hands in place of the animation's.

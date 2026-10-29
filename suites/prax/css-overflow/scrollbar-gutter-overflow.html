@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>scrollbar-gutter and the overflow values</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .sc { width: 120px; height: 40px; margin: 10px 40px; overflow: auto; background: #b9cde6; }
+  .stage { height: 60px; }
+  .kid { height: 20px; background: #f4f5f7; }
+  .classic::-webkit-scrollbar { width: 12px; height: 12px; background: #cfd3da; }
+  .classic::-webkit-scrollbar-thumb { background: #8a93a1; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Overflow 3 · 5.2 Reserving space for the scrollbar, overflow values</div>
+  <h1>scrollbar-gutter and the overflow values</h1>
+  <p class=pr-lede><code>scrollbar-gutter: auto | stable &amp;&amp; both-edges?</code> <q>The space between the inner
+  border edge and the outer padding edge which user agents may reserve to display the scrollbar is called the
+  scrollbar gutter.</q> <q>In the case of overlay scrollbars, no scrollbar gutter is present.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></span></p>
+</header>
+
+<section>
+  <h2>With overflow's other values</h2>
+  <p><code>stable</code>: the gutter is present <q>when overflow is overflow/hidden, overflow/scroll, or
+  overflow/auto, regardless of whether the box is actually overflowing.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-overflow-3/#scrollbar-gutter-property">CSS Overflow 3 §5.2</a></span></p>
+  <figure class=pr-erratum>
+    <div class="pr-stage stage"><div class="pr-frame sc classic" style="overflow: hidden; scrollbar-gutter: stable"><div class=kid></div></div></div>
+    <figcaption><code>hidden</code>: a gutter, with never a bar in it. <span class=pr-flag>Safari</span> leaves
+    none.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage"><div class="pr-frame sc classic" style="overflow: visible; scrollbar-gutter: stable"><div class=kid></div></div></div>
+    <figcaption><code>visible</code>: not a scroll container, so no gutter; the child fills the box.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

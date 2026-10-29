@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Keys during a composition</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>UI Events · 3.6.5 Key Events During Composition</div>
+  <h1>Keys during a composition</h1>
+  <p class=pr-lede><q>During the composition session, keydown and keyup events MUST still be sent, and these events MUST have the
+  isComposing attribute set to true.</q> <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-key-events">UI Events §3.6.5</a></span></p>
+</header>
+<section>
+  <h2>isComposing</h2>
+  <p>The keydown that starts a composition has <code>isComposing</code> false; every key event after compositionstart
+  has it true, up to the keydown that ends the composition; the keyup after compositionend has it false again.
+  <span class=pr-cite><a href="https://w3c.github.io/uievents/#events-composition-key-events">§3.6.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0"><input class=pr-target id=field></div>
+      <ol class=pr-log data-log="keydown keyup compositionstart compositionend" data-fields="key isComposing" data-on="#field" data-lines=6></ol>
+    </div>
+    <figcaption>With an input method on, click the field and type a word, then commit it. The first keydown has no
+    <code>isComposing</code>; the keyup after compositionstart and every key event up to compositionend have it; the
+    last keyup does not.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+</body>
+</html>

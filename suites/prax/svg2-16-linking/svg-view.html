@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>svgView(): viewBox, preserveAspectRatio, transform</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  img { display: block; width: 160px; height: 60px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 16.3.2 SVG fragment identifiers definitions</div>
+  <h1>svgView(): viewBox, preserveAspectRatio, transform</h1>
+  <p class=pr-lede><q>Parameters of the svgView specification override the parameters defined on the root ‘svg’ element
+  of the referenced document. Unspecified parameters of the svgView specification don't reset the values defined on the
+  root ‘svg’ element of the referenced document.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/linking.html#SVGFragmentIdentifiersDefinitions">SVG 2 §16.3.2</a></span>
+  Each stage is an <code>img</code> 160 by 60 of <code>support/quadrants.svg</code>: blue, orange, green and purple
+  quadrants from the top left, 80 by 30 each, with white dots in their middles.</p>
+</header>
+
+<section>
+  <h2>Each parameter</h2>
+  <p><q>SVG view box parameters are applied in order, as defined in CSS Transforms specification (e.g. SVG view is
+  transformed as defined in ViewBoxParams, then as defined in TransformParams).</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#svgView(viewBox(0,0,80,30);preserveAspectRatio(none))" alt=""></div>
+    <figcaption><code>viewBox(0,0,80,30);preserveAspectRatio(none)</code>: the blue quadrant fills the stage, its
+    dot an ellipse.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#svgView(preserveAspectRatio(xMinYMid))" alt=""></div>
+    <figcaption>Only <code>preserveAspectRatio(xMinYMid)</code>: the root's <code>viewBox</code> kept, which fits
+    exactly: the whole.</figcaption>
+  </figure>
+  <figure class=pr-erratum>
+    <div class="pr-stage pr-medium"><img src="support/quadrants.svg#svgView(transform(scale(2)))" alt=""></div>
+    <figcaption><code>transform(scale(2))</code>, about the root's center, its <code>transform-origin</code>
+    by the user agent style sheet: the quadrants doubled, meeting in the middle, a dot in each corner.
+    <span class=pr-flag>Chrome</span> <span class=pr-flag>Safari</span> The whole.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

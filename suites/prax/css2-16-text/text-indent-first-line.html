@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The text-indent property: the first formatted line</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS 2 · 16.1 Indentation: the 'text-indent' property</div>
+  <h1>The text-indent property: the first formatted line</h1>
+  <p class=pr-lede>Every stage here has <code>text-indent: 30px</code>. The blue box is the first box on a line that is
+  indented; the orange one is on a line that is not.</p>
+</header>
+
+<section>
+  <h2>Only the element's first formatted line</h2>
+  <p><q>'Text-indent' only affects a line if it is the first formatted line of an element. For example, the first line
+  of an anonymous block box is only affected if it is the first child of its parent element.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2
+  §16.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span class=pr-a>one</span> line<br><span class=pr-b>two</span> after a forced break</div>
+    <figcaption>After a <code>&lt;br&gt;</code>, the second line is not the first: it starts at the left edge, the
+    first 30px in.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span class=pr-a>anon</span> text<div><span class=pr-a>block</span></div><span class=pr-b>anon</span> text</div>
+    <figcaption>The first anonymous block is the stage's first child and is indented. The block, which inherits
+    30px, is indented for its own first line. The last anonymous block is not.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Inherited into inline blocks</h2>
+  <p><q>Since the 'text-indent' property inherits, when specified on a block element, it will affect descendant
+  inline-block elements. For this reason, it is often wise to specify 'text-indent: 0' on elements that are specified
+  'display:inline-block'.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css2/#indentation-prop">CSS 2 §16.1</a></span></p>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span class=pr-a>a</span> <span class=pr-hl style="display: inline-block; width: 100px; vertical-align: top"><span class=pr-a>b</span> in a block</span></div>
+    <figcaption>The orange inline block inherits 30px, so its first line starts 30px inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-text" style="text-indent: 30px"><span class=pr-a>a</span> <span class=pr-hl style="display: inline-block; width: 100px; vertical-align: top; text-indent: 0"><span class=pr-b>b</span> in a block</span></div>
+    <figcaption>With <code>text-indent: 0</code> on the inline block, its first line starts at its left edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

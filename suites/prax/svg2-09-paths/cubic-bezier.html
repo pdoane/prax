@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Cubic Béziers: C and S</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 9.3.6 The cubic Bézier curve commands</div>
+  <h1>Cubic Béziers: C and S</h1>
+  <p class=pr-lede><q>A cubic Bézier segment is defined by a start point, an end point, and two control points.</q>
+  <span class=pr-cite><a href="https://svgwg.org/svg2-draft/paths.html#PathDataCubicBezierCommands">SVG 2 §9.3.6</a></span>
+  Each stage is an SVG 160 by 60 with a path stroked dark blue, 4 wide; on it, grey lines join each control
+  point, ringed, to its end of the curve.</p>
+</header>
+
+<section>
+  <h2>C: both control points given</h2>
+  <p><q>Draws a cubic Bézier curve from the current point to (x,y) using (x1,y1) as the control point at the
+  beginning of the curve and (x2,y2) as the control point at the end of the curve.</q> <q>Multiple sets of
+  coordinates may be specified to draw a polybézier.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 C 20 10 140 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 20 10 M 140 10 L 140 50" /><circle cx="20" cy="10" r="2.5" fill="#fff" /><circle cx="140" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 C 20 10 140 10 140 50</code>: an arch leaving straight up and landing straight
+    down, its top on y 20.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 10 c 60 0 60 40 120 40" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 10 L 80 10 M 80 50 L 140 50" /><circle cx="80" cy="10" r="2.5" fill="#fff" /><circle cx="80" cy="50" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 10 c 60 0 60 40 120 40</code>: every pair from 20, 10, so control points at 80, 10
+    and 80, 50: a curve down through 80, 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 C 20 10 80 10 80 50 80 10 140 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 50 L 20 10 M 80 10 L 80 50 M 140 10 L 140 50" /><circle cx="20" cy="10" r="2.5" fill="#fff" /><circle cx="80" cy="10" r="2.5" fill="#fff" /><circle cx="140" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 C 20 10 80 10 80 50 80 10 140 10 140 50</code>: two arches meeting at 80, 50,
+    their tops on y 20.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>S: the first control point reflected</h2>
+  <p><q>The first control point is assumed to be the reflection of the second control point on the previous command
+  relative to the current point. (If there is no previous command or if the previous command was not an C, c, S or
+  s, assume the first control point is coincident with the current point.)</q> The reflected point is orange.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 C 20 5 80 5 80 30 S 140 55 140 30" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 20 30 L 20 5 M 80 5 L 80 55 M 140 55 L 140 30" /><circle cx="20" cy="5" r="2.5" fill="#fff" /><circle cx="80" cy="5" r="2.5" fill="#fff" /><circle cx="140" cy="55" r="2.5" fill="#fff" /></g><circle fill="#d68a3c" cx="80" cy="55" r="3" /></svg></div>
+    <figcaption><code>M 20 30 C 20 5 80 5 80 30 S 140 55 140 30</code>: 80, 5 reflected through 80, 30 is 80,
+    55, so a smooth wave: up to y 11, down to y 49.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 30 c 0 -25 30 -25 30 0 s 30 25 30 0 30 -25 30 0 30 25 30 0" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 50 5 L 50 55 M 80 5 L 80 55 M 110 5 L 110 55" /></g><circle fill="#d68a3c" cx="50" cy="55" r="3" /><circle fill="#d68a3c" cx="80" cy="5" r="3" /><circle fill="#d68a3c" cx="110" cy="55" r="3" /></svg></div>
+    <figcaption><code>M 20 30 c 0 -25 30 -25 30 0 s 30 25 30 0 30 -25 30 0 30 25 30 0</code>: each set another
+    <b>s</b>, a wave of four arches crossing y 30 every 30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><path d="M 20 50 Q 40 10 60 50 S 140 10 140 50" fill="none" stroke="#2c5a8f" stroke-width="4" /><g fill="none" stroke="#8a8a8a" stroke-width="1"><path d="M 140 10 L 140 50" /><circle cx="140" cy="10" r="2.5" fill="#fff" /></g></svg></div>
+    <figcaption><code>M 20 50 Q 40 10 60 50 S 140 10 140 50</code>: after a <b>Q</b>, the first control point is
+    60, 50, so the curve rises from there to about y 33, never below y 50.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,640 @@
+/* The look of every page of the suite: a header, cards of figures, and the boxes a figure is drawn with. A page is
+   laid out for a viewport of 600 by 800, and fits in it, so that a reviewer flips through pages without scrolling. A
+   page's figures show one requirement each, and a caption says what a reader is to see. The chrome around the figures
+   keeps to what an engine lays out early (block and inline-block boxes, borders, backgrounds), so that a page reads in
+   an engine that is still growing; what the figures exercise is the page's subject. */
+
+/* A page follows the reader's preferred color scheme: its chrome takes these colors, each a light and a dark one, and the
+   system colors and form controls follow the used scheme. A figure's own colors are its subject, and the same in both,
+   so a stage is light in both (.pr-stage), and what is drawn in it resolves these colors' light values. A figure about
+   another scheme sets color-scheme on its stage. */
+:root {
+    color-scheme: light dark;
+    --pr-surface: light-dark(#eef0f4, #15181e);     /* behind the cards */
+    --pr-card: light-dark(white, #1e222a);
+    --pr-card-border: light-dark(#d5d9e0, #353b46);
+    --pr-ink: light-dark(#1f2430, #e3e6ec);         /* text */
+    --pr-quiet: light-dark(#7b8494, #8d96a5);       /* eyebrows, citations, notes */
+    --pr-caption: light-dark(#6b7381, #9aa2af);
+    --pr-quote: light-dark(#4a5261, #b4bcc9);
+    --pr-stage: light-dark(#e7eaef, #262b34);
+    --pr-guide: light-dark(rgba(31, 36, 48, 0.08), rgba(227, 230, 236, 0.08));
+    --pr-stage-border: light-dark(#b5bcc7, #4a5160);
+    --pr-plain: light-dark(#f4f5f7, #2c313b);       /* a plain box's content area */
+    --pr-line: light-dark(#6b7381, #8d96a5);        /* dashed outlines and frames */
+    --pr-accent: light-dark(#2c5a8f, #8fb3e0);      /* tags and notes about later specifications */
+}
+
+/* The page's own elements take the rules below by name. A stage's elements are a figure's subject, and the selectors
+   leave them to the user agent's style and the figure's own; :where keeps each rule as weak as a page's own selector. */
+body {
+    margin: 0;
+    padding: 16px;
+    background: var(--pr-surface);
+    color: var(--pr-ink);
+    font: 14px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+:where(header:not(.pr-stage *)) {
+    margin: 0 0 12px;
+}
+
+.pr-eyebrow {
+    color: var(--pr-quiet);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+:where(h1:not(.pr-stage *)) {
+    margin: 2px 0 4px;
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.pr-lede {
+    margin: 0;
+}
+
+:where(section:not(.pr-stage *)) {
+    margin: 0 0 12px;
+    padding: 12px 16px 2px;
+    background: var(--pr-card);
+    border: 1px solid var(--pr-card-border);
+    border-radius: 10px;
+}
+
+:where(h2:not(.pr-stage *)) {
+    margin: 0 0 4px;
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+:where(section:not(.pr-stage *) > p) {
+    margin: 0 0 10px;
+}
+
+/* A sentence of the specification, quoted. */
+:where(q:not(.pr-stage *)) {
+    color: var(--pr-quote);
+    font-style: italic;
+}
+
+.pr-cite {
+    color: var(--pr-quiet);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* A citation links to its section in the specification's editor's draft, or to the issue that settled it, and reads as
+   the text around it. */
+a[href^="https://drafts.csswg.org/"],
+a[href^="https://svgwg.org/"],
+a[href^="https://html.spec.whatwg.org/"],
+a[href^="https://w3c.github.io/"],
+a[href^="https://github.com/"] {
+    color: inherit;
+    text-decoration: none;
+}
+
+:where(code:not(.pr-stage *)) {
+    font: 13px/1.3 ui-monospace, Menlo, monospace;
+}
+
+/* A figure is a stage and a caption. Figures sit side by side and wrap. */
+:where(figure:not(.pr-stage *)) {
+    display: inline-block;
+    vertical-align: top;
+    margin: 0 14px 12px 0;
+}
+
+/* The area a figure draws in: 200px wide, so a percentage of it is easy to read, with guides every 10px from its
+   padding edge. It establishes a block formatting context, so the margins inside it stay inside it. It is light in
+   either scheme, because a figure's colors are chosen for a light stage and are the same in both. */
+.pr-stage {
+    color-scheme: light;
+    color: var(--pr-ink);           /* set, not inherited, so that a stage's text takes the light scheme's ink */
+    display: flow-root;
+    width: 200px;
+    background-color: var(--pr-stage);
+    background-image: linear-gradient(to right, var(--pr-guide) 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--pr-guide) 1px, transparent 1px);
+    background-size: 10px 10px;
+    border: 1px solid var(--pr-stage-border);
+}
+
+.pr-stage.pr-wide {
+    width: 300px;
+}
+
+.pr-stage.pr-narrow {
+    width: 100px;
+}
+
+/* A stage for three figures across. */
+.pr-stage.pr-medium {
+    width: 160px;
+}
+
+.pr-medium + figcaption {
+    max-width: 160px;
+}
+
+:where(figcaption:not(.pr-stage *)) {
+    max-width: 200px;
+    margin: 6px 0 0;
+    color: var(--pr-caption);
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.pr-wide + figcaption {
+    max-width: 300px;
+}
+
+/* Code in a caption breaks anywhere if it must, so a long value or URL stays within the caption's width. */
+:where(figcaption:not(.pr-stage *) code) {
+    color: var(--pr-ink);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+/* Boxes with names. Each is 20px tall from a single line of text, so it lines up with the guides. */
+.pr-a, .pr-b, .pr-c, .pr-d {
+    padding: 0 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+}
+
+.pr-a {
+    background: #4f81bd;
+    border: 1px solid #2c5a8f;
+}
+
+.pr-b {
+    background: #d68a3c;
+    border: 1px solid #9c5f22;
+}
+
+.pr-c {
+    background: #6aa36a;
+    border: 1px solid #3f7a3f;
+}
+
+.pr-d {
+    background: #8e44ad;
+    border: 1px solid #5e2a75;
+}
+
+/* Lighter tints of A and B, for boxes that overlap text that must stay readable. */
+.pr-a.pr-light {
+    background: #b9cde6;
+    color: #1f2430;
+}
+
+.pr-b.pr-light {
+    background: #f6d7b4;
+    color: #1f2430;
+}
+
+/* A box whose size is exactly what a figure gives it: no padding, and its border inside its width and height. */
+.pr-fit {
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* A box that only contains others: tinted, and outlined, which takes no room, so that it has no border or padding of
+   its own to keep margins apart. */
+.pr-parent {
+    background: rgba(79, 129, 189, 0.16);
+    outline: 1px dashed var(--pr-line);
+}
+
+/* The areas of the box model, in the colors browsers' inspectors use. `.pr-margin-area` is a flow root around one box,
+   so its tint is that box's margin area; the box's background is its padding area, and its child `.pr-content-area` is
+   its content. */
+.pr-margin-area {
+    display: flow-root;
+    background: #f9cc9d;
+}
+
+.pr-box {
+    background: #c3d08b;
+    border: 0 solid #e6b54a;
+}
+
+.pr-content-area {
+    height: 20px;
+    background: #8cb6c0;
+}
+
+.pr-legend {
+    margin: 0 0 12px;
+    color: var(--pr-quote);
+    font-size: 13px;
+}
+
+.pr-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin: 0 4px 0 12px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.pr-swatch:first-child {
+    margin-left: 0;
+}
+
+.pr-swatch.pr-margin { background: #f9cc9d; }
+.pr-swatch.pr-border { background: #e6b54a; }
+.pr-swatch.pr-padding { background: #c3d08b; }
+.pr-swatch.pr-content { background: #8cb6c0; }
+
+/* A bar of the size a figure is to have, for comparison. */
+.pr-expect {
+    height: 6px;
+    margin: 4px 0 0;
+    background: #8a93a1;
+}
+
+/* Declarations and selectors that a supports page asks the engine to parse, and interfaces and members that it asks
+   the engine to expose (supports.js). */
+.pr-decl, .pr-selector, .pr-api {
+    display: inline-block;
+    margin: 0 8px 8px 0;
+    padding: 3px 8px;
+    background: var(--pr-plain);
+    border: 1px solid light-dark(#cfd3da, #444b57);
+    color: light-dark(#9aa1ad, #7d8592);
+    font-size: 13px;
+    white-space: pre;
+}
+
+.pr-decl.pr-yes, .pr-selector.pr-yes, .pr-api.pr-yes {
+    background: light-dark(#dcefd6, #1f3a1c);
+    border-color: light-dark(#8fc47f, #4f8a40);
+    color: light-dark(#1f3d1a, #cfe8c6);
+}
+
+.pr-note {
+    margin: 0 0 12px;
+    color: var(--pr-quiet);
+    font-size: 13px;
+}
+
+/* A margin area as wide as its box, beside others on a line. */
+.pr-margin-area.pr-shrink {
+    display: inline-block;
+    vertical-align: top;
+}
+
+/* A stage whose lines hold only boxes laid side by side: its lines are as tall as their boxes, with no room for text
+   below them. */
+.pr-row {
+    font-size: 0;
+    line-height: 0;
+}
+
+/* The source a figure is made from. */
+pre.pr-source {
+    display: inline-block;
+    vertical-align: top;
+    margin: 0 20px 14px 0;
+    padding: 8px 12px;
+    background: light-dark(#f6f7f9, #1b1f26);
+    border: 1px solid light-dark(#e1e4e9, #353b46);
+    color: var(--pr-ink);
+    font: 12px/1.45 ui-monospace, Menlo, monospace;
+}
+
+/* A list of what a reader is to see in a figure. */
+ul.pr-points {
+    margin: 0 0 12px;
+    padding: 0 0 0 20px;
+}
+
+/* A plain box to put a border on: a light content area, 20px tall, with no border until a figure gives it one. */
+.pr-plain {
+    height: 20px;
+    background: var(--pr-plain);
+    border: 0 solid #2c5a8f;
+}
+
+/* A stage that is the containing block of the positioned boxes in it, 100px tall so that a percentage of its height
+   reads as easily as one of its width. */
+.pr-stage.pr-cb {
+    position: relative;
+    height: 100px;
+}
+
+/* Text in a figure: 13px on 20px lines, so that each line sits between two guides. */
+.pr-text {
+    font-size: 13px;
+    line-height: 20px;
+}
+
+/* A box that is a containing block or a formatting context, drawn with a dashed border of its own. Unlike `.pr-parent`,
+   its border is part of the layout. */
+.pr-frame {
+    border: 1px dashed var(--pr-line);
+}
+
+/* A value that computed.js reads back and fills in. */
+.pr-computed {
+    color: var(--pr-ink);
+    font-weight: 600;
+}
+
+/* A stage that forms a stacking context of its own, so that what paints in it is ordered among itself. */
+.pr-stage.pr-stacking {
+    position: relative;
+    z-index: 0;
+}
+
+/* A frame the size of a stage, for a figure that needs a document of its own: the root element, the viewport, fixed
+   positioning, scrolling. Its document does not load this stylesheet. */
+iframe.pr-view {
+    display: block;
+    width: 200px;
+    height: 100px;
+    border: 0;
+}
+
+/* A frame holding a document with `@page` rules, for a figure that shows printed output. On screen it shows the
+   document's continuous layout, the width of a 240px page, inside a border that marks it as a source of pages. The
+   stills print its document and show each browser's pages below the screen columns. */
+iframe.pr-paged {
+    display: block;
+    width: 240px;
+    height: 160px;
+    border: 1px solid #6b7381;
+    background: white;
+}
+
+/* A short paged frame, for a document whose continuous layout is a few lines. */
+iframe.pr-paged.pr-short {
+    height: 80px;
+}
+
+/* Inline boxes that show where text belongs: a chip has a background and a border, a highlight only a background. */
+.pr-chip {
+    background: #f9cc9d;
+    border: 2px solid #d68a3c;
+}
+
+.pr-hl {
+    background: #f9cc9d;
+}
+
+/* An outline of where a box would be, or of a region, which takes no room. On an SVG shape, such as a rect that marks a
+   positioning rectangle, it is a dashed stroke of the same color, 1 wide, and the shape is not filled. */
+.pr-ghost {
+    outline: 1px dashed var(--pr-line);
+}
+
+svg .pr-ghost {
+    outline: none;
+    fill: none;
+    stroke: var(--pr-line);
+    stroke-width: 1px;
+    stroke-dasharray: 3px 2px;
+}
+
+/* An svg element that holds only definitions (markers, gradients, filters, clip paths and masks) for the page's
+   figures: it takes no room and draws nothing. */
+.pr-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+/* A line's baseline, dashed across the stage: a zero-height inline-block that takes no room on the line. Put it first
+   on the line whose baseline it marks. */
+.pr-baseline {
+    display: inline-block;
+    width: 200px;
+    height: 0;
+    margin-right: -200px;
+    border-bottom: 1px dashed #c0392b;
+}
+
+/* A stage whose lines run down, right to left: 200px tall, its block size, and so its width, from its content. */
+.pr-stage.pr-vertical {
+    writing-mode: vertical-rl;
+    width: auto;
+    height: 200px;
+}
+
+/* On an SVG shape, a line that text stands on or is measured against, dashed in the baseline's red and not filled:
+   a baseline or a y, the path of a textPath, or an edge of a wrapping area. It resets width and height, so a rect takes
+   the look from attributes instead. */
+svg .pr-baseline {
+    display: inline;
+    width: auto;
+    height: auto;
+    margin: 0;
+    border: 0;
+    fill: none;
+    stroke: #c0392b;
+    stroke-width: 1px;
+    stroke-dasharray: 3px 2px;
+}
+
+/* A vertical line's baseline, dashed down the stage: the vertical counterpart of `.pr-baseline`. Put it first on the
+   line whose baseline it marks. */
+.pr-vbaseline {
+    display: inline-block;
+    width: 0;
+    height: 200px;
+    margin-bottom: -200px;
+    border-left: 1px dashed #c0392b;
+}
+
+/* A figure narrow enough that four or five sit side by side, for stages of 100px or less. */
+figure.pr-narrow figcaption {
+    max-width: 116px;
+}
+
+/* A figure whose caption sits beside its stage, so that a wide stage with a long caption keeps the page short. */
+figure.pr-beside {
+    display: flex;
+    align-items: flex-start;
+    margin-right: 0;
+}
+
+figure.pr-beside > .pr-wide + figcaption {
+    max-width: none;
+    flex: 1;
+    margin: 0 0 0 14px;
+}
+
+/* Text whose every letter, space and punctuation mark is 10px wide, on 20px lines, so the width of a word, a line or a
+   box sized from its text reads off the guides: "auto" is 40px. For figures whose sizes come from text: intrinsic
+   sizes, contributions, line breaking. Needs fonts.css. */
+.pr-measure {
+    font: calc(50px / 3)/20px "PR Noto Sans Mono";
+}
+
+/* Large text on lines of a fixed height, for figures about fonts and text. */
+.pr-sample {
+    padding: 0 6px;
+    font-size: 24px;
+    line-height: 40px;
+    white-space: nowrap;
+}
+
+/* Lists in a stage: flush with it, with room for outside markers. */
+.pr-stage ul, .pr-stage ol {
+    margin: 0;
+    padding: 0 0 0 30px;
+}
+
+/* Tables built of elements with table display values, named after them, and a cell 20px tall that lines up with the
+   guides. */
+.pr-table { display: table; }
+.pr-inline-table { display: inline-table; }
+.pr-table-row-group { display: table-row-group; }
+.pr-table-header-group { display: table-header-group; }
+.pr-table-footer-group { display: table-footer-group; }
+.pr-table-row { display: table-row; }
+.pr-table-column-group { display: table-column-group; }
+.pr-table-column { display: table-column; }
+.pr-table-caption { display: table-caption; }
+
+.pr-table-cell {
+    display: table-cell;
+    height: 20px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    background: var(--pr-plain);
+    border: 1px solid #2c5a8f;
+    font-size: 12px;
+    line-height: 18px;
+}
+
+/* A figure whose subject is source text rather than a stage. */
+figure pre.pr-source {
+    display: block;
+    width: 200px;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+/* What a specification after CSS 2 changes. A card of its own follows the CSS 2 cards it revisits: its tag names the
+   later specification and section, and its figures show what is expected now. */
+section.pr-later {
+    border-left: 4px solid #4f81bd;
+}
+
+/* Under the header of a chapter's page that a module replaces whole: the module's pages to read for what is expected
+   now. */
+.pr-now {
+    margin: 6px 0 0;
+    padding: 0 0 0 8px;
+    border-left: 4px solid #4f81bd;
+    color: var(--pr-accent);
+    font-size: 13px;
+}
+
+.pr-tag {
+    margin: 0 0 2px;
+    color: var(--pr-accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* A flag in a caption. Red: a browser departs from the specification, and the caption says what it does instead; the
+   figure is a `pr-erratum`, whose stage is outlined in red. Blue (`pr-since`): a later specification replaced what this
+   figure shows of CSS 2, and a `pr-later` card shows what is expected now. */
+.pr-flag {
+    display: inline-block;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: #c0392b;
+    color: white;
+    font: 600 11px/16px -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+.pr-flag.pr-since {
+    background: #2c5a8f;
+}
+
+figure.pr-erratum > :not(figcaption) {
+    outline: 2px dashed #c0392b;
+    outline-offset: 2px;
+}
+
+/* A stage that moves, for a figure whose point is clearer in motion than in a still: a plane turning, an origin
+   sweeping. Its animations run all the time. A still (tools/suite/prax/suite_stills.py) pauses them at load, so that it
+   shows the frame that the declared style, or a negative animation-delay, picks: the frame that the caption describes,
+   the same in every browser and the engine. What moves is clipped to the stage, so that it never crosses a neighbouring
+   figure; `clip` is no grouping property, and leaves a 3D scene in the stage whole. */
+.pr-motion {
+    overflow: clip;
+}
+
+/* The events that reach part of a figure, newest last (events.js), on 20px lines that sit between the guides. The
+   list keeps its height, so the stage does not grow as the reader acts. */
+.pr-log {
+    height: calc(var(--pr-log-lines, 6) * 20px);
+    margin: 0;
+    padding: 0 6px;
+    overflow: hidden;
+    list-style: none;
+    background: var(--pr-plain);
+    border-top: 1px solid var(--pr-stage-border);
+    font: 11px/20px ui-monospace, Menlo, monospace;
+    white-space: nowrap;
+}
+
+/* Something for the reader to act on in a figure: a plain block that takes the focus and shows it. It fills the line
+   less its margins, button or not, since a button's auto width only fits its content; 100% is the fallback. */
+.pr-target {
+    display: block;
+    width: 100%;
+    width: -webkit-fill-available;
+    width: -moz-available;
+    width: stretch;
+    height: 20px;
+    margin: 0 0 10px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    background: var(--pr-plain);
+    border: 1px solid var(--pr-accent);
+    color: var(--pr-ink);
+    font-size: 12px;
+    text-align: left;
+}
+
+.pr-target:focus-visible {
+    outline: 3px solid var(--pr-accent);
+}
+
+/* Fields in a .pr-validity element outlined by their validity: green while :valid, red while :invalid. Buttons are
+   left plain, since a figure about validity is about what the fields hold. */
+.pr-validity :is(input:not([type=submit], [type=image], [type=reset], [type=button]), select, textarea):valid {
+    outline: 2px solid #6aa36a;
+    outline-offset: 1px;
+}
+
+.pr-validity :is(input:not([type=submit], [type=image], [type=reset], [type=button]), select, textarea):invalid {
+    outline: 2px solid #c0392b;
+    outline-offset: 1px;
+}
+
+/* The frame below a form's stage that its submission loads: the document that the form's action names, which lists
+   what it was sent. A page sets its height where the list is longer. */
+iframe.pr-result {
+    display: block;
+    width: 100%;
+    height: 40px;
+    border: 0;
+    border-top: 1px solid var(--pr-stage-border);
+}

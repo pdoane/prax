@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>non-scaling-stroke</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg class=pr-defs width="0" height="0"><defs><marker id="square" markerWidth="3" markerHeight="3" refX="1.5" refY="1.5"><rect width="3" height="3" fill="#d68a3c" /></marker></defs></svg>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 13.6 Vector effects</div>
+  <h1>non-scaling-stroke</h1>
+  <p class=pr-lede><q>With the non-scaling-stroke vector effect, stroke outline shall be calculated in the "host"
+  coordinate space instead of user coordinate system. More precisely: the viewport coordinate system of the furthest
+  ancestral SVG viewport.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#PaintingVectorEffects">SVG 2 §13.6</a></span>
+  Each stage is an SVG 160 by 60, the host; the strokes are dark blue.</p>
+</header>
+
+<section>
+  <h2>Not scaled by the transform</h2>
+  <p><q>The resulting visual effect of this modification is that stroke width is not dependent on the transformations
+  of the element (including non-uniform scaling and shear transformations) and zoom level.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(4 1)"><rect x="5" y="10" width="30" height="40" fill="none" stroke="#2c5a8f" stroke-width="4" /></g></svg></div>
+    <figcaption>A <code>rect</code> stroked 4 wide in a <code>scale(4 1)</code>, from 20, 10 to 140, 50: its
+    sides 16 wide, its top and bottom 4.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(4 1)"><rect x="5" y="10" width="30" height="40" fill="none" stroke="#2c5a8f" stroke-width="4" vector-effect="non-scaling-stroke" /></g></svg></div>
+    <figcaption>The same with <code>vector-effect="non-scaling-stroke"</code>: 4 wide all round.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="skewX(45)"><rect x="10" y="10" width="80" height="40" fill="none" stroke="#2c5a8f" stroke-width="4" vector-effect="non-scaling-stroke" /></g></svg></div>
+    <figcaption>A <code>rect</code> in a <code>skewX(45)</code>, a parallelogram from 20, 10 to 140, 50,
+    non-scaling: 4 wide across every side, the slanted ones too.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The furthest viewport, markers and dashes</h2>
+  <p><q>first, the shape's path is transformed into the host coordinate space. Stroke outline is calculated in the
+  host coordinate space. The resulting outline is transformed back to the user coordinate system.</q></p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><svg x="20" y="10" width="120" height="40" viewBox="0 0 30 10" preserveAspectRatio="none" overflow="visible"><rect width="30" height="10" fill="none" stroke="#2c5a8f" stroke-width="2" vector-effect="non-scaling-stroke" /></svg></svg></div>
+    <figcaption>In an inner <code>svg</code> that scales by 4, a <code>rect</code> from 20, 10 to 140, 50,
+    <code>stroke-width="2"</code>, non-scaling: 2 wide.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(3)"><path d="M 10 10 H 40" stroke="#2c5a8f" stroke-width="2" vector-effect="non-scaling-stroke" marker-start="url(#square)" marker-end="url(#square)" /></g></svg></div>
+    <figcaption>A line from x 30 to 120 in a <code>scale(3)</code>, 2 wide, non-scaling, with markers 3 units of
+    <q>the painted stroke width</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/painting.html#MarkerElement">§13.7.1</a></span>
+    across: squares 6 across.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="60"><g transform="scale(4 1)"><path d="M 5 30 H 35" stroke="#2c5a8f" stroke-width="4" stroke-dasharray="5 5" vector-effect="non-scaling-stroke" /></g></svg></div>
+    <figcaption>A line from x 20 to 140 in a <code>scale(4 1)</code>, dashed <code>5 5</code>, non-scaling: the
+    dashes are part of the outline, so 5 long every 10, twelve of them.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

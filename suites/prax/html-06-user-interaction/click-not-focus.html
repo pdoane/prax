@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Not focused by click()</title>
+<link rel=stylesheet href=../shared/page.css>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 6.6.2 Data model</div>
+  <h1>Not focused by click()</h1>
+  <p class=pr-lede><q>Being focusable is a statement about whether an element can be focused programmatically, e.g. via the focus() method or autofocus attribute.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">HTML §6.6.2</a></span></p>
+</header>
+<section>
+  <h2>Not by click()</h2>
+  <p><q>Note that focusing is not an activation behavior, i.e. calling the click() method on an element or
+  dispatching a synthetic click event on it won't cause the element to get focused.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/interaction.html#data-model">§6.6.2</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div style="padding: 10px 20px 0">
+        <button class=pr-target id=caller>call click() on the box</button>
+        <div class=pr-target id=target tabindex=0>the box, tabindex=0</div>
+      </div>
+      <ol class=pr-log data-log="click focus" data-fields="target" data-lines=3></ol>
+    </div>
+    <figcaption>Click the first button: a click at the box, from the script, and no focus at the box; the
+    focus stays on the button.</figcaption>
+  </figure>
+</section>
+<script>
+  // Clicks the box from script.
+  document.getElementById("caller").addEventListener("click", () => document.getElementById("target").click());
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

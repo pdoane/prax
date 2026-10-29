@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The area element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .pic { box-sizing: border-box; padding: 10px 0 0; font-size: 0; line-height: 0; }
+  figure { margin-right: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.8.13 The area element</div>
+  <h1>The area element</h1>
+  <p class=pr-lede><q>The area element represents either a hyperlink with some text and a corresponding area on an
+  image map, or a dead area on an image map.</q> <q>the shape and coords attributes specify the area.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/image-maps.html#the-area-element">HTML §4.8.13</a></span>
+  Each image is 200 by 100, a blue rectangle from 10, 10 to 60, 90, an orange circle at 100, 50 of radius 30, and a
+  green triangle, and each area matches one of them. Each log lists the target of the clicks in its stage.</p>
+</header>
+
+<section>
+  <h2>A rectangle, a circle and a polygon</h2>
+  <p>Rectangle: <q>the distance from the left edge of the image to the left side of the rectangle, the distance from
+  the top edge to the top side, the distance from the left edge to the right side, and the distance from the top edge
+  to the bottom side</q>. Circle: the center's <q>distance in CSS pixels from the left edge</q> and <q>from the top
+  edge</q>, then <q>the radius of the circle</q>. Polygon: <q>the points of the polygon, in order.</q></p>
+  <figure>
+    <div class=pr-stage>
+      <div class=pic><img id=shapes src="support/map-shapes.svg" usemap="#three" alt="Shapes"><map name=three>
+        <area id=rect shape=rect coords="10,10,60,90" href="#rect-link" alt="Rectangle" style="cursor: crosshair">
+        <area id=circle shape=circle coords="100,50,30" href="#circle-link" alt="Circle">
+        <area id=poly shape=poly coords="150,90,190,90,170,10" href="#poly-link" alt="Triangle">
+      </map></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol>
+    </div>
+    <figcaption>Click each shape: <code>target=rect</code>, <code>circle</code>, <code>poly</code>; the grey around
+    them, and the corners of the circle's square: <code>target=shapes</code>. Over the rectangle the pointer is a
+    crosshair, its area's cursor. <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/rendering.html#image-maps-2">§15.4.4</a></span></figcaption>
+  </figure>
+</section>
+
+<script src=../shared/events.js></script>
+</body>
+</html>

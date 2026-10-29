@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Autonomous custom elements</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .stage { padding: 10px; box-sizing: border-box; }
+  .act { padding: 10px 20px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.13.3 Core concepts</div>
+  <h1>Autonomous custom elements</h1>
+  <p class=pr-lede><q>An autonomous custom element does not have any special meaning: it represents its children.</q>
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-core-concepts">HTML §4.13.3</a></span>
+  The page defines <code>x-plain</code>, with no shadow tree, and <code>x-framed</code>, whose constructor attaches a
+  shadow tree: a blue frame round a <code>slot</code>.</p>
+</header>
+<section>
+  <h2>Its children, or its shadow tree</h2>
+  <figure>
+    <div class="pr-stage stage pr-text">before <x-plain>the <b>children</b></x-plain> after</div>
+    <figcaption><code>x-plain</code>: "before the <b>children</b> after" on one line, as if it were a span.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage stage pr-text">before <x-framed>the <b>children</b></x-framed> after</div>
+    <figcaption><code>x-framed</code>: the same words, with "the <b>children</b>" inside an inline blue frame, drawn in
+    its shadow tree's slot.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>No behavior of its own</h2>
+  <p>An autonomous element is not focusable or activated as a control is: <q>simply defining and using an element called
+  taco-button does not mean that such elements represent buttons.</q> <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-autonomous-drawbacks">§4.13.1.5</a></span></p>
+  <figure>
+    <div class="pr-stage pr-wide">
+      <div class=act>
+        <button class=pr-target id=before>before</button>
+        <x-plain class=pr-target id=taco>x-plain, styled as a button</x-plain>
+        <button class=pr-target id=after>after</button>
+      </div>
+      <ol class=pr-log data-log="focus click" data-fields="target" data-lines=4></ol>
+    </div>
+    <figcaption>Click "before", then press Tab: the focus goes to "after", passing over <code>x-plain</code>. Click
+    <code>x-plain</code>: a <code>click</code> at it, but no focus.</figcaption>
+  </figure>
+</section>
+<script>
+  customElements.define("x-plain", class extends HTMLElement {});
+  customElements.define("x-framed", class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({mode: "open"}).innerHTML =
+        '<span style="border: 2px solid #4f81bd; padding: 0 4px"><slot></slot></span>';
+    }
+  });
+</script>
+<script src=../shared/events.js></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Layout of line boxes</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .fl { float: left; width: 60px; height: 40px; }
+  .tall { display: inline-block; width: 30px; height: 40px; vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Inline Layout 3 · 2.1 Layout of Line Boxes</div>
+  <h1>Layout of line boxes</h1>
+  <p class=pr-lede><q>Line boxes are created as needed to hold inline-level content within an inline formatting
+  context.</q> <span class=pr-cite><a href="https://drafts.csswg.org/css-inline-3/#line-boxes">CSS Inline Layout 3 §2.1</a></span></p>
+</header>
+
+<section>
+  <h2>Inline boxes split across line boxes</h2>
+  <p><q>When an inline box exceeds the logical width of a line box, or contains a forced line break, it is split
+  … into several fragments, which are partitioned across multiple line boxes.</q></p>
+  <figure>
+    <div class=pr-stage>Text <span class=pr-chip>in an inline box too long for one line, so split onto three of them</span> after.</div>
+    <figcaption>Too wide: one fragment on each of three lines, the border open at each break.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>Text <span class=pr-chip>one<br>two</span> after.</div>
+    <figcaption>A forced break inside it: a fragment on each of two lines.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Stacked, and as wide as the containing block</h2>
+  <p><q>Line boxes are stacked with no separation … and they never overlap.</q> They are <q>aligned within this
+  container as specified by 'align-content'</q>. <q>Floating boxes or initial letter boxes can come between the
+  containing block edge and the line box edge, reducing … the logical width of, any such impacted line boxes.</q></p>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow"><span class=pr-hl>one two three <span class="pr-a pr-fit tall"></span> four five six</span></div>
+    <figcaption>Each line directly below the last; the second grows to 40px for the blue box, and the third starts
+    under it.</figcaption>
+  </figure>
+  <figure class=pr-narrow>
+    <div class="pr-stage pr-narrow" style="height: 100px; align-content: end"><span class=pr-hl>one two three</span></div>
+    <figcaption><code>align-content: end</code> in a 100px block: the lines sit at its bottom.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage style="text-align: right"><span class="pr-b pr-fit fl"></span>Text to the right of the float, and then below it, aligned to the right of each line box.</div>
+    <figcaption>Beside the 60px float each line box is 140px wide, starting at the float; below it, 200px. Each line
+    ends at the right edge.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

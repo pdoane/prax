@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>ry: the vertical radius</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  figure { margin-right: 10px; }
+  svg { display: block; }
+  .auto { ry: auto; }
+  .percent { ry: 25%; }
+  .round { ry: 10px; }
+  .over { ry: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>SVG 2 · 7.5 Vertical radius: The ‘ry’ property</div>
+  <h1>ry: the vertical radius</h1>
+  <p class=pr-lede><q>The ‘ry’ property describes the vertical radius of the ‘ellipse’ element and the vertical curve
+  radius of the ‘rect’ element.</q> <span class=pr-cite><a href="https://svgwg.org/svg2-draft/geometry.html#RY">SVG 2 §7.5</a></span>
+  Each stage is an SVG 160 by 80, in user units of 1px.</p>
+</header>
+
+<section>
+  <h2>An ellipse's, from CSS, or auto</h2>
+  <p>Its percentages <q>refer to the height of the current SVG viewport</q>. <q>When the computed value of ‘ry’ is
+  <code>auto</code>, the used radius is equal to the absolute length used for ‘rx’, creating a circular arc.</q>
+  Each ellipse is about 80, 40.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse class=percent cx="80" cy="40" rx="60" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption>A style sheet's <code>ry: 25%</code> of 80 over <code>ry="10"</code>, 20: from y 20 to 60.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse class=auto cx="80" cy="40" rx="30" ry="10" fill="#4f81bd" /></svg></div>
+    <figcaption><code>ry: auto</code> over <code>ry="10"</code>, with <code>rx="30"</code>: a circle of radius
+    30.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><ellipse cx="80" cy="40" rx="30" fill="#4f81bd" /></svg></div>
+    <figcaption><code>rx="30"</code> alone, <code>ry</code> initially <code>auto</code>: the same circle.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>A rect's, at most half its height</h2>
+  <p><q>Regardless of how the value is calculated, the used value of ‘ry’ for a ‘rect’ is never more than 50% of the
+  used value of height for the same shape.</q> Each rect is 120 by 60 at 20, 10, outlined dashed.</p>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=round x="20" y="10" width="120" height="60" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="60" /></svg></div>
+    <figcaption><code>ry: 10px</code>: <code>rx</code>, <code>auto</code>, takes 10. Quarter circles of radius 10.</figcaption>
+  </figure>
+  <figure>
+    <div class="pr-stage pr-medium"><svg width="160" height="80"><rect class=over x="20" y="10" width="120" height="60" rx="10" fill="#4f81bd" /><rect class=pr-ghost x="20" y="10" width="120" height="60" /></svg></div>
+    <figcaption><code>ry: 40px</code>, held to 30, with <code>rx="10"</code>: corners 10 by 30, no straight
+    sides, the top straight from 30 to 130.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

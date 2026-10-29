@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>Precomposed inline-level values</title>
+<link rel=stylesheet href=../shared/page.css>
+<link rel=stylesheet href=../shared/fonts.css>
+<style>
+  .pr-stage { font: 13px/20px "PR Arimo"; }
+  .x { padding: 0 2px; background: #f6d7b4; border: 1px solid #d68a3c; vertical-align: top; }
+  .x > span { padding: 0 4px; background: #b9cde6; }
+  .cell { display: table-cell; padding: 0 4px; background: #b9cde6; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>CSS Display 4 · 2.6 Precomposed Inline-level Display Values</div>
+  <h1>Precomposed inline-level values</h1>
+  <p class=pr-lede><q>CSS level 2 used a single-keyword syntax for 'display', requiring separate keywords for
+  block-level and inline-level variants of the same layout mode.</q> <q>These &lt;display-legacy&gt; keywords map as
+  follows</q>: each to a pair of an outer and an inner type. <span class=pr-cite><a href="https://drafts.csswg.org/css-display-4/#legacy-display">CSS Display 4 §2.6</a></span></p>
+</header>
+
+<section>
+  <h2>Each is its two keywords</h2>
+  <p><q>inline-block: Computes to inline flow-root</q>, and so on for the other three. Each stage has the
+  precomposed keyword on its first line and its two keywords on the second; each box holds "a" and "b", and the two
+  lines are drawn alike.</p>
+  <figure>
+    <div class=pr-stage>x <span id=p1 class=x style="display: inline-block"><span>a</span> <span>b</span></span> x<br>x <span id=p2 class=x style="display: inline flow-root"><span>a</span> <span>b</span></span> x</div>
+    <figcaption><code>inline-block</code> and <code>inline flow-root</code>: on both lines one atomic box between the x's, "a b" inside it.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span id=p3 class=x style="display: inline-table"><span class=cell>a</span><span class=cell>b</span></span> x<br>x <span id=p4 class=x style="display: inline table"><span class=cell>a</span><span class=cell>b</span></span> x</div>
+    <figcaption><code>inline-table</code> and <code>inline table</code>: on both lines a table on the line, its cells "a" and "b" side by side.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span id=p5 class=x style="display: inline-flex; gap: 4px"><span>a</span><span>b</span></span> x<br>x <span id=p6 class=x style="display: inline flex; gap: 4px"><span>a</span><span>b</span></span> x</div>
+    <figcaption><code>inline-flex</code> and <code>inline flex</code>: on both lines a flex container on the line, "a" and "b" 4px apart.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage>x <span id=p7 class=x style="display: inline-grid; grid-template-columns: 30px 30px"><span>a</span><span>b</span></span> x<br>x <span id=p8 class=x style="display: inline grid; grid-template-columns: 30px 30px"><span>a</span><span>b</span></span> x</div>
+    <figcaption><code>inline-grid</code> and <code>inline grid</code>: on both lines a grid on the line, "a" and "b" in two 30px columns.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

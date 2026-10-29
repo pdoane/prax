@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<title>The link element</title>
+<link rel=stylesheet href=../shared/page.css>
+<style>
+  .act { padding: 10px; }
+  link.shown { display: block; height: 20px; margin: 0 0 10px; background: #8a93a1; }
+  iframe.pr-view { height: 40px; }
+  label.act { display: block; padding: 0 10px 10px; font-size: 12px; line-height: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div class=pr-eyebrow>HTML · 4.2.4 The link element</div>
+  <h1>The link element</h1>
+  <p class=pr-lede><q>The link element allows authors to link their document to other resources.</q> In these
+  figures the resource is a style sheet that turns a box green, or orange.
+  <span class=pr-cite><a href="https://html.spec.whatwg.org/multipage/semantics.html#the-link-element">HTML §4.2.4</a></span></p>
+</header>
+<section>
+  <h2>A link for each keyword</h2>
+  <p><q>if a single link element has a rel attribute with the value next stylesheet, it creates both a hyperlink (for
+  the next keyword) and an external resource link (for the stylesheet keyword)</q>. A link element whose
+  <code>disabled</code> attribute is set does not fetch its style sheet; <q>Whenever the disabled attribute is removed,
+  set the link element's explicitly enabled attribute to true.</q> Each frame is a document of its own.</p>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel='next stylesheet' href=support/green.css><div class=styled>rel=&quot;next stylesheet&quot;</div>"></iframe></div>
+    <figcaption>The box is green: the style sheet applies.</figcaption>
+  </figure>
+  <figure>
+    <div class=pr-stage><iframe class=pr-view id=disabled-frame srcdoc="<link rel=stylesheet href=../shared/fonts.css><link rel=stylesheet href=support/box.css><link rel=stylesheet href=support/orange.css disabled id=sheet><div class=styled>rel=stylesheet disabled</div>"></iframe>
+      <label class=act><input type=checkbox checked id=disabled-box> disabled</label></div>
+    <figcaption>Plain while disabled. Uncheck the box to remove the attribute: the box turns orange; check it: plain
+    again.</figcaption>
+  </figure>
+</section>
+<section>
+  <h2>Not a link for the reader</h2>
+  <p><q>hyperlinks created by link elements are not displayed as part of the document by default, in user agents that
+  support the suggested default rendering. And even if they are force-displayed using CSS, they have no activation
+  behavior.</q></p>
+  <figure>
+    <div class=pr-stage><div class=act style="padding-bottom: 0"><link class=shown id=next rel=next href=support/target.html></div>
+      <ol class=pr-log data-log="click" data-fields="target" data-lines=2></ol></div>
+    <figcaption>A <code>&lt;link rel=next&gt;</code> displayed as a gray bar. Click it: the click is logged, and
+    nothing navigates.</figcaption>
+  </figure>
+</section>
+<script src=../shared/events.js></script>
+<script>
+  document.getElementById("disabled-box").addEventListener("change", event => {
+    document.getElementById("disabled-frame").contentDocument.getElementById("sheet").toggleAttribute("disabled", event.target.checked);
+  });
+</script>
+</body>
+</html>
